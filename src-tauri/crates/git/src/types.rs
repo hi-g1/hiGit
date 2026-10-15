@@ -51,6 +51,59 @@ impl fmt::Display for GitVersion {
     }
 }
 
+/// `git status` 결과.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Status {
+    pub branch: BranchInfo,
+    pub entries: Vec<StatusEntry>,
+}
+
+/// 현재 갈래 정보(`# branch.*` 헤더).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BranchInfo {
+    /// 현재 저장의 해시. 저장이 하나도 없으면 `None`.
+    pub oid: Option<String>,
+    /// 현재 갈래 이름. 특정 저장을 직접 보고 있으면(detached) `None`.
+    pub head: Option<String>,
+    pub upstream: Option<String>,
+    pub ahead: u32,
+    pub behind: u32,
+}
+
+/// 바뀐 파일 하나. 경로 구분자는 OS와 상관없이 `/`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatusEntry {
+    pub path: String,
+    /// 이름 바꿈·복사의 원래 경로.
+    pub orig_path: Option<String>,
+    /// 저장에 넣은(stage) 쪽 변화.
+    pub index: Change,
+    /// 작업 폴더 쪽 변화.
+    pub worktree: Change,
+    pub kind: EntryKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Change {
+    Unmodified,
+    Modified,
+    TypeChanged,
+    Added,
+    Deleted,
+    Renamed,
+    Copied,
+    Unmerged,
+    Untracked,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntryKind {
+    Ordinary,
+    Renamed,
+    Unmerged,
+    Untracked,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

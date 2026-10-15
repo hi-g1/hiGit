@@ -21,6 +21,11 @@ impl GitOutput {
         String::from_utf8(self.stdout.clone())
             .map_err(|e| GitError::Parse(format!("UTF-8이 아닌 출력: {e}")))
     }
+
+    /// 파일 이름처럼 UTF-8이 아닐 수도 있는 출력. 읽을 수 없는 바이트는 대체 문자로 바꾼다.
+    pub fn stdout_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stdout).into_owned()
+    }
 }
 
 impl Runner {

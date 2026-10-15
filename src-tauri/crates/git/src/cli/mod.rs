@@ -1,11 +1,12 @@
 mod runner;
+mod status;
 
 use std::path::{Path, PathBuf};
 
 pub use runner::ConfigureCommand;
 use runner::Runner;
 
-use crate::{GitBackend, GitError, GitVersion, RepoPath, Result};
+use crate::{GitBackend, GitError, GitVersion, RepoPath, Result, Status};
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
@@ -44,6 +45,20 @@ impl GitBackend for CliBackend {
             }
             Err(e) => Err(e),
         }
+    }
+
+    fn status(&self, repo: &RepoPath) -> Result<Status> {
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &[
+                "status",
+                "--porcelain=v2",
+                "-z",
+                "--branch",
+                "--untracked-files=all",
+            ],
+        )?;
+        status::parse(&out.stdout_lossy())
     }
 }
 
