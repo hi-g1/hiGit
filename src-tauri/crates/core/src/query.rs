@@ -10,7 +10,8 @@ use crate::recent::RecentStore;
 use crate::trust::{TrustDecision, TrustState, TrustStore};
 use crate::view::{
     BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, HomeMapView,
-    LogPage, LogQuery, MapCommit, NameProblem, ProjectSummaryView, StatusView,
+    LogPage, LogQuery, MapCommit, NameProblem, ProjectSummaryView, SecretCheckRequest,
+    SecretCheckView, SecretFinding, SecretRule, StatusView,
 };
 use crate::{CoreError, Result};
 
@@ -70,6 +71,101 @@ impl Queries {
             stays_inside(root.as_path(), path)?;
         }
         Ok(self.git.diff(&root, &request.into())?.into())
+    }
+
+    /// 버전 저장 전에 넣을 파일에서 키·비밀번호로 보이는 것을 찾는다(D-040, D-077).
+    /// 넣은 파일은 index의 내용을, 넣은 파일이 없고 `stage_all`이면 작업 폴더 파일을 본다.
+    /// 링크는 읽지 않는다. 일치한 글자는 결과에 담지 않는다.
+    pub fn secret_check(
+        &self,
+        repo: &Path,
+        request: &SecretCheckRequest,
+    ) -> Result<SecretCheckView> {
+        use git::Change;
+        const MAX_FILES: usize = 200;
+        let root = self.opened_repo(repo)?;
+        let status = self.git.status(&root)?;
+        let staged: Vec<&git::StatusEntry> = status
+            .entries
+            .iter()
+            .filter(|e| {
+                !matches!(
+                    e.index,
+                    Change::Unmodified | Change::Untracked | Change::Deleted
+                )
+            })
+            .filter(|e| e.kind != git::EntryKind::Unmerged)
+            .collect();
+        let from_index = !staged.is_empty();
+        let targets: Vec<&git::StatusEntry> = if from_index {
+            staged
+        } else if request.stage_all {
+            status
+                .entries
+                .iter()
+                .filter(|e| !matches!(e.worktree, Change::Unmodified | Change::Deleted))
+                .filter(|e| e.kind != git::EntryKind::Unmerged)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let mut view = SecretCheckView {
+            skipped: u32::try_from(targets.len().saturating_sub(MAX_FILES)).unwrap_or(u32::MAX),
+            ..SecretCheckView::default()
+        };
+        let targets = &targets[..targets.len().min(MAX_FILES)];
+
+        // (경로, 크기, 앞부분)
+        let mut files: Vec<(String, u64, Vec<u8>)> = Vec::new();
+        if from_index {
+            let index = self.git.index_entries(&root)?;
+            let oids: Vec<(String, git::Oid)> = targets
+                .iter()
+                .filter_map(|t| {
+                    index
+                        .iter()
+                        .find(|e| e.stage == 0 && e.path == t.path && e.mode != "120000")
+                        .map(|e| (t.path.clone(), e.oid.clone()))
+                })
+                .collect();
+            let wanted: Vec<git::Oid> = oids.iter().map(|(_, o)| o.clone()).collect();
+            let blobs = self
+                .git
+                .read_blobs(&root, &wanted, crate::secrets::SCAN_BYTES)?;
+            for (path, oid) in oids {
+                if let Some(b) = blobs.iter().find(|b| b.oid == oid) {
+                    files.push((path, b.size, b.head.clone()));
+                }
+            }
+        } else {
+            for t in targets {
+                if paths::validate_one(&t.path).is_err() {
+                    continue;
+                }
+                let full = root.as_path().join(&t.path);
+                let Ok(meta) = std::fs::symlink_metadata(&full) else {
+                    continue;
+                };
+                if !meta.is_file() {
+                    continue;
+                }
+                files.push((t.path.clone(), meta.len(), read_head(&full)));
+            }
+        }
+
+        for (path, size, head) in files {
+            let finding = if let Some(rule) = crate::secrets::name_rule(&path) {
+                Some((rule, None))
+            } else if size >= crate::secrets::LARGE_BYTES {
+                Some((SecretRule::LargeFile, None))
+            } else {
+                crate::secrets::content_rule(&head).map(|(rule, line)| (rule, Some(line)))
+            };
+            if let Some((rule, line)) = finding {
+                view.findings.push(SecretFinding { path, rule, line });
+            }
+        }
+        Ok(view)
     }
 
     /// 시작 화면의 프로젝트 상태 요약(D-031). 여러 프로젝트를 한꺼번에 읽으므로 새 git 호출을
@@ -386,6 +482,18 @@ fn remote_host(url: &str) -> Option<&str> {
     let host = rest.rsplit_once('@').map_or(rest, |(_, h)| h);
     let host = host.split(':').next()?;
     (!host.is_empty()).then_some(host)
+}
+
+/// 파일 앞부분(비밀 검사 상한까지).
+fn read_head(path: &Path) -> Vec<u8> {
+    use std::io::Read;
+    let mut buf = Vec::new();
+    if let Ok(file) = std::fs::File::open(path) {
+        let _ = file
+            .take(crate::secrets::SCAN_BYTES as u64)
+            .read_to_end(&mut buf);
+    }
+    buf
 }
 
 fn repo_path(path: &Path) -> Result<RepoPath> {

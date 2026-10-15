@@ -34,6 +34,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_branches,
             commands::query_branch_name,
             commands::query_home_map,
+            commands::query_secret_check,
             commands::query_project_summary,
             commands::repo_watch,
             commands::repo_unwatch,

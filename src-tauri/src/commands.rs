@@ -7,8 +7,8 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     DiffRequest, ErrorCode, ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, OpenHow,
-    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, TrustChoice,
-    UndoResult,
+    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, SecretCheckRequest,
+    SecretCheckView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -253,6 +253,20 @@ pub async fn redo_last(state: State<'_, AppState>, folder: String) -> CmdResult<
 pub async fn query_home_map(state: State<'_, AppState>, repo: String) -> CmdResult<HomeMapView> {
     blocking(state, move |core| {
         core.queries().home_map(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 버전 저장 전 비밀 파일 검사(D-077).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_secret_check(
+    state: State<'_, AppState>,
+    repo: String,
+    request: SecretCheckRequest,
+) -> CmdResult<SecretCheckView> {
+    blocking(state, move |core| {
+        core.queries().secret_check(&PathBuf::from(repo), &request)
     })
     .await
 }

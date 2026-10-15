@@ -1,5 +1,8 @@
 mod args;
 #[cfg(test)]
+mod blob_tests;
+mod blobs;
+#[cfg(test)]
 mod branch_tests;
 mod branches;
 mod diff;
@@ -36,8 +39,9 @@ use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
-    Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp,
-    GitVersion, LogQuery, MergeCheck, Oid, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
+    BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
+    GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, Oid, OpOutput, RefEntry, Remote, RepoPath,
+    Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -462,6 +466,14 @@ impl GitBackend for CliBackend {
                 None => (record.to_string(), String::new()),
             })
             .collect())
+    }
+
+    fn index_entries(&self, repo: &RepoPath) -> Result<Vec<IndexEntry>> {
+        self.ls_index(repo)
+    }
+
+    fn read_blobs(&self, repo: &RepoPath, oids: &[Oid], max_bytes: usize) -> Result<Vec<BlobHead>> {
+        self.blob_heads(repo, oids, max_bytes)
     }
 
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {

@@ -333,6 +333,17 @@ mod tests {
         fn current_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
             unreachable!()
         }
+        fn index_entries(&self, _: &RepoPath) -> git::Result<Vec<git::IndexEntry>> {
+            unreachable!()
+        }
+        fn read_blobs(
+            &self,
+            _: &RepoPath,
+            _: &[git::Oid],
+            _: usize,
+        ) -> git::Result<Vec<git::BlobHead>> {
+            unreachable!()
+        }
         fn local_config(&self, _: &RepoPath) -> git::Result<Vec<(String, String)>> {
             unreachable!()
         }

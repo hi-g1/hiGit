@@ -255,6 +255,19 @@ impl GitBackend for FakeGit {
         Ok(self.parked_paths.lock().unwrap().clone())
     }
 
+    fn index_entries(&self, _repo: &RepoPath) -> git::Result<Vec<git::IndexEntry>> {
+        Ok(Vec::new())
+    }
+
+    fn read_blobs(
+        &self,
+        _repo: &RepoPath,
+        _oids: &[Oid],
+        _max_bytes: usize,
+    ) -> git::Result<Vec<git::BlobHead>> {
+        Ok(Vec::new())
+    }
+
     fn local_config(&self, _repo: &RepoPath) -> git::Result<Vec<(String, String)>> {
         Ok(self.local_config.lock().unwrap().clone())
     }

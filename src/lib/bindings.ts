@@ -31,6 +31,8 @@ export const commands = {
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
 	queryHomeMap: (repo: string) => __TAURI_INVOKE<HomeMapView>("query_home_map", { repo }),
+	/**  버전 저장 전 비밀 파일 검사(D-077). */
+	querySecretCheck: (repo: string, request: SecretCheckRequest) => __TAURI_INVOKE<SecretCheckView>("query_secret_check", { repo, request }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
@@ -310,6 +312,39 @@ export type RepoInfo = {
 };
 
 export type RiskView = "safe" | "normal" | "caution" | "danger";
+
+export type SecretCheckRequest = {
+	/**  넣은 파일이 없으면 고친 파일을 모두 넣고 저장할 때처럼 모든 고친 파일을 본다(D-062). */
+	stageAll: boolean,
+};
+
+export type SecretCheckView = {
+	findings: SecretFinding[],
+	/**  검사 상한(파일 200개)을 넘어 보지 않은 파일 수. */
+	skipped: number,
+};
+
+export type SecretFinding = {
+	path: string,
+	rule: SecretRule,
+	/**  내용 규칙이면 걸린 줄(1부터). */
+	line: number | null,
+};
+
+/**  걸린 까닭. 화면이 문구를 고른다. */
+export type SecretRule = 
+/**  `.env`, `.env.local` 등 */
+"envFile" | 
+/**  `id_rsa`, `id_ed25519` 등 */
+"sshKey" | 
+/**  `.pem`, `.key`, `.p12` 등 */
+"keyFile" | 
+/**  `credentials.json`, `service-account*.json` */
+"credentials" | 
+/**  `-----BEGIN … PRIVATE KEY-----` */
+"privateKey" | "githubToken" | "awsKey" | "slackToken" | "apiKey" | 
+/**  50MB 이상 */
+"largeFile";
 
 export type StatusView = {
 	branch: BranchView,

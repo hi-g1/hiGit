@@ -21,6 +21,7 @@ const COMMANDS: &[&str] = &[
     "query_branches",
     "query_branch_name",
     "query_home_map",
+    "query_secret_check",
     "query_project_summary",
     "repo_watch",
     "repo_unwatch",

@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, MergeCheck, Oid, OpOutput,
-    RefEntry, RefExpect, Remote, RepoPath, Result, Status,
+    BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, IndexEntry, LogQuery,
+    MergeCheck, Oid, OpOutput, RefEntry, RefExpect, Remote, RepoPath, Result, Status,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -86,6 +86,13 @@ pub trait GitBackend: Send + Sync {
 
     /// 저장소 설정(local, worktree. include 포함)의 (키, 값) 목록. 키는 git이 주는 소문자 형태.
     fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>;
+
+    /// index 항목 전부(`ls-files -s -z`). 충돌 중이면 stage 1·2·3이 함께 나온다.
+    fn index_entries(&self, repo: &RepoPath) -> Result<Vec<IndexEntry>>;
+
+    /// 블롭들의 크기와 앞 `max_bytes`바이트. 1MB가 넘는 블롭은 앞부분을 읽지 않는다.
+    /// 없는 해시는 결과에서 빠진다. 프로세스는 둘(`cat-file --batch-check`, `--batch`)만 띄운다.
+    fn read_blobs(&self, repo: &RepoPath, oids: &[Oid], max_bytes: usize) -> Result<Vec<BlobHead>>;
 
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);

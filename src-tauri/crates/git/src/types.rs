@@ -166,6 +166,24 @@ pub struct Remote {
     pub url: String,
 }
 
+/// index 항목 하나(`ls-files -s`). 충돌 중이면 같은 경로가 stage 1(원래)·2(내 쪽)·3(합칠 쪽)으로 나온다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexEntry {
+    pub path: String,
+    /// `100644`·`100755`·`120000`(링크)·`160000`(서브모듈).
+    pub mode: String,
+    pub oid: Oid,
+    pub stage: u8,
+}
+
+/// 블롭의 크기와 앞부분. 너무 크면 앞부분을 읽지 않는다(`head`가 빈 값).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlobHead {
+    pub oid: Oid,
+    pub size: u64,
+    pub head: Vec<u8>,
+}
+
 /// ref 하나(이름과 가리키는 해시).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefEntry {

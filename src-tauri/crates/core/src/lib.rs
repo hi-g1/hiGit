@@ -18,6 +18,7 @@ mod query;
 pub mod recent;
 mod redact;
 mod registry;
+mod secrets;
 mod state;
 pub mod trust;
 pub mod undo;

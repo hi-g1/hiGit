@@ -102,6 +102,8 @@ export const api = {
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),
+  /** 버전 저장 전 비밀 파일 검사(D-077). 결과에는 경로·규칙·줄 번호만. */
+  secretCheck: (repo: string, stageAll: boolean) => call(commands.querySecretCheck(repo, { stageAll })),
   checkBranchName: (repo: string, name: string) => call(commands.queryBranchName(repo, name)),
   watch: (repo: string) => call(commands.repoWatch(repo)),
   unwatch: () => call(commands.repoUnwatch()),

@@ -606,3 +606,119 @@ fn error_detail_hides_credentials() {
     assert!(!detail.contains("ghp_abc"), "{detail}");
     assert!(detail.contains("https://***@github.com"), "{detail}");
 }
+
+mod secrets {
+    use std::path::Path;
+    use std::sync::Arc;
+
+    use higit_core::view::{OpenHow, SecretCheckRequest, SecretRule};
+    use higit_core::{Core, GitBackend};
+
+    fn git(dir: &Path, args: &[&str]) {
+        let ok = std::process::Command::new("git")
+            .args(["-c", "core.autocrlf=false"])
+            .args(args)
+            .current_dir(dir)
+            .status()
+            .unwrap()
+            .success();
+        assert!(ok, "git {args:?}");
+    }
+
+    fn opened(dir: &Path) -> Core {
+        let core = Core::with_backend(
+            Arc::new(git::CliBackend::new("git", Arc::new(|_| {}))) as Arc<dyn GitBackend>
+        )
+        .unwrap();
+        core.open_project(dir, OpenHow::Picked).unwrap();
+        core
+    }
+
+    #[test]
+    fn finds_names_tokens_and_keys_without_the_secret_text() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        std::fs::write(dir.join(".env"), "PASSWORD=hunter2\n").unwrap();
+        std::fs::write(dir.join(".env.example"), "PASSWORD=\n").unwrap();
+        let token = format!("ghp_{}", "Z9".repeat(18));
+        std::fs::write(
+            dir.join("설정 파일.ts"),
+            format!("// 설명\nconst t = \"{token}\";\n"),
+        )
+        .unwrap();
+        std::fs::write(dir.join("평범.txt"), "그냥 글\n").unwrap();
+        let core = opened(dir);
+
+        // 넣은 파일이 없고 모두 넣고 저장이면 작업 폴더의 고친 파일을 본다.
+        let view = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all: true })
+            .unwrap();
+        let mut found: Vec<(String, SecretRule, Option<u32>)> = view
+            .findings
+            .iter()
+            .map(|f| (f.path.clone(), f.rule, f.line))
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            found,
+            [
+                (".env".to_string(), SecretRule::EnvFile, None),
+                ("설정 파일.ts".to_string(), SecretRule::GithubToken, Some(2)),
+            ]
+        );
+        let json = serde_json::to_string(&view).unwrap();
+        assert!(
+            !json.contains(&token) && !json.contains("hunter2"),
+            "{json}"
+        );
+        // 모두 넣지 않는 저장이면 넣은 파일이 없으니 볼 것이 없다.
+        let view = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all: false })
+            .unwrap();
+        assert!(view.findings.is_empty());
+    }
+
+    #[test]
+    fn staged_content_is_what_gets_checked() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        let key = "-----BEGIN RSA PRIVATE KEY-----\nabc\n";
+        std::fs::write(dir.join("a.txt"), key).unwrap();
+        git(dir, &["add", "a.txt"]);
+        // 작업 폴더에서는 지웠지만 넣은 내용에는 키가 있다.
+        std::fs::write(dir.join("a.txt"), "깨끗함\n").unwrap();
+        std::fs::write(dir.join(".env"), "x\n").unwrap();
+        let core = opened(dir);
+        let view = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all: true })
+            .unwrap();
+        assert_eq!(view.findings.len(), 1, "{:?}", view.findings);
+        assert_eq!(view.findings[0].path, "a.txt");
+        assert_eq!(view.findings[0].rule, SecretRule::PrivateKey);
+        assert_eq!(view.findings[0].line, Some(1));
+    }
+
+    #[test]
+    fn links_are_not_read() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        let outside = tempfile::tempdir().unwrap();
+        let secret = outside.path().join("token.txt");
+        std::fs::write(&secret, format!("ghp_{}", "a".repeat(40))).unwrap();
+        if platform::symlink_file(&secret, &dir.join("링크.txt")).is_err() {
+            return;
+        }
+        let core = opened(dir);
+        let view = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all: true })
+            .unwrap();
+        assert!(view.findings.is_empty(), "{:?}", view.findings);
+    }
+}
