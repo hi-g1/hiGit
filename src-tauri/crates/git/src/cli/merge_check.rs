@@ -5,7 +5,6 @@
 
 use std::ffi::OsStr;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::CliBackend;
 use super::args::{Cmd, push_revs};
@@ -162,7 +161,13 @@ impl CliBackend {
             push_revs(&mut args, Cmd::CatFile, self.git_version(), &[sha]);
             let blob = self.runner.run(dir, &args)?;
             let path = scratch.path(name);
-            std::fs::write(&path, &blob.stdout).map_err(GitError::Spawn)?;
+            // 새 파일로만 만든다(이미 있는 파일이나 링크를 따라가 덮어쓰지 않음).
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .and_then(|mut f| std::io::Write::write_all(&mut f, &blob.stdout))
+                .map_err(GitError::Spawn)?;
             files.push(path);
         }
         let paths: Vec<&OsStr> = files.iter().map(|p| p.as_os_str()).collect();
@@ -195,26 +200,21 @@ fn unmerged(out: &str) -> Result<Vec<(String, [Option<String>; 3])>> {
     Ok(found)
 }
 
-/// 호출마다 따로 쓰는 임시 폴더. 동기화와 백그라운드 확인이 겹쳐도 부딪히지 않는다.
-struct Scratch(PathBuf);
+/// 호출마다 따로 쓰는 임시 폴더. 무작위 이름으로 새로 만들고(남이 미리 만든 폴더·링크를 쓰지 않음)
+/// Linux에서는 0700이다. 동기화와 백그라운드 확인이 겹쳐도 부딪히지 않는다.
+struct Scratch(tempfile::TempDir);
 
 impl Scratch {
     fn new() -> Result<Self> {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let n = NEXT.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("higit-merge-{}-{n}", std::process::id()));
-        std::fs::create_dir_all(&dir).map_err(GitError::Spawn)?;
-        Ok(Self(dir))
+        tempfile::Builder::new()
+            .prefix("higit-merge-")
+            .tempdir()
+            .map(Self)
+            .map_err(GitError::Spawn)
     }
 
     fn path(&self, name: &str) -> PathBuf {
-        self.0.join(name)
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
+        self.0.path().join(name)
     }
 }
 

@@ -8,8 +8,7 @@ publish = false
 
 [dependencies]
 thiserror = { workspace = true }
-
-[dev-dependencies]
+# 겹침 검사의 임시 폴더: 무작위 이름, 0700, 새로 만든 폴더만 쓴다.
 tempfile = { workspace = true }
 
 [lints]
