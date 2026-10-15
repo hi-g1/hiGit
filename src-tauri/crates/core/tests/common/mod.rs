@@ -43,6 +43,7 @@ pub struct FakeGit {
     pub cancel_cleared: AtomicUsize,
     /// `other_git_running`이 돌려줄 값.
     pub git_running: AtomicBool,
+    pub tags: Mutex<Vec<git::TagRef>>,
 }
 
 impl FakeGit {
@@ -71,6 +72,7 @@ impl FakeGit {
             observer: Mutex::new(None),
             cancel_cleared: AtomicUsize::new(0),
             git_running: AtomicBool::new(false),
+            tags: Mutex::new(Vec::new()),
         }
     }
 
@@ -110,6 +112,27 @@ impl GitBackend for FakeGit {
             .take(query.limit as usize)
             .cloned()
             .collect())
+    }
+
+    /// 끝점은 보지 않고 `commits`를 그대로(위상 순서라고 본다).
+    fn log_graph(&self, _repo: &RepoPath, query: &git::GraphLogQuery) -> git::Result<Vec<Commit>> {
+        self.log_calls.fetch_add(1, Ordering::SeqCst);
+        if query.tips.is_empty() {
+            return Ok(Vec::new());
+        }
+        Ok(self
+            .commits
+            .lock()
+            .unwrap()
+            .iter()
+            .skip(query.skip as usize)
+            .take(query.limit as usize)
+            .cloned()
+            .collect())
+    }
+
+    fn tags(&self, _repo: &RepoPath) -> git::Result<Vec<git::TagRef>> {
+        Ok(self.tags.lock().unwrap().clone())
     }
 
     fn excludes_file(&self, _repo: &RepoPath) -> git::Result<Option<PathBuf>> {

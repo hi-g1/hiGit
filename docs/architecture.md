@@ -67,6 +67,8 @@ pub trait GitBackend: Send + Sync {
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 고른 폴더의 저장소 최상위 찾기
     fn status(&self, repo: &RepoPath) -> Result<Status>;
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>;
+    fn log_graph(&self, repo: &RepoPath, q: &GraphLogQuery) -> Result<Vec<Commit>>; // 2b: 여러 끝점(해시만)에서 --topo-order, ^제외
+    fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>>; // 2b: 버전을 가리키는 태그 1000개까지. 태그를 가리키는 태그는 뺀다
     fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 전역 무시 규칙 파일(감시용)
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 마지막 버전과 지금을 합쳐 비교
     // 반복 1b: 브랜치·원격

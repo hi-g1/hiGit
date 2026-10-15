@@ -8,6 +8,8 @@ mod branches;
 mod diff;
 #[cfg(test)]
 mod diff_tests;
+#[cfg(test)]
+mod graph_tests;
 mod log;
 mod merge_check;
 #[cfg(test)]
@@ -45,8 +47,8 @@ pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
     BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
-    GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
-    ReflogEntry, Remote, RepoPath, Result, StashEntry, Status,
+    GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid,
+    OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -234,6 +236,43 @@ impl GitBackend for CliBackend {
         args.push("--");
         let out = self.runner.run(dir, &args)?;
         log::parse(&out.stdout_lossy())
+    }
+
+    fn log_graph(&self, repo: &RepoPath, query: &GraphLogQuery) -> Result<Vec<Commit>> {
+        if query.tips.is_empty() {
+            return Ok(Vec::new());
+        }
+        let skip = format!("--skip={}", query.skip);
+        let max = format!("--max-count={}", query.limit);
+        let excludes: Vec<String> = query.exclude.iter().map(|o| format!("^{o}")).collect();
+        let mut revs: Vec<&str> = query.tips.iter().map(Oid::as_str).collect();
+        revs.extend(excludes.iter().map(String::as_str));
+        // 개인 설정 log.showSignature가 형식 출력에 서명 글자를 섞지 않게 끈다.
+        let mut args = vec![
+            "log",
+            "--topo-order",
+            "--no-show-signature",
+            log::FORMAT,
+            &skip,
+            &max,
+        ];
+        push_revs(&mut args, Cmd::Log, self.git_version(), &revs);
+        args.push("--");
+        let out = self.runner.run(Some(repo.as_path()), &args)?;
+        log::parse(&out.stdout_lossy())
+    }
+
+    fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>> {
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &[
+                "for-each-ref",
+                "--count=1000",
+                branches::TAG_FORMAT,
+                "refs/tags/",
+            ],
+        )?;
+        branches::parse_tags(&out.stdout_lossy())
     }
 
     fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>> {

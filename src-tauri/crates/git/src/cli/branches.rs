@@ -8,6 +8,37 @@ pub(crate) const BRANCH_FORMAT: &str = "--format=%(refname)%00%(objectname)%00%(
 pub(crate) const REF_FORMAT: &str =
     "--format=%(refname)%00%(objectname)%00%(creatordate:unix)%00%(contents:subject)";
 
+/// 태그: 이름, 객체 종류, 해시, 벗긴 종류, 벗긴 해시(주석 태그만).
+pub(crate) const TAG_FORMAT: &str =
+    "--format=%(refname)%00%(objecttype)%00%(objectname)%00%(*objecttype)%00%(*objectname)";
+
+/// 태그 출력에서 버전을 가리키는 것만. 가벼운 태그는 그 해시, 주석 태그는 한 단계 벗긴 해시.
+pub(crate) fn parse_tags(out: &str) -> Result<Vec<crate::TagRef>> {
+    let mut tags = Vec::new();
+    for line in out.lines().filter(|l| !l.is_empty()) {
+        let f: Vec<&str> = line.split('\0').collect();
+        let [refname, kind, oid, peeled_kind, peeled] = f[..] else {
+            return Err(GitError::Parse(format!("태그 줄 필드 수: {}", f.len())));
+        };
+        let Some(name) = refname.strip_prefix("refs/tags/") else {
+            continue;
+        };
+        let commit = match (kind, peeled_kind) {
+            ("commit", _) => oid,
+            ("tag", "commit") => peeled,
+            _ => continue,
+        };
+        let Some(commit) = crate::Oid::parse(commit) else {
+            return Err(GitError::Parse(format!("태그 해시: {commit}")));
+        };
+        tags.push(crate::TagRef {
+            name: name.to_string(),
+            commit,
+        });
+    }
+    Ok(tags)
+}
+
 /// `for-each-ref` 출력을 브랜치 목록으로. 원격 이름은 `remotes`로 가린다(이름에 `/`가 있을 수 있다).
 pub(crate) fn parse_branches(out: &str, remotes: &[Remote]) -> Result<Vec<Branch>> {
     let mut branches = Vec::new();

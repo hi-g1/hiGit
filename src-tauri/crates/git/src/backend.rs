@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, IndexEntry, LogQuery,
-    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, ReflogEntry, Remote, RepoPath,
-    Result, StashEntry, Status,
+    BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, GraphLogQuery, IndexEntry,
+    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, ReflogEntry, Remote,
+    RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -20,6 +20,13 @@ pub trait GitBackend: Send + Sync {
 
     /// 저장 기록. 최근 것부터. 저장이 하나도 없으면 빈 목록.
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>;
+
+    /// 여러 끝점에서 위상 순서(자식이 부모보다 먼저)로 읽는다. 끝점이 없으면 빈 목록(노선도, D-088).
+    fn log_graph(&self, repo: &RepoPath, query: &GraphLogQuery) -> Result<Vec<Commit>>;
+
+    /// 버전을 가리키는 태그(이름순, 최대 1000개). 버전이 아닌 것을 가리키는 태그와 태그를
+    /// 가리키는 태그는 뺀다.
+    fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>>;
 
     /// 전역 무시 규칙 파일(`core.excludesFile`) 경로. 설정이 없으면 `None`.
     fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>;

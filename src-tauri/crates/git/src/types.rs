@@ -255,6 +255,26 @@ pub struct Commit {
     pub summary: String,
 }
 
+/// 여러 끝점에서 위상 순서로 읽는 기록 조건(노선도, D-088). 끝점과 제외는 해시만 받아
+/// 이름이 명령줄에 닿지 않는다.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GraphLogQuery {
+    /// 여기서 시작한다(지금 위치, 브랜치 끝). 비면 빈 목록.
+    pub tips: Vec<Oid>,
+    /// 이 버전들과 그 조상은 뺀다(예: upstream으로 안 올린 버전만).
+    pub exclude: Vec<Oid>,
+    pub skip: u32,
+    pub limit: u32,
+}
+
+/// 버전을 가리키는 태그. 주석 태그는 가리키는 버전으로 한 단계 벗긴다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TagRef {
+    /// `refs/tags/` 뒤의 이름.
+    pub name: String,
+    pub commit: Oid,
+}
+
 /// 저장 기록 조회 조건. 나중에 확대·축소 단계 같은 필드를 더할 수 있게 구조체로 둔다.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LogQuery {

@@ -278,6 +278,12 @@ mod tests {
         fn log(&self, _: &RepoPath, _: &LogQuery) -> git::Result<Vec<Commit>> {
             unreachable!()
         }
+        fn log_graph(&self, _: &RepoPath, _: &git::GraphLogQuery) -> git::Result<Vec<Commit>> {
+            unreachable!()
+        }
+        fn tags(&self, _: &RepoPath) -> git::Result<Vec<git::TagRef>> {
+            unreachable!()
+        }
         fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
             unreachable!()
         }
