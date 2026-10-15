@@ -34,6 +34,8 @@ pub enum UndoKind {
     Inverse,
     /// 되돌릴 수 없다. 실행 전 확인을 받는다(D-043).
     Irreversible,
+    /// 되돌릴 수 없지만 확인 없이 실행하고 경계 줄만 남긴다(D-072).
+    Barrier,
 }
 
 impl UndoKind {
@@ -50,7 +52,10 @@ impl UndoKind {
 
     /// 되돌릴 수 없어서 경계 줄을 남기는지(그 앞 줄은 되돌리지 않는다, D-065).
     pub(crate) fn is_barrier(self) -> bool {
-        matches!(self, UndoKind::RestoreIndex | UndoKind::Irreversible)
+        matches!(
+            self,
+            UndoKind::RestoreIndex | UndoKind::Irreversible | UndoKind::Barrier
+        )
     }
 }
 

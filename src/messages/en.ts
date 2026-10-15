@@ -125,7 +125,6 @@ export const en: Messages = {
     unknownAction: "Unknown action.",
     previewRequired: "Please check the preview first.",
     previewMismatch: "The preview has expired. Please check it again.",
-    notYetSupported: "This action is not supported yet.",
     invalidInput: "Please check what you entered.",
     busy: "Please wait until the other task finishes.",
     notOpened: "This project isn't open. Please open it again.",

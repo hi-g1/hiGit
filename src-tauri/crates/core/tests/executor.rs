@@ -89,12 +89,31 @@ fn safe_and_normal_run_without_preview() {
     assert_eq!(actions[1].executed.load(Ordering::SeqCst), 1);
 }
 
+const HEAD: &str = "1111111111111111111111111111111111111111";
+
+fn git_at_head() -> FakeGit {
+    let git = FakeGit::new();
+    git.status.lock().unwrap().branch.oid = Some(HEAD.into());
+    git
+}
+
+fn backups(git: &FakeGit) -> Vec<String> {
+    git.refs
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|r| r.name.starts_with("refs/higit/backup/"))
+        .map(|r| r.oid.clone())
+        .collect()
+}
+
 #[test]
-fn caution_and_danger_are_refused_until_backup_exists() {
+fn caution_and_danger_back_up_head_before_running() {
     let (exec, actions) =
         executor_with(&[("caution", Risk::Caution), ("danger", Risk::Danger)], TTL);
-    let git = FakeGit::new();
-    let state = folder_state("/p");
+    let git = git_at_head();
+    let dir = tempfile::tempdir().unwrap();
+    let state = repo_state(&dir.path().to_string_lossy());
     let ctx = ExecCtx {
         git: &git,
         state: &state,
@@ -102,17 +121,59 @@ fn caution_and_danger_are_refused_until_backup_exists() {
     let input = ActionInput::Init;
 
     for (i, id) in ["caution", "danger"].into_iter().enumerate() {
-        // 미리보기 없이: 거부
+        // 되돌릴 수 없으니 미리보기(확인) 없이는 거부
         let err = exec.execute(&ctx, id, &input, None).unwrap_err();
         assert!(matches!(err, CoreError::PreviewRequired), "{id}: {err:?}");
-
-        // 미리보기를 거쳐도: 백업이 없으므로 거부(D-011)
-        let (_, token) = exec.preview(&ctx, id, &input).unwrap();
-        let err = exec.execute(&ctx, id, &input, Some(&token)).unwrap_err();
-        assert!(matches!(err, CoreError::NotYetSupported), "{id}: {err:?}");
-
         assert_eq!(actions[i].executed.load(Ordering::SeqCst), 0, "{id}");
+
+        // 확인을 거치면 HEAD를 백업한 뒤 실행한다(D-043)
+        let (_, token) = exec.preview(&ctx, id, &input).unwrap();
+        exec.execute(&ctx, id, &input, Some(&token)).unwrap();
+        assert_eq!(actions[i].executed.load(Ordering::SeqCst), 1, "{id}");
+        assert_eq!(backups(&git).len(), i + 1, "{id}");
     }
+    assert!(backups(&git).iter().all(|oid| oid == HEAD));
+    // 되돌릴 수 없는 일은 경계 줄을 남긴다(D-065).
+    let journal = std::fs::read_to_string(dir.path().join(".git/higit/journal.jsonl")).unwrap();
+    assert_eq!(
+        journal.matches("\"type\":\"barrier\"").count(),
+        2,
+        "{journal}"
+    );
+}
+
+#[test]
+fn no_backup_means_no_run() {
+    let (exec, actions) = executor_with(&[("caution", Risk::Caution)], TTL);
+    let git = git_at_head();
+    git.fail_update_ref.store(true, Ordering::SeqCst);
+    let state = repo_state("/p");
+    let ctx = ExecCtx {
+        git: &git,
+        state: &state,
+    };
+    let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
+    assert!(
+        exec.execute(&ctx, "caution", &ActionInput::Init, Some(&token))
+            .is_err()
+    );
+    assert_eq!(actions[0].executed.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn caution_without_any_version_runs_without_backup() {
+    let (exec, actions) = executor_with(&[("caution", Risk::Caution)], TTL);
+    let git = FakeGit::new();
+    let state = repo_state("/p");
+    let ctx = ExecCtx {
+        git: &git,
+        state: &state,
+    };
+    let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
+    exec.execute(&ctx, "caution", &ActionInput::Init, Some(&token))
+        .unwrap();
+    assert_eq!(actions[0].executed.load(Ordering::SeqCst), 1);
+    assert!(backups(&git).is_empty());
 }
 
 #[test]

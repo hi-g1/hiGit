@@ -169,7 +169,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -333,7 +333,7 @@ export type TrustChoice =
 "disable";
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
-export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible";
+export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible" | "barrier";
 
 /**  되돌리기·다시 하기 결과. */
 export type UndoResult = {

@@ -34,6 +34,20 @@ fn repo_of<'a>(ctx: &'a ExecCtx<'_>) -> Result<&'a RepoPath> {
     ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)
 }
 
+/// 충돌이 남은 파일이 있으면 거절한다. 그대로 넣거나 저장하면 git의 충돌 표시가 든 파일이
+/// 버전에 들어간다(다른 도구로 시작한 리베이스·cherry-pick 중 홈에서 누른 경우).
+fn refuse_conflicts(git: &dyn git::GitBackend, repo: &RepoPath) -> Result<()> {
+    let unmerged = git
+        .status(repo)?
+        .entries
+        .iter()
+        .any(|e| e.kind == git::EntryKind::Unmerged);
+    if unmerged {
+        return Err(CoreError::OperationInProgress);
+    }
+    Ok(())
+}
+
 /// 앱이 쓰는 액션을 모두 등록한다.
 pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(InitAction::new()))?;

@@ -17,6 +17,12 @@ pub trait Action: Send + Sync {
 
     /// `input`의 변형이 이 액션 것이 아니면 [`crate::CoreError::InputMismatch`].
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome>;
+
+    /// HEAD(지금 브랜치가 가리키는 버전)를 바꿀 수 있는지. 거짓이면 `caution` 이상이어도
+    /// 실행기가 HEAD 백업 ref를 만들지 않는다(작업 내역에 쓸모없는 줄이 쌓이지 않게, D-072).
+    fn moves_head(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,6 +85,24 @@ pub enum Outcome {
     Fetched,
     /// 가져오기·올리기·동기화 결과.
     Synced(crate::actions::SyncReport),
+}
+
+/// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JournalMode {
+    /// 액션의 `undo` 종류대로.
+    Journal,
+    /// 되돌릴 수 없는 상태가 되었다. 경계 줄을 남긴다(D-065).
+    Barrier,
+    /// 아무것도 남기지 않는다(합치기를 시작만 하고 멈춘 경우 등).
+    Skip,
+}
+
+impl Outcome {
+    /// 이 결과를 journal에 어떻게 남길지. 합치는 중으로 끝나는 결과들이 쓴다(반복 2).
+    pub fn journal_mode(&self) -> JournalMode {
+        JournalMode::Journal
+    }
 }
 
 /// 액션이 실행될 때 받는 것.

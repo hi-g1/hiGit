@@ -255,6 +255,7 @@ pub enum UndoKindView {
     DeleteCreated,
     Inverse,
     Irreversible,
+    Barrier,
 }
 
 impl From<crate::undo::UndoKind> for UndoKindView {
@@ -268,6 +269,7 @@ impl From<crate::undo::UndoKind> for UndoKindView {
             K::DeleteCreated => Self::DeleteCreated,
             K::Inverse => Self::Inverse,
             K::Irreversible => Self::Irreversible,
+            K::Barrier => Self::Barrier,
         }
     }
 }
@@ -393,7 +395,6 @@ pub enum ErrorCode {
     UnknownAction,
     PreviewRequired,
     PreviewMismatch,
-    NotYetSupported,
     InvalidInput,
     Busy,
     NotOpened,
@@ -468,7 +469,6 @@ impl From<&CoreError> for ErrorView {
             CoreError::UnknownAction(_) => ErrorCode::UnknownAction,
             CoreError::PreviewRequired => ErrorCode::PreviewRequired,
             CoreError::PreviewMismatch => ErrorCode::PreviewMismatch,
-            CoreError::NotYetSupported => ErrorCode::NotYetSupported,
             CoreError::InvalidInput(_) => ErrorCode::InvalidInput,
             CoreError::Busy => ErrorCode::Busy,
             CoreError::NotOpened => ErrorCode::NotOpened,

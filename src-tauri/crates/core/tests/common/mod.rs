@@ -35,6 +35,8 @@ pub struct FakeGit {
     pub merge_check: Mutex<MergeCheck>,
     pub parked_paths: Mutex<Vec<String>>,
     pub local_config: Mutex<Vec<(String, String)>>,
+    /// 참이면 `update_ref`가 실패한다(사용자 hook이 ref 쓰기를 거부한 경우).
+    pub fail_update_ref: AtomicBool,
 }
 
 impl FakeGit {
@@ -59,6 +61,7 @@ impl FakeGit {
             merge_check: Mutex::new(MergeCheck::Clean),
             parked_paths: Mutex::new(Vec::new()),
             local_config: Mutex::new(Vec::new()),
+            fail_update_ref: AtomicBool::new(false),
         }
     }
 
@@ -169,6 +172,9 @@ impl GitBackend for FakeGit {
             .lock()
             .unwrap()
             .push(format!("update-ref {name} {new}"));
+        if self.fail_update_ref.load(Ordering::SeqCst) {
+            return Err(fake_failure("hook declined"));
+        }
         let mut refs = self.refs.lock().unwrap();
         let current = refs.iter().position(|r| r.name == name);
         let ok = match expect {

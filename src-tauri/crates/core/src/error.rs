@@ -91,10 +91,6 @@ pub enum CoreError {
     #[error("미리보기가 만료되었거나 실행하려는 내용과 다릅니다")]
     PreviewMismatch,
 
-    /// 백업·되돌리기가 생기기 전까지 caution 이상은 실행하지 않는다(D-011).
-    #[error("아직 지원하지 않는 작업입니다")]
-    NotYetSupported,
-
     #[error("git 작업이 실패했습니다")]
     Git(#[from] GitError),
 }

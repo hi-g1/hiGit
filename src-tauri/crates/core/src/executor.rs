@@ -6,7 +6,9 @@ use std::time::{Duration, Instant};
 use crate::undo::journal::{self, Body, Journal};
 use crate::undo::{JournalKey, UndoKind, UndoState};
 use crate::view::ActionInput;
-use crate::{Availability, CoreError, ExecCtx, Outcome, Preview, Registry, Result, Risk};
+use crate::{
+    Availability, CoreError, ExecCtx, JournalMode, Outcome, Preview, Registry, Result, Risk,
+};
 
 /// 미리보기를 보여줬다는 증표. 실행 때 한 번만 쓸 수 있다.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22,8 +24,8 @@ struct Ticket {
 /// 위험도와 되돌리는 방법에 따라 공통 흐름을 강제한다(D-043). 액션이 안전장치를 따로 구현하지 않는다.
 ///
 /// - 되돌릴 수 없는(`Irreversible`) 액션은 미리보기 토큰(사용자 확인)이 있어야 한다.
-/// - `caution` 이상은 백업이 갖춰지는 반복 2 전까지 거부한다(D-011).
-/// - 되돌릴 수 있는 액션은 전후 상태를 journal에 남기고, 1b에서 되돌리지 못하는 상태 변경은
+/// - `caution` 이상은 실행 전에 HEAD를 백업 ref로 남기고, 못 남기면 실행하지 않는다(D-043).
+/// - 되돌릴 수 있는 액션은 전후 상태를 journal에 남기고, 되돌리지 못하는 상태 변경은
 ///   경계 줄을 남긴다(D-065).
 pub struct Executor {
     registry: Registry,
@@ -119,12 +121,16 @@ impl Executor {
             let token = token.ok_or(CoreError::PreviewRequired)?;
             self.take_ticket(ctx, meta.id, input, token)?;
         }
-        if meta.risk >= Risk::Caution {
-            // 백업 ref를 남기는 caution 흐름은 반복 2에서 연다(D-011).
-            return Err(CoreError::NotYetSupported);
+        let repo = ctx.state.repo.as_ref();
+        if meta.risk >= Risk::Caution
+            && action.moves_head()
+            && let Some(repo) = repo
+            && let Some(head) = ctx.git.resolve_ref(repo, "HEAD")?
+        {
+            // 지우거나 덮어쓰기 전에 지금 버전을 살려 둔다. 못 남기면 실행하지 않는다(D-034 4번).
+            crate::undo::backup::backup_oid(ctx.git, repo, &head, meta.id)?;
         }
 
-        let repo = ctx.state.repo.as_ref();
         let before = match repo {
             Some(r) if meta.undo.is_recorded() => Some(UndoState::capture(ctx.git, r)?),
             _ => None,
@@ -132,7 +138,13 @@ impl Executor {
         let outcome = action.execute(ctx, input)?;
         if let Some(repo) = repo {
             // 작업은 이미 끝났다. 기록을 못 남기면 되돌리기만 안 될 뿐이라 결과는 그대로 돌려준다.
-            let _ = self.record(ctx, repo, meta.id, meta.undo, input, before);
+            let _ = match outcome.journal_mode() {
+                JournalMode::Skip => Ok(()),
+                JournalMode::Barrier => {
+                    self.record(ctx, repo, meta.id, UndoKind::Barrier, input, None)
+                }
+                JournalMode::Journal => self.record(ctx, repo, meta.id, meta.undo, input, before),
+            };
         }
         Ok(outcome)
     }

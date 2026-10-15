@@ -186,3 +186,32 @@ fn same_repo_runs_one_action_at_a_time() {
     core.execute(dir.path(), &ActionInput::Stage(paths(&["b.txt"])), None)
         .unwrap();
 }
+
+#[test]
+fn stage_and_commit_refuse_while_files_are_in_conflict() {
+    let exec = executor();
+    let git = FakeGit::new();
+    git.status.lock().unwrap().entries.push(git::StatusEntry {
+        path: "a.txt".into(),
+        orig_path: None,
+        index: git::Change::Unmerged,
+        worktree: git::Change::Unmerged,
+        kind: git::EntryKind::Unmerged,
+    });
+    let state = repo_state("/repo");
+    let ctx = ExecCtx {
+        git: &git,
+        state: &state,
+    };
+    for (id, input) in [
+        ("stage", ActionInput::Stage(paths(&["a.txt"]))),
+        ("commit", commit("저장")),
+    ] {
+        let err = exec.execute(&ctx, id, &input, None).unwrap_err();
+        assert!(
+            matches!(err, CoreError::OperationInProgress),
+            "{id}: {err:?}"
+        );
+    }
+    assert!(git.calls().is_empty(), "{:?}", git.calls());
+}

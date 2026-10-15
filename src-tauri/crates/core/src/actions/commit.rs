@@ -53,6 +53,7 @@ impl Action for CommitAction {
             return Err(CoreError::InvalidInput("버전 메시지가 비어 있어요"));
         }
         let repo = repo_of(ctx)?;
+        super::refuse_conflicts(ctx.git, repo)?;
         // 넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062).
         let mut index_before = None;
         if input.stage_all {

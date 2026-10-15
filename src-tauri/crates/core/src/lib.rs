@@ -24,7 +24,8 @@ pub mod view;
 mod watch;
 
 pub use action::{
-    Action, ActionMeta, Availability, ExecCtx, Outcome, Preview, Risk, UnavailableReason,
+    Action, ActionMeta, Availability, ExecCtx, JournalMode, Outcome, Preview, Risk,
+    UnavailableReason,
 };
 pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, Result};

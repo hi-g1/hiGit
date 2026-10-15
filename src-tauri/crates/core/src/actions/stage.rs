@@ -49,6 +49,7 @@ impl Action for PathsAction {
         let (op, count) = match (self.meta.id, input) {
             ("stage", ActionInput::Stage(i)) => {
                 paths::validate(&i.paths)?;
+                super::refuse_conflicts(ctx.git, repo)?;
                 (
                     GitOp::Stage {
                         paths: i.paths.clone(),
