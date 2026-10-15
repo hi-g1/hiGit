@@ -29,7 +29,7 @@ effort: high
 - [ ] git 출력 파싱이 기계용 형식(`--porcelain`, `-z`, `%x00`)만 쓴다. 한글 파일명 테스트가 있다.
 - [ ] `cfg(windows)` / `cfg(target_os = "linux")` 분기가 `crates/platform` 밖에 없다.
 - [ ] CSS에 토큰 대신 색 값을 직접 쓴 곳이 없다(`rg "#[0-9a-fA-F]{3,6}" src --glob '!**/tokens.css'`).
-- [ ] 단축키 판정은 `src/lib/shortcuts.ts`에만 있다(`rg "e\.code ===|ctrlKey" src --glob '!src/lib/**'`가 비어 있음, D-056).
+- [ ] 단축키와 목록 조작 키 판정은 `src/lib`(`shortcuts.ts`, `listKeys.ts`, `wheelZoom.ts`)에만 있다(`rg "e\.code ===|ctrlKey" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 `ApiError.code` 비교 말고는 비어 있음, D-056).
 - [ ] 노선도·그래프 옆 글자에 `--graph-*` 색을 쓰지 않는다(D-031). 브랜치 색은 `branchColor` 하나로 정한다(노선도는 `render/palette.ts`가 색 키를 바꾼다).
 - [ ] 노선도 배치(`features/history/layout/`)는 DOM(`document`, `window`)을 쓰지 않는다. 홈·시작 화면·버전 기록이 같은 배치 함수(`buildRoute`)를 쓴다(D-090). 역 메뉴 항목은 `menu/items.ts` 표에만 있고 화면이 git을 직접 부르지 않는다.
 - [ ] 새 기능에 테스트가 있고 `cargo test --workspace`, `pnpm test`가 통과한다.

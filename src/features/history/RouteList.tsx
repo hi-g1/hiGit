@@ -7,6 +7,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
+import { listKey } from "../../lib/listKeys";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -131,28 +132,28 @@ export function RouteList({
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!fromList(e)) return;
-    if (e.nativeEvent.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
+    const move = listKey({ ...e, isComposing: e.nativeEvent.isComposing });
+    if (!move) return;
+    e.preventDefault();
     const page = Math.max(1, Math.floor(viewHeight / ROW_H) - 1);
     const at = selected < 0 ? -1 : selected;
-    const keys: Record<string, () => void> = {
-      ArrowDown: () => moveTo(at + 1),
-      ArrowUp: () => moveTo(at < 0 ? 0 : at - 1),
-      PageDown: () => moveTo(at + page),
-      PageUp: () => moveTo(at - page),
-      Home: () => moveTo(0),
-      End: () => moveTo(total - 1),
-    };
-    const open = e.key === "Enter" || e.key === " " || e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey);
-    if (open) {
-      e.preventDefault();
-      if (selectedId !== null) onActivate(selectedId);
-      return;
+    switch (move) {
+      case "open":
+        if (selectedId !== null) onActivate(selectedId);
+        return;
+      case "next":
+        return moveTo(at + 1);
+      case "prev":
+        return moveTo(at < 0 ? 0 : at - 1);
+      case "pageNext":
+        return moveTo(at + page);
+      case "pagePrev":
+        return moveTo(at - page);
+      case "first":
+        return moveTo(0);
+      case "last":
+        return moveTo(total - 1);
     }
-    if (e.shiftKey) return;
-    const run = keys[e.key];
-    if (!run) return;
-    e.preventDefault();
-    run();
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
