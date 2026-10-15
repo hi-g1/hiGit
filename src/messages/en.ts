@@ -51,6 +51,7 @@ export const en: Messages = {
   synced: (sent: number, received: number) => `Synced · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `${n} overlapping files`,
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
+  hereNow: "You are here",
   startTitle: "Projects",
   lastPlace: (when: string) => `Last worked on · ${when}`,
   continueWork: "Continue",

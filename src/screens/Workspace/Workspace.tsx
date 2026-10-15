@@ -15,6 +15,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { History } from "../History/History";
 import { ChangedFiles } from "./ChangedFiles";
+import { HomeMap } from "./HomeMap";
 import { TopBar } from "./TopBar";
 import styles from "./Workspace.module.css";
 
@@ -66,6 +67,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       {view === "history" ? (
         <History repo={repo.path} />
       ) : (
+        <>
+        <HomeMap repo={repo.path} />
         <div className={styles.twoPane}>
           <section className={styles.left}>
             <div className={styles.scroll}>
@@ -106,6 +109,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
             )}
           </section>
         </div>
+        </>
       )}
     </div>
   );

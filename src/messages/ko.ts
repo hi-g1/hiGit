@@ -58,6 +58,7 @@ export const ko = {
   synced: (sent: number, received: number) => `동기화했어요 · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
+  hereNow: "지금 여기",
   startTitle: "프로젝트",
   lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,
   continueWork: "이어서 하기",

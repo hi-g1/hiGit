@@ -1,0 +1,5 @@
+.map {
+  overflow: hidden;
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--bg);
+}

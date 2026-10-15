@@ -14,6 +14,8 @@ vi.mock("./lib/api", async (importOriginal) => ({
     status: vi.fn(),
     log: vi.fn(),
     diff: vi.fn(),
+    homeMap: vi.fn(async () => ({ current: null, defaultBranch: null, twoLines: false, currentCommits: [], currentMore: 0, mainSince: 0, mainLast: null, upstreamOid: null, upstreamLabel: null, changedFiles: 0 })),
+    branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: null, orphanParked: [], remotes: [] })),
     watch: vi.fn(async () => null),
     unwatch: vi.fn(async () => null),
   },

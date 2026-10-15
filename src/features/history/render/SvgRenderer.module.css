@@ -1,0 +1,27 @@
+.svg {
+  display: block;
+  overflow: visible;
+}
+
+.station {
+  fill: var(--surface);
+}
+
+.text {
+  fill: var(--text);
+  font-size: var(--font-size-sm);
+}
+
+.muted {
+  fill: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.tag rect {
+  fill: var(--primary);
+}
+
+.tag text {
+  fill: var(--primary-text);
+  font-size: var(--font-size-sm);
+}
