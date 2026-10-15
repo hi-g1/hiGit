@@ -12,6 +12,7 @@ mod query;
 mod registry;
 mod state;
 pub mod view;
+mod watch;
 
 pub use action::{
     Action, ActionMeta, Availability, ExecCtx, Outcome, Preview, Risk, UnavailableReason,
@@ -22,6 +23,7 @@ pub use executor::{Executor, PreviewToken};
 pub use query::Queries;
 pub use registry::Registry;
 pub use state::RepoState;
+pub use watch::{WatchSignal, WatchSink};
 
 /// core 밖(app, 테스트)에서 필요한 git 타입. app은 `git` 크레이트를 직접 의존하지 않는다.
 pub use git::{GitBackend, RepoPath};

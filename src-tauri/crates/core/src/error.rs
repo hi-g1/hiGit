@@ -37,6 +37,10 @@ pub enum CoreError {
     #[error("다른 작업이 실행 중입니다")]
     Busy,
 
+    /// 파일 변경 감시를 시작하지 못했다(감시 한도 등).
+    #[error("파일 변경을 감시할 수 없습니다")]
+    WatchUnavailable(String),
+
     /// 화면이 액션과 맞지 않는 입력 변형을 보냈다(화면 버그).
     #[error("액션에 맞지 않는 입력입니다: {0}")]
     InputMismatch(&'static str),
@@ -62,6 +66,7 @@ impl CoreError {
             CoreError::Git(e) => Some(e.detail()),
             CoreError::FolderNotFound(e) => Some(e.to_string()),
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
+            CoreError::WatchUnavailable(reason) => Some(reason.clone()),
             _ => None,
         }
     }

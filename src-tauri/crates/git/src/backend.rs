@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
     Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Result, Status,
@@ -18,6 +18,9 @@ pub trait GitBackend: Send + Sync {
 
     /// 저장 기록. 최근 것부터. 저장이 하나도 없으면 빈 목록.
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>;
+
+    /// 전역 무시 규칙 파일(`core.excludesFile`) 경로. 설정이 없으면 `None`.
+    fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>;
 
     /// 파일 하나를 마지막 저장과 줄 단위로 비교한다.
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>;

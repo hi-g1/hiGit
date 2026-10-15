@@ -151,6 +151,9 @@ mod tests {
         fn log(&self, _: &RepoPath, _: &LogQuery) -> git::Result<Vec<Commit>> {
             unreachable!()
         }
+        fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
+            unreachable!()
+        }
         fn diff(&self, _: &RepoPath, _: &git::DiffTarget) -> git::Result<git::FileDiff> {
             unreachable!()
         }

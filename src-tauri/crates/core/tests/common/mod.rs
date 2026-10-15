@@ -80,6 +80,10 @@ impl GitBackend for FakeGit {
             .collect())
     }
 
+    fn excludes_file(&self, _repo: &RepoPath) -> git::Result<Option<PathBuf>> {
+        Ok(None)
+    }
+
     fn diff(&self, _repo: &RepoPath, _target: &DiffTarget) -> git::Result<FileDiff> {
         Ok(self.file_diff.lock().unwrap().clone())
     }

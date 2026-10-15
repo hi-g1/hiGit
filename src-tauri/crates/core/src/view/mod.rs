@@ -290,6 +290,7 @@ pub enum ErrorCode {
     NotYetSupported,
     InvalidInput,
     Busy,
+    WatchUnavailable,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -346,6 +347,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NotYetSupported => ErrorCode::NotYetSupported,
             CoreError::InvalidInput(_) => ErrorCode::InvalidInput,
             CoreError::Busy => ErrorCode::Busy,
+            CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,
         };
@@ -363,4 +365,24 @@ impl From<CoreError> for ErrorView {
     fn from(e: CoreError) -> Self {
         Self::from(&e)
     }
+}
+
+// ---- 파일 변경 감시 이벤트 ----
+
+/// 저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoChanged {
+    pub repo: String,
+    pub worktree: bool,
+    pub git: bool,
+}
+
+/// 감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchStatus {
+    pub repo: String,
+    pub active: bool,
+    pub reason: Option<String>,
 }

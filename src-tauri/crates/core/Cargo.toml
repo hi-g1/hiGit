@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 git = { path = "../git" }
 platform = { path = "../platform" }
+watcher = { path = "../watcher" }
 serde = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }

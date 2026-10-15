@@ -14,7 +14,15 @@ export const commands = {
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
+	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
+	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
+	repoUnwatch: () => __TAURI_INVOKE<null>("repo_unwatch"),
 };
+
+/* Constants */
+export const REPO_CHANGED_EVENT = "repo-changed" as const;
+
+export const WATCH_STATUS_EVENT = "watch-status" as const;
 
 /* Types */
 export type ActionInput = 
@@ -94,7 +102,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -144,6 +152,13 @@ export type PreviewView = {
 	token: string,
 };
 
+/**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */
+export type RepoChanged = {
+	repo: string,
+	worktree: boolean,
+	git: boolean,
+};
+
 export type RepoInfo = {
 	/**  저장소 최상위 폴더의 절대 경로. */
 	path: string,
@@ -156,5 +171,12 @@ export type RiskView = "safe" | "normal" | "caution" | "danger";
 export type StatusView = {
 	branch: BranchView,
 	files: ChangedFile[],
+};
+
+/**  감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다. */
+export type WatchStatus = {
+	repo: string,
+	active: boolean,
+	reason: string | null,
 };
 

@@ -13,12 +13,14 @@ pub const MIN_GIT_VERSION: GitVersion = GitVersion::new(2, 30, 0);
 
 /// 앱이 쓰는 core의 입구. app은 이 타입만 부른다.
 pub struct Core {
-    git: Arc<dyn GitBackend>,
+    pub(crate) git: Arc<dyn GitBackend>,
     git_version: GitVersion,
     executor: Executor,
     queries: Queries,
     /// 지금 액션이 실행 중인 저장소(또는 폴더). 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
     busy: Mutex<HashSet<PathBuf>>,
+    /// 지금 감시 중인 저장소. watch.rs가 쓴다.
+    pub(crate) watcher: Mutex<Option<watcher::RepoWatcher>>,
 }
 
 /// 실행이 끝나면(오류여도) 잠금을 푼다.
@@ -58,6 +60,7 @@ impl Core {
             git,
             git_version,
             busy: Mutex::new(HashSet::new()),
+            watcher: Mutex::new(None),
         })
     }
 

@@ -4,12 +4,12 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use higit_core::Core;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, DiffRequest, ErrorCode, ErrorView,
     FileDiffView, FolderInfo, LogPage, LogQuery, PreviewView, StatusView,
 };
-use tauri::State;
+use higit_core::{Core, WatchSignal};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::AppState;
 
@@ -118,4 +118,34 @@ pub async fn query_diff(
         core.queries().diff(&PathBuf::from(repo), &request)
     })
     .await
+}
+
+/// 저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다.
+#[tauri::command]
+#[specta::specta]
+pub async fn repo_watch(app: AppHandle, state: State<'_, AppState>, repo: String) -> CmdResult<()> {
+    blocking(state, move |core| {
+        core.watch(
+            &PathBuf::from(repo),
+            Arc::new(move |signal| {
+                // 화면이 닫혀 이벤트를 못 보내도 감시는 계속한다.
+                let _ = match signal {
+                    WatchSignal::Changed(payload) => {
+                        app.emit(crate::bindings::REPO_CHANGED_EVENT, payload)
+                    }
+                    WatchSignal::Status(payload) => {
+                        app.emit(crate::bindings::WATCH_STATUS_EVENT, payload)
+                    }
+                };
+            }),
+        )
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn repo_unwatch(state: State<'_, AppState>) -> CmdResult<()> {
+    core(&state)?.unwatch();
+    Ok(())
 }

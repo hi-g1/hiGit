@@ -71,4 +71,6 @@ export const api = {
   status: (repo: string) => call(commands.queryStatus(repo)),
   log: (repo: string, query: LogQuery) => call(commands.queryLog(repo, query)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
+  watch: (repo: string) => call(commands.repoWatch(repo)),
+  unwatch: () => call(commands.repoUnwatch()),
 };

@@ -104,6 +104,22 @@ impl GitBackend for CliBackend {
         log::parse(&out.stdout_lossy())
     }
 
+    fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>> {
+        // --path: `~/` 같은 경로를 git이 풀어 준다. 설정이 없으면 종료 코드 1.
+        match self.runner.run(
+            Some(repo.as_path()),
+            &["config", "--path", "--get", "core.excludesFile"],
+        ) {
+            Ok(out) => {
+                let path = out.stdout_utf8()?;
+                let path = path.trim_end_matches(['\n', '\r']);
+                Ok((!path.is_empty()).then(|| PathBuf::from(path)))
+            }
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff> {
         let dir = Some(repo.as_path());
         let out = match target.kind {
@@ -355,6 +371,22 @@ mod tests {
             )
             .unwrap();
         assert_eq!(out.stdout_utf8().unwrap().trim().len(), 40);
+    }
+
+    #[test]
+    fn excludes_file_from_config() {
+        let repo = testutil::init_repo();
+        let backend = testutil::backend();
+        let path = RepoPath::new(repo.path());
+        assert_eq!(backend.excludes_file(&path).unwrap(), None);
+        testutil::git(
+            repo.path(),
+            &["config", "core.excludesFile", "/곳/전역 무시"],
+        );
+        assert_eq!(
+            backend.excludes_file(&path).unwrap(),
+            Some(PathBuf::from("/곳/전역 무시"))
+        );
     }
 
     #[test]

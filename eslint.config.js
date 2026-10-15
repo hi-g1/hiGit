@@ -22,6 +22,10 @@ export default defineConfig(
               name: "@tauri-apps/api/core",
               message: "백엔드 호출은 src/lib/api.ts를 통해서만 합니다.",
             },
+            {
+              name: "@tauri-apps/api/event",
+              message: "백엔드 이벤트는 src/lib/events.ts를 통해서만 구독합니다.",
+            },
           ],
         },
       ],

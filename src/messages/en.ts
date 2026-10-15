@@ -24,6 +24,7 @@ export const en: Messages = {
     notYetSupported: "This action is not supported yet.",
     invalidInput: "Please check what you entered.",
     busy: "Please wait until the other task finishes.",
+    watchUnavailable: "File changes are not detected automatically. The view refreshes when you return to the window.",
     nothingToCommit: "Nothing to save. Add files to the save first.",
     identityMissing: "Your name and email for saves are not set.",
     invalidBranchName: "The branch name contains characters that are not allowed.",
