@@ -1,6 +1,7 @@
 // 문장 안의 용어는 glossary 쉬운 이름에서 꺼낸다(D-029).
 import { en as glossary } from "../glossary/en";
 import type { TermId } from "../glossary/types";
+import type { SecretRule } from "../lib/api";
 import type { Messages } from "./ko";
 
 const t = (id: TermId) => glossary[id].friendly;
@@ -16,6 +17,23 @@ export const en: Messages = {
   undone: "Undone",
   redone: "Redone",
   reverted: "Made a new version that undoes it",
+  secretTitle: (n: number) => `${n} file${n === 1 ? "" : "s"} that look like keys or passwords`,
+  secretRule: {
+    envFile: "Environment file",
+    sshKey: "SSH key",
+    keyFile: "Key file",
+    credentials: "Credentials file",
+    privateKey: "Private key",
+    githubToken: "GitHub token",
+    awsKey: "AWS key",
+    slackToken: "Slack token",
+    apiKey: "API key",
+    largeFile: "File over 50MB",
+  } satisfies Record<SecretRule, string>,
+  moreFiles: (n: number) => `${n} more`,
+  addToIgnore: `Add to ${t("ignore").toLowerCase()}`,
+  saveAnyway: "Save anyway",
+  ignored: (n: number) => `Excluded · ${n}`,
   saved: "Saved",
   suggest: {
     one: (kind: "update" | "add" | "delete" | "rename", name: string) =>

@@ -4,7 +4,7 @@
 import { ko as glossary } from "../glossary/ko";
 import type { TermId } from "../glossary/types";
 import type { LastVersion, ShortCase, StatusCase } from "../features/start/summary";
-import type { ErrorCode, ChangeKind } from "../lib/api";
+import type { ErrorCode, ChangeKind, SecretRule } from "../lib/api";
 import { josa } from "./josa";
 
 /** 문장에 끼울 쉬운 이름 */
@@ -22,6 +22,24 @@ export const ko = {
   undone: "되돌렸어요",
   redone: "다시 했어요",
   reverted: "되돌리는 새 버전을 만들었어요",
+  // 비밀 파일 알림 줄(D-077)
+  secretTitle: (n: number) => `키나 비밀번호로 보이는 파일 ${n}개`,
+  secretRule: {
+    envFile: "환경 설정 파일",
+    sshKey: "SSH 키",
+    keyFile: "키 파일",
+    credentials: "인증 정보 파일",
+    privateKey: "개인 키",
+    githubToken: "GitHub 토큰",
+    awsKey: "AWS 키",
+    slackToken: "Slack 토큰",
+    apiKey: "API 키",
+    largeFile: "50MB 넘는 파일",
+  } satisfies Record<SecretRule, string>,
+  moreFiles: (n: number) => `외 ${n}개`,
+  addToIgnore: `${t("ignore")}에 추가`,
+  saveAnyway: "그래도 저장",
+  ignored: (n: number) => `${t("ignore")}에 넣었어요 · ${n}개`,
   saved: "저장했어요",
   suggest: {
     one: (kind: "update" | "add" | "delete" | "rename", name: string) =>

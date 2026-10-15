@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import type { ChangedFile } from "../../lib/api";
+import type { ChangedFile, SecretFinding } from "../../lib/api";
 import { api } from "../../lib/api";
 import { queryKeys } from "../../lib/queries";
 import { SHORTCUTS, matches } from "../../lib/shortcuts";
@@ -9,6 +9,7 @@ import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Kbd } from "../../ui/Kbd";
 import { Term } from "../../ui/Term";
+import { SecretNotice } from "../secrets/SecretNotice";
 import { useUndoStore } from "../undo/undoStore";
 import styles from "./NameBox.module.css";
 import { suggestName } from "./suggest";
@@ -18,6 +19,11 @@ export function composeMessage(name: string, description: string, suggestion: st
   const title = name.trim() || suggestion;
   const body = description.trim();
   return body ? `${title}\n\n${body}` : title;
+}
+
+/** 저장할 파일 묶음을 가리키는 글자. 같은 묶음으로 다시 저장하면 비밀 파일 알림을 넘긴다(D-077). */
+function signatureOf(files: ChangedFile[], stageAll: boolean): string {
+  return `${stageAll}\n${files.map((f) => `${f.path}:${f.staged}`).join("\n")}`;
 }
 
 /** 버전 메시지를 이름과 설명으로 나눈다(되돌린 저장을 칸에 다시 채울 때). */
@@ -61,6 +67,11 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
     [],
   );
 
+  const signature = signatureOf(files, stageAll);
+  const [notice, setNotice] = useState<{ findings: SecretFinding[]; signature: string } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [fixing, setFixing] = useState(false);
+
   const commit = useMutation({
     mutationFn: () =>
       api.executeAction(folder, {
@@ -80,15 +91,45 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
     },
   });
 
-  const canCommit = files.length > 0 && !commit.isPending;
-  const save = () => {
-    if (canCommit) commit.mutate();
+  const canCommit = files.length > 0 && !commit.isPending && !checking;
+  // 저장 전에 키·비밀번호로 보이는 파일을 본다(D-077). 걸리면 저장하지 않고 알림 줄을 띄우고,
+  // 같은 파일 묶음으로 다시 저장하면(알림 줄의 "그래도 저장" 포함) 그대로 저장한다.
+  const save = async () => {
+    if (!canCommit) return;
+    if (notice?.signature === signature) {
+      setNotice(null);
+      commit.mutate();
+      return;
+    }
+    setChecking(true);
+    try {
+      const view = await api.secretCheck(folder, stageAll);
+      if (view.findings.length === 0) commit.mutate();
+      else setNotice({ findings: view.findings, signature });
+    } catch {
+      // 검사를 못 해도 저장은 막지 않는다. 저장 쪽 오류는 저장이 알린다.
+      commit.mutate();
+    } finally {
+      setChecking(false);
+    }
+  };
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: queryKeys.status(folder) });
+  const fix = async (id: "unstage" | "ignore", paths: string[]) => {
+    setFixing(true);
+    try {
+      await api.executeAction(folder, { id, input: { paths } });
+      setNotice(null);
+      if (id === "ignore") onSaved(m.ignored(paths.length));
+    } finally {
+      setFixing(false);
+      refresh();
+    }
   };
   // 단축키 표(D-033)로 판정한다. 한글 조합 중 Ctrl+Enter는 저장하지 않는다.
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (matches("commit", e.nativeEvent)) {
       e.preventDefault();
-      save();
+      void save();
     }
   };
 
@@ -97,7 +138,7 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
       className={styles.box}
       onSubmit={(e) => {
         e.preventDefault();
-        save();
+        void save();
       }}
     >
       <input
@@ -125,6 +166,16 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
         </Button>
       </div>
       {files.length === 0 && <p className={styles.hint}>{m.noChangedFiles}</p>}
+      {notice !== null && notice.signature === signature && (
+        <SecretNotice
+          findings={notice.findings}
+          files={files}
+          busy={fixing || commit.isPending}
+          onUnstage={(paths) => void fix("unstage", paths)}
+          onIgnore={(paths) => void fix("ignore", paths)}
+          onSaveAnyway={() => void save()}
+        />
+      )}
       {commit.error && <ErrorNotice error={commit.error} />}
     </form>
   );
