@@ -52,6 +52,7 @@ const PAIRS: [string, string, number][] = [
   ["--accent", "--surface-sunken", 4.5],
   ["--primary-text", "--primary", 4.5],
   ["--primary-text", "--primary-hover", 4.5],
+  ["--on-deleted", "--deleted", 4.5],
   ["--added", "--diff-add-bg", 4.5],
   ["--deleted", "--diff-del-bg", 4.5],
   ["--text", "--diff-add-bg", 4.5],

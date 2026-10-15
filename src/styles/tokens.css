@@ -19,6 +19,7 @@
   --added: #2d7a4d;
   --modified: #9a6110;
   --deleted: #b4423a;
+  --on-deleted: #fff;
   --diff-add-bg: #eaf5ee;
   --diff-del-bg: #fbecea;
 
@@ -100,6 +101,7 @@
     --added: #6bbf8a;
     --modified: #d9a54a;
     --deleted: #e07a70;
+    --on-deleted: #161718;
     --diff-add-bg: #1e2e24;
     --diff-del-bg: #33201f;
     --conflict-ours-bg: #1d2e24;
@@ -127,6 +129,7 @@
   --added: #6bbf8a;
   --modified: #d9a54a;
   --deleted: #e07a70;
+  --on-deleted: #161718;
   --diff-add-bg: #1e2e24;
   --diff-del-bg: #33201f;
   --conflict-ours-bg: #1d2e24;

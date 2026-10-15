@@ -64,6 +64,7 @@ describe("useRepoWatch", () => {
       "mergeHint",
       "mergeState",
       "recovery",
+      "stashes",
       "status",
     ]);
   });

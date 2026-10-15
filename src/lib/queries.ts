@@ -19,7 +19,16 @@ export const queryKeys = {
   conflictFile: (repo: string, path: string) => ["conflictFile", repo, path] as const,
   mergeHint: (repo: string) => ["mergeHint", repo] as const,
   recovery: (repo: string) => ["recovery", repo] as const,
+  stashes: (repo: string) => ["stashes", repo] as const,
 };
+
+/** 임시 보관 목록(D-076). */
+export function useStashes(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.stashes>>, ApiError>({
+    queryKey: queryKeys.stashes(repo),
+    queryFn: () => api.stashes(repo),
+  });
+}
 
 /** 작업 내역(D-085). */
 export function useRecovery(repo: string) {

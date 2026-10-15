@@ -47,3 +47,9 @@
 .text:hover:not(:disabled) {
   background: var(--surface-hover);
 }
+
+.danger {
+  background: var(--deleted);
+  color: var(--on-deleted);
+  font-weight: var(--font-weight-bold);
+}

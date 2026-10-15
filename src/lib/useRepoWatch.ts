@@ -65,6 +65,7 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
       if (pending.git) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.mergeHint(repo) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.recovery(repo) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.stashes(repo) });
       }
       pending = { worktree: false, git: false };
     };

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { CompareFooter } from "../../features/stash/CompareFooter";
 import { SyncButton } from "../../features/sync/SyncButton";
 import { useSyncStore } from "../../features/sync/syncStore";
 import { useAutoFetch } from "../../features/sync/useAutoFetch";
@@ -109,15 +110,18 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           </section>
           <section className={styles.right} aria-label={m.compareArea}>
             {selected ? (
-              <DiffView
-                key={selected.path}
-                repo={repo.path}
-                request={{
-                  path: selected.path,
-                  origPath: selected.origPath,
-                  untracked: selected.change === "untracked",
-                }}
-              />
+              <>
+                <DiffView
+                  key={selected.path}
+                  repo={repo.path}
+                  request={{
+                    path: selected.path,
+                    origPath: selected.origPath,
+                    untracked: selected.change === "untracked",
+                  }}
+                />
+                <CompareFooter repo={repo.path} file={selected} hasChanges={(files?.length ?? 0) > 0} onDone={notifyDone} />
+              </>
             ) : (
               status.data && <AllSaved repo={repo.path} status={status.data} hasRemote={hasRemote} />
             )}
