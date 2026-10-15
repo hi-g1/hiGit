@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, GraphLogQuery, IndexEntry,
-    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, ReflogEntry, Remote,
-    RepoPath, Result, StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitStat, DiffTarget, FileDiff, GitOp, GitVersion, GraphLogQuery,
+    IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect,
+    ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -23,6 +23,10 @@ pub trait GitBackend: Send + Sync {
 
     /// 여러 끝점에서 위상 순서(자식이 부모보다 먼저)로 읽는다. 끝점이 없으면 빈 목록(노선도, D-088).
     fn log_graph(&self, repo: &RepoPath, query: &GraphLogQuery) -> Result<Vec<Commit>>;
+
+    /// 버전마다 바뀐 파일·줄 수. 출력 2MB, 10초 안에 받은 것만 돌려준다(뒤의 버전은 결과에
+    /// 없다, D-096). 경로는 돌려주지 않는다.
+    fn commit_stats(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitStat>>;
 
     /// 버전을 가리키는 태그(이름순, 최대 1000개). 버전이 아닌 것을 가리키는 태그와 태그를
     /// 가리키는 태그는 뺀다.

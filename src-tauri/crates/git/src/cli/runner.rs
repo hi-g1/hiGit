@@ -416,6 +416,98 @@ impl Runner {
         Ok(Capped { stdout, truncated })
     }
 
+    /// 읽기 전용 조회를 상한 안에서 돌린다: `input`을 stdin으로, 출력은 `cap` 바이트까지,
+    /// `timeout`이 지나면 끝낸다(D-096). 상한·시간에 걸리면 받은 앞부분과 `truncated`를 돌려준다.
+    pub fn run_bounded(
+        &self,
+        cwd: Option<&Path>,
+        args: &[&str],
+        input: &[u8],
+        cap: usize,
+        timeout: Duration,
+    ) -> Result<Capped> {
+        let mut cmd = self.command(cwd, args);
+        (self.process.prepare)(&mut cmd);
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let _live = self.track(child.id());
+        let writer = child.stdin.take().map(|mut pipe| {
+            let input = input.to_vec();
+            std::thread::spawn(move || pipe.write_all(&input))
+        });
+        let err_reader = read_all(child.stderr.take());
+        // 읽은 것은 함께 쓰는 버퍼에 둔다. 끝낼 때 손자가 파이프를 쥐고 있어도 기다리지 않고
+        // 그때까지 받은 것을 가져간다.
+        let received: Arc<std::sync::Mutex<Vec<u8>>> = Arc::default();
+        let full = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let out_reader = {
+            let received = received.clone();
+            let full = full.clone();
+            let mut pipe = child.stdout.take();
+            std::thread::spawn(move || {
+                let mut chunk = [0u8; 64 * 1024];
+                while let Some(p) = pipe.as_mut() {
+                    let n = match p.read(&mut chunk) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => n,
+                    };
+                    let mut buf = received
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
+                    buf.extend_from_slice(&chunk[..n]);
+                    if buf.len() >= cap {
+                        buf.truncate(cap);
+                        full.store(true, std::sync::atomic::Ordering::SeqCst);
+                        break;
+                    }
+                }
+            })
+        };
+        let start = Instant::now();
+        let status = loop {
+            if let Some(status) = child.try_wait().map_err(GitError::Spawn)? {
+                break Some(status);
+            }
+            if full.load(std::sync::atomic::Ordering::SeqCst) || start.elapsed() >= timeout {
+                (self.process.kill)(&mut child);
+                let _ = child.wait();
+                break None;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        let stderr = match status {
+            // 끝까지 돌았으면 파이프가 닫힐 때까지 읽는다.
+            Some(_) => {
+                let _ = out_reader.join();
+                if let Some(w) = writer {
+                    let _ = w.join();
+                }
+                err_reader.join().unwrap_or_default()
+            }
+            None => Vec::new(),
+        };
+        let stdout = received
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        // 끝나는 순간 상한에 닿았을 수도 있다.
+        let truncated = status.is_none() || full.load(std::sync::atomic::Ordering::SeqCst);
+        if let Some(status) = status
+            && !truncated
+            && !status.success()
+        {
+            return Err(GitError::Failed {
+                args: args.iter().map(|a| a.to_string()).collect(),
+                code: status.code(),
+                stdout: String::from_utf8_lossy(&stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&stderr).into_owned(),
+            });
+        }
+        Ok(Capped { stdout, truncated })
+    }
+
     /// `input`을 stdin으로 넘겨 git을 실행한다(예: `--pathspec-from-file=-`).
     pub fn run_with_stdin(
         &self,

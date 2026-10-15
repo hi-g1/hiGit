@@ -26,8 +26,8 @@ pub use cli::{
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{
-    BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, DiffKind, DiffLine, DiffTarget,
-    EntryKind, FileDiff, GitOp, GitVersion, GraphLogQuery, Hunk, IndexEntry, LineKind, LogQuery,
-    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, StashEntry,
-    Status, StatusEntry, TagRef,
+    BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitStat, DiffKind, DiffLine,
+    DiffTarget, EntryKind, FileDiff, GitOp, GitVersion, GraphLogQuery, Hunk, IndexEntry, LineKind,
+    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath,
+    StashEntry, Status, StatusEntry, TagRef,
 };

@@ -33,6 +33,7 @@ mod resolve_tests;
 mod run_tests;
 mod runner;
 mod segments;
+mod stats;
 mod status;
 
 use std::path::{Path, PathBuf};
@@ -46,9 +47,9 @@ use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
-    BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
-    GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid,
-    OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitStat, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend,
+    GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment,
+    Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -260,6 +261,38 @@ impl GitBackend for CliBackend {
         args.push("--");
         let out = self.runner.run(Some(repo.as_path()), &args)?;
         log::parse(&out.stdout_lossy())
+    }
+
+    fn commit_stats(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitStat>> {
+        const CAP: usize = 2 * 1024 * 1024;
+        const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+        if oids.is_empty() {
+            return Ok(Vec::new());
+        }
+        // 해시는 stdin으로(명령줄에 닿지 않음). 합치기 버전은 diff를 내지 않아 0이다.
+        let input: String = oids.iter().map(|o| format!("{o}\n")).collect();
+        let out = self.runner.run_bounded(
+            Some(repo.as_path()),
+            &[
+                "log",
+                "--no-walk=unsorted",
+                "--stdin",
+                "--root",
+                "--numstat",
+                "-z",
+                "--no-renames",
+                "--no-show-signature",
+                "--no-ext-diff",
+                "--format=%x1e%H",
+            ],
+            input.as_bytes(),
+            CAP,
+            TIMEOUT,
+        )?;
+        Ok(stats::parse(
+            &String::from_utf8_lossy(&out.stdout),
+            out.truncated,
+        ))
     }
 
     fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>> {

@@ -267,6 +267,16 @@ pub struct GraphLogQuery {
     pub limit: u32,
 }
 
+/// 버전 하나에서 바뀐 파일 수와 줄 수(노선도 선 굵기, D-089). 이진 파일은 줄 0.
+/// 합치기 버전은 바뀐 줄을 재지 않아 모두 0이다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommitStat {
+    pub oid: Oid,
+    pub files: u32,
+    pub added: u32,
+    pub removed: u32,
+}
+
 /// 버전을 가리키는 태그. 주석 태그는 가리키는 버전으로 한 단계 벗긴다.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagRef {

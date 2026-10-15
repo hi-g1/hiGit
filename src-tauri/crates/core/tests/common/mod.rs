@@ -135,6 +135,19 @@ impl GitBackend for FakeGit {
         Ok(self.tags.lock().unwrap().clone())
     }
 
+    /// 버전마다 파일 1개, 해시 첫 글자 값만큼 더한 줄(시험용 고정값).
+    fn commit_stats(&self, _repo: &RepoPath, oids: &[Oid]) -> git::Result<Vec<git::CommitStat>> {
+        Ok(oids
+            .iter()
+            .map(|o| git::CommitStat {
+                oid: o.clone(),
+                files: 1,
+                added: u32::from_str_radix(&o.as_str()[..1], 16).unwrap_or(0),
+                removed: 0,
+            })
+            .collect())
+    }
+
     fn excludes_file(&self, _repo: &RepoPath) -> git::Result<Option<PathBuf>> {
         Ok(None)
     }

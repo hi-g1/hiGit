@@ -271,3 +271,43 @@ fn unknown_process_list_means_running() {
     });
     assert!(backend.other_git_running());
 }
+
+#[test]
+fn bounded_run_stops_at_the_output_cap() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    for i in 0..20 {
+        fs::write(p.join("a.txt"), format!("{i}")).unwrap();
+        git(p, &["add", "-A"]);
+        git(p, &["commit", "-q", "-m", &format!("저장 {i}")]);
+    }
+    let out = testutil::backend()
+        .runner
+        .run_bounded(
+            Some(p),
+            &["log", "--format=%H"],
+            b"",
+            100,
+            std::time::Duration::from_secs(10),
+        )
+        .unwrap();
+    assert!(out.truncated);
+    assert_eq!(out.stdout.len(), 100);
+}
+
+#[test]
+fn bounded_run_stops_after_the_time_limit() {
+    let start = std::time::Instant::now();
+    let out = testutil::backend()
+        .runner
+        .run_bounded(
+            None,
+            &["-c", "alias.slow=!sleep 5", "slow"],
+            b"",
+            1024,
+            std::time::Duration::from_millis(300),
+        )
+        .unwrap();
+    assert!(out.truncated);
+    assert!(start.elapsed() < std::time::Duration::from_secs(4));
+}

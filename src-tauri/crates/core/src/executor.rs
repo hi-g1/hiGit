@@ -284,6 +284,9 @@ mod tests {
         fn tags(&self, _: &RepoPath) -> git::Result<Vec<git::TagRef>> {
             unreachable!()
         }
+        fn commit_stats(&self, _: &RepoPath, _: &[git::Oid]) -> git::Result<Vec<git::CommitStat>> {
+            unreachable!()
+        }
         fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
             unreachable!()
         }

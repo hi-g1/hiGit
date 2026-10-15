@@ -144,3 +144,71 @@ fn tag_list_stops_at_a_thousand() {
     assert_eq!(tags.len(), 1000);
     assert_eq!(tags[0].name, "t0000");
 }
+
+#[test]
+fn commit_stats_count_files_and_lines() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    fs::write(p.join("a.txt"), "a\nb\n").unwrap();
+    git(p, &["add", "-A"]);
+    git(p, &["commit", "-q", "-m", "처음"]);
+    let root = oid(p, "HEAD");
+    fs::write(p.join("a.txt"), "a\nc\nd\n").unwrap();
+    fs::write(p.join("b.bin"), b"\x00\x01bin").unwrap();
+    fs::write(p.join("새 파일.txt"), "x\n").unwrap();
+    git(p, &["add", "-A"]);
+    git(p, &["commit", "-q", "-m", "둘째"]);
+    let second = oid(p, "HEAD");
+    git(p, &["commit", "-q", "--allow-empty", "-m", "빈"]);
+    let empty = oid(p, "HEAD");
+    git(p, &["switch", "-q", "-c", "곁가지", "HEAD~1"]);
+    let side = commit(p, "c.txt", "곁");
+    git(p, &["switch", "-q", "main"]);
+    git(p, &["merge", "-q", "--no-edit", "-m", "합침", "곁가지"]);
+    let merge = oid(p, "HEAD");
+    git(p, &["rm", "-q", "a.txt"]);
+    git(p, &["commit", "-q", "-m", "지움"]);
+    let removed = oid(p, "HEAD");
+
+    let stats = testutil::backend()
+        .commit_stats(
+            &RepoPath::new(p),
+            &[
+                removed.clone(),
+                merge.clone(),
+                side,
+                empty.clone(),
+                second.clone(),
+                root.clone(),
+            ],
+        )
+        .unwrap();
+    let by: HashMap<String, (u32, u32, u32)> = stats
+        .iter()
+        .map(|s| (s.oid.to_string(), (s.files, s.added, s.removed)))
+        .collect();
+    assert_eq!(stats.len(), 6);
+    assert_eq!(by[root.as_str()], (1, 2, 0));
+    // 이진 파일은 파일 1개, 줄 0.
+    assert_eq!(by[second.as_str()], (3, 3, 1));
+    assert_eq!(by[empty.as_str()], (0, 0, 0));
+    assert_eq!(by[merge.as_str()], (0, 0, 0));
+    assert_eq!(by[removed.as_str()], (1, 0, 3));
+    // 준 순서 그대로.
+    assert_eq!(stats[0].oid, removed);
+}
+
+#[test]
+fn commit_stats_for_a_hundred_versions_at_once() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    let mut oids = Vec::new();
+    for i in 0..100 {
+        oids.push(commit(p, "a.txt", &format!("{i}")));
+    }
+    let stats = testutil::backend()
+        .commit_stats(&RepoPath::new(p), &oids)
+        .unwrap();
+    assert_eq!(stats.len(), 100);
+    assert!(stats.iter().all(|s| s.files == 1));
+}
