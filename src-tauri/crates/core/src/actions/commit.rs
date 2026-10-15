@@ -1,4 +1,4 @@
-use git::{GitOp, LogQuery};
+use git::{Change, GitOp, LogQuery};
 
 use super::repo_of;
 use crate::view::ActionInput;
@@ -53,6 +53,17 @@ impl Action for CommitAction {
             return Err(CoreError::InvalidInput("버전 메시지가 비어 있어요"));
         }
         let repo = repo_of(ctx)?;
+        // 넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062).
+        if input.stage_all {
+            let status = ctx.git.status(repo)?;
+            let staged = status
+                .entries
+                .iter()
+                .any(|e| !matches!(e.index, Change::Unmodified | Change::Untracked));
+            if !staged {
+                ctx.git.run(repo, &GitOp::StageAll)?;
+            }
+        }
         ctx.git.run(
             repo,
             &GitOp::Commit {

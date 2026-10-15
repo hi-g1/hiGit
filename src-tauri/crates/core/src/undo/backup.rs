@@ -22,19 +22,8 @@ pub(crate) fn ref_name(label: &str) -> String {
     format!("{BACKUP_PREFIX}{}-{n}/{label}", utc_stamp(secs))
 }
 
-/// 지금 HEAD를 백업 ref로 남긴다. 버전이 없으면(첫 저장 전) 남길 것이 없다.
-/// 쓰기에 실패하면(사용자 hook이 거부 등) 오류를 돌려주고, 부르는 쪽은 본 동작을 하지 않는다.
-pub(crate) fn backup_head(
-    git: &dyn GitBackend,
-    repo: &RepoPath,
-    label: &str,
-) -> Result<Option<String>> {
-    let Some(head) = git.resolve_ref(repo, "HEAD")? else {
-        return Ok(None);
-    };
-    backup_oid(git, repo, &head, label).map(Some)
-}
-
+/// `oid`를 백업 ref로 남긴다. 쓰기에 실패하면(사용자 hook이 거부 등) 오류를 돌려주고,
+/// 부르는 쪽은 본 동작을 하지 않는다.
 pub(crate) fn backup_oid(
     git: &dyn GitBackend,
     repo: &RepoPath,

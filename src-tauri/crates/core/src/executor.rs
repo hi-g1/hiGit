@@ -60,6 +60,20 @@ impl Executor {
         self.journal_key = key;
     }
 
+    /// 마지막 작업을 되돌린다(D-042). 저장소 잠금은 부르는 쪽(Core)이 잡는다.
+    pub fn undo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
+        let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
+        let journal = Journal::at(&ctx.git.git_dir(repo)?, self.journal_key.clone());
+        crate::undo::run::undo(ctx.git, repo, &journal)
+    }
+
+    /// 마지막으로 되돌린 작업을 다시 한다. 그 뒤에 새 작업이 있으면 할 것이 없다.
+    pub fn redo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
+        let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
+        let journal = Journal::at(&ctx.git.git_dir(repo)?, self.journal_key.clone());
+        crate::undo::run::redo(ctx.git, repo, &journal)
+    }
+
     pub fn registry(&self) -> &Registry {
         &self.registry
     }

@@ -15,6 +15,10 @@ export const commands = {
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
 	actionPreview: (folder: string, input: ActionInput) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
 	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
+	/**  마지막 작업을 되돌린다(Ctrl+Z, D-042). */
+	undoLast: (folder: string) => __TAURI_INVOKE<UndoResult>("undo_last", { folder }),
+	/**  되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y). */
+	redoLast: (folder: string) => __TAURI_INVOKE<UndoResult>("redo_last", { folder }),
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -150,7 +154,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -257,6 +261,15 @@ export type StatusView = {
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
 export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible";
+
+/**  되돌리기·다시 하기 결과. */
+export type UndoResult = {
+	action: string,
+	kind: UndoKindView,
+	branch: string | null,
+	/**  버전 저장을 되돌렸으면 그때 쓴 메시지. 화면이 이름 칸에 다시 채운다. */
+	message: string | null,
+};
 
 /**  감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다. */
 export type WatchStatus = {

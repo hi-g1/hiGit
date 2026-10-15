@@ -218,6 +218,28 @@ pub struct ActionMetaView {
     pub undo: UndoKindView,
 }
 
+/// 되돌리기·다시 하기 결과.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoResult {
+    pub action: String,
+    pub kind: UndoKindView,
+    pub branch: Option<String>,
+    /// 버전 저장을 되돌렸으면 그때 쓴 메시지. 화면이 이름 칸에 다시 채운다.
+    pub message: Option<String>,
+}
+
+impl From<crate::undo::UndoOutcome> for UndoResult {
+    fn from(o: crate::undo::UndoOutcome) -> Self {
+        Self {
+            action: o.action,
+            kind: o.kind.into(),
+            branch: o.branch,
+            message: o.message,
+        }
+    }
+}
+
 /// 되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -338,6 +360,9 @@ pub enum ErrorCode {
     InvalidInput,
     Busy,
     NotOpened,
+    NothingToUndo,
+    UndoStale,
+    UndoPushed,
     WatchUnavailable,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
@@ -404,6 +429,9 @@ impl From<&CoreError> for ErrorView {
             CoreError::InvalidInput(_) => ErrorCode::InvalidInput,
             CoreError::Busy => ErrorCode::Busy,
             CoreError::NotOpened => ErrorCode::NotOpened,
+            CoreError::NothingToUndo => ErrorCode::NothingToUndo,
+            CoreError::UndoStale => ErrorCode::UndoStale,
+            CoreError::UndoPushed => ErrorCode::UndoPushed,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {

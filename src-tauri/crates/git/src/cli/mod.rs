@@ -496,6 +496,21 @@ impl GitBackend for CliBackend {
                 }
                 self.run_network(repo, &args, mode)?
             }
+            GitOp::StageAll => self.runner.run(dir, &["add", "-A"])?,
+            // reset은 2.34.1에서 `--end-of-options`를 받지 못한다. 해시는 `Oid`가 형식을 보장한다.
+            GitOp::ResetSoft { oid } => self
+                .runner
+                .run(dir, &["reset", "--soft", "-q", oid.as_str()])?,
+            GitOp::ReadTree { tree } => {
+                let mut args = vec!["read-tree"];
+                push_revs(
+                    &mut args,
+                    Cmd::ReadTree,
+                    self.git_version(),
+                    &[tree.as_str()],
+                );
+                self.runner.run(dir, &args)?
+            }
             GitOp::MergeFf { rev } => {
                 let mut args = vec!["merge", "--ff-only", "--no-edit"];
                 push_revs(&mut args, Cmd::Merge, self.git_version(), &[rev]);

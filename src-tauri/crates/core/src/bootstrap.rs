@@ -201,6 +201,35 @@ impl Core {
         input: &ActionInput,
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
+        let token = preview_token.map(PreviewToken);
+        let outcome = self.with_repo_lock(folder, |executor, ctx| {
+            executor.execute(ctx, input.action_id(), input, token.as_ref())
+        })?;
+        if let crate::Outcome::RepoCreated(repo) = &outcome {
+            self.opened.insert(repo.as_path());
+            self.recent.touch(repo.as_path());
+        }
+        Ok(outcome.into())
+    }
+
+    /// 마지막 작업을 되돌린다(Ctrl+Z, D-042).
+    pub fn undo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
+        self.with_repo_lock(folder, |executor, ctx| executor.undo(ctx))
+            .map(Into::into)
+    }
+
+    /// 되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y).
+    pub fn redo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
+        self.with_repo_lock(folder, |executor, ctx| executor.redo(ctx))
+            .map(Into::into)
+    }
+
+    /// 저장소 잠금을 잡고(같은 저장소에서 한 번에 하나) 실행기에 맡긴다.
+    fn with_repo_lock<T>(
+        &self,
+        folder: &Path,
+        f: impl FnOnce(&Executor, &ExecCtx<'_>) -> Result<T>,
+    ) -> Result<T> {
         let state = self.state_of(folder)?;
         let key = state
             .repo
@@ -223,15 +252,7 @@ impl Core {
             git: self.git.as_ref(),
             state: &state,
         };
-        let token = preview_token.map(PreviewToken);
-        let outcome = self
-            .executor
-            .execute(&ctx, input.action_id(), input, token.as_ref())?;
-        if let crate::Outcome::RepoCreated(repo) = &outcome {
-            self.opened.insert(repo.as_path());
-            self.recent.touch(repo.as_path());
-        }
-        Ok(outcome.into())
+        f(&self.executor, &ctx)
     }
 
     /// 폴더를 정규화하고 저장소인지 확인한다. 저장소 경로도 같은 형식으로 정규화한다.

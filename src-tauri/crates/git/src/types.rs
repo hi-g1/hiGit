@@ -256,6 +256,12 @@ pub enum GitOp {
     Merge { rev: String, message: String },
     /// 진행 중인 합치기를 그만둔다. 합치기 중이 아니면 아무것도 하지 않는다.
     MergeAbort,
+    /// 고친 파일을 모두 다음 버전에 넣는다(`add -A`, 무시된 파일 제외).
+    StageAll,
+    /// 브랜치를 `oid`로 되돌린다. index와 작업 폴더는 그대로(`reset --soft`, 버전 저장 되돌리기).
+    ResetSoft { oid: Oid },
+    /// index를 `tree`로 바꾼다. 작업 폴더는 그대로(`read-tree`).
+    ReadTree { tree: Oid },
     /// 올린다. `target`이 있으면 `<원격> HEAD:refs/heads/<브랜치>`, `set_upstream`이면 `-u`.
     Push {
         target: Option<(String, String)>,

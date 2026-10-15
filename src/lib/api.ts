@@ -35,6 +35,7 @@ export type {
   RepoInfo,
   RiskView,
   StatusView,
+  UndoResult,
 } from "./bindings";
 
 /** 백엔드 오류. 화면은 `code`로 문구를 고르고 `detail`은 "자세히 보기"에 보여준다. */
@@ -82,6 +83,9 @@ export const api = {
     call(commands.actionPreview(folder, input)),
   executeAction: (folder: string, input: ActionInput, previewToken: string | null = null) =>
     call(commands.actionExecute(folder, input, previewToken)),
+  /** 마지막 작업 되돌리기(Ctrl+Z)와 다시 하기(D-042). */
+  undoLast: (folder: string) => call(commands.undoLast(folder)),
+  redoLast: (folder: string) => call(commands.redoLast(folder)),
   status: (repo: string) => call(commands.queryStatus(repo)),
   log: (repo: string, query: LogQuery) => call(commands.queryLog(repo, query)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),

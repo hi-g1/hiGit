@@ -23,6 +23,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::action_list,
             commands::action_preview,
             commands::action_execute,
+            commands::undo_last,
+            commands::redo_last,
             commands::query_status,
             commands::query_log,
             commands::query_diff,

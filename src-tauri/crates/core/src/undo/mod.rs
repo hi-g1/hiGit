@@ -2,16 +2,16 @@
 //!
 //! 실행기가 액션 전후의 상태를 journal에 남기고, 백업 ref로 버전을 살려 둔다.
 
-// 되돌리기 실행(계획 005 H3)이 쓴다. 그 단계에서 이 허용을 지운다.
-#[allow(dead_code)]
 pub(crate) mod backup;
 pub(crate) mod journal;
 mod key;
+pub(crate) mod run;
 
 use git::{GitBackend, Oid, RepoPath};
 use serde::{Deserialize, Serialize};
 
 pub use key::JournalKey;
+pub use run::UndoOutcome;
 
 use crate::Result;
 use crate::actions::names;
@@ -78,7 +78,6 @@ impl UndoState {
         })
     }
 
-    #[allow(dead_code)]
     /// journal에서 읽은 값은 믿지 않는 입력이다(D-034). 해시와 이름 형식을 확인한다.
     pub(crate) fn is_valid(&self) -> bool {
         let oid_ok = |o: &Option<String>| o.as_deref().is_none_or(|s| Oid::parse(s).is_some());
@@ -93,7 +92,6 @@ impl UndoState {
                 .all(|(b, o)| name_ok(b) && Oid::parse(o).is_some())
     }
 
-    #[allow(dead_code)]
     pub(crate) fn head_oid(&self) -> Option<Oid> {
         self.head.as_deref().and_then(Oid::parse)
     }

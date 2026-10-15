@@ -33,6 +33,18 @@ pub enum CoreError {
     #[error("입력이 올바르지 않습니다: {0}")]
     InvalidInput(&'static str),
 
+    /// 되돌릴(다시 할) 작업이 없다.
+    #[error("되돌릴 작업이 없습니다")]
+    NothingToUndo,
+
+    /// 앱 밖에서 버전이나 브랜치가 바뀌어 되돌리지 않았다.
+    #[error("앱 밖에서 바뀌어 되돌리지 않았습니다")]
+    UndoStale,
+
+    /// 이미 올린 버전이라 되돌리지 않았다(올린 기록은 바꾸지 않는다, D-042).
+    #[error("이미 올린 버전입니다")]
+    UndoPushed,
+
     /// journal을 쓰지 못했다(디스크, 권한).
     #[error("작업 기록을 쓰지 못했습니다: {0}")]
     Journal(String),

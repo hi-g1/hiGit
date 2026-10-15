@@ -7,7 +7,7 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     DiffRequest, ErrorCode, ErrorView, FileDiffView, LogPage, LogQuery, OpenHow, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -186,6 +186,20 @@ pub async fn query_branch_name(
             .check_branch_name(&PathBuf::from(repo), &name)
     })
     .await
+}
+
+/// 마지막 작업을 되돌린다(Ctrl+Z, D-042).
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_last(state: State<'_, AppState>, folder: String) -> CmdResult<UndoResult> {
+    blocking(state, move |core| core.undo(&PathBuf::from(folder))).await
+}
+
+/// 되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y).
+#[tauri::command]
+#[specta::specta]
+pub async fn redo_last(state: State<'_, AppState>, folder: String) -> CmdResult<UndoResult> {
+    blocking(state, move |core| core.redo(&PathBuf::from(folder))).await
 }
 
 /// 저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다.
