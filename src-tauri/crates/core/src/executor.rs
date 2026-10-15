@@ -172,6 +172,33 @@ mod tests {
         fn check_branch_name(&self, _: &str) -> git::Result<bool> {
             unreachable!()
         }
+        fn resolve_ref(&self, _: &RepoPath, _: &str) -> git::Result<Option<git::Oid>> {
+            unreachable!()
+        }
+        fn update_ref(
+            &self,
+            _: &RepoPath,
+            _: &str,
+            _: &git::Oid,
+            _: &git::RefExpect,
+        ) -> git::Result<()> {
+            unreachable!()
+        }
+        fn delete_ref(&self, _: &RepoPath, _: &str, _: &git::RefExpect) -> git::Result<()> {
+            unreachable!()
+        }
+        fn git_dir(&self, _: &RepoPath) -> git::Result<std::path::PathBuf> {
+            unreachable!()
+        }
+        fn is_ancestor(&self, _: &RepoPath, _: &str, _: &str) -> git::Result<bool> {
+            unreachable!()
+        }
+        fn count_between(&self, _: &RepoPath, _: &str, _: &str) -> git::Result<(u32, u32)> {
+            unreachable!()
+        }
+        fn merge_base(&self, _: &RepoPath, _: &str, _: &str) -> git::Result<Option<git::Oid>> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }

@@ -5,6 +5,9 @@ mod branches;
 mod diff;
 mod log;
 #[cfg(test)]
+mod ref_tests;
+mod refs;
+#[cfg(test)]
 mod run_tests;
 mod runner;
 mod status;
@@ -14,12 +17,13 @@ use std::sync::OnceLock;
 
 use args::{Cmd, push_revs};
 
+pub use refs::RefExpect;
 pub use runner::ConfigureCommand;
 use runner::Runner;
 
 use crate::{
     Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp,
-    GitVersion, LogQuery, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
+    GitVersion, LogQuery, Oid, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -253,6 +257,91 @@ impl GitBackend for CliBackend {
         match self.runner.run(None, &["check-ref-format", &full]) {
             Ok(_) => Ok(true),
             Err(GitError::Failed { code: Some(_), .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn resolve_ref(&self, repo: &RepoPath, name: &str) -> Result<Option<Oid>> {
+        let target = format!("{name}^{{commit}}");
+        let mut args = vec!["rev-parse", "--verify", "-q"];
+        push_revs(&mut args, Cmd::RevParse, self.git_version(), &[&target]);
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => {
+                let text = out.stdout_lossy();
+                Oid::parse(&text)
+                    .map(Some)
+                    .ok_or_else(|| GitError::Parse(format!("해시: {text:?}")))
+            }
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn update_ref(&self, repo: &RepoPath, name: &str, new: &Oid, expect: &RefExpect) -> Result<()> {
+        refs::check_ref_name(name)?;
+        let old = expect.arg(new.as_str().len());
+        let mut revs = vec![name, new.as_str()];
+        if let Some(old) = &old {
+            revs.push(old);
+        }
+        let mut args = vec!["update-ref", "-m", "higit"];
+        push_revs(&mut args, Cmd::UpdateRef, self.git_version(), &revs);
+        self.runner.run(Some(repo.as_path()), &args).map(|_| ())
+    }
+
+    fn delete_ref(&self, repo: &RepoPath, name: &str, expect: &RefExpect) -> Result<()> {
+        refs::check_ref_name(name)?;
+        // 지울 때 "없어야 함"은 뜻이 없으므로 Any처럼 다룬다.
+        let old = match expect {
+            RefExpect::Is(oid) => Some(oid.as_str().to_string()),
+            _ => None,
+        };
+        let mut revs = vec![name];
+        if let Some(old) = &old {
+            revs.push(old);
+        }
+        let mut args = vec!["update-ref", "-m", "higit", "-d"];
+        push_revs(&mut args, Cmd::UpdateRef, self.git_version(), &revs);
+        self.runner.run(Some(repo.as_path()), &args).map(|_| ())
+    }
+
+    fn git_dir(&self, repo: &RepoPath) -> Result<PathBuf> {
+        let out = self
+            .runner
+            .run(Some(repo.as_path()), &["rev-parse", "--absolute-git-dir"])?;
+        let text = out.stdout_utf8()?;
+        Ok(PathBuf::from(text.trim_end_matches(['\n', '\r'])))
+    }
+
+    fn is_ancestor(&self, repo: &RepoPath, ancestor: &str, descendant: &str) -> Result<bool> {
+        let mut args = vec!["merge-base", "--is-ancestor"];
+        push_revs(
+            &mut args,
+            Cmd::MergeBase,
+            self.git_version(),
+            &[ancestor, descendant],
+        );
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(_) => Ok(true),
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn count_between(&self, repo: &RepoPath, left: &str, right: &str) -> Result<(u32, u32)> {
+        let range = format!("{left}...{right}");
+        let mut args = vec!["rev-list", "--left-right", "--count"];
+        push_revs(&mut args, Cmd::RevList, self.git_version(), &[&range]);
+        let out = self.runner.run(Some(repo.as_path()), &args)?;
+        refs::parse_counts(&out.stdout_lossy())
+    }
+
+    fn merge_base(&self, repo: &RepoPath, a: &str, b: &str) -> Result<Option<Oid>> {
+        let mut args = vec!["merge-base"];
+        push_revs(&mut args, Cmd::MergeBase, self.git_version(), &[a, b]);
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => Ok(Oid::parse(&out.stdout_lossy())),
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
             Err(e) => Err(e),
         }
     }

@@ -14,11 +14,11 @@ mod types;
 mod testutil;
 
 pub use backend::GitBackend;
-pub use cli::{CliBackend, ConfigureCommand};
+pub use cli::{CliBackend, ConfigureCommand, RefExpect};
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{
     Branch, BranchInfo, BranchKind, Change, Commit, DiffKind, DiffLine, DiffTarget, EntryKind,
-    FileDiff, GitOp, GitVersion, Hunk, LineKind, LogQuery, OpOutput, RefEntry, Remote, RepoPath,
-    Status, StatusEntry,
+    FileDiff, GitOp, GitVersion, Hunk, LineKind, LogQuery, Oid, OpOutput, RefEntry, Remote,
+    RepoPath, Status, StatusEntry,
 };

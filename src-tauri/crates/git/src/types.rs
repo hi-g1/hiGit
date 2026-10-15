@@ -104,6 +104,32 @@ pub enum EntryKind {
     Untracked,
 }
 
+/// 버전(객체) 해시. SHA-1(40자)과 SHA-256(64자) 저장소 모두 받는다.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Oid(String);
+
+impl Oid {
+    /// 16진수 40자나 64자만 받는다. 저장소나 journal에서 온 값을 그대로 믿지 않는다.
+    pub fn parse(text: &str) -> Option<Self> {
+        let text = text.trim();
+        let ok = (text.len() == 40 || text.len() == 64)
+            && text
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase());
+        ok.then(|| Self(text.to_string()))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for Oid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// 브랜치 하나(`for-each-ref`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Branch {
@@ -289,6 +315,23 @@ mod tests {
     fn rejects_other_text() {
         assert_eq!(GitVersion::parse("hello"), None);
         assert_eq!(GitVersion::parse("git version x.y"), None);
+    }
+
+    #[test]
+    fn oid_accepts_only_lowercase_hex_of_known_lengths() {
+        assert!(Oid::parse(&"a".repeat(40)).is_some());
+        assert!(Oid::parse(&"0".repeat(64)).is_some());
+        assert!(Oid::parse(&format!("{}\n", "b".repeat(40))).is_some());
+        for bad in [
+            "",
+            "abc",
+            &"g".repeat(40),
+            &"A".repeat(40),
+            &"a".repeat(41),
+            "-x",
+        ] {
+            assert!(Oid::parse(bad).is_none(), "{bad}");
+        }
     }
 
     #[test]

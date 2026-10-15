@@ -6,8 +6,8 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use git::{
-    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RefEntry, Remote,
-    RepoPath, Status,
+    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, Oid, OpOutput, RefEntry,
+    RefExpect, Remote, RepoPath, Status,
 };
 use higit_core::view::ActionInput;
 use higit_core::{
@@ -138,6 +138,85 @@ impl GitBackend for FakeGit {
             && !name.contains(".."))
     }
 
+    fn resolve_ref(&self, _repo: &RepoPath, name: &str) -> git::Result<Option<Oid>> {
+        if name == "HEAD" {
+            let oid = self.status.lock().unwrap().branch.oid.clone();
+            return Ok(oid.as_deref().and_then(Oid::parse));
+        }
+        Ok(self
+            .refs
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|r| r.name == name)
+            .and_then(|r| Oid::parse(&r.oid)))
+    }
+
+    fn update_ref(
+        &self,
+        _repo: &RepoPath,
+        name: &str,
+        new: &Oid,
+        expect: &RefExpect,
+    ) -> git::Result<()> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("update-ref {name} {new}"));
+        let mut refs = self.refs.lock().unwrap();
+        let current = refs.iter().position(|r| r.name == name);
+        let ok = match expect {
+            RefExpect::Any => true,
+            RefExpect::Absent => current.is_none(),
+            RefExpect::Is(oid) => current.is_some_and(|i| refs[i].oid == oid.as_str()),
+        };
+        if !ok {
+            return Err(fake_failure("cannot lock ref"));
+        }
+        match current {
+            Some(i) => refs[i].oid = new.to_string(),
+            None => refs.push(RefEntry {
+                name: name.to_string(),
+                oid: new.to_string(),
+            }),
+        }
+        Ok(())
+    }
+
+    fn delete_ref(&self, _repo: &RepoPath, name: &str, expect: &RefExpect) -> git::Result<()> {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("delete-ref {name}"));
+        let mut refs = self.refs.lock().unwrap();
+        let current = refs.iter().position(|r| r.name == name);
+        if let (RefExpect::Is(oid), Some(i)) = (expect, current)
+            && refs[i].oid != oid.as_str()
+        {
+            return Err(fake_failure("cannot lock ref"));
+        }
+        if let Some(i) = current {
+            refs.remove(i);
+        }
+        Ok(())
+    }
+
+    fn git_dir(&self, repo: &RepoPath) -> git::Result<PathBuf> {
+        Ok(repo.as_path().join(".git"))
+    }
+
+    fn is_ancestor(&self, _repo: &RepoPath, _a: &str, _b: &str) -> git::Result<bool> {
+        Ok(false)
+    }
+
+    fn count_between(&self, _repo: &RepoPath, _l: &str, _r: &str) -> git::Result<(u32, u32)> {
+        Ok((0, 0))
+    }
+
+    fn merge_base(&self, _repo: &RepoPath, _a: &str, _b: &str) -> git::Result<Option<Oid>> {
+        Ok(None)
+    }
+
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {
         self.calls
             .lock()
@@ -159,6 +238,16 @@ impl GitBackend for FakeGit {
             _ => {}
         }
         Ok(OpOutput::default())
+    }
+}
+
+/// 분류할 수 있는 가짜 git 실패.
+pub fn fake_failure(stderr: &str) -> git::GitError {
+    git::GitError::Failed {
+        args: Vec::new(),
+        code: Some(1),
+        stdout: String::new(),
+        stderr: stderr.to_string(),
     }
 }
 
