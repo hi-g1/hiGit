@@ -1,13 +1,43 @@
 use std::ffi::OsStr;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crate::{GitError, Result};
 
 /// git을 실행하기 전에 OS별 설정(예: Windows 콘솔 창 숨기기)을 붙이는 함수.
 pub type ConfigureCommand = Arc<dyn Fn(&mut Command) + Send + Sync>;
+
+/// 시간 제한으로 끝낼 수 있게 프로세스를 띄우고 트리째 끝내는 방법. platform이 준다(D-041).
+#[derive(Clone)]
+pub struct ProcessControl {
+    /// 띄우기 전에 붙인다(Linux: 새 프로세스 그룹).
+    pub prepare: ConfigureCommand,
+    /// 자식과 손자를 모두 끝낸다.
+    pub kill: Arc<dyn Fn(&mut Child) + Send + Sync>,
+}
+
+impl Default for ProcessControl {
+    /// 테스트용 기본값: 자식만 끝낸다.
+    fn default() -> Self {
+        Self {
+            prepare: Arc::new(|_| {}),
+            kill: Arc::new(|child: &mut Child| {
+                let _ = child.kill();
+            }),
+        }
+    }
+}
+
+/// 호출 하나에만 바꾸는 환경 변수.
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) enum EnvChange<'a> {
+    Set(&'a OsStr),
+    Remove,
+}
 
 /// 모든 git 호출에 허용하는 전송 방식(D-035). `ext::`, `file://`, 로컬 경로 원격은 막는다.
 pub(crate) const ALLOWED_PROTOCOLS: &str = "https:ssh:git";
@@ -31,6 +61,7 @@ pub(crate) struct Runner {
     git: PathBuf,
     configure: ConfigureCommand,
     allowed_protocols: &'static str,
+    pub(crate) process: ProcessControl,
 }
 
 #[derive(Debug)]
@@ -68,6 +99,7 @@ impl Runner {
             git,
             configure,
             allowed_protocols: ALLOWED_PROTOCOLS,
+            process: ProcessControl::default(),
         }
     }
 
@@ -98,6 +130,55 @@ impl Runner {
         }
         let out = cmd.output().map_err(GitError::Spawn)?;
         finish(args, out)
+    }
+
+    #[cfg_attr(not(test), allow(dead_code))]
+    /// 시간 제한이 지나면 프로세스 트리째 끝내고 `TimedOut`(D-041). 원격·백그라운드 작업에만 쓴다(D-066).
+    pub fn run_limited(
+        &self,
+        cwd: Option<&Path>,
+        args: &[&str],
+        envs: &[(&str, EnvChange<'_>)],
+        timeout: Duration,
+    ) -> Result<GitOutput> {
+        let mut cmd = self.command(cwd, args);
+        for (key, change) in envs {
+            match change {
+                EnvChange::Set(value) => cmd.env(key, value),
+                EnvChange::Remove => cmd.env_remove(key),
+            };
+        }
+        (self.process.prepare)(&mut cmd);
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let out_reader = read_all(child.stdout.take());
+        let err_reader = read_all(child.stderr.take());
+        let start = Instant::now();
+        let status = loop {
+            if let Some(status) = child.try_wait().map_err(GitError::Spawn)? {
+                break status;
+            }
+            if start.elapsed() >= timeout {
+                (self.process.kill)(&mut child);
+                let _ = child.wait();
+                return Err(GitError::TimedOut {
+                    args: args.iter().map(|a| a.to_string()).collect(),
+                });
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        };
+        let stdout = out_reader.join().unwrap_or_default();
+        let stderr = err_reader.join().unwrap_or_default();
+        finish(
+            args,
+            Output {
+                status,
+                stdout,
+                stderr,
+            },
+        )
     }
 
     /// `git merge-file -p --quiet <우리> <기준> <그쪽>`이 겹침 없이 합쳐지는지. 파일은 바꾸지 않는다.
@@ -210,6 +291,18 @@ impl Runner {
         }
         cmd
     }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+/// 파이프를 다른 스레드에서 끝까지 읽는다(파이프가 차서 git이 멈추지 않게).
+fn read_all<R: Read + Send + 'static>(pipe: Option<R>) -> std::thread::JoinHandle<Vec<u8>> {
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        if let Some(mut p) = pipe {
+            let _ = p.read_to_end(&mut buf);
+        }
+        buf
+    })
 }
 
 fn finish(args: &[&str], out: Output) -> Result<GitOutput> {

@@ -147,7 +147,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 

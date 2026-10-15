@@ -15,4 +15,4 @@ pub use app_dir::{DATA_DIR_ENV, app_data_dir};
 pub use git_exe::{GitBuild, find_git, git_build, git_download_url};
 pub use link::{symlink_dir, symlink_file};
 pub use path::{normalize_repo_path, same_path};
-pub use process::configure_child;
+pub use process::{configure_child, kill_tree, prepare_killable};

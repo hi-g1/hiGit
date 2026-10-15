@@ -90,6 +90,7 @@ pub trait GitBackend: Send + Sync {
 - 공통 환경에 `PAGER=cat`, `GIT_EDITOR=:`(편집기를 띄우지 않는 특별 값), `GIT_ALLOW_PROTOCOL=https:ssh:git`도 둔다. 상위 프로세스의 `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` 등 저장소 위치 변수는 지운다(D-052). 로컬 경로 원격은 테스트에서만 `CliBackend::allow_local_remotes_for_tests()`로 켠다. 조회는 `--no-ext-diff`, `--no-textconv`.
 - 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
 - git 실행 파일은 시작할 때 절대 경로로 한 번 찾아 그 경로만 쓴다.
+- 원격 작업은 `CliBackend::run_network`로만 한다. 사용자가 누른 작업은 10분, 저절로 하는 원격 확인은 60초가 지나면 프로세스 트리째 끝낸다(`ProcessControl`, platform의 `prepare_killable`·`kill_tree`). 로컬 조회·쓰기는 끝내지 않는다(D-066). 사용자가 SSH 명령을 정하지 않았으면 `GIT_SSH_COMMAND=ssh -o BatchMode=yes`(D-023). 백그라운드는 `GCM_INTERACTIVE=never`, `credential.interactive=never`, `SSH_ASKPASS_REQUIRE=never`, `gc.auto=0`.
 - 믿지 않기로 한 저장소(D-039)는 모든 호출에 실행 설정을 끄는 `-c` 덮어쓰기를 붙인다.
 
 ### Action (crates/core) — 상태를 바꾸는 기능

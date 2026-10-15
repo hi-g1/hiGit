@@ -324,6 +324,7 @@ pub enum ErrorCode {
     RemoteUnreachable,
     ProtocolNotAllowed,
     UnparkConflict,
+    TimedOut,
     /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
@@ -348,6 +349,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::NotARepository => ErrorCode::NotARepo,
             F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
             F::UnparkConflict => ErrorCode::UnparkConflict,
+            F::TimedOut => ErrorCode::TimedOut,
             F::Other => ErrorCode::GitFailed,
         }
     }

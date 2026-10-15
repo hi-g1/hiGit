@@ -9,6 +9,9 @@ mod log;
 mod merge_check;
 #[cfg(test)]
 mod merge_check_tests;
+mod network;
+#[cfg(test)]
+mod network_tests;
 mod park;
 #[cfg(test)]
 mod park_tests;
@@ -25,9 +28,10 @@ use std::sync::OnceLock;
 
 use args::{Cmd, push_revs};
 
+pub use network::{BACKGROUND_TIMEOUT, NETWORK_TIMEOUT, NetMode};
 pub use refs::RefExpect;
-pub use runner::ConfigureCommand;
 use runner::Runner;
+pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
     Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp,
@@ -37,6 +41,8 @@ use crate::{
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
     runner: Runner,
+    /// 원격 작업 시간 제한(사용자가 누름, 백그라운드).
+    timeouts: (std::time::Duration, std::time::Duration),
     /// `version()` 결과. `--end-of-options`를 넣을지 고를 때 쓴다(args.rs).
     version: OnceLock<GitVersion>,
 }
@@ -46,8 +52,26 @@ impl CliBackend {
     pub fn new(git: impl Into<PathBuf>, configure: ConfigureCommand) -> Self {
         Self {
             runner: Runner::new(git.into(), configure),
+            timeouts: (network::NETWORK_TIMEOUT, network::BACKGROUND_TIMEOUT),
             version: OnceLock::new(),
         }
+    }
+
+    /// 시간 제한으로 git 프로세스 트리를 끝내는 방법(platform이 준다).
+    pub fn with_process_control(mut self, control: ProcessControl) -> Self {
+        self.runner.process = control;
+        self
+    }
+
+    /// **테스트 전용.** 원격 작업 시간 제한을 바꾼다.
+    #[doc(hidden)]
+    pub fn with_network_timeouts_for_tests(
+        mut self,
+        foreground: std::time::Duration,
+        background: std::time::Duration,
+    ) -> Self {
+        self.timeouts = (foreground, background);
+        self
     }
 
     /// **테스트 전용.** 로컬 경로·`file://` 원격을 허용한다. 앱 코드에서는 부르지 않는다(D-035).

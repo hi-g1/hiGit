@@ -14,7 +14,10 @@ mod types;
 mod testutil;
 
 pub use backend::GitBackend;
-pub use cli::{CliBackend, ConfigureCommand, RefExpect};
+pub use cli::{
+    BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, NETWORK_TIMEOUT, NetMode, ProcessControl,
+    RefExpect,
+};
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{

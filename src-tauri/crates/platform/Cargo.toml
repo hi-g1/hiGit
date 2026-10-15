@@ -11,6 +11,10 @@ which = { workspace = true }
 dunce = { workspace = true }
 dirs = { workspace = true }
 
+# 프로세스 그룹째 끝내기(D-041). unsafe 없는 API라 platform의 forbid(unsafe_code)를 지킨다.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process"] }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 

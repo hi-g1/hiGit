@@ -24,6 +24,10 @@ pub enum GitError {
     #[error("git 작업을 하지 않았습니다: {detail}")]
     Refused { kind: FailureKind, detail: String },
 
+    /// 시간 제한이 지나 git을 끝냈다(원격·백그라운드 작업, D-041).
+    #[error("git 명령이 시간 안에 끝나지 않았습니다: git {}", .args.join(" "))]
+    TimedOut { args: Vec<String> },
+
     /// git 출력이 기대한 기계용 형식과 다르다.
     #[error("git 출력을 읽지 못했습니다: {0}")]
     Parse(String),
@@ -35,6 +39,7 @@ impl GitError {
         match self {
             GitError::Failed { stdout, stderr, .. } => failure::classify(stdout, stderr),
             GitError::Refused { kind, .. } => *kind,
+            GitError::TimedOut { .. } => FailureKind::TimedOut,
             _ => FailureKind::Other,
         }
     }
@@ -51,6 +56,7 @@ impl GitError {
                 }
             }
             GitError::Refused { detail, .. } => detail.clone(),
+            GitError::TimedOut { args } => format!("timed out: git {}", args.join(" ")),
             GitError::Parse(msg) => msg.clone(),
         }
     }
