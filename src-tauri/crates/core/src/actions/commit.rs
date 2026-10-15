@@ -43,7 +43,7 @@ impl Action for CommitAction {
             return Err(CoreError::InputMismatch("commit"));
         };
         if input.message.trim().is_empty() {
-            return Err(CoreError::InvalidInput("저장 메시지가 비어 있습니다"));
+            return Err(CoreError::InvalidInput("버전 메시지가 비어 있어요"));
         }
         let repo = repo_of(ctx)?;
         ctx.git.run(

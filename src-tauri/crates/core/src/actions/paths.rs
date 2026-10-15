@@ -6,18 +6,24 @@ use crate::{CoreError, Result};
 /// OS와 상관없이 같은 규칙: 절대 경로, 드라이브(`C:`), `\`, `..`, 빈 경로를 거부한다.
 pub(crate) fn validate(paths: &[String]) -> Result<()> {
     if paths.is_empty() {
-        return Err(CoreError::InvalidInput("파일을 고르지 않았습니다"));
+        return Err(CoreError::InvalidInput("파일을 고르지 않았어요"));
     }
-    for path in paths {
-        let bad = path.is_empty()
-            || path.contains('\0')
-            || path.contains('\\')
-            || path.starts_with('/')
-            || path.as_bytes().get(1) == Some(&b':')
-            || path.split('/').any(|part| part == ".." || part.is_empty());
-        if bad {
-            return Err(CoreError::InvalidInput("저장소 밖이나 잘못된 경로입니다"));
-        }
+    paths.iter().try_for_each(|p| validate_one(p))
+}
+
+/// 경로 하나 검사(비교 보기처럼 경로 하나만 받는 곳에서 쓴다).
+pub(crate) fn validate_one(path: &str) -> Result<()> {
+    let bytes = path.as_bytes();
+    // Windows 드라이브(`C:`)만 거른다. Linux에서는 `a:b.txt`도 쓸 수 있는 이름이다.
+    let drive = bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+    let bad = path.is_empty()
+        || path.contains('\0')
+        || path.contains('\\')
+        || path.starts_with('/')
+        || drive
+        || path.split('/').any(|part| part == ".." || part.is_empty());
+    if bad {
+        return Err(CoreError::InvalidInput("저장소 밖이거나 잘못된 경로예요"));
     }
     Ok(())
 }
@@ -39,6 +45,8 @@ mod tests {
             ".gitignore",
             "a..b.txt"
         ]));
+        // 둘째 글자가 `:`이어도 드라이브가 아니면 받는다(Linux 파일 이름).
+        assert!(ok(&["가:나.txt", "1:2.txt"]));
     }
 
     #[test]

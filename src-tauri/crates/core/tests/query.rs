@@ -337,3 +337,37 @@ fn git_failures_map_to_error_codes() {
         assert_eq!(view.detail.as_deref(), Some(stderr));
     }
 }
+
+#[test]
+fn diff_rejects_paths_outside_repo() {
+    use higit_core::view::DiffRequest;
+    let base = tempfile::tempdir().unwrap();
+    let repo = base.path().join("repo");
+    std::fs::create_dir(&repo).unwrap();
+    std::fs::write(base.path().join("비밀.txt"), "저장소 밖 내용\n").unwrap();
+    std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(&repo)
+        .status()
+        .unwrap();
+    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+
+    for (path, orig) in [("../비밀.txt", None), ("a.txt", Some("../비밀.txt"))] {
+        let err = core
+            .queries()
+            .diff(
+                &repo,
+                &DiffRequest {
+                    path: path.into(),
+                    orig_path: orig.map(str::to_string),
+                    untracked: true,
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            ErrorView::from(&err).code,
+            ErrorCode::InvalidInput,
+            "{path}"
+        );
+    }
+}

@@ -2,7 +2,7 @@
 
 mod commit;
 mod init;
-mod paths;
+pub(crate) mod paths;
 mod stage;
 
 pub use commit::CommitAction;

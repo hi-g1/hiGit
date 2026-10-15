@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use git::{GitBackend, RepoPath};
 
+use crate::actions::paths;
 use crate::view::{CommitRow, DiffRequest, FileDiffView, LogPage, LogQuery, StatusView};
 use crate::{CoreError, Result};
 
@@ -22,6 +23,11 @@ impl Queries {
 
     /// 파일 하나를 마지막 저장과 비교한다(넣은 것과 안 넣은 것을 합쳐서).
     pub fn diff(&self, repo: &Path, request: &DiffRequest) -> Result<FileDiffView> {
+        // 새 파일 비교(--no-index)는 git이 경로를 저장소로 묶지 않으므로 여기서 막는다.
+        paths::validate_one(&request.path)?;
+        if let Some(orig) = &request.orig_path {
+            paths::validate_one(orig)?;
+        }
         Ok(self.git.diff(&repo_path(repo)?, &request.into())?.into())
     }
 
