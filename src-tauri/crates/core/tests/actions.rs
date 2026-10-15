@@ -191,11 +191,16 @@ fn same_repo_runs_one_action_at_a_time() {
 fn progress_names_the_running_action_and_cancel_reaches_git() {
     let dir = tempfile::tempdir().unwrap();
     let git = Arc::new(FakeGit::new());
-    let repo = higit_core::RepoPath::new(dir.path());
-    *git.repo.lock().unwrap() = Some(repo.clone());
+    *git.repo.lock().unwrap() = Some(higit_core::RepoPath::new(dir.path()));
     let core = Arc::new(Core::with_backend(git.clone() as Arc<dyn GitBackend>).unwrap());
-    core.open_project(dir.path(), higit_core::view::OpenHow::Picked)
-        .unwrap();
+    // core는 정규화한 경로(Windows의 짧은 이름 RUNNER~1을 펼친 것)로 작업을 기록한다.
+    let higit_core::view::ProjectOpenResult::Opened { repo } = core
+        .open_project(dir.path(), higit_core::view::OpenHow::Picked)
+        .unwrap()
+    else {
+        panic!("열리지 않음");
+    };
+    let repo = std::path::PathBuf::from(repo.path);
     let heard = Arc::new(std::sync::Mutex::new(Vec::new()));
     {
         let heard = heard.clone();
