@@ -21,7 +21,7 @@ pub type ProgressObserver = std::sync::Arc<
 >;
 pub use cli::{
     BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, NETWORK_TIMEOUT, NetMode, ProcessControl,
-    RefExpect,
+    RefExpect, safe_relative,
 };
 pub use error::{GitError, Result};
 pub use failure::FailureKind;

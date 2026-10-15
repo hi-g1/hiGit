@@ -106,7 +106,7 @@ impl CliBackend {
                 }
                 self.runner.run(Some(dir), &["reset", "--hard", "-q"])?;
                 for path in &untracked {
-                    let _ = std::fs::remove_file(dir.join(path));
+                    remove_inside(dir, path);
                 }
                 Err(e)
             }
@@ -127,7 +127,7 @@ impl CliBackend {
         }
         self.runner.run(Some(dir), &["reset", "--hard", "-q"])?;
         for path in self.stash_untracked_paths(repo, oid)? {
-            let _ = std::fs::remove_file(dir.join(path));
+            remove_inside(dir, &path);
         }
         Ok(OpOutput::default())
     }
@@ -252,7 +252,7 @@ impl CliBackend {
                 // 반쯤 적용됐을 수 있다. 시작할 때 깨끗했으므로 HEAD로 되돌리고 꺼낸 새 파일을 지운다.
                 self.runner.run(Some(dir), &["reset", "--hard", "-q"])?;
                 for path in &untracked {
-                    let _ = std::fs::remove_file(dir.join(path));
+                    remove_inside(dir, path);
                 }
                 Err(GitError::Refused {
                     kind: FailureKind::UnparkConflict,
@@ -316,8 +316,9 @@ impl CliBackend {
     }
 }
 
-/// 저장소 안 상대 경로인지: 절대 경로, 드라이브, `\`, `..`, 빈 조각, `.git` 조각을 거부한다.
-pub(super) fn safe_relative(path: &str) -> bool {
+/// 저장소 안 상대 경로인지: 절대 경로, 드라이브, `\`, `..`, 빈 조각, `.git`을 가리키는 조각을
+/// 거부한다. 받은 저장소의 경로라 OS와 상관없이 같은 규칙을 쓴다(D-034).
+pub fn safe_relative(path: &str) -> bool {
     let b = path.as_bytes();
     let drive = b.len() >= 2 && b[0].is_ascii_alphabetic() && b[1] == b':';
     !(path.starts_with('/')
@@ -326,16 +327,55 @@ pub(super) fn safe_relative(path: &str) -> bool {
         || drive
         || path
             .split('/')
-            .any(|c| c.is_empty() || c == ".." || c.eq_ignore_ascii_case(".git")))
+            .any(|c| c.is_empty() || c == ".." || names_git_dir(c)))
+}
+
+/// Windows에서 `.git` 폴더로 풀리는 이름: `.git`, 끝의 점·공백(`.git.`, `.git `), 대체 데이터 흐름
+/// (`.git:$INDEX_ALLOCATION`), 8.3 짧은 이름(`GIT~1`). 대소문자는 가리지 않는다.
+fn names_git_dir(component: &str) -> bool {
+    let stem = component.split(':').next().unwrap_or(component);
+    let stem = stem.trim_end_matches(['.', ' ']);
+    if stem.eq_ignore_ascii_case(".git") {
+        return true;
+    }
+    let lower = stem.to_ascii_lowercase();
+    lower
+        .strip_prefix("git~")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|c| c.is_ascii_digit()))
 }
 
 fn exists(dir: &Path, rel: &str) -> bool {
     dir.join(rel).symlink_metadata().is_ok()
 }
 
+/// 작업 폴더 안의 파일 하나를 지운다. 경로 중간 조각이 링크(Windows는 재해석 지점 포함)이거나
+/// 폴더가 아니면 따라가지 않고 그만둔다. 마지막 조각이 링크면 링크만 지운다(D-037).
+fn remove_inside(dir: &Path, rel: &str) {
+    if !safe_relative(rel) {
+        return;
+    }
+    let mut at = dir.to_path_buf();
+    let mut parts = rel.split('/').peekable();
+    while let Some(part) = parts.next() {
+        at.push(part);
+        let Ok(meta) = at.symlink_metadata() else {
+            return;
+        };
+        if parts.peek().is_some() {
+            // `FileType::is_dir`은 링크(정션 포함)이면 거짓이다.
+            if !meta.file_type().is_dir() {
+                return;
+            }
+        } else if !meta.file_type().is_dir() {
+            let _ = std::fs::remove_file(&at);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::safe_relative;
+    use super::{remove_inside, safe_relative};
+    use crate::testutil::{self, git};
 
     #[test]
     fn rejects_paths_that_leave_the_repo() {
@@ -348,11 +388,55 @@ mod tests {
             ".git/config",
             "a/.GIT/x",
             "a//b",
+            ".git./config",
+            ".GIT /config",
+            ".git:$INDEX_ALLOCATION/config",
+            "GIT~1/config",
+            "a/git~12",
         ] {
             assert!(!safe_relative(bad), "{bad}");
         }
-        for good in ["a.txt", "폴더/새 파일.txt", ".gitignore", "a..b"] {
+        for good in [
+            "a.txt",
+            "폴더/새 파일.txt",
+            ".gitignore",
+            "a..b",
+            "git~",
+            "git~a",
+            ".github/x",
+        ] {
             assert!(safe_relative(good), "{good}");
         }
+    }
+
+    #[test]
+    fn removing_does_not_follow_a_linked_folder() {
+        let repo = testutil::init_repo();
+        let p = repo.path();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("victim.txt"), "남아야 함").unwrap();
+        // git이 추적하는 링크를 꺼내 작업 폴더에 `lnk -> 바깥 폴더`를 만든다(Linux). Windows의
+        // core.symlinks=false에서는 보통 파일이 생기고, 그래도 지우면 안 된다.
+        let target = p.join("target.txt");
+        std::fs::write(&target, outside.path().to_string_lossy().as_bytes()).unwrap();
+        let blob = git(p, &["hash-object", "-w", "target.txt"]);
+        let blob = blob.trim();
+        git(
+            p,
+            &[
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                &format!("120000,{blob},lnk"),
+            ],
+        );
+        git(p, &["checkout", "--", "lnk"]);
+        remove_inside(p, "lnk/victim.txt");
+        assert!(outside.path().join("victim.txt").exists());
+        // 보통 파일은 지운다.
+        std::fs::create_dir_all(p.join("폴더")).unwrap();
+        std::fs::write(p.join("폴더/새 파일.txt"), "x").unwrap();
+        remove_inside(p, "폴더/새 파일.txt");
+        assert!(!p.join("폴더/새 파일.txt").exists());
     }
 }

@@ -16,6 +16,7 @@ mod network;
 #[cfg(test)]
 mod network_tests;
 mod park;
+pub use park::safe_relative;
 #[cfg(test)]
 mod park_tests;
 #[cfg(test)]
