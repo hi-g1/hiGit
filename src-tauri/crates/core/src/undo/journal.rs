@@ -2,6 +2,8 @@
 //!
 //! 줄을 고치지 않고 덧붙이기만 한다. 줄마다 앱 데이터의 키로 서명하고, 서명이 맞지 않거나
 //! 형식이 이상한 줄은 읽을 때 버린다(받은 zip 저장소에 남이 만든 줄이 있을 수 있다).
+//! 같은 까닭으로 `higit` 폴더나 journal 파일이 링크면 읽지도 쓰지도 않는다. 링크를 따라 쓰면
+//! 저장소 밖 파일(`~/.bashrc` 등)에 줄이 덧붙는다.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -64,6 +66,7 @@ struct Signed<'a> {
 }
 
 pub(crate) struct Journal {
+    git_dir: PathBuf,
     path: PathBuf,
     key: JournalKey,
 }
@@ -71,9 +74,31 @@ pub(crate) struct Journal {
 impl Journal {
     pub(crate) fn at(git_dir: &Path, key: JournalKey) -> Self {
         Self {
+            git_dir: git_dir.to_path_buf(),
             path: git_dir.join("higit").join("journal.jsonl"),
             key,
         }
+    }
+
+    /// `higit` 폴더와 journal 파일이 링크가 아니고 git 폴더 안에 있는지. 없는 것은 괜찮다.
+    fn check_place(&self) -> Result<()> {
+        let refuse = || CoreError::Journal("journal 위치가 링크입니다".into());
+        let dir = self.git_dir.join("higit");
+        for (path, want_dir) in [(&dir, true), (&self.path, false)] {
+            match std::fs::symlink_metadata(path) {
+                Ok(m) if m.file_type().is_symlink() || m.is_dir() != want_dir => {
+                    return Err(refuse());
+                }
+                Ok(_) | Err(_) => {}
+            }
+        }
+        // Windows 연결 지점(junction)처럼 링크로 보이지 않는 것도 실제 위치로 확인한다.
+        if let (Ok(real_dir), Ok(real_git)) = (dir.canonicalize(), self.git_dir.canonicalize())
+            && !real_dir.starts_with(&real_git)
+        {
+            return Err(refuse());
+        }
+        Ok(())
     }
 
     pub(crate) fn append(&self, body: &Body) -> Result<()> {
@@ -84,9 +109,12 @@ impl Journal {
             sig: self.key.sign(&text),
         })
         .map_err(|e| CoreError::Journal(e.to_string()))?;
+        self.check_place()?;
         if let Some(dir) = self.path.parent() {
             std::fs::create_dir_all(dir).map_err(|e| CoreError::Journal(e.to_string()))?;
         }
+        // 만든 사이에 링크로 바뀌지 않았는지 한 번 더 본다.
+        self.check_place()?;
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -99,6 +127,9 @@ impl Journal {
 
     /// 믿을 수 있는 줄만 순서대로. 파일이 없으면 빈 목록.
     pub(crate) fn read(&self) -> Vec<Body> {
+        if self.check_place().is_err() {
+            return Vec::new();
+        }
         let Ok(bytes) = read_tail(&self.path) else {
             return Vec::new();
         };
@@ -224,5 +255,40 @@ mod tests {
         f.write_all(b"{\"v\":1,\"type\":\"act").unwrap();
         let lines = mine.read();
         assert_eq!(lines, vec![action("내 줄")]);
+    }
+
+    #[test]
+    fn links_are_never_followed() {
+        let outside = tempfile::tempdir().unwrap();
+        let target = outside.path().join("bashrc");
+        std::fs::write(&target, "원래 내용\n").unwrap();
+
+        // journal 파일이 저장소 밖 파일로 가는 링크.
+        let git = tempfile::tempdir().unwrap();
+        std::fs::create_dir(git.path().join("higit")).unwrap();
+        if let Err(e) = platform::symlink_file(&target, &git.path().join("higit/journal.jsonl")) {
+            eprintln!("링크를 만들 수 없어 건너뜀: {e}");
+            return;
+        }
+        let journal = Journal::at(git.path(), JournalKey::ephemeral());
+        assert!(journal.append(&action("1")).is_err());
+        assert!(journal.read().is_empty());
+
+        // higit 폴더가 저장소 밖 폴더로 가는 링크.
+        let git2 = tempfile::tempdir().unwrap();
+        platform::symlink_dir(outside.path(), &git2.path().join("higit")).unwrap();
+        let journal = Journal::at(git2.path(), JournalKey::ephemeral());
+        assert!(journal.append(&action("1")).is_err());
+
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "원래 내용\n");
+        assert!(!outside.path().join("journal.jsonl").exists());
+    }
+
+    #[test]
+    fn a_folder_in_place_of_the_file_is_refused() {
+        let git = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(git.path().join("higit/journal.jsonl")).unwrap();
+        let journal = Journal::at(git.path(), JournalKey::ephemeral());
+        assert!(journal.append(&action("1")).is_err());
     }
 }
