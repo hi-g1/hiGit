@@ -21,11 +21,11 @@
 │ git        GitBackend 트레이트 + CliBackend 구현, 출력 파서              │
 │ hosting    HostingProvider 트레이트 + GitHub 구현 (PR, 인증)            │
 │ platform   OS별 코드: 우클릭 메뉴 등록, git 실행 파일 찾기, 키체인      │
-│ watcher    파일 변경 감시 → "repo-changed" 이벤트                       │
+│ watcher    파일 변경 감시(.gitignore 거름). core가 이벤트로 바꾼다     │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-의존 방향은 위에서 아래로만. `git`, `hosting`, `platform`은 서로 모른다. `core`만 이들을 조합한다.
+의존 방향은 위에서 아래로만. `git`, `hosting`, `platform`, `watcher`는 서로 모른다. `core`만 이들을 조합한다.
 
 ## 폴더 구조
 
@@ -39,7 +39,8 @@
 │  ├─ features/<action-id>/
 │  ├─ ui/
 │  ├─ glossary/              ko.ts, en.ts  (용어 원본은 docs/spec.md 표)
-│  ├─ lib/api.ts             tauri-specta 생성 바인딩 import (invoke는 lib/ 안에서만)
+│  ├─ lib/                   api.ts(백엔드 호출, invoke는 lib/ 안에서만), events.ts(이벤트 구독), queries.ts(TanStack Query), useRepoWatch.ts, dialog.ts, bindings.ts(생성물)
+│  ├─ messages/              ko.ts, en.ts 화면 문구(copy-rules.test.ts가 문구 규칙 확인)
 │  └─ styles/tokens.css      docs/design.md 토큰
 └─ src-tauri/               app 크레이트 겸 워크스페이스 루트(D-018)
    ├─ Cargo.toml             [package] app + [workspace] members = ["crates/*"]
@@ -65,9 +66,10 @@ pub trait GitBackend: Send + Sync {
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 반복 0. 고른 폴더의 저장소 최상위 찾기
     fn status(&self, repo: &RepoPath) -> Result<Status>;              // 반복 0
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>; // 반복 0
-    fn diff(&self, repo: &RepoPath, target: DiffTarget) -> Result<Vec<FileDiff>>; // 반복 1에서 구현
-    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 반복 1에서 구현
-    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;   // 반복 0은 GitOp::Init만, 나머지는 반복 1부터. 쓰기 작업은 전부 여기로
+    fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 반복 1a. 전역 무시 규칙 파일(감시용)
+    fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 반복 1a. 마지막 버전과 지금을 합쳐 비교
+    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 반복 1b에서 구현
+    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;   // 반복 1a까지 Init, Stage, Unstage, Commit. 쓰기 작업은 전부 여기로
     fn resolve_ref(&self, repo: &RepoPath, r: &str) -> Result<Oid>;   // 반복 2에서 구현(백업 참조)
     fn update_ref(&self, repo: &RepoPath, name: &str, oid: Oid) -> Result<()>; // 반복 2에서 구현(백업 참조)
 }
@@ -78,8 +80,9 @@ pub trait GitBackend: Send + Sync {
 
 - `GitOp`는 enum(Init, Commit, Merge, Rebase, Reset …). 새 쓰기 작업은 enum 변형 하나 + `CliBackend` 매핑 하나를 추가한다.
 - `GitOp::Init`은 아직 저장소가 아닌 폴더에서 실행하므로 `repo` 인자는 정규화한 대상 폴더다.
-- CLI 출력은 기계용 형식만 파싱한다: `status --porcelain=v2 -z`, `log --format=...%x00`, `for-each-ref --format`.
-- 모든 git 호출에 `LC_ALL=C`, `GIT_TERMINAL_PROMPT=0`, `core.quotepath=off`를 준다(한글 파일명, 영어 오류 파싱).
+- CLI 출력은 기계용 형식만 파싱한다: `status --porcelain=v2 -z`, `log --format=%x1e…%x00…`, unified diff, `for-each-ref --format`. 실패 종류는 `crates/git/src/failure.rs` 한 곳에서만 영어 원문으로 가린다(D-021).
+- 경로 목록은 `--pathspec-from-file=- --pathspec-file-nul`로 stdin에 넘기고 `--literal-pathspecs`를 붙인다.
+- 모든 git 호출에 `LC_ALL=C`(그리고 `LANGUAGE` 지움), `GIT_TERMINAL_PROMPT=0`, `GIT_PAGER=cat`, `GIT_OPTIONAL_LOCKS=0`, `-c core.quotepath=off -c color.ui=never`를 준다. `GIT_OPTIONAL_LOCKS=0`은 조회가 index를 쓰지 않게 해 파일 감시의 되먹임 고리를 막는다. OS별 설정(Windows 콘솔 창 숨기기)은 platform이 먼저 붙이고 위 값이 마지막에 이긴다.
 
 ### Action (crates/core) — 상태를 바꾸는 기능
 
@@ -113,7 +116,7 @@ execute(action, input):
   if risk >= Caution: 백업 참조 생성  refs/higit/backup/<timestamp>/<HEAD 이름>
   result = action.execute()
   기록: UndoJournal에 {action, 이전 HEAD, 백업 참조, 시각} 추가
-  이벤트: "repo-changed"
+  (화면 갱신은 파일 변경 감시가 맡는다. 실행기가 이벤트를 보내지 않는다)
 ```
 
 ### Query (crates/core) — 조회 (D-010)
@@ -123,7 +126,8 @@ pub struct Queries { /* GitBackend를 품는다 */ }
 impl Queries {
     pub fn status(&self, repo: &RepoPath) -> Result<view::Status>;            // 반복 0
     pub fn log(&self, repo: &RepoPath, q: view::LogQuery) -> Result<view::LogPage>; // 반복 0
-    // diff, branches 등은 해당 반복에서 추가
+    pub fn diff(&self, repo: &Path, r: &view::DiffRequest) -> Result<view::FileDiffView>; // 반복 1a. 경로는 저장소 안만
+    // branches 등은 해당 반복에서 추가
 }
 ```
 
@@ -131,6 +135,14 @@ impl Queries {
 - 결과는 `core::view` 타입으로 돌려준다. `crates/git` 타입은 core 안에서 view 타입으로 옮긴다(D-019).
 - 화면은 Query도 core를 통해서만 부른다. `app`의 `query_*` 명령이 `Queries`를 호출한다.
 - 용어 호버는 glossary id로 동작하므로 조회 화면도 `<Term id="status" />`처럼 쓴다.
+
+### 파일 변경 감시 (crates/watcher, core::watch)
+- `watcher::RepoWatcher`가 저장소 루트를 재귀 감시한다(notify, 300ms 디바운스). 다른 내부 크레이트를 모른다.
+- 작업 폴더 변경과 `.git` 안의 의미 있는 파일(HEAD, index, refs/*, packed-refs, FETCH_HEAD …)만 알린다. `.gitignore`(하위 폴더 포함)·`.git/info/exclude`·`core.excludesFile` 대상, `.git/objects`·잠금 파일, 읽기 알림, 폴더 자체의 수정 알림은 거른다.
+- 감시 오류나 저장소 폴더 삭제는 한 번만 "멈춤"으로 알린다. 폴더 삭제는 0.5초마다 따로 확인한다(알림을 주지 않는 OS가 있다).
+- `Core::watch(repo, sink)`가 한 번에 한 저장소만 감시하고, 알림을 `RepoChanged`·`WatchStatus` view 타입으로 바꾼다. `app`이 Tauri 이벤트로 내보낸다.
+- 화면(`useRepoWatch`)은 작업 폴더 변경이면 변경 사항·비교, `.git` 변경이면 변경 사항·버전 기록·비교를 다시 읽는다(1초에 한 번). 감시가 꺼지면 안내 줄과 "다시 읽기"를 보여주고 창 포커스 새로 고침으로 대신한다(D-025).
+- 알려진 제약: 무시된 폴더에도 감시 등록은 된다(Ubuntu inotify 한도에 걸리면 멈춤으로 떨어짐). `core.excludesFile`이 없을 때 git의 기본 전역 무시 파일은 읽지 않는다.
 
 ### UndoJournal (crates/core)
 - 앱이 한 작업 목록을 `.git/higit/journal.jsonl`에 남긴다(저장소마다 따로, 저장소를 옮겨도 따라감).
@@ -150,12 +162,12 @@ pub trait HostingProvider {
 GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자, Ubuntu Secret Service)에 저장한다.
 
 ## 프론트와 백엔드 계약
-- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `undo_last`.
+- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`, `repo_watch`, `repo_unwatch`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `query_diff`, `undo_last`(반복 2).
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
 - 타입은 Rust에서 정의하고 `tauri-specta`로 TS 바인딩을 생성한다. 프론트에서 타입을 손으로 쓰지 않는다.
-- 이벤트: `repo-changed { repo, kinds }`, `op-progress { op_id, percent, message }`.
+- 이벤트: `repo-changed { repo, worktree, git }`, `watch-status { repo, active, reason }`. 이름은 Rust 상수를 바인딩으로 내보내고(`REPO_CHANGED_EVENT` 등), 화면은 `src/lib/events.ts`로만 구독한다. `op-progress`는 아직 없다.
 - 프론트는 `action_list`로 받은 메타데이터로 버튼, 메뉴, 명령 팔레트(Ctrl+K)를 만든다.
 
 ## 용어와 호버 (D-006)

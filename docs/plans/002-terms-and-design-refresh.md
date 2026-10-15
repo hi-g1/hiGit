@@ -237,7 +237,7 @@ D-027(괄호 금지, 버튼은 동사 하나, 보충은 툴팁·둘째 줄)과 D
    - 변경 파일: `src/styles/tokens.css`(라이트, `prefers-color-scheme: dark` 블록, `[data-theme="dark"]` 블록 세 곳을 위 표로. `--accent-text` 삭제, 새 토큰 추가), `src/ui/Button.module.css`(`.primary`는 `--primary`/`--primary-text`, 호버 `--primary-hover`. `.text`는 `color: var(--text)`), `src/ui/Button.tsx`(주석 `--accent 채움` → `--primary 채움`), `src/styles/contrast.test.ts`(신규, node 환경).
    - `contrast.test.ts`: tokens.css를 읽어 라이트 `:root`와 `:root[data-theme="dark"]` 블록의 색 변수를 뽑고, WCAG 상대 휘도로 대비를 계산한다. 위 "대비 계산 결과" 표의 쌍마다 기준(글자 4.5, `--primary`/`--bg`·`--border-strong`/`--surface`·`--accent`/`--bg` 3.0)을 넘는지 확인. 다크 미디어 쿼리 블록과 `[data-theme="dark"]` 블록의 값이 같은지도 확인(두 곳 복사본이 어긋나지 않게).
    - 테스트: `pnpm test`, `pnpm lint`(stylelint 포함. tokens.css 밖에 색 값이 없는지는 기존 규칙대로).
-   - 완료 기준: 대비 테스트 통과. `rg "accent-text" src`가 비어 있다. 수동: 두 OS에서 홈의 "폴더 열기" 버튼이 흑연색, Tab 포커스 테두리는 파랑, 라이트/다크 전환.
+   - 완료 기준: 대비 테스트 통과. `rg "accent-text" src --glob '*.css' --glob '*.tsx'`가 비어 있다(`contrast.test.ts`는 그 토큰이 없는지 확인하느라 글자를 쓴다). 수동: 두 OS에서 홈의 "폴더 열기" 버튼이 흑연색, Tab 포커스 테두리는 파랑, 라이트/다크 전환.
    - Windows/Ubuntu: Windows 고대비 모드에서 버튼 테두리(지금 `transparent`)가 시스템 색으로 그려지는지 확인. 다크에서 `color-scheme: dark`로 WebView2·WebKitGTK의 스크롤바·입력칸 기본색이 바뀌는지 확인.
    - 위험: 지금 `--accent`를 글자 버튼 색으로 쓰는 곳(`.text`)이 본문색으로 바뀌어 "새로 고침", "다른 폴더 열기"가 덜 눈에 띈다. 의도한 변화다(Q10). 그래프 색 `--graph-1`이 다크 `--surface` 위에서 3.18로 낮지만 노선도 반복에서 다룬다.
 
