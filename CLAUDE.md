@@ -28,12 +28,17 @@ Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 앱. Tauri 2(Rust) + R
 - 사용자에게 보이는 문구는 한국어 존댓말, 짧게. Git 원문 오류는 "자세히 보기"로 접는다.
 
 ## 명령
-(반복 0에서 확정 후 채운다)
+저장소 루트에서 실행한다. `src-tauri/`에서 실행하는 것은 따로 적었다.
 - 개발 실행: `pnpm tauri dev`
 - 프론트 테스트: `pnpm test`
+- 프론트 타입 검사: `pnpm typecheck`
+- 프론트 린트: `pnpm lint` (ESLint + Stylelint. 화면의 `invoke` 직접 사용, tokens.css 밖의 색 값을 막는다)
 - Rust 테스트: `cargo test --workspace` (src-tauri에서)
-- 타입 바인딩 생성: `cargo run -p app --bin gen-bindings`
-- 린트: `pnpm lint`, `cargo clippy --workspace -- -D warnings`
+- Rust 린트: `cargo clippy --workspace --all-targets -- -D warnings` (src-tauri에서)
+- Rust 형식: `cargo fmt --all --check` (src-tauri에서)
+- 타입 바인딩 생성: `cargo run -p app --bin gen-bindings` (src-tauri에서). `src/lib/bindings.ts`, `src/lib/action-meta.json`을 다시 만든다. `core::view`나 Tauri 명령을 바꾸면 실행하고 결과를 함께 커밋한다(CI가 최신인지 확인).
+- 빌드 확인: `pnpm tauri build --no-bundle`
+- CI: `.github/workflows/ci.yml`(ubuntu-22.04, windows-latest). 결과는 `gh run list`.
 
 ## 커밋
 - 한 커밋에 한 가지. 메시지는 `<영역>: <요약>` (예: `core: add amend action`).

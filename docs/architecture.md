@@ -64,10 +64,10 @@ pub trait GitBackend: Send + Sync {
     fn version(&self) -> Result<GitVersion>;                          // 반복 0. 2.30 이상 확인(D-003)
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 반복 0. 고른 폴더의 저장소 최상위 찾기
     fn status(&self, repo: &RepoPath) -> Result<Status>;              // 반복 0
-    fn log(&self, repo: &RepoPath, query: LogQuery) -> Result<Vec<Commit>>; // 반복 0
+    fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>; // 반복 0
     fn diff(&self, repo: &RepoPath, target: DiffTarget) -> Result<Vec<FileDiff>>; // 반복 1에서 구현
     fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 반복 1에서 구현
-    fn run(&self, repo: &RepoPath, op: GitOp) -> Result<OpOutput>;    // 반복 0은 GitOp::Init만, 나머지는 반복 1부터. 쓰기 작업은 전부 여기로
+    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;   // 반복 0은 GitOp::Init만, 나머지는 반복 1부터. 쓰기 작업은 전부 여기로
     fn resolve_ref(&self, repo: &RepoPath, r: &str) -> Result<Oid>;   // 반복 2에서 구현(백업 참조)
     fn update_ref(&self, repo: &RepoPath, name: &str, oid: Oid) -> Result<()>; // 반복 2에서 구현(백업 참조)
 }
@@ -86,9 +86,9 @@ pub trait GitBackend: Send + Sync {
 ```rust
 pub trait Action: Send + Sync {
     fn meta(&self) -> &ActionMeta;                       // id, risk, glossary_id, 단축키
-    fn available(&self, ctx: &RepoState) -> Availability; // 지금 쓸 수 있나, 아니면 쉬운 이유
-    fn preview(&self, ctx: &RepoState, input: &Value) -> Result<Preview>; // 무엇이 바뀌나
-    fn execute(&self, ctx: &mut ExecCtx, input: &Value) -> Result<Outcome>;
+    fn available(&self, state: &RepoState) -> Availability; // 지금 쓸 수 있나, 아니면 쉬운 이유
+    fn preview(&self, ctx: &ExecCtx, input: &Value) -> Result<Preview>; // 무엇이 바뀌나
+    fn execute(&self, ctx: &ExecCtx, input: &Value) -> Result<Outcome>; // ExecCtx = { git, state }
 }
 
 pub struct ActionMeta {
@@ -146,8 +146,10 @@ pub trait HostingProvider {
 GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자, Ubuntu Secret Service)에 저장한다.
 
 ## 프론트와 백엔드 계약
-- Tauri 명령 이름은 `<영역>_<동사>`: `repo_open`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `undo_last`.
+- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `undo_last`.
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
+- 액션 입력은 화면에서 `ActionInput`(필드 이름 → 문자열)으로 보내고, core가 `serde_json::Value`로 바꿔 `Action`에 넘긴다. `Value`는 재귀 타입이라 specta rc.25가 바인딩으로 내보내지 못한다.
+- 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
 - 타입은 Rust에서 정의하고 `tauri-specta`로 TS 바인딩을 생성한다. 프론트에서 타입을 손으로 쓰지 않는다.
 - 이벤트: `repo-changed { repo, kinds }`, `op-progress { op_id, percent, message }`.
 - 프론트는 `action_list`로 받은 메타데이터로 버튼, 메뉴, 명령 팔레트(Ctrl+K)를 만든다.
