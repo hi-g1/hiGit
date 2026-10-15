@@ -533,12 +533,14 @@ impl GitBackend for CliBackend {
                 } else {
                     NetMode::Foreground
                 };
-                // FETCH_HEAD는 쓰지 않는다(바뀔 때마다 파일 감시가 알림을 낸다). 저절로 하는 확인은
-                // 서브모듈까지 받지 않는다(별도 설정으로 명령이 돌 수 있다).
-                let mut args = vec!["fetch", "--no-prune", "--no-write-fetch-head"];
-                if *background {
-                    args.push("--no-recurse-submodules");
-                }
+                // FETCH_HEAD는 쓰지 않는다(바뀔 때마다 파일 감시가 알림을 낸다). 서브모듈까지 받지
+                // 않는다(서브모듈 설정은 신뢰 확인 대상이 아니고, 그 안에서 명령이 돌 수 있다).
+                let mut args = vec![
+                    "fetch",
+                    "--no-prune",
+                    "--no-write-fetch-head",
+                    "--no-recurse-submodules",
+                ];
                 match remote {
                     Some(r) => push_revs(&mut args, Cmd::Fetch, self.git_version(), &[r]),
                     None => args.push("--all"),
@@ -591,7 +593,13 @@ impl GitBackend for CliBackend {
                 target,
                 set_upstream,
             } => {
-                let mut args = vec!["push"];
+                // 태그·서브모듈·서명은 저장소 설정(push.followTags 등)을 따르지 않는다.
+                let mut args = vec![
+                    "push",
+                    "--no-follow-tags",
+                    "--no-recurse-submodules",
+                    "--no-signed",
+                ];
                 if *set_upstream {
                     args.push("-u");
                 }

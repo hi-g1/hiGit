@@ -174,6 +174,29 @@ fn overlapping_change_does_not_start_merge() {
 }
 
 #[test]
+fn push_names_the_branch_and_ignores_repo_push_settings() {
+    let s = setup();
+    // 남이 올린 다른 브랜치. 내 쪽에는 같은 이름의 오래된 브랜치가 있다.
+    git(s.mine.path(), &["branch", "old"]);
+    git(s.other.path(), &["switch", "-q", "-c", "old"]);
+    commit_file(s.other.path(), "o.txt", "남의 브랜치\n");
+    git(s.other.path(), &["push", "-q", "origin", "old"]);
+    let theirs = git(s.other.path(), &["rev-parse", "old"]);
+    // 받은 저장소의 설정이 모든 브랜치를 강제로 올리게 해 둔다.
+    git(
+        s.mine.path(),
+        &["config", "remote.origin.push", "+refs/heads/*:refs/heads/*"],
+    );
+    git(s.mine.path(), &["config", "push.default", "matching"]);
+    commit_file(s.mine.path(), "c.txt", "내 것\n");
+    sync(&core(s.mine.path()), s.mine.path()).unwrap();
+    let remote_old = git(Path::new(&s.url), &["rev-parse", "old"]);
+    assert_eq!(remote_old, theirs, "다른 브랜치를 덮어쓰지 않는다");
+    let remote_main = git(Path::new(&s.url), &["rev-parse", "main"]);
+    assert_eq!(remote_main, git(s.mine.path(), &["rev-parse", "main"]));
+}
+
+#[test]
 fn first_upload_sets_upstream() {
     let s = setup();
     git(s.mine.path(), &["switch", "-q", "-c", "기능"]);

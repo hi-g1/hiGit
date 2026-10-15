@@ -130,6 +130,23 @@ struct Upstream {
     tracking: String,
 }
 
+impl Upstream {
+    /// 올릴 곳을 앱이 정한다: `<원격> HEAD:refs/heads/<upstream 브랜치>`. 인자 없는 `git push`는
+    /// 저장소 설정(`remote.<n>.push`, `push.default=matching`)이 무엇을 올릴지 정해, 받은 저장소의
+    /// 설정이 다른 브랜치까지 덮어쓸 수 있다.
+    fn push_target(&self, git: &dyn GitBackend) -> Result<(String, String)> {
+        let branch = self
+            .tracking
+            .strip_prefix(&format!("{}/", self.remote))
+            .unwrap_or(&self.tracking)
+            .to_string();
+        if !git.check_branch_name(&branch)? {
+            return Err(CoreError::InvalidInput("올릴 수 없는 브랜치 이름이에요"));
+        }
+        Ok((self.remote.clone(), branch))
+    }
+}
+
 fn upstream(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Upstream>> {
     let Some(tracking) = git.status(repo)?.branch.upstream else {
         return Ok(None);
@@ -201,7 +218,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
                 git.run(
                     repo,
                     &GitOp::Push {
-                        target: None,
+                        target: Some(up.push_target(git)?),
                         set_upstream: false,
                     },
                 )?;
@@ -280,7 +297,7 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
         match git.run(
             repo,
             &GitOp::Push {
-                target: None,
+                target: Some(up.push_target(git)?),
                 set_upstream: false,
             },
         ) {
