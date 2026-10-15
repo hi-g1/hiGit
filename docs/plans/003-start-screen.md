@@ -1,4 +1,5 @@
 # 003 시작 화면
+- 2026-10-15 확정: D-031~D-033, Q1~Q15, 추가 두 가지(아래 "결정 결과").
 - 관련 결정: D-031, D-032, D-033 (제안, 이 계획과 함께 추가). 기대는 확정 결정: D-002, D-003, D-004, D-006, D-009, D-010, D-019, D-024, D-025, D-026, D-027, D-029, D-030. D-017(제안)이 확정되어야 하는 부분은 따로 표시한다.
 - 관련 명세: spec.md "화면 구성"의 "시작 화면" 행과 "진입점" 절(이 계획과 함께 고침, 제안 상태 표시). 용어표는 건드리지 않는다.
 - 참고 자료(결정 아님): `docs/research/start-screen.md`, `docs/research/img/start-normal.png`, `start-first.png`(다크는 `-dark`).
@@ -62,7 +63,7 @@
      - `docs/decision.md`: D-031~D-033 상태를 `확정`으로(보류한 것은 제안 그대로). 답에 따라 문구 수정.
      - `docs/spec.md`: "진입점" 절 머리의 "제안 상태" 문장과 "시작 화면" 행의 "제안"을 확정에 맞게 고친다. 저장소 아닌 폴더 안내 자리(Q8) 답을 적는다.
      - `docs/design.md`: 글꼴 크기 줄을 "13px(기본), 12px(보조), 15px(화면 제목, 시작 화면 상태 문장), 20px(시작 화면 처음 실행 제목), 26px(시작 화면 프로젝트 이름)"로. 부품 규칙에 "굵은 글자 버튼: 테두리 없이 600, 옆에 단축키를 `--text-muted` 12px 코드 글꼴로"와 "흐린 줄: 투명도 대신 `--text-muted`". 새 절 "시작 화면 색": 큰 노선도 선·점만 `--graph-*`, 작은 노선도 `--border-strong`·갈라진 브랜치 `--text-muted`, 상태 글자는 `--text`이고 충돌만 `--deleted`, 노선도 옆 글자는 `--text`·`--text-muted`.
-     - `docs/architecture.md`: "프론트와 백엔드 계약"의 명령 목록에 `recent_list`, `recent_open`, `recent_remove`, `query_project_summary`. "OS별 처리" 표에 "앱 데이터 폴더" 행(Windows `%LOCALAPPDATA%\dev.higit.desktop`, Ubuntu `$XDG_DATA_HOME` 또는 `~/.local/share` 아래 `dev.higit.desktop`)과 "경로 같음 비교"(Windows 대소문자 무시) 행. 계층 그림 `screens/`의 "홈"을 "시작 화면"으로. core 설명에 "최근 프로젝트 목록". "버전 기록 그리기 계층"에 한 줄: "시작 화면의 노선도 미리보기도 같은 layout·render를 쓴다(D-031)".
+     - `docs/architecture.md`: "프론트와 백엔드 계약"의 명령 목록에 `recent_list`, `project_open`(기존 `repo_open` 대체, 프로젝트 열기의 유일한 입구), `recent_remove`, `query_project_summary`. "OS별 처리" 표에 "앱 데이터 폴더" 행(Windows `%LOCALAPPDATA%\dev.higit.desktop`, Ubuntu `$XDG_DATA_HOME` 또는 `~/.local/share` 아래 `dev.higit.desktop`)과 "경로 같음 비교"(Windows 대소문자 무시) 행. 계층 그림 `screens/`의 "홈"을 "시작 화면"으로. core 설명에 "최근 프로젝트 목록". "버전 기록 그리기 계층"에 한 줄: "시작 화면의 노선도 미리보기도 같은 layout·render를 쓴다(D-031)".
      - `docs/roadmap.md`: 반복 1b에 "시작 화면: 마지막 프로젝트 바로 열기, 최근 프로젝트, 상태 문장(계획 003)". 반복 4에 "시작 화면 복제 글자와 Ctrl+Shift+O". "노선도 보기" 절에 "시작 화면 큰·작은 노선도(계획 003 N1~N3)".
    - 완료 기준: `pnpm test`(spec.md를 건드리므로 spec-sync 재확인) 통과. 용어표는 바뀌지 않는다.
    - Windows/Ubuntu: 문서라 차이 없음.
@@ -91,15 +92,18 @@
      - `init()`이 `platform::app_data_dir(APP_ID)`로 `RecentStore`를 만든다. 폴더를 못 만들면 목록 없이(메모리 전용) 계속한다. `with_backend(git, recent: RecentStore)`로 테스트가 임시 폴더를 넘긴다(기존 테스트 호출부 수정, 또는 `with_backend`는 그대로 두고 `with_backend_and_data_dir` 추가 — 구현자가 작은 쪽을 고른다).
      - `open_folder`에서 저장소가 확인되면 `touch`. `execute`의 결과가 `RepoCreated`면 `touch`.
      - `recent_list() -> Vec<view::RecentProject>`: 파일만 읽는다. 폴더가 있는지는 여기서 보지 않는다(네트워크 드라이브가 응답하지 않으면 목록 전체가 멈추므로, 줄마다 4단계 Query에서 확인).
-     - `open_recent(path) -> Result<view::RecentOpenResult>`: 폴더 정규화 실패 → `Missing`. `discover` 결과가 없거나 그 최상위가 `path`와 `same_path`가 아니면 → `NotARepo`(`.git`만 지워져 바깥 폴더의 저장소가 잡히는 경우를 막는다). 맞으면 `touch` 후 `Opened { repo }`.
+     - **프로젝트 열기는 한 곳(사용자 지시, 2026-10-15)**: `Core::open_project(path, how) -> Result<view::ProjectOpenResult>` 하나만 둔다. 앱을 켤 때 마지막 프로젝트 열기, 최근 목록에서 열기, 폴더 고르기(Ctrl+O·"폴더 열기"), 나중의 프로젝트 메뉴 최근 항목, 우클릭·명령줄(반복 5)이 모두 이 함수를 거친다. 기존 `open_folder`는 이 함수로 대체하고(또는 안에서 이 함수를 부르는 얇은 별칭으로 두었다가 다음 커밋에서 지움), `open_project`라는 별도 함수는 만들지 않는다.
+       - `how`: `Picked`(사용자가 방금 고른 폴더, 저장소가 아니면 버전 관리 시작 안내로) / `Recent`(목록·자동 열기, 최상위가 기록과 `same_path`여야 함).
+       - 순서: 폴더 정규화(실패 → `Missing`) → `discover` → `Recent`이면 최상위가 `path`와 `same_path`가 아니면 `NotARepo`(`.git`만 지워져 바깥 저장소가 잡히는 경우를 막는다), `Picked`이면 저장소가 없을 때 `NotARepo { folder }` → **저장소 신뢰 확인 자리**(지금은 항상 통과, 보안 계획에서 이 한 곳에 넣는다는 주석과 `trust_check` 빈 함수) → `touch` → `Opened { repo }`.
+       - 테스트: 세 진입점(앱 켜기·목록·폴더 고르기)에 해당하는 화면 흐름이 모두 같은 명령 `project_open`을 부르는지(프론트 테스트), core는 `how`별 결과.
      - `remove_recent(path)`.
    - view 타입(바인딩 derive는 view에만, D-019):
      ```rust
      pub struct RecentProject { pub path: String, pub name: String, #[specta(type = u32)] pub last_opened_at: i64 }
      #[serde(tag = "kind", rename_all = "camelCase")]
-     pub enum RecentOpenResult { Opened { repo: RepoInfo }, Missing, NotARepo }
+     pub enum ProjectOpenResult { Opened { repo: RepoInfo }, Missing, NotARepo { folder: String } }
      ```
-   - 테스트(`tests/recent.rs`, 가짜 백엔드 + 임시 폴더): 열면 맨 앞에 생김, 같은 저장소를 두 번 열면 하나, 21개 열면 20개, 깨진 파일 → 빈 목록 + `.bad`, 모르는 `version` → 같음, 지운 폴더 → `Missing`, 저장소 아닌 폴더 → `NotARepo`, 바깥 저장소 안의 하위 폴더를 기록한 뒤 그 `.git`이 없는 경우 → `NotARepo`, init 성공 → 기록됨, 쓰기 실패(읽기 전용 폴더)에도 `open_folder`는 성공. identifier 대조 테스트: `tauri.conf.json`의 `identifier`가 `higit_core::APP_ID`와 같다.
+   - 테스트(`tests/recent.rs`, 가짜 백엔드 + 임시 폴더): 열면 맨 앞에 생김, 같은 저장소를 두 번 열면 하나, 21개 열면 20개, 깨진 파일 → 빈 목록 + `.bad`, 모르는 `version` → 같음, `open_project`: 지운 폴더 → `Missing`, 저장소 아닌 폴더 → `NotARepo`, 바깥 저장소 안의 하위 폴더를 기록한 뒤 그 `.git`이 없는 경우(`Recent`) → `NotARepo`, 같은 하위 폴더를 `Picked`로 고르면 바깥 저장소가 열림(지금 동작 유지), init 성공 → 기록됨, 쓰기 실패(읽기 전용 폴더)에도 `open_folder`는 성공. identifier 대조 테스트: `tauri.conf.json`의 `identifier`가 `higit_core::APP_ID`와 같다.
    - 완료 기준: `cargo test --workspace` 두 OS 통과, clippy 통과.
    - Windows/Ubuntu: Windows의 `rename`은 대상 파일을 다른 프로그램(백신)이 열고 있으면 실패할 수 있다 → 실패는 무시하고 `.tmp`를 남긴다(다음 쓰기가 덮어씀). Windows 경로는 `C:\…` 형식(dunce)으로 저장되어 JSON에서 `\\`로 이스케이프된다. Ubuntu에서 홈이 암호화되었거나 `~/.local/share`가 없을 때 폴더를 만든다(2단계).
    - 위험: 단일 인스턴스(반복 5) 전에는 앱 두 개가 같은 파일을 쓰면 나중 쓰기가 이긴다(D-032에 적음). 목록 크기 20은 화면 높이 기준 임의 값(Q5).
@@ -122,19 +126,20 @@
    - 노선도 데이터는 이 Query에 넣지 않는다(나중 단계 N1의 별도 Query).
    - 테스트: 가짜 백엔드로 바뀐 파일 수·충돌 수 세기, 저장 없는 저장소(`last_commit: None`, log 호출 없음), detached, 없는 폴더 → `FolderNotFound`, 바깥 저장소가 잡히는 하위 폴더 → `NotARepo`. 실제 git 통합 테스트 1개(파일 2개 수정 + 버전 1개).
    - 완료 기준: `cargo test --workspace` 통과.
-   - Windows/Ubuntu: 큰 저장소의 `status`는 Windows에서 특히 느리다(수 초). 화면이 줄마다 따로 불러 늦게 채우므로 목록 표시는 막히지 않는다. 조회는 `GIT_OPTIONAL_LOCKS=0`이라 다른 앱의 index를 건드리지 않는다(기존 Runner 설정 유지).
+   - Windows/Ubuntu: 큰 저장소의 `status`는 Windows에서 특히 느리다(수 초). 화면이 줄마다 따로 불러 늦게 채우므로 목록 표시는 막히지 않는다.
+   - index 잠금(사용자 지시, 2026-10-15): 여러 프로젝트를 한꺼번에 읽으므로 다른 작업(사용자의 터미널 git, 다른 앱)과 `index.lock`이 부딪히면 안 된다. 모든 git 호출은 이미 `Runner`가 `GIT_OPTIONAL_LOCKS=0`을 붙이며(1a), 이 Query는 그 경로만 쓴다(새 git 호출을 따로 만들지 않는다). 테스트로 고정한다: 실제 git 저장소에 `.git/index.lock`을 만들어 다른 작업이 잡고 있는 상태를 흉내 낸 뒤 `project_summary`가 성공하고, 끝난 뒤에도 `index.lock`이 그대로이며 `.git/index`의 수정 시각이 바뀌지 않는다. `Runner`가 이 환경 변수를 붙이는지 확인하는 git 크레이트 단위 테스트도 하나 둔다(지금은 감시 되먹임 테스트로만 간접 확인).
    - 위험: 가져올 버전 수(`behind`)는 마지막 새로 고침(fetch) 기준이다. 시작 화면은 프로젝트마다 네트워크를 쓰지 않으므로 "최신 상태"가 실제와 다를 수 있다(Q9).
 
 5. app + lib: 명령과 바인딩 (`app: expose recent projects and project summary`)
-   - 변경 파일: `src-tauri/src/commands.rs`(`recent_list`, `recent_open(path)`, `recent_remove(path)`, `query_project_summary(repo)`, 모두 `blocking`), `src-tauri/src/bindings.rs`(명령 목록), 생성물 `src/lib/bindings.ts`, `src/lib/api.ts`(`recentProjects()`, `openRecent(path)`, `removeRecent(path)`, `projectSummary(repo)`와 타입 re-export), `src/lib/queries.ts`(`queryKeys.recent`, `queryKeys.summary(repo)`, `useRecentProjects()`, `useProjectSummary(repo)`), `src/lib/api.test.ts`.
+   - 변경 파일: `src-tauri/src/commands.rs`(`recent_list`, `project_open(path, how)`, `recent_remove(path)`, `query_project_summary(repo)`, 모두 `blocking`. 기존 `repo_open`은 `project_open`으로 바꾼다), `src-tauri/src/bindings.rs`(명령 목록), 생성물 `src/lib/bindings.ts`, `src/lib/api.ts`(`recentProjects()`, `openProject(path, how)`, `removeRecent(path)`, `projectSummary(repo)`와 타입 re-export. `openFolder`는 없앤다), `src/features/open-project/useOpenProject.ts`(신규: 화면에서 프로젝트를 여는 유일한 훅. 결과에 따라 `openRepo`·시작 화면 안내·버전 관리 시작 안내로 나눈다), `src/lib/queries.ts`(`queryKeys.recent`, `queryKeys.summary(repo)`, `useRecentProjects()`, `useProjectSummary(repo)`), `src/lib/api.test.ts`.
    - `useProjectSummary`는 `staleTime` 30초, 창 포커스 때 다시 읽기(TanStack 기본). 실패(`folderNotFound`, `notARepo`)는 화면이 줄 상태로 쓰므로 오류 알림을 띄우지 않는다.
-   - 폴더를 연 뒤(`openFolder`, init 성공, `openRecent`) `queryKeys.recent`를 무효화한다.
+   - 프로젝트를 연 뒤(`openProject`, init 성공) `queryKeys.recent`를 무효화한다. 화면의 모든 프로젝트 열기는 `useOpenProject`를 거친다(ESLint `no-restricted-syntax`나 테스트로 `api.openProject`를 그 훅 밖에서 부르지 않는지 확인).
    - 테스트: api 모킹으로 명령 이름·인자, `ApiError` 변환.
    - 완료 기준: `pnpm typecheck`, `pnpm test`, `cargo test --workspace`, 바인딩 최신.
    - Windows/Ubuntu: 차이 없음(경로 문자열은 core가 정규화한 것을 그대로 주고받는다).
 
 6. 단축키 표와 Ctrl+O (`ui: shortcut table and open folder shortcut`)
-   - 변경 파일: `src/lib/shortcuts.ts`(신규), `src/lib/useShortcut.ts`(신규), `src/lib/shortcuts.test.ts`(신규), `src/features/open-folder/useOpenFolder.ts`(신규, 지금 `Home.tsx`의 폴더 열기 mutation을 옮김: `pickFolder` → `api.openFolder` → 저장소면 `openRepo`, 아니면 저장소 아님 안내 상태), `src/screens/Home/Home.tsx`(훅 사용), `src/ui/Kbd.tsx` + `Kbd.module.css`(신규, 단축키 글자 `--text-muted`, 12px, `--font-mono`), `src/features/commit/CommitBox.tsx`(Ctrl+Enter를 표의 항목으로 판정하도록 바꿈, 동작은 그대로).
+   - 변경 파일: `src/lib/shortcuts.ts`(신규), `src/lib/useShortcut.ts`(신규), `src/lib/shortcuts.test.ts`(신규), `src/features/open-project/useOpenFolder.ts`(신규: `pickFolder` → `useOpenProject`의 `open(path, "picked")`. 폴더 고르기만 하고 여는 일은 `useOpenProject`에 맡긴다), `src/screens/Home/Home.tsx`(훅 사용), `src/ui/Kbd.tsx` + `Kbd.module.css`(신규, 단축키 글자 `--text-muted`, 12px, `--font-mono`), `src/features/commit/CommitBox.tsx`(Ctrl+Enter를 표의 항목으로 판정하도록 바꿈, 동작은 그대로).
    - 표(D-033):
      ```ts
      export const SHORTCUTS = {
@@ -166,15 +171,15 @@
    - 변경 파일: `src/App.tsx`, `src/state/useStartup.ts`(신규), `src/state/repoStore.ts`, `src/screens/Workspace/TopBar.tsx` + CSS, `src/screens/Workspace/ProjectMenu.tsx`(신규), `src/screens/Workspace/TopBar.test.tsx`, `src/App.test.tsx`, `src/messages/ko.ts`·`en.ts`, `package.json`(`@radix-ui/react-dropdown-menu`, D-004. 001 19단계가 popover를 넣으면 같은 계열).
    - 시작 흐름(`useStartup`, 앱을 켤 때 한 번만):
      1. `appStatus`가 실패(git 없음·오래됨)면 다시 열기를 하지 않고 시작 화면.
-     2. `recentProjects()`의 맨 앞 하나로 `openRecent(path)`.
-     3. `opened` → `openRepo(repo)`. `missing` → 시작 화면 + `startNotice = { kind: "lastMissing", name }`. `notARepo` → 시작 화면 + `{ kind: "lastNotRepo", name }`. 목록이 비었으면 시작 화면.
+     2. `recentProjects()`의 맨 앞 하나로 `useOpenProject`의 `open(path, "recent")`(같은 열기 함수).
+     3. `opened` → 작업 공간. `missing` → 시작 화면 + `startNotice = { kind: "lastMissing", name }`. `notARepo` → 시작 화면 + `{ kind: "lastNotRepo", name }`. 목록이 비었으면 시작 화면.
      4. 확인하는 동안은 빈 `--bg` 화면(시작 화면이 잠깐 보였다 사라지지 않게). 1초가 넘으면 "불러오는 중…"(`m.loading`)을 보여준다.
    - `repoStore`: `startNotice: StartNotice | null`, `openRepo(repo, opts?: { selectPath?: string })`(바뀐 파일 보기용), `closeRepo()`는 `startNotice`를 지운다. "다른 프로젝트 열기"로 올 때는 다시 열기를 하지 않는다.
    - 상단 바: 프로젝트 이름이 메뉴 단추가 된다(경로는 툴팁 그대로). 메뉴 항목 "다른 프로젝트 열기"(→ `closeRepo`). 오른쪽의 "다른 폴더 열기" 글자 버튼은 없앤다(컨트롤 수가 하나 줄어 1b 20단계의 새로 고침·가져오기·올리기 자리가 넉넉해짐, D-025 5개 이하).
    - 문구(ko / en): `otherProjects` 메뉴 "다른 프로젝트 열기" / "Open another project". `projectMenu` 접근성 이름 "프로젝트 메뉴" / "Project menu". `openOtherFolder`는 쓰는 곳이 없어지면 지운다.
-   - 테스트: api 모킹으로 시작 흐름 네 경우(열림, 사라짐, 저장소 아님, 목록 없음)와 git 없음에서 `openRecent`를 부르지 않음. 프로젝트 메뉴를 키보드(Enter, 화살표)로 열고 "다른 프로젝트 열기"를 누르면 시작 화면. `TopBar.test.tsx`의 "다른 폴더 열기" 기대를 메뉴로 바꿈.
+   - 테스트: api 모킹으로 시작 흐름 네 경우(열림, 사라짐, 저장소 아님, 목록 없음)와 git 없음에서 `openProject`를 부르지 않음. 프로젝트 메뉴를 키보드(Enter, 화살표)로 열고 "다른 프로젝트 열기"를 누르면 시작 화면. `TopBar.test.tsx`의 "다른 폴더 열기" 기대를 메뉴로 바꿈.
    - 완료 기준: `pnpm test`, `pnpm lint`. 두 OS 수동: 앱을 다시 켜면 마지막 프로젝트가 바로 열림, 폴더를 지운 뒤 다시 켜면 시작 화면과 안내 줄.
-   - Windows/Ubuntu: Radix 메뉴가 WebKitGTK에서 포커스 이동·Esc 닫기가 되는지, WebView2 고대비(`forced-colors`)에서 메뉴 테두리가 보이는지 확인. 연결이 끊긴 네트워크 드라이브(Windows `\\server\share`, Ubuntu `/media/…` 분리된 USB)가 마지막 프로젝트이면 `openRecent`가 수 초 걸릴 수 있다 → 4번의 "불러오는 중…"으로 버티고, 시간 제한은 위험에 기록.
+   - Windows/Ubuntu: Radix 메뉴가 WebKitGTK에서 포커스 이동·Esc 닫기가 되는지, WebView2 고대비(`forced-colors`)에서 메뉴 테두리가 보이는지 확인. 연결이 끊긴 네트워크 드라이브(Windows `\\server\share`, Ubuntu `/media/…` 분리된 USB)가 마지막 프로젝트이면 `openProject`가 수 초 걸릴 수 있다 → 4번의 "불러오는 중…"으로 버티고, 시간 제한은 위험에 기록.
    - 위험: 마지막 프로젝트가 아주 큰 저장소면 작업 공간이 열린 뒤 status가 늦게 온다(지금도 같음).
 
 8. 시작 화면 (`screens: start screen with last project and recent list`)
@@ -182,7 +187,7 @@
    - 배치(D-031, 그림 `start-normal.png`):
      - 상단 바(`--bg`, 아래 `--border` 1px): 왼쪽 "프로젝트"(600). 오른쪽 굵은 글자 버튼 "폴더 열기"(`variant="text"` + 600) 옆에 `<Kbd>Ctrl+O</Kbd>`. 앞의 `+` 기호는 쓰지 않는다(Q10). 복제·설정은 이번에 없다.
      - 마지막으로 하던 곳(`--bg`): 작은 글자 `m.lastPlace(시각)` "마지막으로 하던 곳 · 10분 전"(`--text-muted` 12px). 이름(`--font-size-display`, 600) + 경로(`--font-mono` 12px `--text-muted`). 상태 문장(15px, `--text`). 노선도 자리는 이번에 없음(N2에서 이 자리에). 주 버튼 "이어서 하기"(`--primary`, 화면의 유일한 주 버튼) + 글자 버튼 "바뀐 파일 N개 보기"(바뀐 파일이 있을 때만). 상태를 불러오는 동안 상태 문장 자리는 빈 줄 높이를 유지한다(밀림 방지).
-     - 다른 프로젝트(`--surface`): 머리 "다른 프로젝트"(`--text-muted` 12px). 줄(높이 48px 또는 `--row-height` 두 배, Q11)마다 이름(600) · 짧은 상태 · 마지막으로 연 때(오른쪽 정렬, `--text-muted`). 줄 전체가 버튼(누르면 `openRecent`). 작은 노선도 칸은 이번에 없음(N3).
+     - 다른 프로젝트(`--surface`): 머리 "다른 프로젝트"(`--text-muted` 12px). 줄(높이 48px 또는 `--row-height` 두 배, Q11)마다 이름(600) · 짧은 상태 · 마지막으로 연 때(오른쪽 정렬, `--text-muted`). 줄 전체가 버튼(누르면 `useOpenProject`의 `open(path, "recent")`). 작은 노선도 칸은 이번에 없음(N3).
      - 사라진 줄: 이름과 상태를 `--text-muted`로(투명도 금지), 상태 "폴더를 찾을 수 없어요" 또는 "버전 관리를 하지 않는 폴더예요", 오른쪽에 글자 버튼 "목록에서 빼기"(시각 대신). 저장소 아닌 줄을 누르면 지금의 "버전 관리 시작" 안내 흐름으로(Q8 답에 따라).
      - 맨 위 안내 줄(`startNotice`): "마지막으로 연 {이름} 폴더를 찾지 못했어요." / "마지막으로 연 {이름} 폴더는 버전 관리를 하지 않는 폴더예요." `role="status"`.
      - 위쪽 자리 고르기: 목록의 맨 앞이 사라진 폴더면 그다음 열 수 있는 프로젝트를 위쪽에 보여준다(조사 문서 "이럴 때"). 판정은 `useProjectSummary` 결과로 하고, 결과가 오기 전에는 맨 앞을 보여준다.
@@ -232,6 +237,12 @@
 - WebView2의 브라우저 단축키 목록은 "예시"라서 Ctrl+O·Ctrl+Shift+O가 앱에 오는지는 실기기로만 확정된다.
 - 다크 테마 그래프 색이 글자 대비에 못 미친다. 노선도 글자에 브랜치 색을 쓰지 않는 규칙으로 피하고, 다크 그래프 값은 노선도 반복에서 정한다.
 - 조사 문서와 기존 결정·계획이 어긋나는 곳은 아래 "사람 확인 필요"에 모았다.
+
+## 결정 결과 (2026-10-15)
+- Q1~Q15는 위 "사람 확인 필요"의 추천안대로 확정(사용자). D-031~D-033 확정, 노선도는 D-017 확정 전까지 구현하지 않음. Q3 복제는 반복 4 전까지 글자·단축키 모두 숨김. Q8 저장소 아닌 폴더 안내는 1b에서 시작 화면 위쪽, 문구 "이 폴더는 아직 버전 관리를 하지 않아요". Q14 "충돌 난 파일 N개", "가져올 버전", "바뀐 파일 N개". Q15 `screens/Home` → `screens/Start`.
+- 추가 1: 상태 요약 Query는 `GIT_OPTIONAL_LOCKS=0` 경로만 쓰고, 다른 작업이 `index.lock`을 잡고 있어도 성공하며 잠금·index를 건드리지 않음을 테스트로 고정(4단계).
+- 추가 2: 앱을 켤 때 열기, 최근 목록에서 열기, 폴더 고르기, 프로젝트 메뉴의 열기는 모두 core `Core::open_project` 하나와 화면 `useOpenProject` 하나를 거친다. 저장소 신뢰 확인은 나중에 그 한 곳에 넣는다(3·5·6·7·8단계).
+- 다크 모드 그림 두 장과 `docs/research/security.md`는 이 계획에서 커밋하지 않는다.
 
 ## 사람 확인 필요
 추천안을 먼저 적는다.
