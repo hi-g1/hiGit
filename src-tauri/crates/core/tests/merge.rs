@@ -282,6 +282,26 @@ fn merge_into_moves_main_forward_and_undo_moves_it_back() {
 }
 
 #[test]
+fn merge_into_refuses_main_checked_out_in_the_main_folder() {
+    let repo = repo();
+    let dir = repo.path();
+    // 주 작업 폴더는 main, 앱은 연결된 worktree(기능 브랜치)를 연다.
+    git(dir, &["switch", "-q", "main"]);
+    let parent = tempfile::tempdir().unwrap();
+    let wt = parent.path().join("작업 트리");
+    git(
+        dir,
+        &["worktree", "add", "-q", &wt.to_string_lossy(), "기능"],
+    );
+    commit_file(&wt, "b.txt", "내 것\n");
+    let old_main = git(dir, &["rev-parse", "main"]);
+    let core = core(&wt);
+    let err = merge_into(&core, &wt).unwrap_err();
+    assert_eq!(code(err), ErrorCode::InvalidInput);
+    assert_eq!(git(dir, &["rev-parse", "main"]), old_main);
+}
+
+#[test]
 fn merge_into_needs_main_not_ahead() {
     let repo = repo();
     let dir = repo.path();

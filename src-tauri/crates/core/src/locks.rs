@@ -31,7 +31,7 @@ pub(crate) fn find(git_dir: &Path, common_dir: &Path) -> Vec<LockFile> {
 }
 
 /// 같은 폴더인지. git이 주는 경로는 모양이 달라도(Windows의 `C:/…`와 `C:\…`) 같은 곳일 수 있다.
-fn same_dir(a: &Path, b: &Path) -> bool {
+pub(crate) fn same_dir(a: &Path, b: &Path) -> bool {
     match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
         (Ok(a), Ok(b)) => a == b,
         _ => platform::same_path(a, b),

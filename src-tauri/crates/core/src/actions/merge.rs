@@ -214,23 +214,25 @@ impl Action for MergeIntoAction {
     }
 }
 
-/// 다른 worktree가 그 브랜치를 쓰는 중인지. 그 작업 폴더를 몰래 바꾸지 않게 막는다.
+/// 다른 작업 폴더가 그 브랜치를 쓰는 중인지. 그 작업 폴더를 몰래 바꾸지 않게 막는다.
+/// 연결된 worktree에서 열었으면 주 작업 폴더(공용 폴더의 HEAD)도 본다.
 fn checked_out_elsewhere(
     git: &dyn git::GitBackend,
     repo: &git::RepoPath,
     branch: &str,
 ) -> Result<bool> {
     let common = git.common_dir(repo)?;
+    let want = format!("ref: refs/heads/{branch}");
+    let points = |dir: &std::path::Path| {
+        std::fs::read_to_string(dir.join("HEAD")).is_ok_and(|head| head.trim() == want)
+    };
+    if !crate::locks::same_dir(&git.git_dir(repo)?, &common) && points(&common) {
+        return Ok(true);
+    }
     let Ok(read) = std::fs::read_dir(common.join("worktrees")) else {
         return Ok(false);
     };
-    let want = format!("ref: refs/heads/{branch}");
-    for entry in read.filter_map(|e| e.ok()) {
-        if let Ok(head) = std::fs::read_to_string(entry.path().join("HEAD"))
-            && head.trim() == want
-        {
-            return Ok(true);
-        }
-    }
-    Ok(false)
+    Ok(read
+        .filter_map(|e| e.ok())
+        .any(|entry| points(&entry.path())))
 }
