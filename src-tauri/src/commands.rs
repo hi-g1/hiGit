@@ -41,10 +41,7 @@ where
 #[tauri::command]
 #[specta::specta]
 pub fn app_status(state: State<'_, AppState>) -> CmdResult<AppStatus> {
-    let core = core(&state)?;
-    Ok(AppStatus {
-        git_version: core.git_version().to_string(),
-    })
+    Ok(core(&state)?.app_status())
 }
 
 #[tauri::command]

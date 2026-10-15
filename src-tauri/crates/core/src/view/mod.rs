@@ -19,6 +19,29 @@ use crate::{ActionMeta, CoreError, Outcome, Risk, UnavailableReason};
 #[serde(rename_all = "camelCase")]
 pub struct AppStatus {
     pub git_version: String,
+    pub git_security: GitSecurity,
+    /// 배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`).
+    pub git_package_version: Option<String>,
+}
+
+/// Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum GitSecurity {
+    Ok,
+    Outdated,
+    DistroManaged,
+}
+
+impl From<crate::git_security::SecurityJudgement> for GitSecurity {
+    fn from(j: crate::git_security::SecurityJudgement) -> Self {
+        use crate::git_security::SecurityJudgement as J;
+        match j {
+            J::Ok => GitSecurity::Ok,
+            J::Outdated => GitSecurity::Outdated,
+            J::DistroManaged => GitSecurity::DistroManaged,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

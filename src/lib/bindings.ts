@@ -44,6 +44,9 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
 	gitVersion: string,
+	gitSecurity: GitSecurity,
+	/**  배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`). */
+	gitPackageVersion: string | null,
 };
 
 export type BranchView = {
@@ -120,6 +123,9 @@ export type FileDiffView = {
 	truncated: boolean,
 	hunks: HunkView[],
 };
+
+/**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
+export type GitSecurity = "ok" | "outdated" | "distroManaged";
 
 export type HunkView = {
 	section: string,

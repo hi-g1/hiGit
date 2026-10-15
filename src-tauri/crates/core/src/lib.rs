@@ -11,6 +11,7 @@ pub mod actions;
 mod bootstrap;
 mod error;
 mod executor;
+pub mod git_security;
 mod query;
 pub mod recent;
 mod registry;

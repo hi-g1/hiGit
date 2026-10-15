@@ -12,7 +12,7 @@ mod path;
 mod process;
 
 pub use app_dir::{DATA_DIR_ENV, app_data_dir};
-pub use git_exe::find_git;
+pub use git_exe::{GitBuild, find_git, git_build};
 pub use link::symlink_file;
 pub use path::{normalize_repo_path, same_path};
 pub use process::configure_child;

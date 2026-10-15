@@ -43,7 +43,7 @@ function renderStart() {
 }
 
 beforeEach(() => {
-  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0" });
+  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null });
   vi.mocked(api.removeRecent).mockResolvedValue(null);
 });
 afterEach(() => {

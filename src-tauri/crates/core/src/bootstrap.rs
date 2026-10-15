@@ -8,7 +8,7 @@ use crate::access::{OpenedRepos, check_path_len};
 use crate::query::Queries;
 use crate::recent::RecentStore;
 use crate::view::{
-    ActionInput, ActionMetaView, ActionResult, OpenHow, PreviewView, ProjectOpenResult,
+    ActionInput, ActionMetaView, ActionResult, AppStatus, OpenHow, PreviewView, ProjectOpenResult,
     RecentProject, RepoInfo,
 };
 use crate::{CoreError, ExecCtx, Executor, PreviewToken, Registry, RepoState, Result, actions};
@@ -23,6 +23,8 @@ pub const APP_ID: &str = "dev.higit.desktop";
 pub struct Core {
     pub(crate) git: Arc<dyn GitBackend>,
     git_version: GitVersion,
+    /// git 설치 방식. 보안 수정 기준 판정에 쓴다(D-050).
+    git_build: platform::GitBuild,
     executor: Executor,
     queries: Queries,
     /// 지금 액션이 실행 중인 저장소(또는 폴더). 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
@@ -52,13 +54,16 @@ impl Drop for BusyGuard<'_> {
 /// 시스템 git을 찾고 버전을 확인한 뒤 Core를 만든다.
 pub fn init() -> Result<Core> {
     let git_path = platform::find_git().ok_or(CoreError::GitMissing)?;
+    let git_build = platform::git_build(&git_path);
     let backend = CliBackend::new(git_path, Arc::new(platform::configure_child));
     // 앱 데이터 폴더를 못 만들면 최근 목록은 메모리에만 둔다(앱은 계속 쓸 수 있다).
     let recent = match platform::app_data_dir(APP_ID) {
         Ok(dir) => RecentStore::open(&dir),
         Err(_) => RecentStore::in_memory(),
     };
-    Core::with_backend_and_recent(Arc::new(backend), recent)
+    let mut core = Core::with_backend_and_recent(Arc::new(backend), recent)?;
+    core.git_build = git_build;
+    Ok(core)
 }
 
 impl Core {
@@ -85,6 +90,7 @@ impl Core {
             queries: Queries::new(git.clone(), opened.clone(), recent.clone()),
             git,
             git_version,
+            git_build: platform::GitBuild::Unknown,
             busy: Mutex::new(HashSet::new()),
             watcher: Mutex::new(None),
             recent,
@@ -94,6 +100,19 @@ impl Core {
 
     pub fn git_version(&self) -> GitVersion {
         self.git_version
+    }
+
+    /// 화면 시작에 필요한 git 정보. 보안 수정 기준은 거부 기준과 따로 판정한다(D-050).
+    pub fn app_status(&self) -> AppStatus {
+        let package = match &self.git_build {
+            platform::GitBuild::DistroPackage { version } => Some(version.clone()),
+            _ => None,
+        };
+        AppStatus {
+            git_version: self.git_version.to_string(),
+            git_security: crate::git_security::judge(self.git_version, package.is_some()).into(),
+            git_package_version: package,
+        }
     }
 
     pub fn queries(&self) -> &Queries {

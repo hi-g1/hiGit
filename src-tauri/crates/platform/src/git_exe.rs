@@ -1,5 +1,5 @@
 use std::ffi::{OsStr, OsString};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 시스템 git 실행 파일을 찾는다. PATH를 먼저 보고, 없으면 OS별 기본 설치 위치를 본다.
 /// 결과는 늘 절대 경로다(D-035).
@@ -21,6 +21,82 @@ fn find_git_in(path_var: Option<&OsStr>) -> Option<PathBuf> {
     // 찾을 이름에 경로가 없으므로 cwd는 쓰이지 않는다. 그래도 절대 경로를 준다.
     let found = which::which_in("git", Some(joined), &absolute[0]).ok()?;
     found.is_absolute().then_some(found)
+}
+
+/// git이 어떻게 설치됐는지. 배포판 패키지는 보안 수정을 버전 번호를 올리지 않고 넣으므로
+/// 버전 문자열만으로 보안 수정 여부를 판단할 수 없다(D-050).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GitBuild {
+    /// Git for Windows처럼 git 프로젝트 버전 번호를 그대로 쓰는 설치.
+    Official,
+    /// dpkg가 관리하는 패키지. `version`은 패키지 버전(예: `1:2.34.1-1ubuntu1.17`).
+    DistroPackage {
+        version: String,
+    },
+    Unknown,
+}
+
+/// `git` 실행 파일의 설치 방식을 알아낸다. 시작할 때 한 번 부른다.
+pub fn git_build(git: &Path) -> GitBuild {
+    #[cfg(target_os = "linux")]
+    {
+        linux_package(git).unwrap_or(GitBuild::Unknown)
+    }
+    #[cfg(windows)]
+    {
+        // Git for Windows는 `...\Git\cmd\git.exe`나 `...\Git\bin\git.exe`에 깔린다.
+        let parent = git
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str());
+        let file = git.file_name().and_then(|n| n.to_str());
+        match (parent, file) {
+            (Some(p), Some(f))
+                if f.eq_ignore_ascii_case("git.exe")
+                    && (p.eq_ignore_ascii_case("cmd") || p.eq_ignore_ascii_case("bin")) =>
+            {
+                GitBuild::Official
+            }
+            _ => GitBuild::Unknown,
+        }
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        let _ = git;
+        GitBuild::Unknown
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_package(git: &Path) -> Option<GitBuild> {
+    use std::process::Command;
+    const DPKG_QUERY: &str = "/usr/bin/dpkg-query";
+    if !Path::new(DPKG_QUERY).is_file() {
+        return None;
+    }
+    let real = std::fs::canonicalize(git).ok()?;
+    let owner = Command::new(DPKG_QUERY)
+        .arg("-S")
+        .arg(&real)
+        .env("LC_ALL", "C")
+        .output()
+        .ok()?;
+    if !owner.status.success() {
+        return None;
+    }
+    // `git: /usr/bin/git` 또는 `git, git-man: /path`. 첫 패키지 이름을 쓴다.
+    let text = String::from_utf8_lossy(&owner.stdout);
+    let package = text.split(": ").next()?.split(", ").next()?.trim();
+    if package.is_empty() || package.starts_with('-') {
+        return None;
+    }
+    let version = Command::new(DPKG_QUERY)
+        .args(["-W", "-f=${Version}", package])
+        .env("LC_ALL", "C")
+        .output()
+        .ok()?;
+    let version = String::from_utf8_lossy(&version.stdout).trim().to_string();
+    (!version.is_empty()).then_some(GitBuild::DistroPackage { version })
 }
 
 #[cfg(windows)]
@@ -87,6 +163,14 @@ mod tests {
         assert!(got.starts_with(fake.path()));
         assert_eq!(find_git_in(Some(OsStr::new(""))), None);
         assert_eq!(find_git_in(None), None);
+    }
+
+    #[test]
+    fn git_build_does_not_fail() {
+        let git = find_git().unwrap();
+        // 결과는 환경마다 다르다(CI 러너의 git은 PPA일 수 있다). 패닉 없이 끝나기만 확인한다.
+        eprintln!("git build: {:?}", git_build(&git));
+        assert_eq!(git_build(Path::new("/없는/git")), GitBuild::Unknown);
     }
 
     #[test]
