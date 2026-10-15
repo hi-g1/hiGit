@@ -100,7 +100,7 @@ pub trait GitBackend: Send + Sync {
 - 코드에는 해당 반복에 필요한 메서드만 구현해 넣는다. 위는 1b까지 구현한 것이다.
 - `GitOp`(1b까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `StashDropIf`, `Unpark`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ReadTree`, `AddSafeDirectory`.
 - `merge_check`는 git 2.38 이상이면 `merge-tree --write-tree`, 그보다 낮으면 임시 index에 `read-tree -m`으로 겹침만 본다(D-050). 사용자의 index와 작업 폴더는 건드리지 않는다.
-- `LogQuery`는 나중에 확대·축소 단계(버전만 / 합치기까지 / 전체)를 받을 자리를 둔다(D-017 제안).
+- `LogQuery`는 나중에 확대·축소 단계(버전만 / 합치기까지 / 전체)를 받을 자리를 둔다(D-017, 반복 2b).
 
 - `GitOp`는 enum(Init, Commit, Merge, Rebase, Reset …). 새 쓰기 작업은 enum 변형 하나 + `CliBackend` 매핑 하나를 추가한다.
 - `GitOp::Init`은 아직 저장소가 아닌 폴더에서 실행하므로 `repo` 인자는 정규화한 대상 폴더다.
@@ -280,7 +280,7 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 - 설정 "Git 원래 이름으로 보기"가 켜지면 `Term`이 원래 이름을 본문에 보여주고 툴팁에 쉬운 이름을 보여준다.
 - 테스트: 레지스트리의 모든 `glossary_id`가 glossary에 있는지 확인하는 테스트를 둔다.
 
-## 버전 기록 그리기 계층 (D-017 제안, 반복 0은 단순 목록)
+## 버전 기록 그리기 계층 (D-017, 반복 2b)
 
 노선도 보기는 아직 제안이다. 반복 0은 목록만 만들되, 나중에 그리기를 붙일 때 데이터와 그리기가 섞이지 않게 아래 네 층으로 나눈다.
 
