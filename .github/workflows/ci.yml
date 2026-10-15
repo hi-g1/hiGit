@@ -53,6 +53,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: 프론트 린트
+        run: pnpm lint
+
+      - name: 프론트 타입 검사
+        run: pnpm typecheck
+
+      - name: 프론트 테스트
+        run: pnpm test
+
       - name: cargo fmt
         working-directory: src-tauri
         run: cargo fmt --all --check
