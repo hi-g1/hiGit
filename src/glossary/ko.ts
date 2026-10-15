@@ -1,0 +1,180 @@
+import type { Glossary } from "./types";
+
+// docs/spec.md "기능 목록과 용어표"를 그대로 옮긴 데이터. 표가 원본이다(D-006).
+// spec-sync.test.ts가 두 곳이 같은지 확인한다.
+export const ko: Glossary = {
+  status: {
+    friendly: "바뀐 내용",
+    gitName: "status",
+    command: "git status",
+    description: "마지막 저장 이후 바뀐 파일 목록",
+  },
+  diff: {
+    friendly: "비교 보기",
+    gitName: "diff",
+    command: "git diff",
+    description: "파일이 어떻게 바뀌었는지 줄 단위로 비교",
+  },
+  stage: {
+    friendly: "저장에 넣기",
+    gitName: "stage",
+    command: "git add",
+    description: "다음 저장에 포함할 파일 고르기",
+  },
+  commit: {
+    friendly: "저장하기",
+    gitName: "commit",
+    command: "git commit",
+    description: "지금 상태를 설명과 함께 기록으로 남기기",
+  },
+  fetch: {
+    friendly: "새 소식 확인",
+    gitName: "fetch",
+    command: "git fetch",
+    description: "원격 저장소의 변경을 내려받되 아직 합치지 않음",
+  },
+  pull: {
+    friendly: "최신으로 받기",
+    gitName: "pull",
+    command: "git pull",
+    description: "원격의 변경을 받아 내 갈래에 합치기",
+  },
+  push: {
+    friendly: "올리기",
+    gitName: "push",
+    command: "git push",
+    description: "내 저장들을 원격 저장소로 보내기",
+  },
+  branch: {
+    friendly: "작업 갈래",
+    gitName: "branch",
+    command: "git branch",
+    description: "원래 작업에 영향 없이 따로 작업하는 길",
+  },
+  switch: {
+    friendly: "갈래 바꾸기",
+    gitName: "switch",
+    command: "git switch",
+    description: "다른 작업 갈래로 이동",
+  },
+  log: {
+    friendly: "저장 기록",
+    gitName: "log",
+    command: "git log",
+    description: "지금까지의 저장 목록",
+  },
+  merge: {
+    friendly: "합치기",
+    gitName: "merge",
+    command: "git merge",
+    description: "다른 갈래의 작업을 지금 갈래에 합치기",
+  },
+  conflict: {
+    friendly: "겹친 부분 고르기",
+    gitName: "merge conflict",
+    command: null,
+    description: "두 갈래가 같은 곳을 다르게 고쳤을 때 고르기",
+  },
+  stash: {
+    friendly: "잠시 치워두기",
+    gitName: "stash",
+    command: "git stash",
+    description: "하던 작업을 서랍에 넣었다가 나중에 꺼내기",
+  },
+  discard: {
+    friendly: "변경 취소",
+    gitName: "restore",
+    command: "git restore",
+    description: "저장 안 한 변경을 마지막 저장 상태로 되돌리기",
+  },
+  pr: {
+    friendly: "검토 요청",
+    gitName: "Pull Request",
+    command: null,
+    description: "내 갈래를 합쳐 달라고 팀에 요청",
+  },
+  clone: {
+    friendly: "프로젝트 가져오기",
+    gitName: "clone",
+    command: "git clone",
+    description: "원격 저장소를 내 컴퓨터로 복사",
+  },
+  init: {
+    friendly: "관리 시작",
+    gitName: "init",
+    command: "git init",
+    description: "이 폴더를 Git으로 관리하기 시작",
+  },
+  amend: {
+    friendly: "방금 저장 고치기",
+    gitName: "amend",
+    command: "git commit --amend",
+    description: "마지막 저장의 설명이나 내용 고치기",
+  },
+  revert: {
+    friendly: "기록 남기고 취소",
+    gitName: "revert",
+    command: "git revert",
+    description: "취소했다는 새 저장을 만들어 안전하게 되돌리기",
+  },
+  reset: {
+    friendly: "기록째 되돌리기",
+    gitName: "reset",
+    command: "git reset",
+    description: "특정 시점으로 갈래를 옮기기. 이후 저장은 기록에서 사라짐",
+  },
+  "rebase-i": {
+    friendly: "기록 정리하기",
+    gitName: "interactive rebase",
+    command: "git rebase -i",
+    description: "저장 순서 바꾸기, 묶기, 메시지 고치기",
+  },
+  rebase: {
+    friendly: "갈래 옮겨 심기",
+    gitName: "rebase",
+    command: "git rebase",
+    description: "내 갈래를 최신 갈래 끝으로 옮기기",
+  },
+  "cherry-pick": {
+    friendly: "저장 하나만 가져오기",
+    gitName: "cherry-pick",
+    command: "git cherry-pick",
+    description: "다른 갈래의 저장 하나를 복사해 오기",
+  },
+  tag: {
+    friendly: "버전 표시",
+    gitName: "tag",
+    command: "git tag",
+    description: "저장에 \"v1.0\" 같은 이름표 달기",
+  },
+  blame: {
+    friendly: "누가 언제 바꿨나",
+    gitName: "blame",
+    command: "git blame",
+    description: "각 줄을 마지막으로 바꾼 사람과 시점",
+  },
+  reflog: {
+    friendly: "안전망",
+    gitName: "reflog",
+    command: "git reflog",
+    description: "최근 작업 이력. 지운 것도 여기서 복구",
+  },
+  "force-push": {
+    friendly: "강제로 올리기",
+    gitName: "force push",
+    command: "git push --force-with-lease",
+    description: "원격 기록을 내 기록으로 덮어쓰기",
+  },
+  remote: {
+    friendly: "연결된 저장소",
+    gitName: "remote",
+    command: "git remote",
+    description: "이 프로젝트가 연결된 원격 저장소 목록",
+  },
+  ignore: {
+    friendly: "저장 안 할 파일",
+    gitName: ".gitignore",
+    command: null,
+    description: "Git이 무시할 파일 규칙",
+  },
+};
