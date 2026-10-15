@@ -10,6 +10,8 @@ export const TERM_IDS = [
   "push",
   "sync",
   "branch",
+  "branch-delete",
+  "branch-rename",
   "switch",
   "log",
   "merge",

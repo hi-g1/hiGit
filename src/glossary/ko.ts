@@ -63,6 +63,18 @@ export const ko: Glossary = {
     command: "git branch",
     description: "원래 작업에 영향 없이 따로 작업하는 공간",
   },
+  "branch-delete": {
+    friendly: "브랜치 지우기",
+    gitName: "branch -D",
+    command: "git branch -D",
+    description: "브랜치 이름표를 지우기. 버전은 작업 내역에 남아요.",
+  },
+  "branch-rename": {
+    friendly: "브랜치 이름 바꾸기",
+    gitName: "branch -m",
+    command: "git branch -m",
+    description: "브랜치 이름을 바꾸기. 원격의 같은 이름은 그대로예요.",
+  },
   switch: {
     friendly: "브랜치 바꾸기",
     gitName: "switch",

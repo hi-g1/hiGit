@@ -62,6 +62,18 @@ export const en: Glossary = {
     command: "git branch",
     description: "A separate space to work without affecting the original",
   },
+  "branch-delete": {
+    friendly: "Delete branch",
+    gitName: "branch -D",
+    command: "git branch -D",
+    description: "Remove a branch label. The versions stay in the activity list.",
+  },
+  "branch-rename": {
+    friendly: "Rename branch",
+    gitName: "branch -m",
+    command: "git branch -m",
+    description: "Change a branch name. The remote branch with the old name stays.",
+  },
   switch: {
     friendly: "Switch branch",
     gitName: "switch",

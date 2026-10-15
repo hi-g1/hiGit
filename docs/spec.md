@@ -81,6 +81,8 @@ D-032·D-033(계획 003). 프로젝트를 여는 모든 진입점은 core의 한
 | push | 올리기 | push · `git push` | 내 버전들을 원격 저장소로 보내기 | normal | 매일 |
 | sync | 동기화 | sync · `git pull + git push` | 원격 저장소의 새 버전을 가져온 다음 내 버전을 올리기 | normal | 매일 |
 | branch | 브랜치 | branch · `git branch` | 원래 작업에 영향 없이 따로 작업하는 공간 | safe | 매일 |
+| branch-delete | 브랜치 지우기 | branch -D · `git branch -D` | 브랜치 이름표를 지우기. 버전은 작업 내역에 남아요. | caution | 드묾 |
+| branch-rename | 브랜치 이름 바꾸기 | branch -m · `git branch -m` | 브랜치 이름을 바꾸기. 원격의 같은 이름은 그대로예요. | normal | 드묾 |
 | switch | 브랜치 바꾸기 | switch · `git switch` | 다른 브랜치로 옮겨 가기 | normal | 매일 |
 | log | 버전 기록 | log · `git log` | 지금까지 저장한 버전 목록 | safe | 매일 |
 | merge | 합치기 | merge · `git merge` | 다른 브랜치의 작업을 지금 브랜치에 합치기. 병합이라고도 해요. | normal | 자주 |
@@ -112,7 +114,7 @@ D-032·D-033(계획 003). 프로젝트를 여는 모든 진입점은 core의 한
 - `safe`: 바로 실행.
 - `normal`: 바로 실행, 실패 시 쉬운 말로 이유와 해결 버튼.
 - `caution`: 미리보기 없이 바로 실행. 실행기가 실행 전에 백업 ref와 작업 목록(journal)을 남기고, 아래 토스트로 되돌리기(D-042, D-043).
-- `danger`: `caution`과 같고, 원격에 올린 기록이 바뀌면 추가 경고.
+- `danger`: `caution`과 같다. 올린 기록을 바꾸는 일은 거절하고 되돌리기(revert)를 권한다(D-097). 덮어쓰며 올리기는 설정 화면이 생길 때 넣는다.
 - 실행 전 확인은 위험도가 아니라 되돌릴 수 있는지로 정한다. journal과 백업 ref로도 살릴 수 없는 일(덮어쓰며 올리기, 고친 것 버리기, 멈춘 작업 정리, 올린 버전 지우기)만 묻는다(D-043, D-074, D-081). 오래 걸리는 저장·합치기를 강제로 멈출 때도 묻는다(D-080).
 
 ## 오류 메시지 원칙
