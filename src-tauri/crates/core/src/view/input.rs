@@ -11,6 +11,9 @@ use specta::Type;
 pub enum ActionInput {
     /// 관리 시작. 입력 없음.
     Init,
+    Stage(PathsInput),
+    Unstage(PathsInput),
+    Commit(CommitInput),
 }
 
 impl ActionInput {
@@ -18,6 +21,22 @@ impl ActionInput {
     pub fn action_id(&self) -> &'static str {
         match self {
             ActionInput::Init => "init",
+            ActionInput::Stage(_) => "stage",
+            ActionInput::Unstage(_) => "unstage",
+            ActionInput::Commit(_) => "commit",
         }
     }
+}
+
+/// 파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PathsInput {
+    pub paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitInput {
+    pub message: String,
 }

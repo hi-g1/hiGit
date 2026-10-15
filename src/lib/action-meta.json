@@ -3,5 +3,20 @@
     "id": "init",
     "glossaryId": "init",
     "risk": "safe"
+  },
+  {
+    "id": "stage",
+    "glossaryId": "stage",
+    "risk": "safe"
+  },
+  {
+    "id": "unstage",
+    "glossaryId": "unstage",
+    "risk": "safe"
+  },
+  {
+    "id": "commit",
+    "glossaryId": "commit",
+    "risk": "safe"
   }
 ]

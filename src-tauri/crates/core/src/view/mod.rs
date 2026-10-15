@@ -7,7 +7,7 @@ mod diff;
 mod input;
 
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
-pub use input::ActionInput;
+pub use input::{ActionInput, CommitInput, PathsInput};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -235,7 +235,20 @@ pub struct PreviewView {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ActionResult {
-    RepoCreated { repo: RepoInfo },
+    RepoCreated {
+        repo: RepoInfo,
+    },
+    Staged {
+        count: u32,
+    },
+    Unstaged {
+        count: u32,
+    },
+    #[serde(rename_all = "camelCase")]
+    Committed {
+        short_oid: String,
+        summary: String,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -244,6 +257,11 @@ impl From<Outcome> for ActionResult {
             Outcome::RepoCreated(repo) => ActionResult::RepoCreated {
                 repo: RepoInfo::from_path(repo.as_path()),
             },
+            Outcome::Staged { count } => ActionResult::Staged { count },
+            Outcome::Unstaged { count } => ActionResult::Unstaged { count },
+            Outcome::Committed { short_oid, summary } => {
+                ActionResult::Committed { short_oid, summary }
+            }
         }
     }
 }
@@ -270,6 +288,8 @@ pub enum ErrorCode {
     PreviewRequired,
     PreviewMismatch,
     NotYetSupported,
+    InvalidInput,
+    Busy,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -324,11 +344,15 @@ impl From<&CoreError> for ErrorView {
             CoreError::PreviewRequired => ErrorCode::PreviewRequired,
             CoreError::PreviewMismatch => ErrorCode::PreviewMismatch,
             CoreError::NotYetSupported => ErrorCode::NotYetSupported,
+            CoreError::InvalidInput(_) => ErrorCode::InvalidInput,
+            CoreError::Busy => ErrorCode::Busy,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,
         };
         let detail = e.detail().or_else(|| match code {
-            ErrorCode::Internal | ErrorCode::UnknownAction => Some(e.to_string()),
+            ErrorCode::Internal | ErrorCode::UnknownAction | ErrorCode::InvalidInput => {
+                Some(e.to_string())
+            }
             _ => None,
         });
         Self { code, detail }

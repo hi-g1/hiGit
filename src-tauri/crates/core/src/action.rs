@@ -58,6 +58,16 @@ pub struct Preview {}
 pub enum Outcome {
     /// 폴더가 저장소가 되었다(init).
     RepoCreated(RepoPath),
+    Staged {
+        count: u32,
+    },
+    Unstaged {
+        count: u32,
+    },
+    Committed {
+        short_oid: String,
+        summary: String,
+    },
 }
 
 /// 액션이 실행될 때 받는 것.

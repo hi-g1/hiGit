@@ -1,5 +1,6 @@
-use std::path::Path;
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 
@@ -16,6 +17,20 @@ pub struct Core {
     git_version: GitVersion,
     executor: Executor,
     queries: Queries,
+    /// 지금 액션이 실행 중인 저장소(또는 폴더). 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
+    busy: Mutex<HashSet<PathBuf>>,
+}
+
+/// 실행이 끝나면(오류여도) 잠금을 푼다.
+struct BusyGuard<'a> {
+    busy: &'a Mutex<HashSet<PathBuf>>,
+    key: PathBuf,
+}
+
+impl Drop for BusyGuard<'_> {
+    fn drop(&mut self) {
+        self.busy.lock().unwrap().remove(&self.key);
+    }
 }
 
 /// 시스템 git을 찾고 버전을 확인한 뒤 Core를 만든다.
@@ -42,6 +57,7 @@ impl Core {
             queries: Queries::new(git.clone()),
             git,
             git_version,
+            busy: Mutex::new(HashSet::new()),
         })
     }
 
@@ -87,6 +103,18 @@ impl Core {
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
         let state = self.state_of(folder)?;
+        let key = state
+            .repo
+            .as_ref()
+            .map(|r| r.as_path().to_path_buf())
+            .unwrap_or_else(|| state.folder.clone());
+        if !self.busy.lock().unwrap().insert(key.clone()) {
+            return Err(CoreError::Busy);
+        }
+        let _guard = BusyGuard {
+            busy: &self.busy,
+            key,
+        };
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,

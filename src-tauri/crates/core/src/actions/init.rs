@@ -42,7 +42,9 @@ impl Action for InitAction {
     }
 
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
-        let ActionInput::Init = input;
+        let ActionInput::Init = input else {
+            return Err(CoreError::InputMismatch("init"));
+        };
         let folder = &ctx.state.folder;
         ctx.git.run(&RepoPath::new(folder), &GitOp::Init)?;
         let repo = ctx.git.discover(folder)?.ok_or(CoreError::NotARepo)?;

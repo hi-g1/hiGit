@@ -19,7 +19,7 @@ export const commands = {
 /* Types */
 export type ActionInput = 
 /**  관리 시작. 입력 없음. */
-{ id: "init" };
+{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -28,7 +28,7 @@ export type ActionMetaView = {
 };
 
 /**  액션 실행 결과. */
-export type ActionResult = { kind: "repoCreated"; repo: RepoInfo };
+export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -55,6 +55,10 @@ export type ChangedFile = {
 	change: ChangeKind,
 	/**  다음 저장에 넣은(stage) 변경이 있는지. */
 	staged: boolean,
+};
+
+export type CommitInput = {
+	message: string,
 };
 
 export type CommitRow = {
@@ -90,7 +94,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -128,6 +132,11 @@ export type LogPage = {
 export type LogQuery = {
 	skip: number,
 	limit: number,
+};
+
+/**  파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다. */
+export type PathsInput = {
+	paths: string[],
 };
 
 /**  미리보기와 실행 때 돌려줄 증표. */

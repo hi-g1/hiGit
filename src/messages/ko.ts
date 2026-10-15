@@ -23,6 +23,8 @@ export const ko = {
     previewRequired: "먼저 미리보기를 확인해 주세요.",
     previewMismatch: "미리보기가 만료됐어요. 다시 확인해 주세요.",
     notYetSupported: "아직 지원하지 않는 작업이에요.",
+    invalidInput: "입력한 내용을 확인해 주세요.",
+    busy: "다른 작업이 끝날 때까지 기다려 주세요.",
     nothingToCommit: "저장할 변경이 없어요. 먼저 파일을 저장에 넣어 주세요.",
     identityMissing: "저장에 쓸 이름과 이메일이 설정되어 있지 않아요.",
     invalidBranchName: "갈래 이름으로 쓸 수 없는 글자가 있어요.",

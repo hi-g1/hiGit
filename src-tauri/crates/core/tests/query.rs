@@ -5,6 +5,7 @@ use std::sync::Arc;
 use common::{FakeGit, commit};
 use git::{BranchInfo, Change, EntryKind, GitVersion, RepoPath, Status, StatusEntry};
 use higit_core::view::{ActionInput, ActionResult, ChangeKind, ErrorCode, ErrorView, LogQuery};
+use higit_core::view::{CommitInput, PathsInput};
 use higit_core::{Core, CoreError, GitBackend};
 
 fn core_with(git: FakeGit) -> (Core, Arc<FakeGit>) {
@@ -188,11 +189,13 @@ fn init_through_core() {
     let (core, git) = core_with(FakeGit::new());
 
     let metas = core.action_metas();
-    assert_eq!(metas.len(), 1);
-    assert_eq!(metas[0].id, "init");
+    let ids: Vec<_> = metas.iter().map(|m| m.id.as_str()).collect();
+    assert_eq!(ids, ["init", "stage", "unstage", "commit"]);
 
     let result = core.execute(dir.path(), &ActionInput::Init, None).unwrap();
-    let ActionResult::RepoCreated { repo } = result;
+    let ActionResult::RepoCreated { repo } = result else {
+        panic!("{result:?}")
+    };
     assert!(!repo.path.is_empty());
     assert_eq!(git.calls().len(), 1);
 
@@ -208,10 +211,23 @@ fn action_input_tags_match_registry() {
     // 새 변형을 더하면 이 match가 컴파일되지 않아 아래 목록을 고치게 된다.
     fn every_variant(input: &ActionInput) {
         match input {
-            ActionInput::Init => {}
+            ActionInput::Init
+            | ActionInput::Stage(_)
+            | ActionInput::Unstage(_)
+            | ActionInput::Commit(_) => {}
         }
     }
-    let samples = [ActionInput::Init];
+    let paths = PathsInput {
+        paths: vec!["a.txt".into()],
+    };
+    let samples = [
+        ActionInput::Init,
+        ActionInput::Stage(paths.clone()),
+        ActionInput::Unstage(paths),
+        ActionInput::Commit(CommitInput {
+            message: "저장".into(),
+        }),
+    ];
     samples.iter().for_each(every_variant);
 
     for input in &samples {

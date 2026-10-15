@@ -29,6 +29,14 @@ pub enum CoreError {
     #[error("지금은 쓸 수 없는 액션입니다")]
     Unavailable(UnavailableReason),
 
+    /// 입력이 규칙에 맞지 않는다(빈 메시지, 저장소 밖 경로 등). 이유는 "자세히 보기"용.
+    #[error("입력이 올바르지 않습니다: {0}")]
+    InvalidInput(&'static str),
+
+    /// 같은 저장소에서 다른 작업이 실행 중이다.
+    #[error("다른 작업이 실행 중입니다")]
+    Busy,
+
     /// 화면이 액션과 맞지 않는 입력 변형을 보냈다(화면 버그).
     #[error("액션에 맞지 않는 입력입니다: {0}")]
     InputMismatch(&'static str),

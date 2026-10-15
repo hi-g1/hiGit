@@ -22,6 +22,8 @@ export const en: Messages = {
     previewRequired: "Please check the preview first.",
     previewMismatch: "The preview has expired. Please check it again.",
     notYetSupported: "This action is not supported yet.",
+    invalidInput: "Please check what you entered.",
+    busy: "Please wait until the other task finishes.",
     nothingToCommit: "Nothing to save. Add files to the save first.",
     identityMissing: "Your name and email for saves are not set.",
     invalidBranchName: "The branch name contains characters that are not allowed.",

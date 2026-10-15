@@ -129,7 +129,16 @@ fn preview_token_must_match() {
     let fake = PreviewToken("p999".into());
     assert!(mismatch(exec.execute(&ctx, "caution", &input, Some(&fake))));
 
-    // 입력이 다른 경우는 입력 변형이 둘 이상 생기는 반복 1의 commit 단계에서 되살린다.
+    // 입력이 다름
+    let message =
+        |m: &str| ActionInput::Commit(higit_core::view::CommitInput { message: m.into() });
+    let (_, token) = exec.preview(&ctx, "caution", &message("가")).unwrap();
+    assert!(mismatch(exec.execute(
+        &ctx,
+        "caution",
+        &message("나"),
+        Some(&token)
+    )));
 
     // 다른 액션의 토큰
     let (_, token) = exec.preview(&ctx, "other", &input).unwrap();
@@ -218,12 +227,20 @@ fn init_runs_only_outside_repo() {
 }
 
 #[test]
-fn init_is_registered_as_safe() {
+fn registered_actions_are_safe() {
     let mut registry = Registry::new();
     actions::register_all(&mut registry).unwrap();
     let metas: Vec<_> = registry
         .metas()
         .map(|m| (m.id, m.glossary_id, m.risk))
         .collect();
-    assert_eq!(metas, [("init", "init", Risk::Safe)]);
+    assert_eq!(
+        metas,
+        [
+            ("init", "init", Risk::Safe),
+            ("stage", "stage", Risk::Safe),
+            ("unstage", "unstage", Risk::Safe),
+            ("commit", "commit", Risk::Safe),
+        ]
+    );
 }

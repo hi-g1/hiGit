@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use git::{Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
 use higit_core::view::ActionInput;
@@ -20,6 +20,10 @@ pub struct FakeGit {
     /// 최근 것부터.
     pub commits: Mutex<Vec<Commit>>,
     pub file_diff: Mutex<FileDiff>,
+    /// true이면 run이 false가 될 때까지 기다린다(잠금 시험용).
+    pub hold: AtomicBool,
+    /// run에 들어왔는지.
+    pub entered: AtomicBool,
 }
 
 impl FakeGit {
@@ -34,6 +38,8 @@ impl FakeGit {
             }),
             commits: Mutex::new(Vec::new()),
             file_diff: Mutex::new(FileDiff::default()),
+            hold: AtomicBool::new(false),
+            entered: AtomicBool::new(false),
         }
     }
 
@@ -83,8 +89,20 @@ impl GitBackend for FakeGit {
             .lock()
             .unwrap()
             .push(format!("{op:?} {}", repo.as_path().display()));
-        if *op == GitOp::Init {
-            *self.repo.lock().unwrap() = Some(repo.clone());
+        self.entered.store(true, Ordering::SeqCst);
+        while self.hold.load(Ordering::SeqCst) {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        match op {
+            GitOp::Init => *self.repo.lock().unwrap() = Some(repo.clone()),
+            GitOp::Commit { message } => {
+                let mut commits = self.commits.lock().unwrap();
+                let n = commits.len() as u32 + 1;
+                let mut c = commit(n);
+                c.summary = message.lines().next().unwrap_or("").to_string();
+                commits.insert(0, c);
+            }
+            _ => {}
         }
         Ok(OpOutput::default())
     }

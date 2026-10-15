@@ -60,6 +60,7 @@ export function Home() {
                 input={{ id: "init" }}
                 folder={plainFolder.folder}
                 onDone={(result) => {
+                  if (result.kind !== "repoCreated") return;
                   setPlainFolder(null);
                   openRepo(result.repo);
                 }}
