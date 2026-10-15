@@ -7,7 +7,7 @@ use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 use crate::query::Queries;
 use crate::recent::RecentStore;
 use crate::view::{
-    ActionInput, ActionMetaView, ActionResult, FolderInfo, OpenHow, PreviewView, ProjectOpenResult,
+    ActionInput, ActionMetaView, ActionResult, OpenHow, PreviewView, ProjectOpenResult,
     RecentProject, RepoInfo,
 };
 use crate::{CoreError, ExecCtx, Executor, PreviewToken, Registry, RepoState, Result, actions};
@@ -89,19 +89,6 @@ impl Core {
 
     pub fn queries(&self) -> &Queries {
         &self.queries
-    }
-
-    /// 폴더를 연다. 저장소가 아니어도 오류가 아니다(화면이 "버전 관리 시작"을 보여준다).
-    /// 1b 5단계에서 `open_project`로 바꾸고 지운다.
-    pub fn open_folder(&self, path: &Path) -> Result<FolderInfo> {
-        let state = self.state_of(path)?;
-        if let Some(repo) = &state.repo {
-            self.recent.touch(repo.as_path());
-        }
-        Ok(FolderInfo {
-            folder: state.folder.to_string_lossy().into_owned(),
-            repo: state.repo.map(|r| RepoInfo::from_path(r.as_path())),
-        })
     }
 
     /// 프로젝트 열기의 유일한 입구(D-032). 앱을 켤 때 열기, 최근 목록, 폴더 고르기,

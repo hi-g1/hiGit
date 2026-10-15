@@ -6,6 +6,7 @@ import {
   type ErrorCode,
   type ErrorView,
   type LogQuery,
+  type OpenHow,
 } from "./bindings";
 
 export type {
@@ -19,7 +20,10 @@ export type {
   DiffRequest,
   ErrorCode,
   FileDiffView,
-  FolderInfo,
+  OpenHow,
+  ProjectOpenResult,
+  ProjectSummaryView,
+  RecentProject,
   HunkView,
   LineKindView,
   LogPage,
@@ -62,7 +66,11 @@ async function call<T>(promise: Promise<T>): Promise<T> {
 
 export const api = {
   appStatus: () => call(commands.appStatus()),
-  openFolder: (path: string) => call(commands.repoOpen(path)),
+  /** 프로젝트 열기. 화면에서는 features/open-project/useOpenProject만 부른다(D-032). */
+  openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
+  recentProjects: () => call(commands.recentList()),
+  removeRecent: (path: string) => call(commands.recentRemove(path)),
+  projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),
   listActions: () => call(commands.actionList()),
   previewAction: (folder: string, input: ActionInput) =>
     call(commands.actionPreview(folder, input)),

@@ -1,9 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActionButton } from "../../features/actions/ActionButton";
-import { api, type FolderInfo } from "../../lib/api";
+import { useOpenProject } from "../../features/open-project/useOpenProject";
+import { ApiError } from "../../lib/api";
 import { pickFolder } from "../../lib/dialog";
-import { useAppStatus } from "../../lib/queries";
+import { queryKeys, useAppStatus } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
@@ -14,22 +15,19 @@ export function Home() {
   const m = useMessages();
   const openRepo = useRepoStore((s) => s.openRepo);
   const appStatus = useAppStatus();
-  // 저장소가 아닌 폴더를 골랐을 때 "관리 시작"을 보여주려고 기억한다.
-  const [plainFolder, setPlainFolder] = useState<FolderInfo | null>(null);
+  const queryClient = useQueryClient();
+  const project = useOpenProject();
+  // 저장소가 아닌 폴더를 골랐을 때 "버전 관리 시작"을 보여주려고 기억한다.
+  const [plainFolder, setPlainFolder] = useState<string | null>(null);
 
   const open = useMutation({
     mutationFn: async () => {
       const path = await pickFolder();
-      return path === null ? null : api.openFolder(path);
-    },
-    onSuccess: (info) => {
-      if (!info) return;
-      if (info.repo) {
-        setPlainFolder(null);
-        openRepo(info.repo);
-      } else {
-        setPlainFolder(info);
-      }
+      if (path === null) return;
+      const result = await project.open(path, "picked");
+      if (result.kind === "notARepo") setPlainFolder(result.folder);
+      else setPlainFolder(null);
+      if (result.kind === "missing") throw new ApiError({ code: "folderNotFound", detail: path });
     },
   });
 
@@ -54,15 +52,16 @@ export function Home() {
         {plainFolder && (
           <div className={styles.notice}>
             <p>{m.notARepo}</p>
-            <p className={styles.folder}>{plainFolder.folder}</p>
+            <p className={styles.folder}>{plainFolder}</p>
             <div>
               <ActionButton
                 input={{ id: "init" }}
-                folder={plainFolder.folder}
+                folder={plainFolder}
                 onDone={(result) => {
                   if (result.kind !== "repoCreated") return;
                   setPlainFolder(null);
                   openRepo(result.repo);
+                  void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
                 }}
               />
             </div>

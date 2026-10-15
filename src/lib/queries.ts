@@ -7,6 +7,8 @@ export const HISTORY_LIMIT = 200;
 export const queryKeys = {
   appStatus: ["appStatus"] as const,
   actions: ["actions"] as const,
+  recent: ["recent"] as const,
+  summary: (repo: string) => ["summary", repo] as const,
   status: (repo: string) => ["status", repo] as const,
   log: (repo: string) => ["log", repo] as const,
   diff: (repo: string, path: string, untracked: boolean) => ["diff", repo, path, untracked] as const,
@@ -46,5 +48,21 @@ export function useDiff(repo: string, request: DiffRequest) {
   return useQuery<Awaited<ReturnType<typeof api.diff>>, ApiError>({
     queryKey: queryKeys.diff(repo, request.path, request.untracked),
     queryFn: () => api.diff(repo, request),
+  });
+}
+
+export function useRecentProjects() {
+  return useQuery<Awaited<ReturnType<typeof api.recentProjects>>, ApiError>({
+    queryKey: queryKeys.recent,
+    queryFn: api.recentProjects,
+  });
+}
+
+/** 시작 화면의 프로젝트별 상태. 실패(폴더 없음, 저장소 아님)는 화면이 줄 상태로 쓴다. */
+export function useProjectSummary(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.projectSummary>>, ApiError>({
+    queryKey: queryKeys.summary(repo),
+    queryFn: () => api.projectSummary(repo),
+    staleTime: 30_000,
   });
 }

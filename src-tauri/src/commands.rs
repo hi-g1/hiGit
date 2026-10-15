@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, DiffRequest, ErrorCode, ErrorView,
-    FileDiffView, FolderInfo, LogPage, LogQuery, PreviewView, StatusView,
+    FileDiffView, LogPage, LogQuery, OpenHow, PreviewView, ProjectOpenResult, ProjectSummaryView,
+    RecentProject, StatusView,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -48,8 +49,41 @@ pub fn app_status(state: State<'_, AppState>) -> CmdResult<AppStatus> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn repo_open(state: State<'_, AppState>, path: String) -> CmdResult<FolderInfo> {
-    blocking(state, move |core| core.open_folder(&PathBuf::from(path))).await
+pub async fn project_open(
+    state: State<'_, AppState>,
+    path: String,
+    how: OpenHow,
+) -> CmdResult<ProjectOpenResult> {
+    // 프로젝트 열기의 유일한 입구(D-032).
+    blocking(state, move |core| {
+        core.open_project(&PathBuf::from(path), how)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn recent_list(state: State<'_, AppState>) -> CmdResult<Vec<RecentProject>> {
+    Ok(core(&state)?.recent_projects())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn recent_remove(state: State<'_, AppState>, path: String) -> CmdResult<()> {
+    core(&state)?.remove_recent(&PathBuf::from(path));
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn query_project_summary(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<ProjectSummaryView> {
+    blocking(state, move |core| {
+        core.queries().project_summary(&PathBuf::from(repo))
+    })
+    .await
 }
 
 #[tauri::command]

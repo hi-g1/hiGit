@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./bindings", () => ({
   commands: {
-    repoOpen: vi.fn(),
+    projectOpen: vi.fn(),
   },
 }));
 
@@ -11,13 +11,14 @@ import { commands } from "./bindings";
 
 describe("api", () => {
   it("성공한 결과를 그대로 돌려준다", async () => {
-    vi.mocked(commands.repoOpen).mockResolvedValue({ folder: "/p", repo: null });
-    await expect(api.openFolder("/p")).resolves.toEqual({ folder: "/p", repo: null });
+    vi.mocked(commands.projectOpen).mockResolvedValue({ kind: "notARepo", folder: "/p" });
+    await expect(api.openProject("/p", "picked")).resolves.toEqual({ kind: "notARepo", folder: "/p" });
+    expect(commands.projectOpen).toHaveBeenCalledWith("/p", "picked");
   });
 
   it("백엔드 오류를 ApiError로 바꾼다", async () => {
-    vi.mocked(commands.repoOpen).mockRejectedValue({ code: "folderNotFound", detail: "원문" });
-    const error = await api.openFolder("/없음").catch((e: unknown) => e);
+    vi.mocked(commands.projectOpen).mockRejectedValue({ code: "folderNotFound", detail: "원문" });
+    const error = await api.openProject("/없음", "recent").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ code: "folderNotFound", detail: "원문" });
   });

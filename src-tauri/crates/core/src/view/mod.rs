@@ -21,14 +21,6 @@ pub struct AppStatus {
     pub git_version: String,
 }
 
-/// 사용자가 고른 폴더. 저장소가 아니면 `repo`가 비어 있다.
-#[derive(Debug, Clone, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct FolderInfo {
-    pub folder: String,
-    pub repo: Option<RepoInfo>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoInfo {

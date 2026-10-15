@@ -5,7 +5,7 @@ use std::sync::Arc;
 use common::{FakeGit, commit};
 use git::{BranchInfo, Change, EntryKind, GitVersion, RepoPath, Status, StatusEntry};
 use higit_core::view::{ActionInput, ActionResult, ChangeKind, ErrorCode, ErrorView, LogQuery};
-use higit_core::view::{CommitInput, PathsInput};
+use higit_core::view::{CommitInput, OpenHow, PathsInput, ProjectOpenResult};
 use higit_core::{Core, CoreError, GitBackend};
 
 fn core_with(git: FakeGit) -> (Core, Arc<FakeGit>) {
@@ -153,16 +153,18 @@ fn queries_reject_missing_folder() {
 }
 
 #[test]
-fn open_folder_outside_repo_is_not_an_error() {
+fn open_project_outside_repo_is_not_an_error() {
     let dir = tempfile::tempdir().unwrap();
     let (core, _) = core_with(FakeGit::new());
-    let info = core.open_folder(dir.path()).unwrap();
-    assert!(info.repo.is_none());
-    assert!(!info.folder.is_empty());
+    let result = core.open_project(dir.path(), OpenHow::Picked).unwrap();
+    let ProjectOpenResult::NotARepo { folder } = result else {
+        panic!("{result:?}")
+    };
+    assert!(!folder.is_empty());
 }
 
 #[test]
-fn open_folder_inside_repo_reports_repo() {
+fn open_project_inside_repo_reports_repo() {
     let dir = tempfile::tempdir().unwrap();
     let repo_dir = dir.path().join("내 프로젝트");
     std::fs::create_dir(&repo_dir).unwrap();
@@ -170,17 +172,21 @@ fn open_folder_inside_repo_reports_repo() {
     *git.repo.lock().unwrap() = Some(RepoPath::new(&repo_dir));
     let (core, _) = core_with(git);
 
-    let info = core.open_folder(&repo_dir).unwrap();
-    assert_eq!(info.repo.unwrap().name, "내 프로젝트");
+    let result = core.open_project(&repo_dir, OpenHow::Picked).unwrap();
+    let ProjectOpenResult::Opened { repo } = result else {
+        panic!("{result:?}")
+    };
+    assert_eq!(repo.name, "내 프로젝트");
 }
 
 #[test]
-fn missing_folder_is_folder_not_found() {
+fn open_project_missing_folder() {
     let dir = tempfile::tempdir().unwrap();
     let (core, _) = core_with(FakeGit::new());
-    let err = core.open_folder(&dir.path().join("없음")).unwrap_err();
-    assert_eq!(ErrorView::from(&err).code, ErrorCode::FolderNotFound);
-    assert!(ErrorView::from(&err).detail.is_some());
+    let result = core
+        .open_project(&dir.path().join("없음"), OpenHow::Picked)
+        .unwrap();
+    assert_eq!(result, ProjectOpenResult::Missing);
 }
 
 #[test]

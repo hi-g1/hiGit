@@ -6,7 +6,8 @@ vi.mock("./lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./lib/api")>()),
   api: {
     appStatus: vi.fn(),
-    openFolder: vi.fn(),
+    openProject: vi.fn(),
+    recentProjects: vi.fn(async () => []),
     listActions: vi.fn(),
     previewAction: vi.fn(),
     executeAction: vi.fn(),
@@ -63,7 +64,7 @@ async function openFolder() {
 describe("홈에서 폴더 열기", () => {
   it("저장소를 열면 변경 사항과 버전 기록이 보인다", async () => {
     vi.mocked(pickFolder).mockResolvedValue(repo.path);
-    vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });
     vi.mocked(api.status).mockResolvedValue({
       ...emptyStatus,
       files: [
@@ -92,6 +93,8 @@ describe("홈에서 폴더 열기", () => {
     expect(await screen.findByText("src/한글 파일.txt")).toBeInTheDocument();
     expect(screen.getByText("옛 이름.md에서 이름 바꿈")).toBeInTheDocument();
     expect(api.status).toHaveBeenCalledWith(repo.path);
+    // 폴더 고르기도 프로젝트 열기 한 곳을 거친다(D-032)
+    expect(api.openProject).toHaveBeenCalledWith(repo.path, "picked");
     // 2단: 왼쪽 탭과 오른쪽 비교 칸, 세 번째 칸은 없다(D-025)
     const tabs = screen.getAllByRole("tab");
     expect(tabs.map((t) => t.textContent)).toEqual(["변경 사항2", "버전 기록"]);
@@ -111,7 +114,7 @@ describe("홈에서 폴더 열기", () => {
 
   it("저장소가 아닌 폴더는 버전 관리 시작으로 저장소를 만든다", async () => {
     vi.mocked(pickFolder).mockResolvedValue("/home/me/새 폴더");
-    vi.mocked(api.openFolder).mockResolvedValue({ folder: "/home/me/새 폴더", repo: null });
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "notARepo", folder: "/home/me/새 폴더" });
     vi.mocked(api.executeAction).mockResolvedValue({
       kind: "repoCreated",
       repo: { path: "/home/me/새 폴더", name: "새 폴더" },
@@ -132,7 +135,7 @@ describe("홈에서 폴더 열기", () => {
 
   it("파일 감시를 쓸 수 없으면 안내 줄과 다시 읽기 버튼", async () => {
     vi.mocked(pickFolder).mockResolvedValue(repo.path);
-    vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });
     vi.mocked(api.watch).mockRejectedValue(new ApiError({ code: "watchUnavailable", detail: "inotify" }));
 
     const user = await openFolder();
@@ -144,7 +147,7 @@ describe("홈에서 폴더 열기", () => {
 
   it("파일 감시가 켜져 있으면 안내 줄도 다시 읽기 버튼도 없다", async () => {
     vi.mocked(pickFolder).mockResolvedValue(repo.path);
-    vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });
     await openFolder();
     expect(await screen.findByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "다시 읽기" })).not.toBeInTheDocument();
@@ -152,7 +155,7 @@ describe("홈에서 폴더 열기", () => {
 
   it("버전 관리 시작이 실패하면 이유와 원문을 보여준다", async () => {
     vi.mocked(pickFolder).mockResolvedValue("/잠긴 폴더");
-    vi.mocked(api.openFolder).mockResolvedValue({ folder: "/잠긴 폴더", repo: null });
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "notARepo", folder: "/잠긴 폴더" });
     vi.mocked(api.executeAction).mockRejectedValue(
       new ApiError({ code: "gitFailed", detail: "fatal: cannot mkdir .git" }),
     );
@@ -168,9 +171,7 @@ describe("홈에서 폴더 열기", () => {
 
   it("폴더를 열지 못하면 쉬운 말로 알려준다", async () => {
     vi.mocked(pickFolder).mockResolvedValue("/없는 폴더");
-    vi.mocked(api.openFolder).mockRejectedValue(
-      new ApiError({ code: "folderNotFound", detail: "No such file or directory" }),
-    );
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "missing" });
 
     await openFolder();
     expect(await screen.findByRole("alert")).toHaveTextContent("폴더를 열 수 없어요.");
@@ -179,7 +180,7 @@ describe("홈에서 폴더 열기", () => {
   it("대화상자를 취소하면 아무것도 하지 않는다", async () => {
     vi.mocked(pickFolder).mockResolvedValue(null);
     await openFolder();
-    expect(api.openFolder).not.toHaveBeenCalled();
+    expect(api.openProject).not.toHaveBeenCalled();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

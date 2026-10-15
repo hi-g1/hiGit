@@ -16,13 +16,16 @@ pub fn builder() -> Builder<tauri::Wry> {
         .error_handling(ErrorHandlingMode::Throw)
         .commands(collect_commands![
             commands::app_status,
-            commands::repo_open,
+            commands::project_open,
+            commands::recent_list,
+            commands::recent_remove,
             commands::action_list,
             commands::action_preview,
             commands::action_execute,
             commands::query_status,
             commands::query_log,
             commands::query_diff,
+            commands::query_project_summary,
             commands::repo_watch,
             commands::repo_unwatch,
         ])

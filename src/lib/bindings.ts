@@ -7,13 +7,16 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	/**  git을 찾았는지와 버전. 실패하면 GitMissing / GitTooOld. */
 	appStatus: () => __TAURI_INVOKE<AppStatus>("app_status"),
-	repoOpen: (path: string) => __TAURI_INVOKE<FolderInfo>("repo_open", { path }),
+	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
+	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
+	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
 	actionPreview: (folder: string, input: ActionInput) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
 	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
+	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
 	repoUnwatch: () => __TAURI_INVOKE<null>("repo_unwatch"),
@@ -118,12 +121,6 @@ export type FileDiffView = {
 	hunks: HunkView[],
 };
 
-/**  사용자가 고른 폴더. 저장소가 아니면 `repo`가 비어 있다. */
-export type FolderInfo = {
-	folder: string,
-	repo: RepoInfo | null,
-};
-
 export type HunkView = {
 	section: string,
 	lines: DiffLineView[],
@@ -142,6 +139,12 @@ export type LogQuery = {
 	limit: number,
 };
 
+/**
+ *  어떻게 여는지. 고른 폴더는 저장소가 아니면 버전 관리 시작 안내로, 최근 목록은 기록과 같은
+ *  저장소일 때만 연다.
+ */
+export type OpenHow = "picked" | "recent";
+
 /**  파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다. */
 export type PathsInput = {
 	paths: string[],
@@ -150,6 +153,29 @@ export type PathsInput = {
 /**  미리보기와 실행 때 돌려줄 증표. */
 export type PreviewView = {
 	token: string,
+};
+
+export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } | 
+/**  폴더가 없다. */
+{ kind: "missing" } | 
+/**  폴더는 있지만 (그 자리의) 저장소가 아니다. */
+{ kind: "notARepo"; folder: string };
+
+/**  시작 화면의 프로젝트 상태 요약(D-031). 문장은 화면(messages)이 만든다. */
+export type ProjectSummaryView = {
+	branch: BranchView,
+	/**  충돌 파일을 포함한 바뀐 파일 수. */
+	changedFiles: number,
+	conflictedFiles: number,
+	/**  마지막 버전. 저장한 버전이 없으면 null. */
+	lastCommit: CommitRow | null,
+};
+
+export type RecentProject = {
+	path: string,
+	name: string,
+	/**  마지막으로 연 시각(unix 초). */
+	lastOpenedAt: number,
 };
 
 /**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */
