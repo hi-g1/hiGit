@@ -5,7 +5,7 @@ use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 use serde_json::Value;
 
 use crate::query::Queries;
-use crate::view::{ActionMetaView, ActionResult, FolderInfo, PreviewView, RepoInfo};
+use crate::view::{ActionInput, ActionMetaView, ActionResult, FolderInfo, PreviewView, RepoInfo};
 use crate::{CoreError, ExecCtx, Executor, PreviewToken, Registry, RepoState, Result, actions};
 
 /// 지원하는 가장 낮은 git 버전(D-003).
@@ -71,13 +71,13 @@ impl Core {
             .collect()
     }
 
-    pub fn preview(&self, folder: &Path, id: &str, input: &Value) -> Result<PreviewView> {
+    pub fn preview(&self, folder: &Path, id: &str, input: &ActionInput) -> Result<PreviewView> {
         let state = self.state_of(folder)?;
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,
         };
-        let (_preview, token) = self.executor.preview(&ctx, id, input)?;
+        let (_preview, token) = self.executor.preview(&ctx, id, &to_value(input))?;
         Ok(PreviewView { token: token.0 })
     }
 
@@ -85,7 +85,7 @@ impl Core {
         &self,
         folder: &Path,
         id: &str,
-        input: &Value,
+        input: &ActionInput,
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
         let state = self.state_of(folder)?;
@@ -94,7 +94,9 @@ impl Core {
             state: &state,
         };
         let token = preview_token.map(PreviewToken);
-        let outcome = self.executor.execute(&ctx, id, input, token.as_ref())?;
+        let outcome = self
+            .executor
+            .execute(&ctx, id, &to_value(input), token.as_ref())?;
         Ok(outcome.into())
     }
 
@@ -108,4 +110,13 @@ impl Core {
         });
         Ok(RepoState { folder, repo })
     }
+}
+
+fn to_value(input: &ActionInput) -> Value {
+    Value::Object(
+        input
+            .iter()
+            .map(|(k, v)| (k.clone(), Value::String(v.clone())))
+            .collect(),
+    )
 }

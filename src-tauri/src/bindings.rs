@@ -1,0 +1,45 @@
+//! 명령 등록과 TS 바인딩 생성을 이 파일 하나에 모은다(D-019).
+//! 바인딩 라이브러리를 바꿀 때 고칠 곳은 이 파일과 `higit_core::view`뿐이어야 한다.
+
+use std::path::Path;
+
+use higit_core::view::ActionMetaView;
+use specta_typescript::Typescript;
+use tauri_specta::{Builder, ErrorHandlingMode, collect_commands};
+
+use crate::commands;
+
+/// 화면이 부를 수 있는 명령 전체. 앱 실행과 바인딩 생성이 같이 쓴다.
+pub fn builder() -> Builder<tauri::Wry> {
+    Builder::<tauri::Wry>::new()
+        // 실패하면 Promise가 ErrorView로 reject된다. src/lib/api.ts가 ApiError로 바꾼다.
+        .error_handling(ErrorHandlingMode::Throw)
+        .commands(collect_commands![
+            commands::app_status,
+            commands::repo_open,
+            commands::action_list,
+            commands::action_preview,
+            commands::action_execute,
+            commands::query_status,
+            commands::query_log,
+        ])
+}
+
+const HEADER: &str =
+    "// 이 파일은 생성물입니다. 고치지 말고 `cargo run -p app --bin gen-bindings`로 다시 만드세요.";
+
+/// `src/lib/bindings.ts`와 `src/lib/action-meta.json`을 쓴다. `frontend_lib`은 `src/lib` 폴더.
+pub fn export_all(frontend_lib: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    builder().export(
+        Typescript::default().header(HEADER),
+        frontend_lib.join("bindings.ts"),
+    )?;
+
+    let metas: Vec<ActionMetaView> = higit_core::actions::all_metas()
+        .iter()
+        .map(ActionMetaView::from)
+        .collect();
+    let json = serde_json::to_string_pretty(&metas)? + "\n";
+    std::fs::write(frontend_lib.join("action-meta.json"), json)?;
+    Ok(())
+}

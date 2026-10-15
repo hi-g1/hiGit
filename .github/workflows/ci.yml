@@ -74,6 +74,12 @@ jobs:
         working-directory: src-tauri
         run: cargo test --workspace
 
+      - name: 바인딩이 최신인지
+        working-directory: src-tauri
+        run: |
+          cargo run -p app --bin gen-bindings
+          git diff --exit-code -- ../src/lib
+
       - name: 프론트 빌드
         run: pnpm build
 

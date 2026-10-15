@@ -1,6 +1,7 @@
 //! 화면에 보내는 타입(D-019). 바인딩용 derive(serde, specta)는 이 모듈에만 붙인다.
 //! `git` 크레이트 타입은 여기서 옮겨 담고, 화면에 그대로 노출하지 않는다.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -164,8 +165,9 @@ pub struct CommitRow {
     pub summary: String,
     pub author_name: String,
     pub author_email: String,
-    /// 작성 시각(unix 초). TS에서는 number(2^53 안쪽이라 정확함).
-    #[specta(type = f64)]
+    /// 작성 시각(unix 초). TS에서는 number. specta는 i64를 bigint로, f64를 `number | null`로
+    /// 내보내므로 TS 타입만 u32(number)로 지정한다. 값은 serde가 숫자 그대로 보낸다.
+    #[specta(type = u32)]
     pub author_time: i64,
 }
 
@@ -242,6 +244,10 @@ impl From<&ActionMeta> for ActionMetaView {
         }
     }
 }
+
+/// 액션 입력. 키는 `input_schema`의 필드 이름, 값은 입력한 글자.
+/// (`serde_json::Value`는 재귀 타입이라 specta rc.25가 내보내지 못한다.)
+pub type ActionInput = BTreeMap<String, String>;
 
 /// 미리보기와 실행 때 돌려줄 증표.
 #[derive(Debug, Clone, Serialize, Type)]

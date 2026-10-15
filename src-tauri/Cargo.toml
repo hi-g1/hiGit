@@ -13,12 +13,22 @@ name = "app_lib"
 name = "higit"
 path = "src/main.rs"
 
+# 화면용 TS 바인딩과 액션 메타 생성: cargo run -p app --bin gen-bindings
+[[bin]]
+name = "gen-bindings"
+path = "src/bin/gen-bindings.rs"
+
 [build-dependencies]
 tauri-build = { workspace = true }
 
 [dependencies]
 higit-core = { path = "crates/core" }
 tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+serde_json = { workspace = true }
+specta = { workspace = true }
+specta-typescript = { workspace = true }
+tauri-specta = { workspace = true }
 
 [workspace]
 members = ["crates/*"]
@@ -32,6 +42,7 @@ rust-version = "1.99"
 [workspace.dependencies]
 tauri = { version = "2.12", features = [] }
 tauri-build = { version = "2.7", features = [] }
+tauri-plugin-dialog = "2.8"
 which = "8.0"
 dunce = "1.0"
 thiserror = "2.0"

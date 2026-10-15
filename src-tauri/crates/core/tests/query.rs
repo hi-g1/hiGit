@@ -4,9 +4,8 @@ use std::sync::Arc;
 
 use common::{FakeGit, commit};
 use git::{BranchInfo, Change, EntryKind, GitVersion, RepoPath, Status, StatusEntry};
-use higit_core::view::{ActionResult, ChangeKind, ErrorCode, ErrorView, LogQuery};
+use higit_core::view::{ActionInput, ActionResult, ChangeKind, ErrorCode, ErrorView, LogQuery};
 use higit_core::{Core, CoreError, GitBackend};
-use serde_json::json;
 
 fn core_with(git: FakeGit) -> (Core, Arc<FakeGit>) {
     let git = Arc::new(git);
@@ -182,14 +181,16 @@ fn init_through_core() {
     assert_eq!(metas.len(), 1);
     assert_eq!(metas[0].id, "init");
 
-    let result = core.execute(dir.path(), "init", &json!({}), None).unwrap();
+    let result = core
+        .execute(dir.path(), "init", &ActionInput::new(), None)
+        .unwrap();
     let ActionResult::RepoCreated { repo } = result;
     assert!(!repo.path.is_empty());
     assert_eq!(git.calls().len(), 1);
 
     // 이미 저장소가 된 폴더에서는 다시 할 수 없다.
     let err = core
-        .execute(dir.path(), "init", &json!({}), None)
+        .execute(dir.path(), "init", &ActionInput::new(), None)
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::AlreadyRepo);
 }
