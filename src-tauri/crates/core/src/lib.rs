@@ -15,6 +15,7 @@ pub mod git_security;
 mod parked;
 mod query;
 pub mod recent;
+mod redact;
 mod registry;
 mod state;
 pub mod view;

@@ -551,3 +551,17 @@ fn log_page_size_is_capped() {
     assert_eq!(page.commits.len(), higit_core::MAX_LOG_PAGE as usize);
     assert!(page.has_more);
 }
+
+#[test]
+fn error_detail_hides_credentials() {
+    let err = CoreError::Git(git::GitError::Failed {
+        args: vec![],
+        code: Some(128),
+        stdout: String::new(),
+        stderr: "fatal: unable to access 'https://kim:ghp_abcdefghijklmnop1234@github.com/a/b.git/': 403".into(),
+    });
+    let detail = ErrorView::from(&err).detail.unwrap();
+    assert!(!detail.contains("kim"), "{detail}");
+    assert!(!detail.contains("ghp_abc"), "{detail}");
+    assert!(detail.contains("https://***@github.com"), "{detail}");
+}

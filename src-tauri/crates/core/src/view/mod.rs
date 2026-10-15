@@ -384,6 +384,9 @@ impl From<&CoreError> for ErrorView {
             }
             _ => None,
         });
+        // "자세히 보기"에 주소 속 자격 증명, 토큰, 홈 폴더가 나오지 않게 한 곳에서 가린다(D-040).
+        let home = platform::home_dir().map(|h| h.to_string_lossy().into_owned());
+        let detail = detail.map(|d| crate::redact::redact(&d, home.as_deref()));
         Self { code, detail }
     }
 }

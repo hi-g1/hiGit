@@ -19,6 +19,11 @@ pub fn app_data_dir(app_id: &str) -> io::Result<PathBuf> {
     Ok(dir)
 }
 
+/// 사용자 홈 폴더. 오류 원문에서 개인 경로를 가릴 때 쓴다(D-040).
+pub fn home_dir() -> Option<PathBuf> {
+    dirs::home_dir()
+}
+
 /// 환경을 읽지 않는 위치 계산. 테스트가 환경 변수를 바꾸지 않고 부를 수 있게 나눴다.
 fn resolve_data_dir(
     override_dir: Option<OsString>,
