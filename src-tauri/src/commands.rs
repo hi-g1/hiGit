@@ -6,8 +6,9 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    DiffRequest, ErrorCode, ErrorView, FileDiffView, LogPage, LogQuery, OpenHow, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, TrustChoice, UndoResult,
+    DiffRequest, ErrorCode, ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, OpenHow,
+    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, TrustChoice,
+    UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -227,6 +228,15 @@ pub async fn undo_last(state: State<'_, AppState>, folder: String) -> CmdResult<
 #[specta::specta]
 pub async fn redo_last(state: State<'_, AppState>, folder: String) -> CmdResult<UndoResult> {
     blocking(state, move |core| core.redo(&PathBuf::from(folder))).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn query_home_map(state: State<'_, AppState>, repo: String) -> CmdResult<HomeMapView> {
+    blocking(state, move |core| {
+        core.queries().home_map(&PathBuf::from(repo))
+    })
+    .await
 }
 
 /// 저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다.

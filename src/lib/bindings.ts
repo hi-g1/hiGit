@@ -28,6 +28,7 @@ export const commands = {
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
+	queryHomeMap: (repo: string) => __TAURI_INVOKE<HomeMapView>("query_home_map", { repo }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
@@ -194,6 +195,28 @@ export type FileDiffView = {
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
 export type GitSecurity = "ok" | "outdated" | "distroManaged";
 
+/**  main과 지금 브랜치 두 줄(지금 브랜치가 main이면 한 줄)을 그리는 데 필요한 것만. */
+export type HomeMapView = {
+	/**  지금 브랜치. 특정 버전을 보는 중이면 null. */
+	current: string | null,
+	/**  기본 브랜치(D-048). 없으면 null(한 줄로 그린다). */
+	defaultBranch: string | null,
+	/**  지금 브랜치가 기본 브랜치에서 갈라져 있어 두 줄로 그린다. */
+	twoLines: boolean,
+	/**  지금 줄에 그릴 버전(오래된 것부터, 최대 3개). 두 줄이면 갈라진 뒤의 버전만. */
+	currentCommits: MapCommit[],
+	/**  그리지 않은 앞쪽 버전 수("…"로 접는다). */
+	currentMore: number,
+	/**  갈라진 뒤 기본 브랜치에 생긴 버전 수. */
+	mainSince: number,
+	/**  기본 브랜치의 마지막 버전(두 줄일 때). */
+	mainLast: MapCommit | null,
+	/**  지금 브랜치 upstream이 가리키는 버전과 그 표시("GitHub" 또는 원격 이름). */
+	upstreamOid: string | null,
+	upstreamLabel: string | null,
+	changedFiles: number,
+};
+
 export type HunkView = {
 	section: string,
 	lines: DiffLineView[],
@@ -210,6 +233,12 @@ export type LogPage = {
 export type LogQuery = {
 	skip: number,
 	limit: number,
+};
+
+export type MapCommit = {
+	oid: string,
+	shortOid: string,
+	summary: string,
 };
 
 export type NameProblem = "empty" | 

@@ -6,12 +6,14 @@ use std::path::Path;
 mod branch;
 mod diff;
 mod input;
+mod map;
 
 pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
     ActionInput, BranchCreateInput, CommitInput, FetchInput, PathsInput, SwitchInput, SyncInput,
 };
+pub use map::{HomeMapView, MapCommit};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;

@@ -9,8 +9,8 @@ use crate::parked;
 use crate::recent::RecentStore;
 use crate::trust::{TrustDecision, TrustState, TrustStore};
 use crate::view::{
-    BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, LogPage,
-    LogQuery, NameProblem, ProjectSummaryView, StatusView,
+    BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, HomeMapView,
+    LogPage, LogQuery, MapCommit, NameProblem, ProjectSummaryView, StatusView,
 };
 use crate::{CoreError, Result};
 
@@ -199,6 +199,102 @@ impl Queries {
             orphan_parked,
             remotes: remotes.into_iter().map(|r| r.name).collect(),
         })
+    }
+
+    /// 홈 두 줄 노선도(D-046). main과 지금 브랜치만, 각 줄 최근 몇 개.
+    pub fn home_map(&self, repo: &Path) -> Result<HomeMapView> {
+        const SHOWN: u32 = 3;
+        let root = self.opened_repo(repo)?;
+        let status = self.git.status(&root)?;
+        let changed_files = u32::try_from(status.entries.len()).unwrap_or(u32::MAX);
+        let current = status.branch.head.clone();
+        let mut view = HomeMapView {
+            current: current.clone(),
+            default_branch: None,
+            two_lines: false,
+            current_commits: Vec::new(),
+            current_more: 0,
+            main_since: 0,
+            main_last: None,
+            upstream_oid: None,
+            upstream_label: None,
+            changed_files,
+        };
+        if status.branch.oid.is_none() {
+            return Ok(view);
+        }
+        let branches = self.git.branches(&root)?;
+        let remotes = self.git.remotes(&root)?;
+        let default = self.default_branch(&root, &branches, &remotes)?;
+        view.default_branch = default.clone();
+        let log = |rev: Option<String>, limit: u32| -> Result<Vec<MapCommit>> {
+            let mut commits: Vec<MapCommit> = self
+                .git
+                .log(
+                    &root,
+                    &git::LogQuery {
+                        skip: 0,
+                        limit,
+                        rev,
+                    },
+                )?
+                .into_iter()
+                .map(|c| MapCommit {
+                    oid: c.oid,
+                    short_oid: c.short_oid,
+                    summary: c.summary,
+                })
+                .collect();
+            commits.reverse();
+            Ok(commits)
+        };
+        let fork = match (&default, &current) {
+            (Some(d), Some(c)) if d != c => {
+                let main_ref = format!("refs/heads/{d}");
+                self.git
+                    .merge_base(&root, &main_ref, "HEAD")?
+                    .map(|base| (main_ref, base))
+            }
+            _ => None,
+        };
+        match fork {
+            Some((main_ref, base)) => {
+                let (main_only, mine) = self.git.count_between(&root, &main_ref, "HEAD")?;
+                view.two_lines = true;
+                view.main_since = main_only;
+                view.current_commits = log(Some(format!("{base}..HEAD")), SHOWN)?;
+                view.current_more = mine.saturating_sub(SHOWN);
+                if main_only > 0 {
+                    view.main_last = log(Some(main_ref), 1)?.pop();
+                }
+            }
+            None => {
+                view.current_commits = log(None, SHOWN + 1)?;
+                if view.current_commits.len() > SHOWN as usize {
+                    view.current_commits.remove(0);
+                    view.current_more = 1;
+                }
+            }
+        }
+        if let Some(upstream) = &status.branch.upstream
+            && let Some(oid) = self
+                .git
+                .resolve_ref(&root, &format!("refs/remotes/{upstream}"))?
+        {
+            view.upstream_oid = Some(oid.to_string());
+            let remote = remotes
+                .iter()
+                .filter(|r| upstream.starts_with(&format!("{}/", r.name)))
+                .max_by_key(|r| r.name.len());
+            view.upstream_label = remote.map(|r| {
+                if r.url.contains("github.com") {
+                    "GitHub".to_string()
+                } else {
+                    r.name.clone()
+                }
+            });
+        }
+        Ok(view)
     }
 
     /// 새 브랜치 이름으로 쓸 수 있는지. 대소문자만 다른 기존 이름도 막는다(Windows ref 충돌).

@@ -14,6 +14,7 @@ export const queryKeys = {
   diff: (repo: string, path: string, untracked: boolean) => ["diff", repo, path, untracked] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
+  homeMap: (repo: string) => ["homeMap", repo] as const,
 };
 
 export function useAppStatus() {
@@ -86,5 +87,12 @@ export function useBranchNameCheck(repo: string, name: string) {
     queryFn: () => api.checkBranchName(repo, name),
     enabled: name.trim() !== "",
     staleTime: 10_000,
+  });
+}
+
+export function useHomeMap(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.homeMap>>, ApiError>({
+    queryKey: queryKeys.homeMap(repo),
+    queryFn: () => api.homeMap(repo),
   });
 }

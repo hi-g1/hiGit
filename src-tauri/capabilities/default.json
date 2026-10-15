@@ -24,6 +24,7 @@
     "allow-query-diff",
     "allow-query-branches",
     "allow-query-branch-name",
+    "allow-query-home-map",
     "allow-query-project-summary",
     "allow-repo-watch",
     "allow-repo-unwatch"
