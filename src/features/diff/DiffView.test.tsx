@@ -41,11 +41,12 @@ describe("DiffView", () => {
       ],
     });
     expect(await screen.findByText("나나")).toBeInTheDocument();
-    expect(screen.getByText("마지막 버전과 지금 파일을 비교해요 · 1줄 추가, 1줄 삭제")).toBeInTheDocument();
+    expect(screen.getByText("1줄 추가")).toBeInTheDocument();
+    expect(screen.getByText("1줄 삭제")).toBeInTheDocument();
     const added = screen.getByText("나나").closest("tr")!;
     expect(added).toHaveTextContent("2+나나");
     expect(screen.getByText("파일 끝 줄바꿈 없음")).toBeInTheDocument();
-    expect(screen.getByText("비교 보기")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "src/한글 파일.txt" })).toBeInTheDocument();
     expect(api.diff).toHaveBeenCalledWith("/repo", request);
   });
 

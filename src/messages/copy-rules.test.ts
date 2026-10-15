@@ -41,7 +41,7 @@ const SAMPLES: Record<string, unknown[][]> = {
     [{ kind: "notUploaded" }],
     [{ kind: "upToDate" }],
   ],
-  diffSummary: [[{ added: 1, removed: 2 }]],
+
 };
 
 /** 메시지 객체 안의 모든 문자열. 함수형 문구는 예시 인자로 불러 문자열로 만든다. */

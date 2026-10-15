@@ -3,7 +3,7 @@ import { useDiff } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
-import { Term } from "../../ui/Term";
+import { TermTooltip } from "../../ui/Term";
 import styles from "./DiffView.module.css";
 import { countChanges, toDiffRows } from "./model";
 
@@ -14,16 +14,14 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
 
   return (
     <div className={styles.view}>
+      {/* 파일 이름과 숫자만(D-049, r-home.png). 비교 보기라는 이름은 칸의 접근성 이름과 호버로 남긴다. */}
       <header className={styles.head}>
-        <h2 className={styles.title}>
-          <Term id="diff" />
-        </h2>
-        <span className={styles.path} title={request.path}>
-          {request.path}
-        </span>
-        {diff.data && !diff.data.binary && !diff.data.link && (
-          <p className={styles.summary}>{m.diffSummary(countChanges(diff.data))}</p>
-        )}
+        <TermTooltip id="diff">
+          <h2 className={styles.path} title={request.path} tabIndex={0}>
+            {request.path}
+          </h2>
+        </TermTooltip>
+        {diff.data && !diff.data.binary && !diff.data.link && <Summary {...countChanges(diff.data)} />}
       </header>
       <div className={styles.body}>
         {diff.isPending && <EmptyState>{m.loading}</EmptyState>}
@@ -65,5 +63,14 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
           ))}
       </div>
     </div>
+  );
+}
+
+function Summary({ added, removed }: { added: number; removed: number }) {
+  const m = useMessages();
+  return (
+    <p className={styles.summary}>
+      <span className={styles.sumAdded}>{m.diffAdded(added)}</span>, <span className={styles.sumRemoved}>{m.diffRemoved(removed)}</span>
+    </p>
   );
 }

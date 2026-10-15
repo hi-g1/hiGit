@@ -14,13 +14,10 @@
   border-bottom: var(--border-width) solid var(--border);
 }
 
-.title {
-  font-size: var(--font-size-title);
-}
-
 .path {
   overflow: hidden;
-  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -29,6 +26,15 @@
   flex-basis: 100%;
   color: var(--text-muted);
   font-size: var(--font-size-sm);
+}
+
+/* 색과 함께 "추가"·"삭제" 글자가 있어 색만으로 알리지 않는다(design.md) */
+.sumAdded {
+  color: var(--added);
+}
+
+.sumRemoved {
+  color: var(--deleted);
 }
 
 /* 긴 줄은 가로로 스크롤한다 */
