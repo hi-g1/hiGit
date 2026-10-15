@@ -8,7 +8,10 @@ const t = (id: TermId) => glossary[id].friendly;
 export const en: Messages = {
   appTagline: "Git made easy, even if you have never used it",
   openFolder: "Open folder",
-  openOtherFolder: "Open another folder",
+  otherProjects: "Open another project",
+  projectMenu: "Project menu",
+  lastMissing: (name: string) => `Couldn't find ${name}, the project you opened last.`,
+  lastNotRepo: (name: string) => `${name}, the project you opened last, is not under version control.`,
   reload: "Reload",
   detached: "Viewing a specific version",
   notUploaded: "Not uploaded yet",

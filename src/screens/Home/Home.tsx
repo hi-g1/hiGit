@@ -17,6 +17,7 @@ export function Home() {
   const open = useOpenFolder();
   // 저장소가 아닌 폴더를 골랐을 때 "버전 관리 시작"을 묻는다(Ctrl+O로 작업 공간에서 골라도).
   const plainFolder = useRepoStore((s) => s.pendingInit);
+  const startNotice = useRepoStore((s) => s.startNotice);
   const setPlainFolder = useRepoStore((s) => s.setPendingInit);
 
   const gitReady = appStatus.isSuccess;
@@ -27,6 +28,11 @@ export function Home() {
         <h1 className={styles.title}>hiGit</h1>
         <p className={styles.tagline}>{m.appTagline}</p>
 
+        {startNotice && (
+          <p className={styles.notice} role="status">
+            {startNotice.kind === "lastMissing" ? m.lastMissing(startNotice.name) : m.lastNotRepo(startNotice.name)}
+          </p>
+        )}
         {appStatus.error && <ErrorNotice error={appStatus.error} />}
 
         <div>

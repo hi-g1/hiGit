@@ -45,12 +45,19 @@ beforeEach(() => {
   vi.mocked(api.log).mockResolvedValue(emptyLog);
   vi.mocked(api.watch).mockResolvedValue(null);
   vi.mocked(api.unwatch).mockResolvedValue(null);
+  vi.mocked(api.recentProjects).mockResolvedValue([]);
 });
 
 afterEach(() => {
   vi.clearAllMocks();
   act(() =>
-    useRepoStore.setState({ repo: null, leftTab: "changes", selectedPath: null, pendingInit: null }),
+    useRepoStore.setState({
+      repo: null,
+      leftTab: "changes",
+      selectedPath: null,
+      pendingInit: null,
+      startNotice: null,
+    }),
   );
 });
 
@@ -205,5 +212,59 @@ describe("홈에서 폴더 열기", () => {
     render(<App />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Git이 설치되어 있지 않아요.");
     expect(screen.getByRole("button", { name: "폴더 열기" })).toBeDisabled();
+  });
+});
+
+describe("앱을 켤 때", () => {
+  const last = { path: repo.path, name: "내 프로젝트", lastOpenedAt: 1_700_000_000 };
+
+  it("마지막 프로젝트를 바로 연다", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([last]);
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
+    expect(api.openProject).toHaveBeenCalledWith(repo.path, "recent");
+  });
+
+  it("마지막 프로젝트 폴더가 사라졌으면 시작 화면에서 알린다", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([last]);
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "missing" });
+    render(<App />);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "마지막으로 연 내 프로젝트 폴더를 찾지 못했어요.",
+    );
+    expect(screen.getByRole("button", { name: "폴더 열기" })).toBeInTheDocument();
+  });
+
+  it("마지막 프로젝트가 저장소가 아니게 되었으면 그렇게 알린다", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([last]);
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "notARepo", folder: repo.path });
+    render(<App />);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "마지막으로 연 내 프로젝트 폴더는 버전 관리를 하지 않는 폴더예요.",
+    );
+  });
+
+  it("git이 없으면 다시 열기를 하지 않는다", async () => {
+    vi.mocked(api.appStatus).mockRejectedValue(new ApiError({ code: "gitMissing", detail: null }));
+    vi.mocked(api.recentProjects).mockResolvedValue([last]);
+    render(<App />);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(api.recentProjects).not.toHaveBeenCalled();
+    expect(api.openProject).not.toHaveBeenCalled();
+  });
+
+  it("프로젝트 메뉴의 다른 프로젝트 열기로 시작 화면에 간다", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([last]);
+    vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });
+    const user = userEvent.setup();
+    render(<App />);
+    const menu = await screen.findByRole("button", { name: "프로젝트 메뉴: 내 프로젝트" });
+    menu.focus();
+    await user.keyboard("{Enter}");
+    await user.click(await screen.findByRole("menuitem", { name: "다른 프로젝트 열기" }));
+    expect(await screen.findByRole("button", { name: "폴더 열기" })).toBeInTheDocument();
+    // 다시 열기를 하지 않는다
+    expect(api.openProject).toHaveBeenCalledTimes(1);
   });
 });

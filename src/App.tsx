@@ -6,6 +6,7 @@ import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { useAppStatus } from "./lib/queries";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
+import { useStartup } from "./state/useStartup";
 
 export function createQueryClient() {
   return new QueryClient({
@@ -37,5 +38,8 @@ function Screens() {
   const openFolder = useOpenFolder();
   // Ctrl+O: 시작 화면과 작업 공간 어디서나 폴더 열기(D-033)
   useShortcut("openFolder", openFolder.pick, gitReady);
+  // 마지막 프로젝트를 여는 동안은 빈 바탕(시작 화면이 잠깐 보였다 사라지지 않게)
+  const ready = useStartup();
+  if (!ready) return null;
   return repo ? <Workspace repo={repo} /> : <Home />;
 }

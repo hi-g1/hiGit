@@ -12,7 +12,9 @@ const status = (branch: Partial<StatusView["branch"]>): StatusView => ({
 describe("TopBar", () => {
   it("프로젝트 이름과 브랜치를 보여준다", () => {
     render(<TopBar repo={repo} status={status({})} />);
-    expect(screen.getByRole("heading", { name: "내 프로젝트" })).toHaveAttribute("title", repo.path);
+    expect(screen.getByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
+    // 프로젝트 이름은 프로젝트 메뉴 단추이고, 경로는 툴팁이다.
+    expect(screen.getByRole("button", { name: "프로젝트 메뉴: 내 프로젝트" })).toHaveAttribute("title", repo.path);
     expect(screen.getByText("브랜치")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
   });

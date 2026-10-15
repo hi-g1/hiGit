@@ -19,6 +19,9 @@ export function useAppStatus() {
     queryKey: queryKeys.appStatus,
     queryFn: api.appStatus,
     staleTime: Infinity,
+    // git 확인은 앱을 켤 때 한 번(안내도 "설치한 뒤 다시 실행해 주세요"). 실패한 쿼리를 새 화면이
+    // 쓸 때 다시 시도하면, 시작을 기다리는 화면과 시작 화면이 번갈아 나타나며 무한히 다시 그린다.
+    retryOnMount: false,
   });
 }
 

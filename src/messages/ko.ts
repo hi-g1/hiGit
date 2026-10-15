@@ -12,7 +12,10 @@ const t = (id: TermId) => glossary[id].friendly;
 export const ko = {
   appTagline: "Git을 모르는 사람도 쉽게 쓰는 Git 앱",
   openFolder: "폴더 열기",
-  openOtherFolder: "다른 폴더 열기",
+  otherProjects: "다른 프로젝트 열기",
+  projectMenu: "프로젝트 메뉴",
+  lastMissing: (name: string) => `마지막으로 연 ${name} 폴더를 찾지 못했어요.`,
+  lastNotRepo: (name: string) => `마지막으로 연 ${name} 폴더는 버전 관리를 하지 않는 폴더예요.`,
   reload: "다시 읽기",
   detached: "특정 버전을 보는 중",
   notUploaded: "아직 올린 적 없음",
