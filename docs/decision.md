@@ -157,3 +157,35 @@
 - 이유: RC라 API가 바뀔 수 있다. 문제가 생기면 ts-rs로 바꿀 때 고칠 곳이 `bindings.rs`와 `core::view` 두 곳으로 한정된다. `git` 크레이트를 작게 유지한다(D-003).
 - 대안: git 타입에 derive를 직접 붙인다(변환 코드가 없지만 바인딩 라이브러리 교체 시 고칠 곳이 흩어짐). 타입을 손으로 쓴다(architecture.md가 금지).
 - 영향: git 결과 타입을 view 타입으로 옮기는 변환 코드가 core에 생긴다. 바인딩 라이브러리를 바꾸면 이 항목을 대체하는 결정을 새로 쓴다.
+
+## D-020 액션 입력은 액션별 구조체와 태그 붙은 `ActionInput` enum으로 받는다
+- 상태: 확정
+- 날짜: 2026-10-15
+- 결정: 액션마다 입력 구조체(`CommitInput { message }` 등)를 두고, 화면은 `ActionInput` enum(`#[serde(tag = "id", content = "input", rename_all = "kebab-case")]`, 입력 없는 액션은 unit 변형)으로 보낸다. 타입은 `core::view`에 두고 바인딩 derive도 거기에만 붙인다(D-019). `Action` 트레이트는 `&serde_json::Value` 대신 `&ActionInput`을 받는다. `action_preview`·`action_execute`의 별도 `id` 인자는 없애고 enum 태그에서 id를 얻는다. `ActionMeta.input_schema`는 없앤다.
+- 이유: `BTreeMap<String, String>`은 문자열만 담고 필드 이름 오타·빠진 필드를 컴파일러가 잡지 못한다. 태그 enum은 TS에서 판별 유니온이 되어 화면 코드도 타입 검사를 받는다. specta rc.25가 재귀 타입(`Value`)을 내보내지 못하는 문제도 사라진다. 입력이 있는 액션은 어차피 전용 UI(`src/features/<id>/`)가 필요해 범용 폼 스키마의 쓰임이 없다.
+- 대안: `BTreeMap` 유지(타입 안전성 없음). 트레이트에 연관 타입 `type Input`(레지스트리를 동적으로 유지하려면 타입 지우기 래퍼가 필요해 복잡). `input_schema` 유지(구조체와 이중 정의가 생기고 맞는지 검사가 필요).
+- 영향: 새 액션 추가 절차에 "`core::view`의 `ActionInput`에 변형 추가"가 들어간다. `architecture.md`의 Action 트레이트·`ActionMeta`·"프론트와 백엔드 계약" 절을 함께 고친다. 명령 팔레트가 생기면 입력 필요 여부를 그때 메타에 다시 정한다.
+
+## D-021 git 실패 분류에 한해 영어 stderr 고정 문구를 읽는다
+- 상태: 확정
+- 날짜: 2026-10-15
+- 결정: 성공 출력은 계속 기계용 형식만 파싱한다(D-003). 실패한 명령의 종류(인증 실패, 앞서 나감 거부, 덮어쓸 파일 있음, 이름 없음 등)를 가리는 데에 한해 `LC_ALL=C`로 받은 stderr의 고정 영어 문구를 `crates/git`의 분류 함수 한곳에서 읽는다. 알아보지 못한 실패는 일반 `GitFailed`로 두고 원문은 "자세히 보기"로 보여준다.
+- 이유: git은 실패 이유를 기계용 형식으로 주지 않는다. 쉬운 안내와 해결 버튼(spec.md "오류 메시지 원칙")을 주려면 분류가 필요하다. 반복 0의 `discover`가 이미 같은 방식을 쓴다.
+- 대안: 분류하지 않고 모두 `GitFailed`(안내가 쓸모없어짐). 명령 전에 상태를 미리 검사(경쟁 상태가 생기고 모든 경우를 막지 못함).
+- 영향: 분류 문구는 `crates/git`의 한 파일에만 두고, 문구마다 실제 git으로 재현하는 테스트를 둔다. git 버전이 바뀌어 문구가 달라져도 `GitFailed`로 떨어질 뿐 동작은 깨지지 않는다. 사용자 환경이 한국어 로케일(`LANG=ko_KR.UTF-8`, `LANGUAGE=ko`)이어도 영어 원문이 나오는지 테스트로 고정한다(`LANGUAGE`는 비워서 실행). SSH 실패는 호스트 확인 실패와 키·인증 실패를 구분해 다른 안내를 준다.
+
+## D-022 커밋 전 검사는 저장소에 포함한 git hook으로 강제한다
+- 상태: 확정
+- 날짜: 2026-10-15
+- 결정: hook 파일을 `.githooks/`에 두고 `core.hooksPath=.githooks`로 쓴다. 설정은 `pnpm install`의 `prepare` 스크립트(`scripts/install-hooks.mjs`)가 한다. hook은 얇은 POSIX sh이고 실제 검사는 `scripts/check.mjs`(Node)가 한다. pre-commit은 스테이지된 파일 기준으로 바뀐 쪽만 빠르게 검사한다(`src/` 등 프론트: lint·typecheck·vitest, `src-tauri/`: fmt·clippy). pre-push는 전체 검사(프론트 전부, fmt, clippy, `cargo test --workspace`, 바인딩 최신)를 한다.
+- 이유: Windows(Git for Windows의 sh)와 Ubuntu에서 같은 스크립트가 돌려면 sh는 Node 호출만 하고 명령 실행은 Node가 하는 편이 안전하다(`.cmd` 실행, 경로 구분자). `prepare`로 설치하면 clone 후 따로 할 일이 없다.
+- 대안: husky·lefthook(의존성 추가), 수동 `git config`(빠뜨리기 쉬움), 모든 검사를 pre-commit에(Rust 테스트가 느려 커밋이 무거움).
+- 영향: CLAUDE.md "명령"·"커밋" 절과 README에 hook과 `pnpm check:fast`/`check:full`을 적는다. `--no-verify`는 쓰지 않는다. 사용자의 개인 `.git/hooks`는 이 저장소에서 쓰이지 않는다. Rust 테스트는 push 때 확인되므로, Rust 코드를 고친 커밋은 커밋 전에 `pnpm check:full`을 돌리는 것을 원칙으로 한다(CLAUDE.md "테스트가 실패하는 상태로 커밋하지 않는다").
+
+## D-023 네트워크 git 작업은 사용자가 정하지 않았을 때 SSH 질문을 끈다
+- 상태: 확정
+- 날짜: 2026-10-15
+- 결정: fetch·pull·push에 한해, 사용자가 `GIT_SSH_COMMAND` 환경 변수나 `core.sshCommand` 설정을 따로 두지 않았으면 `GIT_SSH_COMMAND="ssh -o BatchMode=yes"`를 준다. 질문(호스트 키 확인, 키 비밀번호) 대신 실패하고, 실패는 D-021 분류로 "처음 접속하는 서버라 확인이 필요해요"와 "SSH 키 비밀번호나 인증이 필요해요"를 나눠 안내한다. HTTPS 자격 증명 도우미(Windows Git Credential Manager 창 등)는 막지 않는다.
+- 이유: 앱에는 SSH 질문에 답할 화면이 없다. 터미널에서 띄운 앱은 질문을 기다리며 멈추고, 데스크톱에서 띄운 앱은 이유 없이 실패한다.
+- 대안: 건드리지 않음(D-003 "사용자 설정과 같은 동작"에 더 가깝지만 멈춤이 생긴다). 앱 안에 SSH 질문 대화상자(SSH_ASKPASS 구현, 범위가 큼).
+- 영향: D-003을 네트워크 작업에서 좁게 보완한다. 사용자가 SSH 설정을 직접 둔 경우는 그대로 따른다. 키 비밀번호가 필요한 사용자는 ssh-agent에 키를 올려야 한다는 안내가 필요하다.
