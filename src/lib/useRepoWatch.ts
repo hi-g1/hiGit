@@ -33,6 +33,9 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
     void queryClient.invalidateQueries({ queryKey: ["diff", repo] });
     void queryClient.invalidateQueries({ queryKey: queryKeys.homeMap(repo) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.branches(repo) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.mergeState(repo) });
+    void queryClient.invalidateQueries({ queryKey: ["conflictFile", repo] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.mergeHint(repo) });
   };
 
   useEffect(() => {
@@ -55,6 +58,12 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
       // 노선도는 버전(.git)과 고친 파일 수(작업 폴더) 둘 다에 따라 바뀐다.
       if (pending.worktree || pending.git) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.homeMap(repo) });
+        // 합치는 중 상태(MERGE_HEAD, index의 충돌 항목)도 둘 다에 따라 바뀐다.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.mergeState(repo) });
+        void queryClient.invalidateQueries({ queryKey: ["conflictFile", repo] });
+      }
+      if (pending.git) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.mergeHint(repo) });
       }
       pending = { worktree: false, git: false };
     };

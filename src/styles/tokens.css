@@ -30,6 +30,10 @@
   --graph-5: #2e7f86;
   --graph-6: #8a5a44;
 
+  /* 충돌 해결 화면 코드 바탕. 내 브랜치(--graph-2)·합칠 브랜치(--graph-1)의 옅은 색(D-086) */
+  --conflict-ours-bg: #edf6f0;
+  --conflict-theirs-bg: #eef3fa;
+
   /* 글꼴 */
   --font-body: "Pretendard", system-ui, sans-serif;
 
@@ -98,6 +102,8 @@
     --deleted: #e07a70;
     --diff-add-bg: #1e2e24;
     --diff-del-bg: #33201f;
+    --conflict-ours-bg: #1d2e24;
+    --conflict-theirs-bg: #1c2633;
     --scrollbar-thumb: #3a3c41;
     --overlay: rgb(0 0 0 / 55%);
   }
@@ -123,6 +129,8 @@
   --deleted: #e07a70;
   --diff-add-bg: #1e2e24;
   --diff-del-bg: #33201f;
+  --conflict-ours-bg: #1d2e24;
+  --conflict-theirs-bg: #1c2633;
   --scrollbar-thumb: #3a3c41;
   --overlay: rgb(0 0 0 / 55%);
 }

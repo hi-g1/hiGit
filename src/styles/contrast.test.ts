@@ -56,6 +56,10 @@ const PAIRS: [string, string, number][] = [
   ["--deleted", "--diff-del-bg", 4.5],
   ["--text", "--diff-add-bg", 4.5],
   ["--text", "--diff-del-bg", 4.5],
+  ["--text", "--conflict-ours-bg", 4.5],
+  ["--text", "--conflict-theirs-bg", 4.5],
+  ["--text-muted", "--conflict-ours-bg", 4.5],
+  ["--text-muted", "--conflict-theirs-bg", 4.5],
   // 경계: 주 버튼 모양, 입력칸·체크 상자 테두리
   ["--primary", "--bg", 3],
   ["--primary", "--surface", 3],

@@ -50,12 +50,21 @@ describe("useRepoWatch", () => {
     expect(api.watch).toHaveBeenCalledWith("/repo");
 
     act(() => handlers.changed?.({ repo: "/repo", worktree: true, git: false }));
-    expect(keys().sort()).toEqual(["diff", "homeMap", "status"]);
+    expect(keys().sort()).toEqual(["conflictFile", "diff", "homeMap", "mergeState", "status"]);
 
     invalidate.mockClear();
     await act(async () => vi.advanceTimersByTime(WATCH_THROTTLE_MS));
     act(() => handlers.changed?.({ repo: "/repo", worktree: false, git: true }));
-    expect(keys().sort()).toEqual(["branches", "diff", "homeMap", "log", "status"]);
+    expect(keys().sort()).toEqual([
+      "branches",
+      "conflictFile",
+      "diff",
+      "homeMap",
+      "log",
+      "mergeHint",
+      "mergeState",
+      "status",
+    ]);
   });
 
   it("1초 안의 여러 알림은 한 번 더로 묶는다", async () => {
@@ -68,7 +77,7 @@ describe("useRepoWatch", () => {
     });
     expect(invalidate).not.toHaveBeenCalled();
     await act(async () => vi.advanceTimersByTime(WATCH_THROTTLE_MS));
-    expect(keys().sort()).toEqual(["diff", "homeMap", "status"]);
+    expect(keys().sort()).toEqual(["conflictFile", "diff", "homeMap", "mergeState", "status"]);
   });
 
   it("감시가 꺼지면 active=false, 창 포커스 새로 고침을 켠다", async () => {

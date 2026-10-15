@@ -1,0 +1,156 @@
+/* 충돌 해결 화면(D-028 1안). 진행 표시 ✓·●와 선택 막대는 먹색, --accent는 쓰지 않는다(spec "색 규칙"). */
+.screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.route {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--font-weight-bold);
+}
+
+.dotOurs,
+.dotTheirs {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotOurs {
+  background: var(--graph-2);
+}
+
+.dotTheirs {
+  background: var(--graph-1);
+}
+
+.progress {
+  color: var(--text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.error {
+  padding: var(--space-2) var(--space-4);
+}
+
+.allChosen {
+  padding: var(--space-8);
+  font-size: var(--font-size-name);
+  font-weight: var(--font-weight-bold);
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 220px 1fr;
+  min-height: 0;
+}
+
+.files {
+  overflow: auto;
+  border-right: var(--border-width) solid var(--border);
+}
+
+.files ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filesTitle {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--row-height);
+  padding: 0 var(--space-4);
+  border: none;
+  border-left: var(--selected-bar) solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.file:hover {
+  background: var(--surface-hover);
+}
+
+.current {
+  border-left-color: var(--text);
+  background: var(--surface-hover);
+}
+
+.fileName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.clean {
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  overflow: auto;
+}
+
+.where {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.path {
+  font-family: var(--font-mono);
+}
+
+.question {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+}
+
+.nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

@@ -15,7 +15,35 @@ export const queryKeys = {
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
+  mergeState: (repo: string) => ["mergeState", repo] as const,
+  conflictFile: (repo: string, path: string) => ["conflictFile", repo, path] as const,
+  mergeHint: (repo: string) => ["mergeHint", repo] as const,
 };
+
+/** 합치는 중인지와 충돌 파일(D-069). 앱을 켜자마자 합치는 중이면 충돌 화면을 연다. */
+export function useConflictState(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.conflictState>>, ApiError>({
+    queryKey: queryKeys.mergeState(repo),
+    queryFn: () => api.conflictState(repo),
+  });
+}
+
+/** 충돌 파일 하나의 고를 곳(D-086). */
+export function useConflictFile(repo: string, path: string | null) {
+  return useQuery<Awaited<ReturnType<typeof api.conflictFile>>, ApiError>({
+    queryKey: queryKeys.conflictFile(repo, path ?? ""),
+    queryFn: () => api.conflictFile(repo, path ?? ""),
+    enabled: path !== null,
+  });
+}
+
+/** 합치기 제안(D-048, D-071). */
+export function useMergeHint(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.mergeHint>>, ApiError>({
+    queryKey: queryKeys.mergeHint(repo),
+    queryFn: () => api.mergeHint(repo),
+  });
+}
 
 export function useAppStatus() {
   return useQuery<Awaited<ReturnType<typeof api.appStatus>>, ApiError>({

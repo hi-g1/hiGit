@@ -6,13 +6,14 @@ import { useSyncStore } from "../../features/sync/syncStore";
 import { useAutoFetch } from "../../features/sync/useAutoFetch";
 import { useUndo } from "../../features/undo/useUndo";
 import type { RepoInfo, StatusView } from "../../lib/api";
-import { useBranches, useStatus } from "../../lib/queries";
+import { useBranches, useConflictState, useStatus } from "../../lib/queries";
 import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { Conflict } from "../Conflict/Conflict";
 import { History } from "../History/History";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
@@ -36,6 +37,9 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   // 원격 확인은 저절로(D-045, D-055). 원격이 없으면 하지 않는다.
   useAutoFetch(repo.path, hasRemote);
   const syncError = useSyncStore((s) => s.error);
+  // 합치는 중이면 홈·기록 대신 충돌 해결 화면(D-069). 앱을 켜자마자 합치는 중이어도 같다.
+  const conflict = useConflictState(repo.path).data;
+  const merging = conflict?.active === true;
   const files = status.data?.files;
   const selected = files?.find((f) => f.path === selectedPath);
   // 홈에 들어오면 첫 파일의 비교가 열려 있다. 고른 파일이 사라지면(버전으로 저장됨) 다음 첫 파일로.
@@ -50,7 +54,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
 
   return (
     <div className={styles.workspace}>
-      <TopBar repo={repo} status={status.data} onDone={notifyDone} />
+      <TopBar repo={repo} status={status.data} onDone={notifyDone} merging={merging} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">
           <span>{m.errors.watchUnavailable}</span>
@@ -64,7 +68,14 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           <ErrorNotice error={syncError} />
         </div>
       )}
-      {view === "history" ? (
+      {conflict?.otherOperation && (
+        <div className={styles.watchNotice} role="status">
+          <span>{m.otherOperation}</span>
+        </div>
+      )}
+      {merging && conflict ? (
+        <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
+      ) : view === "history" ? (
         <History repo={repo.path} />
       ) : (
         <>

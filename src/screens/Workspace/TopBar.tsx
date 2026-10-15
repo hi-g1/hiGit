@@ -18,10 +18,13 @@ export function TopBar({
   repo,
   status,
   onDone,
+  merging = false,
 }: {
   repo: RepoInfo;
   status: StatusView | undefined;
   onDone: (text: string) => void;
+  /** 합치는 중이면 브랜치 목록·동기화·버전 기록을 숨긴다(그 단축키도 꺼진다). */
+  merging?: boolean;
 }) {
   const m = useMessages();
   const branch = status?.branch;
@@ -31,13 +34,16 @@ export function TopBar({
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
   const toggleHistory = () => setView(view === "history" ? "home" : "history");
-  useShortcut("history", toggleHistory);
+  useShortcut("history", toggleHistory, !merging);
 
   return (
     <header className={styles.bar}>
       <ProjectMenu repo={repo} />
       <span className={styles.divider} aria-hidden="true" />
-      {branch && (
+      {branch && merging && (
+        <span className={styles.branchName}>{branch.name ?? m.detached}</span>
+      )}
+      {branch && !merging && (
         <BranchList repo={repo.path} current={branch.name} onDone={onDone}>
           {branch.name && <span className={styles.dot} style={{ background: branchColor(branch.name, defaultBranch) }} />}
           <span className={styles.branchName}>{branch.name ?? m.detached}</span>
@@ -45,9 +51,10 @@ export function TopBar({
         </BranchList>
       )}
       <span className={styles.spacer} />
-      {branch && hasRemote && (
+      {branch && hasRemote && !merging && (
         <SyncButton repo={repo.path} branch={branch} changedFiles={status?.files.length ?? 0} />
       )}
+      {!merging && (
       <button
         type="button"
         className={`${styles.textButton} ${view === "history" ? styles.on : ""}`}
@@ -57,6 +64,7 @@ export function TopBar({
       >
         <Term id="log" focusable={false} />
       </button>
+      )}
     </header>
   );
 }
