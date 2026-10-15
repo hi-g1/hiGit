@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
 import type { RepoInfo } from "../../lib/api";
@@ -16,7 +15,6 @@ import styles from "./Workspace.module.css";
 export function Workspace({ repo }: { repo: RepoInfo }) {
   const m = useMessages();
   const closeRepo = useRepoStore((s) => s.closeRepo);
-  const queryClient = useQueryClient();
   const status = useStatus(repo.path);
   const log = useLog(repo.path);
 
@@ -27,9 +25,6 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           <h1 className={styles.name}>{repo.name}</h1>
           <span className={styles.path}>{repo.path}</span>
         </div>
-        <Button variant="text" onClick={() => void queryClient.invalidateQueries()}>
-          {m.refresh}
-        </Button>
         <Button variant="text" onClick={closeRepo}>
           {m.openOtherFolder}
         </Button>

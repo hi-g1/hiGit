@@ -106,8 +106,8 @@ describe("홈에서 폴더 열기", () => {
 
     expect(api.executeAction).toHaveBeenCalledWith("/home/me/새 폴더", { id: "init" });
     expect(await screen.findByRole("heading", { name: "새 폴더" })).toBeInTheDocument();
-    expect(await screen.findByText("마지막 저장 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
-    expect(await screen.findByText("아직 저장한 기록이 없어요.")).toBeInTheDocument();
+    expect(await screen.findByText("마지막 버전 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
+    expect(await screen.findByText("아직 저장한 버전이 없어요.")).toBeInTheDocument();
   });
 
   it("버전 관리 시작이 실패하면 이유와 원문을 보여준다", async () => {
