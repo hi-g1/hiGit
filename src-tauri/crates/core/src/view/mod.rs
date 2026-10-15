@@ -351,12 +351,15 @@ pub enum ActionResult {
         name: String,
     },
     Fetched,
+    #[serde(rename_all = "camelCase")]
     Synced {
         received: u32,
         sent: u32,
         merged: bool,
-        /// 겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다.
+        /// 겹친 파일. 비어 있지 않으면 올리지 않았다.
         overlap: Vec<String>,
+        /// 겹쳐서 합치기를 시작했다. 화면은 충돌 해결 화면으로 간다(D-069).
+        merge_started: bool,
     },
     Ignored {
         count: u32,
@@ -401,6 +404,7 @@ impl From<Outcome> for ActionResult {
                 sent: r.sent,
                 merged: r.merged,
                 overlap: r.overlap,
+                merge_started: r.merge_started,
             },
             Outcome::Ignored { count } => ActionResult::Ignored { count },
             Outcome::Merged {

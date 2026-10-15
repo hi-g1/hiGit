@@ -97,7 +97,8 @@ fn receive_only_fast_forwards() {
             received: 1,
             sent: 0,
             merged: false,
-            overlap: vec![]
+            overlap: vec![],
+            merge_started: false
         }
     );
     assert!(s.mine.path().join("b.txt").exists());
@@ -149,7 +150,7 @@ fn both_sides_different_files_merge_and_push() {
 }
 
 #[test]
-fn overlapping_change_does_not_start_merge() {
+fn overlapping_change_starts_the_merge_for_the_conflict_screen() {
     let s = setup();
     others_push(&s, "a.txt", "줄 1\n남이 고침\n줄 3\n줄 4\n줄 5\n");
     commit_file(
@@ -158,19 +159,35 @@ fn overlapping_change_does_not_start_merge() {
         "줄 1\n내가 고침\n줄 3\n줄 4\n줄 5\n",
     );
     let before = git(s.mine.path(), &["rev-parse", "HEAD"]);
-    let r = sync(&core(s.mine.path()), s.mine.path()).unwrap();
+    let core = core(s.mine.path());
+    let r = sync(&core, s.mine.path()).unwrap();
     assert_eq!(
         r,
         ActionResult::Synced {
             received: 0,
             sent: 0,
             merged: false,
-            overlap: vec!["a.txt".into()]
+            overlap: vec!["a.txt".into()],
+            merge_started: true,
         }
     );
+    // 합치는 중으로 멈추고 올리지 않는다(D-069).
     assert_eq!(git(s.mine.path(), &["rev-parse", "HEAD"]), before);
-    assert!(!s.mine.path().join(".git/MERGE_HEAD").exists());
-    assert_eq!(git(s.mine.path(), &["status", "--porcelain"]), "");
+    assert!(s.mine.path().join(".git/MERGE_HEAD").exists());
+    // 합치는 중에는 다시 동기화하지 않는다.
+    let err = sync(&core, s.mine.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::OperationInProgress);
+}
+
+#[test]
+fn staged_files_block_a_merge_during_sync() {
+    let s = setup();
+    others_push(&s, "b.txt", "남의 것\n");
+    commit_file(s.mine.path(), "c.txt", "내 것\n");
+    std::fs::write(s.mine.path().join("d.txt"), "넣음\n").unwrap();
+    git(s.mine.path(), &["add", "d.txt"]);
+    let err = sync(&core(s.mine.path()), s.mine.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::StagedChanges);
 }
 
 #[test]
@@ -287,8 +304,16 @@ fn a_sync_that_stopped_does_not_block_undoing_the_save() {
         "줄 1\n내가 고침\n줄 3\n줄 4\n줄 5\n",
     );
     let r = sync(&core, s.mine.path()).unwrap();
-    assert!(matches!(r, ActionResult::Synced { ref overlap, .. } if !overlap.is_empty()));
-    // 겹쳐서 멈춘 동기화는 아무것도 바꾸지 않았으니, 되돌리기는 그 앞의 버전 저장을 되돌린다.
+    assert!(matches!(
+        r,
+        ActionResult::Synced {
+            merge_started: true,
+            ..
+        }
+    ));
+    // 합치기를 그만두면, 시작만 한 동기화는 기록이 없으니 되돌리기는 그 앞의 버전 저장을 되돌린다.
+    core.execute(s.mine.path(), &ActionInput::ConflictAbort, None)
+        .unwrap();
     core.undo(s.mine.path()).unwrap();
     assert_eq!(git(s.mine.path(), &["rev-parse", "HEAD"]), before);
 }

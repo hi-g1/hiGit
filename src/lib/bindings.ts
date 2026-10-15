@@ -76,8 +76,10 @@ export type ActionMetaView = {
 export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
 parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
-/**  겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다. */
-overlap: string[] } | { kind: "ignored"; count: number } | 
+/**  겹친 파일. 비어 있지 않으면 올리지 않았다. */
+overlap: string[]; 
+/**  겹쳐서 합치기를 시작했다. 화면은 충돌 해결 화면으로 간다(D-069). */
+mergeStarted: boolean } | { kind: "ignored"; count: number } | 
 /**  합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다. */
 { kind: "merged"; branch: string; fastForward: boolean } | 
 /**  겹쳐서 합치는 중으로 멈췄다. 충돌 해결 화면으로 간다(D-069). */

@@ -130,6 +130,7 @@ impl Outcome {
             Outcome::Ignored { .. } => JournalMode::Always,
             // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
             Outcome::MergeConflicts { .. } => JournalMode::Skip,
+            Outcome::Synced(r) if r.merge_started => JournalMode::Skip,
             _ => JournalMode::Journal,
         }
     }

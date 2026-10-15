@@ -35,12 +35,13 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
     onMutate: () => set({ paused: false, error: null }),
     onSuccess: (result) => {
       if (result.kind !== "synced") return;
-      set({ overlap: result.overlap, fetchFailedAt: null });
+      // 겹쳐서 합치기를 시작했으면 충돌 해결 화면이 이어받는다(D-069). 겹친 글자는 남기지 않는다.
+      set({ overlap: result.mergeStarted ? [] : result.overlap, fetchFailedAt: null });
       if (result.overlap.length === 0) show(m.synced(result.sent, result.received));
     },
     onError: (e) => set({ error: e }),
     onSettled: () => {
-      for (const key of [["status", repo], ["log", repo], ["branches", repo]]) {
+      for (const key of [["status", repo], ["log", repo], ["branches", repo], ["mergeState", repo], ["homeMap", repo]]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     },

@@ -3,7 +3,7 @@
 //! 동기화 = 원격 확인 → (받을 것이 있으면) 합치기 → (보낼 것이 있으면) 올리기. 합칠 때 겹치면
 //! 합치기를 시작하지 않는다(충돌 해결은 반복 2). 겹침은 작업 폴더를 건드리지 않고 미리 본다.
 
-use git::{GitBackend, GitOp, LogQuery, MergeCheck, RepoPath};
+use git::{GitBackend, GitOp, LogQuery, RepoPath};
 
 use super::{names, needs_repo, repo_of};
 use crate::undo::backup;
@@ -21,8 +21,10 @@ pub struct SyncReport {
     pub sent: u32,
     /// 다른 사람 버전과 합친 버전을 만들었다.
     pub merged: bool,
-    /// 겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다.
+    /// 겹친 파일. 비어 있지 않으면 올리지 않았다.
     pub overlap: Vec<String>,
+    /// 겹쳐서 합치기를 시작한 채 멈췄다(충돌 해결 화면으로, D-069).
+    pub merge_started: bool,
 }
 
 fn meta(
@@ -97,14 +99,9 @@ impl Action for RemoteAction {
             ("pull", ActionInput::Pull) => {
                 let up = upstream(git, repo)?.ok_or(CoreError::Git(no_upstream()))?;
                 fetch_remote(git, repo, &up.remote)?;
-                let (_, behind) = git.count_between(repo, "HEAD", &up.tracking)?;
+                let (_, behind) = git.count_between(repo, "HEAD", &up.rev())?;
                 if behind > 0 {
-                    git.run(
-                        repo,
-                        &GitOp::MergeFf {
-                            rev: up.tracking.clone(),
-                        },
-                    )?;
+                    git.run(repo, &GitOp::MergeFf { rev: up.rev() })?;
                 }
                 Ok(Outcome::Synced(SyncReport {
                     received: behind,
@@ -131,6 +128,11 @@ struct Upstream {
 }
 
 impl Upstream {
+    /// git에 넘길 전체 이름. 짧은 이름(`origin/main`)은 같은 이름의 태그·로컬 브랜치가 먼저 풀린다(D-069).
+    fn rev(&self) -> String {
+        format!("refs/remotes/{}", self.tracking)
+    }
+
     /// 올릴 곳을 앱이 정한다: `<원격> HEAD:refs/heads/<upstream 브랜치>`. 인자 없는 `git push`는
     /// 저장소 설정(`remote.<n>.push`, `push.default=matching`)이 무엇을 올릴지 정해, 받은 저장소의
     /// 설정이 다른 브랜치까지 덮어쓸 수 있다.
@@ -213,7 +215,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
     ))?;
     match upstream(git, repo)? {
         Some(up) => {
-            let (ahead, _) = git.count_between(repo, "HEAD", &up.tracking)?;
+            let (ahead, _) = git.count_between(repo, "HEAD", &up.rev())?;
             if ahead > 0 {
                 git.run(
                     repo,
@@ -264,33 +266,32 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
             ..SyncReport::default()
         });
     };
+    // 합치는 중에는 동기화하지 않는다(충돌 해결 화면에서 마치거나 그만둔 뒤에).
+    crate::actions::switch::refuse_during_operation(git, repo)?;
     let mut report = SyncReport::default();
+    let rev = up.rev();
     // 그사이 누가 올려 거부되면 한 번만 처음부터 다시 한다.
     for attempt in 0..2 {
         fetch_remote(git, repo, &up.remote)?;
-        let (ahead, behind) = git.count_between(repo, "HEAD", &up.tracking)?;
+        let (ahead, behind) = git.count_between(repo, "HEAD", &rev)?;
         if behind > 0 {
             if ahead == 0 {
-                git.run(
-                    repo,
-                    &GitOp::MergeFf {
-                        rev: up.tracking.clone(),
-                    },
-                )?;
+                git.run(repo, &GitOp::MergeFf { rev: rev.clone() })?;
             } else {
-                match git.merge_check(repo, None, "HEAD", &up.tracking)? {
-                    MergeCheck::Overlap { paths } => {
-                        report.received = 0;
-                        report.overlap = paths;
-                        return Ok(report);
-                    }
-                    MergeCheck::Clean => merge(git, repo, &up.tracking, behind, &input.locale)?,
+                // 넣은 파일이 있으면 합친 버전에 섞이지 않게 시작하지 않는다(D-069).
+                crate::actions::merge::refuse_staged(git, repo)?;
+                if !merge(git, repo, &rev, behind, &input.locale)? {
+                    // 겹쳤다: 합치는 중으로 두고 충돌 해결 화면으로 간다. 올리지 않는다.
+                    report.received = 0;
+                    report.merge_started = true;
+                    report.overlap = crate::actions::merge::conflict_paths(git, repo)?;
+                    return Ok(report);
                 }
                 report.merged = true;
             }
             report.received += behind;
         }
-        let (ahead, _) = git.count_between(repo, "HEAD", &up.tracking)?;
+        let (ahead, _) = git.count_between(repo, "HEAD", &rev)?;
         if ahead == 0 {
             return Ok(report);
         }
@@ -312,31 +313,29 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
     Ok(report)
 }
 
-/// 다른 사람 버전과 합친 버전을 만든다. 실패하면 합치기를 그만두고 겹침으로 알린다.
+/// 다른 사람 버전과 합친 버전을 만든다. 합쳤으면 참, 겹쳐서(또는 hook이 막아) 합치는 중으로
+/// 멈췄으면 거짓. 그 밖의 실패는 오류다.
 fn merge(
     git: &dyn GitBackend,
     repo: &RepoPath,
-    tracking: &str,
+    rev: &str,
     count: u32,
     locale: &str,
-) -> Result<()> {
+) -> Result<bool> {
     if let Some(head) = git.resolve_ref(repo, "HEAD")? {
         backup::backup_oid(git, repo, &head, "sync")?;
     }
-    let message = merge_message(&incoming_authors(git, repo, tracking)?, count, locale);
+    let message = merge_message(&incoming_authors(git, repo, rev)?, count, locale);
     match git.run(
         repo,
         &GitOp::Merge {
-            rev: tracking.to_string(),
+            rev: rev.to_string(),
             message,
         },
     ) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            // 미리 본 판정이 틀려 겹쳤으면 곧바로 그만둔다(합치기 중이 아니면 아무것도 안 함).
-            let _ = git.run(repo, &GitOp::MergeAbort);
-            Err(e.into())
-        }
+        Ok(_) => Ok(true),
+        Err(_) if crate::actions::merge::merging(git, repo)? => Ok(false),
+        Err(e) => Err(e.into()),
     }
 }
 

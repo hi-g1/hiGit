@@ -55,24 +55,27 @@ describe("동기화 버튼", () => {
   });
 
   it("누르거나 Ctrl+Shift+S면 동기화하고 결과를 알린다", async () => {
-    vi.mocked(api.executeAction).mockResolvedValue({ kind: "synced", received: 1, sent: 2, merged: false, overlap: [] });
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "synced", received: 1, sent: 2, merged: false, overlap: [], mergeStarted: false });
     show();
     await userEvent.keyboard("{Control>}{Shift>}s{/Shift}{/Control}");
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "sync", input: { locale: "ko" } });
     await vi.waitFor(() => expect(useToastStore.getState().toast?.text).toBe("동기화했어요 · ↑2 ↓1"));
   });
 
-  it("겹치면 버튼 옆에 겹친 파일 수를 남긴다", async () => {
+  it("겹쳐서 합치기를 시작하면 겹친 글자 대신 충돌 화면이 이어받는다", async () => {
     vi.mocked(api.executeAction).mockResolvedValue({
       kind: "synced",
       received: 0,
       sent: 0,
       merged: false,
       overlap: ["a.txt", "b.txt"],
+      mergeStarted: true,
     });
     show();
     await userEvent.click(screen.getByRole("button", { name: /동기화/ }));
-    expect(await screen.findByText("겹친 파일 2개")).toHaveAttribute("title", "a.txt\nb.txt");
+    await vi.waitFor(() => expect(api.executeAction).toHaveBeenCalled());
+    expect(screen.queryByText("겹친 파일 2개")).not.toBeInTheDocument();
+    expect(useSyncStore.getState().overlap).toEqual([]);
   });
 
   it("오류는 안내 줄 상태로 남긴다", async () => {
