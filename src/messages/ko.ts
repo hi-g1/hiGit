@@ -1,5 +1,13 @@
-// 화면 문구(한국어, 존댓말, 짧게). Git 용어 자체는 여기 두지 않고 <Term>으로 쓴다.
+// 화면 문구(한국어, 존댓말, 짧게). 화면 요소의 Git 용어는 <Term>으로 쓴다.
+// 문장 안의 용어는 호버 없이 쉬운 이름만 쓰되, 글자를 직접 쓰지 않고 glossary에서 꺼낸다(D-029).
+// 그래서 용어표가 바뀌면 이 문장들도 함께 바뀐다.
+import { ko as glossary } from "../glossary/ko";
+import type { TermId } from "../glossary/types";
 import type { ErrorCode, ChangeKind } from "../lib/api";
+import { josa } from "./josa";
+
+/** 문장에 끼울 쉬운 이름 */
+const t = (id: TermId) => glossary[id].friendly;
 
 export const ko = {
   appTagline: "Git을 모르는 사람도 쉽게 쓰는 Git 앱",
@@ -19,7 +27,7 @@ export const ko = {
   diffTruncated: "파일이 커서 앞부분만 보여요.",
   noNewlineAtEnd: "파일 끝 줄바꿈 없음",
   commitPlaceholder: "무엇을 바꿨나요?",
-  commitNeedsFiles: "이번 버전에 넣을 파일을 골라 주세요.",
+  commitNeedsFiles: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
   commitNeedsMessage: "무엇을 바꿨는지 적어 주세요.",
   committed: (shortOid: string) => `버전을 저장했어요 · ${shortOid}`,
   loading: "불러오는 중…",
@@ -42,18 +50,18 @@ export const ko = {
     invalidInput: "입력한 내용을 확인해 주세요.",
     busy: "다른 작업이 끝날 때까지 기다려 주세요.",
     watchUnavailable: "파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요.",
-    nothingToCommit: "이번 버전에 넣은 파일이 없어요. 먼저 파일을 골라 주세요.",
+    nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",
-    invalidBranchName: "브랜치 이름으로 쓸 수 없는 글자가 있어요.",
-    branchExists: "같은 이름의 브랜치가 이미 있어요.",
-    wouldOverwrite: "버전으로 저장하지 않은 변경이 덮어써져요. 먼저 버전을 저장해 주세요.",
-    notFastForward: "내 버전과 원격 저장소의 버전이 갈라져 있어요. 합치기는 아직 준비 중이에요.",
-    pushRejected: "올리기 전에 원격 저장소의 새 버전을 먼저 가져와야 해요.",
-    noUpstream: "아직 원격 저장소에 올린 적이 없는 브랜치예요.",
+    invalidBranchName: `${t("branch")} 이름으로 쓸 수 없는 글자가 있어요.`,
+    branchExists: `같은 이름의 ${josa(t("branch"), "이/가")} 이미 있어요.`,
+    wouldOverwrite: `버전으로 저장하지 않은 변경이 덮어써져요. 먼저 ${t("commit")}부터 해 주세요.`,
+    notFastForward: `내 버전과 ${t("remote")}의 버전이 갈라져 있어요. ${josa(t("merge"), "은/는")} 아직 준비 중이에요.`,
+    pushRejected: `${t("remote")}에 새 버전이 있어요. ${t("push")} 전에 ${t("pull")}부터 해 주세요.`,
+    noUpstream: `아직 ${t("remote")}에 올린 적이 없는 ${josa(t("branch"), "이에요/예요")}.`,
     sshHostUnverified: "처음 접속하는 서버라 확인이 필요해요. 터미널에서 한 번 접속해 서버를 등록해 주세요.",
     sshAuthFailed: "SSH 인증에 실패했어요. 키가 등록되어 있는지 확인하고, 키에 비밀번호가 있으면 ssh-agent에 올려 주세요.",
-    httpAuthFailed: "원격 저장소에 로그인하지 못했어요.",
-    remoteUnreachable: "원격 저장소에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.",
+    httpAuthFailed: `${t("remote")}에 로그인하지 못했어요.`,
+    remoteUnreachable: `${t("remote")}에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.`,
     gitFailed: "Git 작업이 실패했어요.",
     internal: "예상하지 못한 문제가 생겼어요.",
   } satisfies Record<ErrorCode, string>,
@@ -63,7 +71,7 @@ export const ko = {
     deleted: "삭제",
     renamed: "이름 바꿈",
     typeChanged: "종류 바뀜",
-    conflicted: "충돌",
+    conflicted: t("conflict"),
     untracked: "새 파일",
   } satisfies Record<ChangeKind, string>,
 };

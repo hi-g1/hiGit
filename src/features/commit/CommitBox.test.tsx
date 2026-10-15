@@ -34,7 +34,7 @@ describe("CommitBox", () => {
   it("넣은 파일이 없으면 꺼지고 이유를 둘째 줄로", () => {
     const { button } = renderBox(0);
     expect(button).toBeDisabled();
-    expect(screen.getByText("이번 버전에 넣을 파일을 골라 주세요.")).toBeInTheDocument();
+    expect(screen.getByText("넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.")).toBeInTheDocument();
   });
 
   it("메시지가 비면 꺼지고, 쓰면 켜진다", async () => {

@@ -1,4 +1,9 @@
+// 문장 안의 용어는 glossary 쉬운 이름에서 꺼낸다(D-029).
+import { en as glossary } from "../glossary/en";
+import type { TermId } from "../glossary/types";
 import type { Messages } from "./ko";
+
+const t = (id: TermId) => glossary[id].friendly;
 
 export const en: Messages = {
   appTagline: "Git made easy, even if you have never used it",
@@ -18,7 +23,7 @@ export const en: Messages = {
   diffTruncated: "The file is large, so only the beginning is shown.",
   noNewlineAtEnd: "no newline at end of file",
   commitPlaceholder: "What did you change?",
-  commitNeedsFiles: "Pick files to include in this version.",
+  commitNeedsFiles: "No files included. Click the checkbox in front of a file.",
   commitNeedsMessage: "Describe what you changed.",
   committed: (shortOid: string) => `Version saved · ${shortOid}`,
   loading: "Loading…",
@@ -41,18 +46,18 @@ export const en: Messages = {
     invalidInput: "Please check what you entered.",
     busy: "Please wait until the other task finishes.",
     watchUnavailable: "File changes are not detected automatically. The view reloads when you return to the window.",
-    nothingToCommit: "No files are included in this version. Pick files first.",
+    nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",
-    invalidBranchName: "The branch name contains characters that are not allowed.",
-    branchExists: "A branch with the same name already exists.",
-    wouldOverwrite: "Changes not saved as a version would be overwritten. Save a version first.",
-    notFastForward: "Your versions and the remote have diverged. Combining is not ready yet.",
-    pushRejected: "Get the new versions from the remote before uploading.",
-    noUpstream: "This branch has never been uploaded.",
+    invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,
+    branchExists: `A ${t("branch").toLowerCase()} with the same name already exists.`,
+    wouldOverwrite: `Changes not saved as a version would be overwritten. Use ${t("commit")} first.`,
+    notFastForward: `Your versions and the ${t("remote").toLowerCase()} have diverged. ${t("merge")} is not ready yet.`,
+    pushRejected: `The ${t("remote").toLowerCase()} has new versions. Use ${t("pull")} before ${t("push")}.`,
+    noUpstream: `This ${t("branch").toLowerCase()} has never been uploaded to the ${t("remote").toLowerCase()}.`,
     sshHostUnverified: "This server is new. Connect once from a terminal to trust it.",
     sshAuthFailed: "SSH authentication failed. Check that your key is registered, and add it to ssh-agent if it has a passphrase.",
-    httpAuthFailed: "Could not sign in to the remote repository.",
-    remoteUnreachable: "Could not reach the remote repository. Check the address and your connection.",
+    httpAuthFailed: `Could not sign in to the ${t("remote").toLowerCase()}.`,
+    remoteUnreachable: `Could not reach the ${t("remote").toLowerCase()}. Check the address and your connection.`,
     gitFailed: "The Git operation failed.",
     internal: "Something unexpected happened.",
   },
@@ -62,7 +67,7 @@ export const en: Messages = {
     deleted: "Deleted",
     renamed: "Renamed",
     typeChanged: "Type changed",
-    conflicted: "Conflict",
+    conflicted: t("conflict"),
     untracked: "New file",
   },
 };
