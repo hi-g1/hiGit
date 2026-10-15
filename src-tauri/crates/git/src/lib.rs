@@ -13,4 +13,6 @@ mod testutil;
 pub use backend::GitBackend;
 pub use cli::{CliBackend, ConfigureCommand};
 pub use error::{GitError, Result};
-pub use types::{BranchInfo, Change, EntryKind, GitVersion, RepoPath, Status, StatusEntry};
+pub use types::{
+    BranchInfo, Change, Commit, EntryKind, GitVersion, LogQuery, RepoPath, Status, StatusEntry,
+};

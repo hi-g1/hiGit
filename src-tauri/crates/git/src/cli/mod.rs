@@ -1,3 +1,4 @@
+mod log;
 mod runner;
 mod status;
 
@@ -6,7 +7,7 @@ use std::path::{Path, PathBuf};
 pub use runner::ConfigureCommand;
 use runner::Runner;
 
-use crate::{GitBackend, GitError, GitVersion, RepoPath, Result, Status};
+use crate::{Commit, GitBackend, GitError, GitVersion, LogQuery, RepoPath, Result, Status};
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
@@ -59,6 +60,31 @@ impl GitBackend for CliBackend {
             ],
         )?;
         status::parse(&out.stdout_lossy())
+    }
+
+    fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>> {
+        let dir = Some(repo.as_path());
+        let rev = match &query.rev {
+            Some(rev) => rev.as_str(),
+            None => {
+                // 저장이 없는 저장소는 오류 문구를 읽지 않고 HEAD 존재 여부로 판단한다.
+                // -q: 없으면 출력 없이 종료 코드 1.
+                match self
+                    .runner
+                    .run(dir, &["rev-parse", "--verify", "-q", "HEAD^{commit}"])
+                {
+                    Ok(_) => "HEAD",
+                    Err(GitError::Failed { code: Some(1), .. }) => return Ok(Vec::new()),
+                    Err(e) => return Err(e),
+                }
+            }
+        };
+        let skip = format!("--skip={}", query.skip);
+        let max = format!("--max-count={}", query.limit);
+        let out = self
+            .runner
+            .run(dir, &["log", "-z", log::FORMAT, &skip, &max, rev, "--"])?;
+        log::parse(&out.stdout_lossy())
     }
 }
 

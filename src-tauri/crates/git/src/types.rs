@@ -104,6 +104,40 @@ pub enum EntryKind {
     Untracked,
 }
 
+/// 저장(커밋) 하나.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Commit {
+    pub oid: String,
+    pub short_oid: String,
+    /// 부모 해시. 첫 저장은 비어 있고, 합치기 저장은 2개 이상.
+    pub parents: Vec<String>,
+    pub author_name: String,
+    pub author_email: String,
+    /// 작성 시각(unix 초). 표시 형식은 화면이 정한다.
+    pub author_time: i64,
+    /// 메시지 첫 줄.
+    pub summary: String,
+}
+
+/// 저장 기록 조회 조건. 나중에 확대·축소 단계 같은 필드를 더할 수 있게 구조체로 둔다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogQuery {
+    pub skip: u32,
+    pub limit: u32,
+    /// 시작점. `None`이면 HEAD.
+    pub rev: Option<String>,
+}
+
+impl Default for LogQuery {
+    fn default() -> Self {
+        Self {
+            skip: 0,
+            limit: 200,
+            rev: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
