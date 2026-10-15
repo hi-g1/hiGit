@@ -10,6 +10,7 @@ mod input;
 mod map;
 mod merge;
 mod secret;
+mod stash;
 
 pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
 pub use conflict::{
@@ -20,10 +21,12 @@ pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
     ActionInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput, FileChoice,
     FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, SwitchInput, SyncInput,
+    TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
+pub use stash::{StashItem, StashListView};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -378,6 +381,8 @@ pub enum ActionResult {
     ConflictFinished,
     /// 합치기를 그만뒀다.
     ConflictAborted,
+    Stashed,
+    TookOut,
 }
 
 impl From<Outcome> for ActionResult {
@@ -417,6 +422,8 @@ impl From<Outcome> for ActionResult {
             Outcome::MergeConflicts { paths } => ActionResult::MergeConflicts { paths },
             Outcome::ConflictFinished => ActionResult::ConflictFinished,
             Outcome::ConflictAborted => ActionResult::ConflictAborted,
+            Outcome::Stashed => ActionResult::Stashed,
+            Outcome::TookOut => ActionResult::TookOut,
         }
     }
 }

@@ -54,6 +54,18 @@
     "undo": "nothing"
   },
   {
+    "id": "stash",
+    "glossaryId": "stash",
+    "risk": "safe",
+    "undo": "inverse"
+  },
+  {
+    "id": "take-out",
+    "glossaryId": "stash",
+    "risk": "safe",
+    "undo": "nothing"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",

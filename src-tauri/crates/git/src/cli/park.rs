@@ -31,6 +31,57 @@ impl CliBackend {
         })
     }
 
+    /// stash 목록(`log -g refs/stash`). 레코드는 `해시\0시각\0제목\0`.
+    pub(super) fn stashes(&self, repo: &RepoPath) -> Result<Vec<crate::StashEntry>> {
+        if self.stash_top(repo)?.is_none() {
+            return Ok(Vec::new());
+        }
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &["log", "-g", "-z", "--format=%H%x00%ct%x00%gs", "refs/stash"],
+        )?;
+        let text = out.stdout_lossy();
+        let fields: Vec<&str> = text.split('\0').collect();
+        let (records, _) = fields.as_chunks::<3>();
+        Ok(records
+            .iter()
+            .filter_map(|[oid, at, subject]| {
+                Some(crate::StashEntry {
+                    oid: Oid::parse(oid.trim_start_matches('\n'))?,
+                    at: at.parse().ok()?,
+                    subject: subject.to_string(),
+                })
+            })
+            .collect())
+    }
+
+    /// stash 목록에서 `oid` 항목을 뺀다. 위치를 찾은 뒤 빼기 직전에 그 자리가 같은지 다시 본다.
+    pub(super) fn stash_drop_oid(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
+        let list = self.stashes(repo)?;
+        let Some(index) = list.iter().position(|e| &e.oid == oid) else {
+            return Err(GitError::Refused {
+                kind: FailureKind::Other,
+                detail: format!("stash {oid} not found"),
+            });
+        };
+        let place = format!("stash@{{{index}}}");
+        let now = crate::GitBackend::resolve_ref(self, repo, &place)?;
+        if now.as_ref() != Some(oid) {
+            return Err(GitError::Refused {
+                kind: FailureKind::Other,
+                detail: "stash list changed".into(),
+            });
+        }
+        let out = self
+            .runner
+            .run(Some(repo.as_path()), &["stash", "drop", "-q", &place])?;
+        Ok(OpOutput {
+            stdout: out.stdout_lossy(),
+            stderr: out.stderr_lossy(),
+            oid: Some(oid.clone()),
+        })
+    }
+
     /// stash 목록 맨 위가 `oid`일 때만 뺀다. 그사이 다른 stash가 생겼으면 그대로 둔다.
     pub(super) fn stash_drop_if(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
         if self.stash_top(repo)?.as_ref() != Some(oid) {

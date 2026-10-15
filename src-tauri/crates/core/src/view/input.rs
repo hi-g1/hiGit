@@ -24,6 +24,10 @@ pub enum ActionInput {
     ConflictFinish(ConflictFinishInput),
     /// 합치기를 그만둔다(D-070).
     ConflictAbort,
+    /// 고친 파일을 모두 임시 보관한다(D-076).
+    Stash,
+    /// 보관해 둔 것을 꺼낸다.
+    TakeOut(TakeOutInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -45,6 +49,8 @@ impl ActionInput {
             ActionInput::MergeInto(_) => "merge-into",
             ActionInput::ConflictFinish(_) => "conflict-finish",
             ActionInput::ConflictAbort => "conflict-abort",
+            ActionInput::Stash => "stash",
+            ActionInput::TakeOut(_) => "take-out",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
@@ -184,6 +190,20 @@ pub enum HunkChoice {
     Custom {
         text: String,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TakeOutInput {
+    pub source: TakeOutSource,
+}
+
+/// 꺼낼 곳. 화면은 조회가 준 값만 보낸다(core가 다시 확인한다).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum TakeOutSource {
+    /// 임시 보관 목록의 항목.
+    Stash { oid: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

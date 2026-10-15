@@ -118,6 +118,10 @@ pub(crate) fn undo(
             undo_create(git, repo, &entry)?;
             Undid::Restored
         }
+        UndoKind::Inverse if entry.action == "stash" => {
+            undo_stash(git, repo, &entry)?;
+            Undid::Restored
+        }
         UndoKind::Inverse if entry.action == "ignore" => {
             undo_ignore(git, repo, &now, &entry)?;
             Undid::Restored
@@ -128,7 +132,8 @@ pub(crate) fn undo(
         _ => return Err(CoreError::NothingToUndo),
     };
     let reverted = matches!(undid, Undid::Reverted);
-    if !reverted {
+    // 임시 보관 되돌리기는 항목을 꺼내고 목록에서 빼는 것으로 `refs/stash`를 이미 되돌렸다.
+    if !reverted && entry.action != "stash" {
         restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
     }
     journal.append(&Body::Undo {
@@ -304,6 +309,29 @@ fn revert_pushed(
 fn redo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
     let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
     git.run(repo, &GitOp::ResetKeep { oid: after })?;
+    Ok(())
+}
+
+/// 임시 보관 되돌리기: 그때 만든 항목이 아직 목록 맨 위이고 작업 폴더가 깨끗할 때만 꺼내고 뺀다.
+fn undo_stash(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let created = entry
+        .after
+        .refs
+        .iter()
+        .find(|(name, _)| name == "refs/stash")
+        .and_then(|(_, v)| v.as_deref())
+        .and_then(Oid::parse)
+        .ok_or(CoreError::NothingToUndo)?;
+    if git.resolve_ref(repo, "refs/stash")? != Some(created.clone()) {
+        return Err(CoreError::UndoStale);
+    }
+    git.run(
+        repo,
+        &GitOp::Unpark {
+            oid: created.clone(),
+        },
+    )?;
+    git.run(repo, &GitOp::StashDropOid { oid: created })?;
     Ok(())
 }
 

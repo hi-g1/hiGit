@@ -340,6 +340,9 @@ mod tests {
         fn current_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
             unreachable!()
         }
+        fn stash_list(&self, _: &RepoPath) -> git::Result<Vec<git::StashEntry>> {
+            unreachable!()
+        }
         fn index_entries(&self, _: &RepoPath) -> git::Result<Vec<git::IndexEntry>> {
             unreachable!()
         }

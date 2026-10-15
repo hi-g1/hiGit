@@ -39,6 +39,8 @@ export type {
   RepoInfo,
   RiskView,
   MergeHintView,
+  StashItem,
+  StashListView,
   ConflictFileView,
   FileResolution,
   ConflictHunkView,
@@ -116,6 +118,8 @@ export const api = {
   conflictState: (repo: string) => call(commands.queryConflictState(repo)),
   /** 충돌 파일 하나의 고를 곳(D-086). */
   conflictFile: (repo: string, path: string) => call(commands.queryConflictFile(repo, path)),
+  /** 임시 보관 목록(D-076). */
+  stashes: (repo: string) => call(commands.queryStashes(repo)),
   /** 합치기 제안(D-048, D-071). */
   mergeHint: (repo: string) => call(commands.queryMergeHint(repo)),
   /** 버전 저장 전 비밀 파일 검사(D-077). 결과에는 경로·규칙·줄 번호만. */

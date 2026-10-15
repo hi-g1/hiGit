@@ -108,6 +108,10 @@ pub enum Outcome {
     ConflictFinished,
     /// 합치기를 그만뒀다.
     ConflictAborted,
+    /// 임시 보관했다.
+    Stashed,
+    /// 보관해 둔 것을 꺼냈다.
+    TookOut,
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -131,6 +135,8 @@ impl Outcome {
             // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
             Outcome::MergeConflicts { .. } => JournalMode::Skip,
             Outcome::Synced(r) if r.merge_started => JournalMode::Skip,
+            // 꺼내기는 HEAD를 바꾸지 않아 앞선 되돌리기를 막지 않는다.
+            Outcome::TookOut => JournalMode::Skip,
             _ => JournalMode::Journal,
         }
     }

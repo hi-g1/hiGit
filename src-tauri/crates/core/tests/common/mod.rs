@@ -255,6 +255,10 @@ impl GitBackend for FakeGit {
         Ok(self.parked_paths.lock().unwrap().clone())
     }
 
+    fn stash_list(&self, _repo: &RepoPath) -> git::Result<Vec<git::StashEntry>> {
+        Ok(Vec::new())
+    }
+
     fn index_entries(&self, _repo: &RepoPath) -> git::Result<Vec<git::IndexEntry>> {
         Ok(Vec::new())
     }

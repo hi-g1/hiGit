@@ -153,6 +153,32 @@ impl Queries {
         crate::conflict::read_file(self.git.as_ref(), &root, c)
     }
 
+    /// 임시 보관 목록(D-076). 맡겨 두기가 잠깐 만든 항목("higit parked …")은 뺀다.
+    pub fn stashes(&self, repo: &Path) -> Result<crate::view::StashListView> {
+        use crate::actions::stash::{PARKED_PREFIX, STASH_PREFIX, stash_message};
+        let root = self.opened_repo(repo)?;
+        let mut items = Vec::new();
+        for e in self.git.stash_list(&root)? {
+            let message = stash_message(&e.subject).to_string();
+            if message.starts_with(PARKED_PREFIX) {
+                continue;
+            }
+            let files = self.git.parked_paths(&root, &e.oid)?.len();
+            let branch = message
+                .strip_prefix(STASH_PREFIX)
+                .map(|b| b.trim().to_string())
+                .filter(|b| !b.is_empty());
+            items.push(crate::view::StashItem {
+                oid: e.oid.to_string(),
+                message,
+                branch,
+                at: e.at,
+                files: u32::try_from(files).unwrap_or(u32::MAX),
+            });
+        }
+        Ok(crate::view::StashListView { items })
+    }
+
     /// 합치기 제안(D-048, D-071). 기본 브랜치에 새 버전이 있으면 "가져와 합치기", 내 브랜치만
     /// 앞서 있으면 "main에 합치기". 기준은 홈 노선도와 같은 로컬 기본 브랜치다.
     pub fn merge_hint(&self, repo: &Path) -> Result<MergeHintView> {

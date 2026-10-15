@@ -232,6 +232,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::MergeInto(_)
             | ActionInput::ConflictFinish(_)
             | ActionInput::ConflictAbort
+            | ActionInput::Stash
+            | ActionInput::TakeOut(_)
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -260,6 +262,12 @@ fn action_input_tags_match_registry() {
             locale: "ko".into(),
         }),
         ActionInput::ConflictAbort,
+        ActionInput::Stash,
+        ActionInput::TakeOut(higit_core::view::TakeOutInput {
+            source: higit_core::view::TakeOutSource::Stash {
+                oid: "a".repeat(40),
+            },
+        }),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
             stage_all: false,

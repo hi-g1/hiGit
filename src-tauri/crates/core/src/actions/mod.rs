@@ -10,6 +10,7 @@ pub(crate) mod names;
 pub(crate) mod paths;
 mod remote;
 mod stage;
+pub(crate) mod stash;
 pub(crate) mod switch;
 
 pub use branch_create::BranchCreateAction;
@@ -20,6 +21,7 @@ pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
 pub use remote::{RemoteAction, SyncReport};
 pub use stage::PathsAction;
+pub use stash::StashAction;
 pub use switch::{SwitchAction, SwitchReport};
 
 use git::RepoPath;
@@ -65,6 +67,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(MergeIntoAction::new()))?;
     registry.register(Box::new(ConflictAction::finish()))?;
     registry.register(Box::new(ConflictAction::abort()))?;
+    registry.register(Box::new(StashAction::stash()))?;
+    registry.register(Box::new(StashAction::take_out()))?;
     registry.register(Box::new(SwitchAction::new()))?;
     registry.register(Box::new(BranchCreateAction::new()))?;
     registry.register(Box::new(RemoteAction::fetch()))?;

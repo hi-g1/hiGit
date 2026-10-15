@@ -23,5 +23,5 @@ pub use failure::FailureKind;
 pub use types::{
     BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, DiffKind, DiffLine, DiffTarget,
     EntryKind, FileDiff, GitOp, GitVersion, Hunk, IndexEntry, LineKind, LogQuery, MergeCheck,
-    MergeSegment, Oid, OpOutput, RefEntry, Remote, RepoPath, Status, StatusEntry,
+    MergeSegment, Oid, OpOutput, RefEntry, Remote, RepoPath, StashEntry, Status, StatusEntry,
 };

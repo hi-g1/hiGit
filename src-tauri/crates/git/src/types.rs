@@ -197,6 +197,16 @@ pub enum MergeSegment {
     },
 }
 
+/// stash 목록 한 줄(`refs/stash`의 reflog).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StashEntry {
+    pub oid: Oid,
+    /// reflog 제목(`On main: 메시지`, `WIP on main: abc 이름`).
+    pub subject: String,
+    /// 만든 시각(unix 초).
+    pub at: i64,
+}
+
 /// ref 하나(이름과 가리키는 해시).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefEntry {
@@ -274,6 +284,8 @@ pub enum GitOp {
     Park { message: String },
     /// stash 목록 맨 위가 이 해시일 때만 뺀다.
     StashDropIf { oid: Oid },
+    /// stash 목록에서 이 해시인 항목을 뺀다(위치를 찾고 빼기 직전에 다시 확인한다).
+    StashDropOid { oid: Oid },
     /// 맡긴 파일을 꺼낸다. 작업 폴더가 깨끗해야 하고, 겹치면 깨끗하게 되돌린 뒤 `UnparkConflict`.
     Unpark { oid: Oid },
     /// 원격의 새 버전을 받아 온다(내 파일은 그대로). `remote`가 없으면 모든 원격. prune은 하지 않는다.

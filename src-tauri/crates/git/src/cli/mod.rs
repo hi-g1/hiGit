@@ -45,7 +45,7 @@ pub use runner::{ConfigureCommand, ProcessControl};
 use crate::{
     BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
     GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
-    Remote, RepoPath, Result, Status,
+    Remote, RepoPath, Result, StashEntry, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -472,6 +472,10 @@ impl GitBackend for CliBackend {
             .collect())
     }
 
+    fn stash_list(&self, repo: &RepoPath) -> Result<Vec<StashEntry>> {
+        self.stashes(repo)
+    }
+
     fn index_entries(&self, repo: &RepoPath) -> Result<Vec<IndexEntry>> {
         self.ls_index(repo)
     }
@@ -552,6 +556,7 @@ impl GitBackend for CliBackend {
             }
             GitOp::Park { message } => return self.park_push(repo, message),
             GitOp::StashDropIf { oid } => return self.stash_drop_if(repo, oid),
+            GitOp::StashDropOid { oid } => return self.stash_drop_oid(repo, oid),
             GitOp::Unpark { oid } => return self.unpark(repo, oid),
             GitOp::Fetch { remote, background } => {
                 let mode = if *background {

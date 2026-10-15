@@ -35,6 +35,8 @@ export const commands = {
 	querySecretCheck: (repo: string, request: SecretCheckRequest) => __TAURI_INVOKE<SecretCheckView>("query_secret_check", { repo, request }),
 	/**  합치기 제안(D-048, D-071). */
 	queryMergeHint: (repo: string) => __TAURI_INVOKE<MergeHintView>("query_merge_hint", { repo }),
+	/**  임시 보관 목록(D-076). */
+	queryStashes: (repo: string) => __TAURI_INVOKE<StashListView>("query_stashes", { repo }),
 	/**  충돌 해결 화면 상태(D-069). */
 	queryConflictState: (repo: string) => __TAURI_INVOKE<ConflictStateView>("query_conflict_state", { repo }),
 	/**  충돌 파일 하나의 고를 곳(D-086). */
@@ -63,7 +65,11 @@ export type ActionInput =
 /**  충돌 해결 화면에서 고른 것으로 합치기를 마친다(D-069, D-070). */
 { id: "conflict-finish"; input: ConflictFinishInput } | 
 /**  합치기를 그만둔다(D-070). */
-{ id: "conflict-abort" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "conflict-abort" } | 
+/**  고친 파일을 모두 임시 보관한다(D-076). */
+{ id: "stash" } | 
+/**  보관해 둔 것을 꺼낸다. */
+{ id: "take-out"; input: TakeOutInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -87,7 +93,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  합치기를 마쳤다(합친 버전을 만들었다). */
 { kind: "conflictFinished" } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -498,6 +504,23 @@ export type SideState = { kind: "text" } | { kind: "binary" } |
 /**  1MB가 넘는다. */
 { kind: "large" } | { kind: "submodule" };
 
+export type StashItem = {
+	/**  꺼낼 때 그대로 돌려보내는 값. */
+	oid: string,
+	/**  보관할 때 메시지(앱이 만든 것은 `higit stash <브랜치>`). */
+	message: string,
+	/**  앱이 만든 항목이면 그때의 브랜치. */
+	branch: string | null,
+	/**  만든 시각(unix 초). */
+	at: number,
+	/**  든 파일 수(고친 파일과 새 파일). */
+	files: number,
+};
+
+export type StashListView = {
+	items: StashItem[],
+};
+
 export type StatusView = {
 	branch: BranchView,
 	files: ChangedFile[],
@@ -513,6 +536,15 @@ export type SyncInput = {
 	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
 	locale: string,
 };
+
+export type TakeOutInput = {
+	source: TakeOutSource,
+};
+
+/**  꺼낼 곳. 화면은 조회가 준 값만 보낸다(core가 다시 확인한다). */
+export type TakeOutSource = 
+/**  임시 보관 목록의 항목. */
+{ kind: "stash"; oid: string };
 
 /**  신뢰 확인에서 고른 것(D-039). */
 export type TrustChoice = 
