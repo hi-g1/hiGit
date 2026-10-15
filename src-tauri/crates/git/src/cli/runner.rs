@@ -49,8 +49,6 @@ impl Runner {
     }
 
     /// `input`을 stdin으로 넘겨 git을 실행한다(예: `--pathspec-from-file=-`).
-    // 저장에 넣기·빼기(반복 1의 7단계)에서 쓴다. 그 전에는 테스트에서만 쓰인다.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn run_with_stdin(
         &self,
         cwd: Option<&Path>,

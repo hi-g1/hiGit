@@ -152,6 +152,59 @@ pub struct OpOutput {
     pub stderr: String,
 }
 
+/// 비교할 파일. 경로는 저장소 기준, 구분자 `/`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiffTarget {
+    pub path: String,
+    /// 이름 바꿈의 원래 경로.
+    pub orig_path: Option<String>,
+    pub kind: DiffKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiffKind {
+    /// 추적 중인 파일: 마지막 저장과 지금(넣은 것 + 안 넣은 것)을 비교한다.
+    Tracked,
+    /// 아직 추적하지 않는 새 파일: 빈 파일과 비교한다.
+    Untracked,
+}
+
+/// 파일 하나의 줄 단위 비교.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FileDiff {
+    pub binary: bool,
+    /// 너무 커서 앞부분만 담았다.
+    pub truncated: bool,
+    pub hunks: Vec<Hunk>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Hunk {
+    pub old_start: u32,
+    pub old_len: u32,
+    pub new_start: u32,
+    pub new_len: u32,
+    /// `@@ … @@` 뒤의 함수 이름 같은 설명. 없으면 빈 문자열.
+    pub section: String,
+    pub lines: Vec<DiffLine>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiffLine {
+    pub kind: LineKind,
+    /// 줄 내용(앞의 `+`/`-`/공백과 줄 끝의 `\r`은 뺀다).
+    pub text: String,
+    /// 파일 끝에 줄바꿈이 없는 줄.
+    pub no_newline_at_end: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineKind {
+    Context,
+    Added,
+    Removed,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

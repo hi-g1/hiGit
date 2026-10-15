@@ -1,3 +1,4 @@
+mod diff;
 mod log;
 mod runner;
 mod status;
@@ -8,8 +9,8 @@ pub use runner::ConfigureCommand;
 use runner::Runner;
 
 use crate::{
-    Commit, FailureKind, GitBackend, GitError, GitOp, GitVersion, LogQuery, OpOutput, RepoPath,
-    Result, Status,
+    Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion,
+    LogQuery, OpOutput, RepoPath, Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -85,6 +86,53 @@ impl GitBackend for CliBackend {
             .runner
             .run(dir, &["log", log::FORMAT, &skip, &max, rev, "--"])?;
         log::parse(&out.stdout_lossy())
+    }
+
+    fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff> {
+        let dir = Some(repo.as_path());
+        let out = match target.kind {
+            DiffKind::Tracked => {
+                // 저장이 없으면 HEAD 대신 빈 트리와 비교한다(해시 방식에 맞게 git이 만든다).
+                let base = match self
+                    .runner
+                    .run(dir, &["rev-parse", "--verify", "-q", "HEAD^{commit}"])
+                {
+                    Ok(_) => "HEAD".to_string(),
+                    Err(GitError::Failed { code: Some(1), .. }) => self
+                        .runner
+                        .run_with_stdin(dir, diff::EMPTY_TREE_ARGS, b"")?
+                        .stdout_utf8()?
+                        .trim()
+                        .to_string(),
+                    Err(e) => return Err(e),
+                };
+                let mut args = vec!["--literal-pathspecs", "diff"];
+                args.extend_from_slice(diff::COMMON_ARGS);
+                args.push(&base);
+                args.push("--");
+                args.push(&target.path);
+                if let Some(orig) = &target.orig_path {
+                    args.push(orig);
+                }
+                self.runner.run(dir, &args)?.stdout_lossy()
+            }
+            DiffKind::Untracked => {
+                let mut args = vec!["diff", "--no-index"];
+                args.extend_from_slice(diff::COMMON_ARGS);
+                args.extend(["--", "/dev/null", &target.path]);
+                // --no-index는 차이가 있으면 종료 코드 1이다(오류가 아님).
+                match self.runner.run(dir, &args) {
+                    Ok(out) => out.stdout_lossy(),
+                    Err(GitError::Failed {
+                        code: Some(1),
+                        stdout,
+                        ..
+                    }) => stdout,
+                    Err(e) => return Err(e),
+                }
+            }
+        };
+        diff::parse(&out)
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {

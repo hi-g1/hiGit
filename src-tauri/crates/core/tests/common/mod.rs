@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use git::{Commit, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
+use git::{Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
 use higit_core::view::ActionInput;
 use higit_core::{
     Action, ActionMeta, Availability, ExecCtx, GitBackend, Outcome, RepoState, Result, Risk,
@@ -70,6 +70,10 @@ impl GitBackend for FakeGit {
             .take(query.limit as usize)
             .cloned()
             .collect())
+    }
+
+    fn diff(&self, _repo: &RepoPath, _target: &DiffTarget) -> git::Result<FileDiff> {
+        Ok(FileDiff::default())
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

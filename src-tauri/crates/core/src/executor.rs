@@ -151,6 +151,9 @@ mod tests {
         fn log(&self, _: &RepoPath, _: &LogQuery) -> git::Result<Vec<Commit>> {
             unreachable!()
         }
+        fn diff(&self, _: &RepoPath, _: &git::DiffTarget) -> git::Result<git::FileDiff> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }
