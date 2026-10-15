@@ -35,6 +35,8 @@ pub enum FailureKind {
     NotARepository,
     /// 합치다 같은 곳이 겹쳤다.
     MergeConflict,
+    /// 폴더 주인이 다른 사용자라 git이 저장소로 다루지 않는다(safe.directory, CVE-2022-24765).
+    DubiousOwnership,
     /// 시간 제한이 지나 끝냈다.
     TimedOut,
     /// 맡겨 둔 파일이 지금 버전과 겹쳐 꺼내지 않았다(D-054).
@@ -47,6 +49,10 @@ pub enum FailureKind {
 /// 순서가 중요하다: SSH 인증 실패 뒤에는 "Could not read from remote repository"가 함께 오므로
 /// 인증을 먼저 본다.
 const RULES: &[(FailureKind, &[&str])] = &[
+    (
+        FailureKind::DubiousOwnership,
+        &["detected dubious ownership"],
+    ),
     (FailureKind::NotARepository, &["not a git repository"]),
     (
         FailureKind::ProtocolNotAllowed,

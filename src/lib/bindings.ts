@@ -12,6 +12,8 @@ export const commands = {
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
 	/**  신뢰 확인에서 고른 결과로 연다(D-039). */
 	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),
+	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
+	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
 	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
@@ -162,7 +164,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -228,6 +230,8 @@ export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } |
 { kind: "missing" } | 
 /**  폴더는 있지만 (그 자리의) 저장소가 아니다. */
 { kind: "notARepo"; folder: string } | 
+/**  폴더 주인이 다른 사용자라 git이 다루지 않는다. 사용자가 고르면 이 폴더만 믿는다(D-039). */
+{ kind: "notOwned"; folder: string } | 
 /**  실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`. */
 { kind: "needsTrust"; folder: string; keys: string[] };
 

@@ -262,6 +262,9 @@ pub enum GitOp {
     ResetSoft { oid: Oid },
     /// index를 `tree`로 바꾼다. 작업 폴더는 그대로(`read-tree`).
     ReadTree { tree: Oid },
+    /// 사용자 전역 설정의 `safe.directory`에 이 폴더 하나를 더한다(사용자가 고를 때만, D-039).
+    /// `*`는 쓰지 않는다. `path`는 git이 받는 형식(Windows는 `C:/…`).
+    AddSafeDirectory { path: String },
     /// 올린다. `target`이 있으면 `<원격> HEAD:refs/heads/<브랜치>`, `set_upstream`이면 `-u`.
     Push {
         target: Option<(String, String)>,

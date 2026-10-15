@@ -21,6 +21,16 @@ pub fn same_path(a: &Path, b: &Path) -> bool {
     }
 }
 
+/// git 설정 값으로 쓸 경로 글자. Windows는 `C:/Users/…`처럼 `/`로 쓴다(safe.directory 등).
+pub fn git_path_string(path: &Path) -> String {
+    let text = path.to_string_lossy().into_owned();
+    if cfg!(windows) {
+        text.replace('\\', "/")
+    } else {
+        text
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

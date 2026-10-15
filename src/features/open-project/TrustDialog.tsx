@@ -18,10 +18,11 @@ export function TrustDialog() {
   const project = useOpenProject();
   const [error, setError] = useState<unknown>(null);
 
-  const choose = async (choice: "trust" | "disable") => {
+  const choose = async (choice: "trust" | "disable" | "owner") => {
     if (!pending) return;
     try {
-      await project.trust(pending.folder, choice);
+      if (choice === "owner") await project.allowOwner(pending.folder);
+      else await project.trust(pending.folder, choice);
       clear();
       setError(null);
     } catch (e) {
@@ -39,21 +40,38 @@ export function TrustDialog() {
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content className={styles.dialog}>
-          <Dialog.Title className={styles.title}>{m.trustTitle}</Dialog.Title>
+          <Dialog.Title className={styles.title}>
+            {pending?.kind === "owner" ? m.ownerTitle : m.trustTitle}
+          </Dialog.Title>
           <Dialog.Description className={styles.folder}>{pending?.folder}</Dialog.Description>
-          <ul className={styles.keys}>
-            {pending?.keys.map((k) => (
-              <li key={k}>{k}</li>
-            ))}
-          </ul>
+          {pending?.kind === "config" && (
+            <ul className={styles.keys}>
+              {pending.keys.map((k) => (
+                <li key={k}>{k}</li>
+              ))}
+            </ul>
+          )}
           {error !== null && error !== undefined && <ErrorNotice error={error} />}
           <div className={styles.actions}>
-            <Button variant="secondary" onClick={() => void choose("trust")}>
-              {m.trustOpen}
-            </Button>
-            <Button variant="primary" onClick={() => void choose("disable")}>
-              {m.trustDisable}
-            </Button>
+            {pending?.kind === "owner" ? (
+              <>
+                <Button variant="secondary" onClick={clear}>
+                  {m.close}
+                </Button>
+                <Button variant="primary" onClick={() => void choose("owner")}>
+                  {m.ownerAllow}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => void choose("trust")}>
+                  {m.trustOpen}
+                </Button>
+                <Button variant="primary" onClick={() => void choose("disable")}>
+                  {m.trustDisable}
+                </Button>
+              </>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -79,6 +79,8 @@ export const api = {
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */
   trustProject: (path: string, choice: TrustChoice) => call(commands.projectTrust(path, choice)),
+  /** 주인이 다른 폴더를 믿기로 하고 연다(D-039). useOpenProject만 부른다. */
+  allowFolderOwner: (path: string) => call(commands.projectAllowOwner(path)),
   recentProjects: () => call(commands.recentList()),
   removeRecent: (path: string) => call(commands.recentRemove(path)),
   projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),

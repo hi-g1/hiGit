@@ -522,6 +522,16 @@ impl GitBackend for CliBackend {
                 }
                 self.run_network(repo, &args, mode)?
             }
+            GitOp::AddSafeDirectory { path } => {
+                if path.is_empty() || path == "*" || path.starts_with('-') {
+                    return Err(GitError::Parse(format!("safe.directory 값: {path}")));
+                }
+                // 저장소 밖에서 돌려 그 저장소 설정의 영향을 받지 않게 한다.
+                self.runner.run(
+                    None,
+                    &["config", "--global", "--add", "safe.directory", path],
+                )?
+            }
             GitOp::StageAll => self.runner.run(dir, &["add", "-A"])?,
             // reset은 2.34.1에서 `--end-of-options`를 받지 못한다. 해시는 `Oid`가 형식을 보장한다.
             GitOp::ResetSoft { oid } => self
@@ -951,6 +961,47 @@ mod tests {
             .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
             .unwrap();
         assert_eq!(out.stdout_utf8().unwrap().trim(), "touch pwned");
+    }
+
+    #[test]
+    fn dubious_ownership_is_classified_and_safe_directory_added() {
+        let repo = testutil::init_repo();
+        let global = tempfile::NamedTempFile::new().unwrap();
+        let global_path = global.path().to_path_buf();
+        let configure: ConfigureCommand =
+            std::sync::Arc::new(move |cmd: &mut std::process::Command| {
+                cmd.env("GIT_CONFIG_GLOBAL", &global_path)
+                    .env("GIT_CONFIG_NOSYSTEM", "1")
+                    // git 2.35.2부터 있는 시험용 스위치: 주인이 다른 것처럼 다룬다.
+                    .env("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1");
+            });
+        let backend = CliBackend::new("git", configure);
+        let err = backend.discover(repo.path()).unwrap_err();
+        assert_eq!(
+            err.kind(),
+            FailureKind::DubiousOwnership,
+            "{}",
+            err.detail()
+        );
+
+        let top = std::fs::canonicalize(repo.path()).unwrap();
+        let path = top.to_string_lossy().replace('\\', "/");
+        backend
+            .run(
+                &RepoPath::new(repo.path()),
+                &GitOp::AddSafeDirectory { path: path.clone() },
+            )
+            .unwrap();
+        let written = std::fs::read_to_string(global.path()).unwrap();
+        assert!(written.contains(&path), "{written}");
+        assert!(
+            backend
+                .run(
+                    &RepoPath::new(repo.path()),
+                    &GitOp::AddSafeDirectory { path: "*".into() }
+                )
+                .is_err()
+        );
     }
 
     #[test]

@@ -159,7 +159,15 @@ impl Core {
             return Ok(ProjectOpenResult::Missing);
         };
         let folder_text = folder.to_string_lossy().into_owned();
-        let Some(repo) = self.git.discover(&folder)? else {
+        let discovered = match self.git.discover(&folder) {
+            Err(e) if e.kind() == git::FailureKind::DubiousOwnership => {
+                return Ok(ProjectOpenResult::NotOwned {
+                    folder: folder_text,
+                });
+            }
+            other => other?,
+        };
+        let Some(repo) = discovered else {
             // 저장소가 아닌 폴더도 열린 것으로 기록한다. 이 폴더에서 "버전 관리 시작"을 할 수 있다.
             self.opened.insert(&folder);
             return Ok(ProjectOpenResult::NotARepo {
@@ -212,6 +220,20 @@ impl Core {
             self.trust.record(&repo, &found, decision);
         }
         self.open_project(&repo, OpenHow::Picked)
+    }
+
+    /// 주인이 다른 폴더를 사용자가 믿기로 했다. 전역 설정 `safe.directory`에 이 폴더 하나만 더하고 연다.
+    /// `*`로 모두 열지 않는다(D-039).
+    pub fn allow_folder_owner(&self, path: &Path) -> Result<ProjectOpenResult> {
+        check_path_len(path)?;
+        let folder = platform::normalize_repo_path(path).map_err(CoreError::FolderNotFound)?;
+        self.git.run(
+            &RepoPath::new(&folder),
+            &git::GitOp::AddSafeDirectory {
+                path: platform::git_path_string(&folder),
+            },
+        )?;
+        self.open_project(&folder, OpenHow::Picked)
     }
 
     pub fn recent_projects(&self) -> Vec<RecentProject> {

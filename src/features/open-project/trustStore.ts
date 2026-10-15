@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
-export type PendingTrust = { folder: string; keys: string[] };
+/** config: 실행되는 설정이 있음. owner: 폴더 주인이 다른 사용자(safe.directory). */
+export type PendingTrust = { kind: "config" | "owner"; folder: string; keys: string[] };
 
 type TrustState = {
   /** 믿을지 물어야 하는 프로젝트(D-039). 있으면 신뢰 확인 창이 뜬다. */

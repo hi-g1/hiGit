@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { trustProject: vi.fn(), openProject: vi.fn() },
+  api: { trustProject: vi.fn(), openProject: vi.fn(), allowFolderOwner: vi.fn() },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -27,7 +27,11 @@ function show() {
       <TrustDialog />
     </AppProviders>,
   );
-  act(() => useTrustStore.getState().ask({ folder: "/받은/프로젝트", keys: ["core.fsmonitor", "hooks/post-checkout"] }));
+  act(() =>
+    useTrustStore
+      .getState()
+      .ask({ kind: "config", folder: "/받은/프로젝트", keys: ["core.fsmonitor", "hooks/post-checkout"] }),
+  );
 }
 
 describe("신뢰 확인", () => {
@@ -54,5 +58,18 @@ describe("신뢰 확인", () => {
     await userEvent.keyboard("{Escape}");
     expect(api.trustProject).not.toHaveBeenCalled();
     expect(useTrustStore.getState().pending).toBeNull();
+  });
+
+  it("주인이 다른 폴더는 이 폴더만 믿기", async () => {
+    vi.mocked(api.allowFolderOwner).mockResolvedValue({ kind: "opened", repo: { path: "/공유/폴더", name: "폴더" } });
+    render(
+      <AppProviders client={createQueryClient()}>
+        <TrustDialog />
+      </AppProviders>,
+    );
+    act(() => useTrustStore.getState().ask({ kind: "owner", folder: "/공유/폴더", keys: [] }));
+    expect(screen.getByText("이 폴더의 주인이 다른 사용자예요.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "이 폴더 믿기" }));
+    expect(api.allowFolderOwner).toHaveBeenCalledWith("/공유/폴더");
   });
 });

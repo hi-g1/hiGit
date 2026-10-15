@@ -86,6 +86,19 @@ pub async fn project_trust(
     .await
 }
 
+/// 주인이 다른 폴더를 믿기로 하고 연다(D-039).
+#[tauri::command]
+#[specta::specta]
+pub async fn project_allow_owner(
+    state: State<'_, AppState>,
+    path: String,
+) -> CmdResult<ProjectOpenResult> {
+    blocking(state, move |core| {
+        core.allow_folder_owner(&PathBuf::from(path))
+    })
+    .await
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn recent_list(state: State<'_, AppState>) -> CmdResult<Vec<RecentProject>> {

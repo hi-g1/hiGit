@@ -11,6 +11,7 @@
     "allow-app-open-git-download",
     "allow-project-open",
     "allow-project-trust",
+    "allow-project-allow-owner",
     "allow-recent-list",
     "allow-recent-remove",
     "allow-action-list",

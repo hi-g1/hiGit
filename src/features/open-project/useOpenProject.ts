@@ -14,7 +14,8 @@ export function useOpenProject() {
   const onResult = (result: ProjectOpenResult) => {
     if (result.kind === "opened") openRepo(result.repo);
     // 실행되는 설정이 있으면 신뢰 확인 창을 띄운다(D-039).
-    if (result.kind === "needsTrust") ask({ folder: result.folder, keys: result.keys });
+    if (result.kind === "needsTrust") ask({ kind: "config", folder: result.folder, keys: result.keys });
+    if (result.kind === "notOwned") ask({ kind: "owner", folder: result.folder, keys: [] });
     void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
   };
   const mutation = useMutation({
@@ -25,7 +26,13 @@ export function useOpenProject() {
     mutationFn: ({ path, choice }: { path: string; choice: TrustChoice }) => api.trustProject(path, choice),
     onSuccess: onResult,
   });
+  const ownerMutation = useMutation({
+    mutationFn: (path: string) => api.allowFolderOwner(path),
+    onSuccess: onResult,
+  });
   return {
+    /** 주인이 다른 폴더를 믿기로 하고 연다(safe.directory에 그 폴더 하나만). */
+    allowOwner: (path: string): Promise<ProjectOpenResult> => ownerMutation.mutateAsync(path),
     /** 열고 결과를 돌려준다. 열렸으면 작업 공간으로 바뀐다. */
     open: (path: string, how: OpenHow): Promise<ProjectOpenResult> => mutation.mutateAsync({ path, how }),
     /** 신뢰 확인에서 고른 결과로 연다. */

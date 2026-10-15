@@ -402,6 +402,7 @@ pub enum ErrorCode {
     UnparkConflict,
     TimedOut,
     MergeConflict,
+    DubiousOwnership,
     /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
@@ -424,6 +425,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::HttpAuthFailed => ErrorCode::HttpAuthFailed,
             F::RemoteUnreachable => ErrorCode::RemoteUnreachable,
             F::NotARepository => ErrorCode::NotARepo,
+            F::DubiousOwnership => ErrorCode::DubiousOwnership,
             F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
             F::UnparkConflict => ErrorCode::UnparkConflict,
             F::TimedOut => ErrorCode::TimedOut,
@@ -523,6 +525,10 @@ pub enum ProjectOpenResult {
     Missing,
     /// 폴더는 있지만 (그 자리의) 저장소가 아니다.
     NotARepo {
+        folder: String,
+    },
+    /// 폴더 주인이 다른 사용자라 git이 다루지 않는다. 사용자가 고르면 이 폴더만 믿는다(D-039).
+    NotOwned {
         folder: String,
     },
     /// 실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.

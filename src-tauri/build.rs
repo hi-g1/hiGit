@@ -6,6 +6,7 @@ const COMMANDS: &[&str] = &[
     "app_open_git_download",
     "project_open",
     "project_trust",
+    "project_allow_owner",
     "recent_list",
     "recent_remove",
     "action_list",
