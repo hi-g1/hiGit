@@ -3,6 +3,7 @@
 // 그래서 용어표가 바뀌면 이 문장들도 함께 바뀐다.
 import { ko as glossary } from "../glossary/ko";
 import type { TermId } from "../glossary/types";
+import type { LastVersion, ShortCase, StatusCase } from "../features/start/summary";
 import type { ErrorCode, ChangeKind } from "../lib/api";
 import { josa } from "./josa";
 
@@ -13,6 +14,49 @@ export const ko = {
   appTagline: "Git을 모르는 사람도 쉽게 쓰는 Git 앱",
   openFolder: "폴더 열기",
   otherProjects: "다른 프로젝트 열기",
+  // 시작 화면(D-031)
+  startTitle: "프로젝트",
+  lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,
+  continueWork: "이어서 하기",
+  viewChangedFiles: (n: number) => `바뀐 파일 ${n}개 보기`,
+  otherProjectsHeader: "다른 프로젝트",
+  removeFromList: "목록에서 빼기",
+  folderMissing: "폴더를 찾을 수 없어요",
+  folderNotRepo: "버전 관리를 하지 않는 폴더예요",
+  noProjects: "아직 연 프로젝트가 없어요. 오른쪽 위의 폴더 열기로 시작해요.",
+  foundGit: (version: string) => `Git을 찾았어요 · 버전 ${version}`,
+  statusSentence: (c: StatusCase) => {
+    switch (c.kind) {
+      case "conflict":
+        return `${t("conflict")} 난 파일이 ${c.files}개 있어요.`;
+      case "changed":
+        return `${c.branch} ${t("branch")}에서 파일 ${c.files}개를 고치다 멈췄어요.`;
+      case "clean":
+        return `${c.branch} ${t("branch")}에 있어요. 바뀐 파일은 없어요.`;
+      case "detached":
+        return "특정 버전을 보는 중이에요.";
+    }
+  },
+  lastVersionSentence: (v: LastVersion, date: string) =>
+    v.kind === "none"
+      ? "아직 저장한 버전이 없어요."
+      : `마지막 버전은 ${date}에 저장한 "${v.summary}"${josa(v.summary, "이에요/예요").slice(v.summary.length)}.`,
+  shortStatus: (c: ShortCase) => {
+    switch (c.kind) {
+      case "conflict":
+        return `${t("conflict")} 난 파일 ${c.files}개`;
+      case "changed":
+        return `바뀐 파일 ${c.files}개`;
+      case "ahead":
+        return `올릴 버전 ${c.versions}개`;
+      case "behind":
+        return `가져올 버전 ${c.versions}개`;
+      case "notUploaded":
+        return "아직 올린 적 없음";
+      case "upToDate":
+        return "최신 상태";
+    }
+  },
   projectMenu: "프로젝트 메뉴",
   lastMissing: (name: string) => `마지막으로 연 ${name} 폴더를 찾지 못했어요.`,
   lastNotRepo: (name: string) => `마지막으로 연 ${name} 폴더는 버전 관리를 하지 않는 폴더예요.`,

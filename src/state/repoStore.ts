@@ -16,12 +16,15 @@ type RepoState = {
   /** 저장소가 아닌 폴더를 골랐을 때, 시작 화면이 "버전 관리 시작"을 물을 폴더. */
   pendingInit: string | null;
   startNotice: StartNotice | null;
+  /** 시작 화면의 "바뀐 파일 N개 보기": 작업 공간이 열리면 첫 바뀐 파일을 고른다. */
+  selectFirstChange: boolean;
   openRepo: (repo: RepoInfo) => void;
   closeRepo: () => void;
   setLeftTab: (tab: LeftTab) => void;
   selectPath: (path: string | null) => void;
   setPendingInit: (folder: string | null) => void;
   setStartNotice: (notice: StartNotice | null) => void;
+  setSelectFirstChange: (on: boolean) => void;
 };
 
 export const useRepoStore = create<RepoState>()((set) => ({
@@ -30,6 +33,7 @@ export const useRepoStore = create<RepoState>()((set) => ({
   selectedPath: null,
   pendingInit: null,
   startNotice: null,
+  selectFirstChange: false,
   openRepo: (repo) =>
     set({ repo, leftTab: "changes", selectedPath: null, pendingInit: null, startNotice: null }),
   closeRepo: () => set({ repo: null, selectedPath: null, startNotice: null }),
@@ -37,4 +41,5 @@ export const useRepoStore = create<RepoState>()((set) => ({
   selectPath: (selectedPath) => set({ selectedPath }),
   setPendingInit: (pendingInit) => set({ pendingInit }),
   setStartNotice: (startNotice) => set({ startNotice }),
+  setSelectFirstChange: (selectFirstChange) => set({ selectFirstChange }),
 }));

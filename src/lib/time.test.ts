@@ -3,6 +3,15 @@ import { formatRelative } from "./time";
 
 const now = 1_700_000_000_000;
 
+describe("formatDate", () => {
+  it("올해면 월·일, 아니면 연도까지", async () => {
+    const { formatDate } = await import("./time");
+    const now = Date.UTC(2026, 9, 15, 3);
+    expect(formatDate(Date.UTC(2026, 9, 7, 3) / 1000, now, "ko")).toBe("10월 7일");
+    expect(formatDate(Date.UTC(2025, 9, 7, 3) / 1000, now, "ko")).toBe("2025년 10월 7일");
+  });
+});
+
 describe("formatRelative", () => {
   it("한국어 상대 시각", () => {
     expect(formatRelative(now / 1000 - 3 * 3600, now, "ko")).toBe("3시간 전");

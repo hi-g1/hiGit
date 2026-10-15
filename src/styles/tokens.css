@@ -39,6 +39,9 @@
   --font-size-md: 13px;
   --font-size-title: 15px;
   --font-size-home: 20px;
+
+  /* 시작 화면 프로젝트 이름(D-031) */
+  --font-size-display: 26px;
   --font-weight-regular: 400;
   --font-weight-bold: 600;
   --line-height: 1.5;

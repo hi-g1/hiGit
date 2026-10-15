@@ -9,6 +9,46 @@ export const en: Messages = {
   appTagline: "Git made easy, even if you have never used it",
   openFolder: "Open folder",
   otherProjects: "Open another project",
+  startTitle: "Projects",
+  lastPlace: (when: string) => `Last worked on · ${when}`,
+  continueWork: "Continue",
+  viewChangedFiles: (n: number) => `View ${n} changed files`,
+  otherProjectsHeader: "Other projects",
+  removeFromList: "Remove from list",
+  folderMissing: "Folder not found",
+  folderNotRepo: "Not under version control",
+  noProjects: "No projects yet. Start with Open folder at the top right.",
+  foundGit: (version: string) => `Found Git · version ${version}`,
+  statusSentence: (c) => {
+    switch (c.kind) {
+      case "conflict":
+        return `${c.files} files have a ${t("conflict").toLowerCase()}.`;
+      case "changed":
+        return `You stopped while changing ${c.files} files on the ${c.branch} ${t("branch").toLowerCase()}.`;
+      case "clean":
+        return `You're on the ${c.branch} ${t("branch").toLowerCase()}. No files changed.`;
+      case "detached":
+        return "You're viewing a specific version.";
+    }
+  },
+  lastVersionSentence: (v, date) =>
+    v.kind === "none" ? "No versions saved yet." : `The last version is "${v.summary}", saved on ${date}.`,
+  shortStatus: (c) => {
+    switch (c.kind) {
+      case "conflict":
+        return `${c.files} files with ${t("conflict").toLowerCase()}`;
+      case "changed":
+        return `${c.files} changed files`;
+      case "ahead":
+        return `${c.versions} versions to upload`;
+      case "behind":
+        return `${c.versions} versions to get`;
+      case "notUploaded":
+        return "Not uploaded yet";
+      case "upToDate":
+        return "Up to date";
+    }
+  },
   projectMenu: "Project menu",
   lastMissing: (name: string) => `Couldn't find ${name}, the project you opened last.`,
   lastNotRepo: (name: string) => `${name}, the project you opened last, is not under version control.`,

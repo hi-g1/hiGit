@@ -20,3 +20,14 @@ export function formatRelative(unixSeconds: number, nowMs: number, locale: Local
   }
   return format.format(0, "second");
 }
+
+/** unix 초를 "10월 7일"로. 올해가 아니면 "2025년 10월 7일". */
+export function formatDate(unixSeconds: number, nowMs: number, locale: Locale): string {
+  const date = new Date(unixSeconds * 1000);
+  const sameYear = date.getFullYear() === new Date(nowMs).getFullYear();
+  return new Intl.DateTimeFormat(locale, {
+    year: sameYear ? undefined : "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}

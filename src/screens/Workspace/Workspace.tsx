@@ -31,6 +31,16 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   useEffect(() => {
     if (status.data && selectedPath !== null && !selected) selectPath(null);
   }, [status.data, selectedPath, selected, selectPath]);
+  // 시작 화면의 "바뀐 파일 N개 보기"로 왔으면 첫 바뀐 파일을 고른다.
+  const selectFirstChange = useRepoStore((s) => s.selectFirstChange);
+  const setSelectFirstChange = useRepoStore((s) => s.setSelectFirstChange);
+  useEffect(() => {
+    const first = status.data?.files[0];
+    if (selectFirstChange && first) {
+      selectPath(first.path);
+      setSelectFirstChange(false);
+    }
+  }, [selectFirstChange, status.data, selectPath, setSelectFirstChange]);
 
   return (
     <div className={styles.workspace}>

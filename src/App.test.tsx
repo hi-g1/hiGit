@@ -64,7 +64,7 @@ afterEach(() => {
 async function openFolder() {
   const user = userEvent.setup();
   render(<App />);
-  const button = await screen.findByRole("button", { name: "폴더 열기" });
+  const button = await screen.findByRole("button", { name: /^폴더 열기/ });
   await vi.waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
   return user;
@@ -211,7 +211,7 @@ describe("홈에서 폴더 열기", () => {
     vi.mocked(api.appStatus).mockRejectedValue(new ApiError({ code: "gitMissing", detail: null }));
     render(<App />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Git이 설치되어 있지 않아요.");
-    expect(screen.getByRole("button", { name: "폴더 열기" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^폴더 열기/ })).toBeDisabled();
   });
 });
 
@@ -233,7 +233,7 @@ describe("앱을 켤 때", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "마지막으로 연 내 프로젝트 폴더를 찾지 못했어요.",
     );
-    expect(screen.getByRole("button", { name: "폴더 열기" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^폴더 열기/ })).toBeInTheDocument();
   });
 
   it("마지막 프로젝트가 저장소가 아니게 되었으면 그렇게 알린다", async () => {
@@ -250,7 +250,7 @@ describe("앱을 켤 때", () => {
     vi.mocked(api.recentProjects).mockResolvedValue([last]);
     render(<App />);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(api.recentProjects).not.toHaveBeenCalled();
+    // 목록은 시작 화면이 보여주려고 읽지만, 프로젝트를 다시 열지는 않는다.
     expect(api.openProject).not.toHaveBeenCalled();
   });
 
@@ -263,7 +263,7 @@ describe("앱을 켤 때", () => {
     menu.focus();
     await user.keyboard("{Enter}");
     await user.click(await screen.findByRole("menuitem", { name: "다른 프로젝트 열기" }));
-    expect(await screen.findByRole("button", { name: "폴더 열기" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /^폴더 열기/ })).toBeInTheDocument();
     // 다시 열기를 하지 않는다
     expect(api.openProject).toHaveBeenCalledTimes(1);
   });
