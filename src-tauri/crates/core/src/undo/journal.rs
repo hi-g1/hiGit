@@ -284,6 +284,29 @@ mod tests {
         assert!(!outside.path().join("journal.jsonl").exists());
     }
 
+    /// 1b 앱이 쓴 줄(고정 키로 서명). 새 필드를 더해도 이 줄이 그대로 읽혀야 한다(D-072).
+    /// 새 필드는 비어 있으면 쓰지 않아야(`skip_serializing_if`) 다시 직렬화한 글자가 같다.
+    const LINE_1B: &str = r#"{"v":1,"type":"action","id":"1","at":1,"action":"commit","input":{"id":"commit","input":{"message":"버전","stageAll":false}},"before":{"head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","branch":"main","parked":[],"indexTree":null},"after":{"head":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","branch":"main","parked":[],"indexTree":null},"kind":"restoreRef","sig":"7c610046e0130a8c83e3d3200968145a27da8d105e36586b902632e55cc9d052"}"#;
+
+    #[test]
+    fn lines_written_by_older_versions_still_verify() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("higit")).unwrap();
+        std::fs::write(
+            dir.path().join("higit/journal.jsonl"),
+            format!("{LINE_1B}\n"),
+        )
+        .unwrap();
+        let journal = Journal::at(dir.path(), JournalKey::fixed(7));
+        assert_eq!(journal.read(), vec![action("1")]);
+        // 같은 내용을 지금 코드로 쓰면 글자까지 같다.
+        let again = tempfile::tempdir().unwrap();
+        let journal = Journal::at(again.path(), JournalKey::fixed(7));
+        journal.append(&action("1")).unwrap();
+        let text = std::fs::read_to_string(again.path().join("higit/journal.jsonl")).unwrap();
+        assert_eq!(text.trim_end(), LINE_1B);
+    }
+
     #[test]
     fn a_folder_in_place_of_the_file_is_refused() {
         let git = tempfile::tempdir().unwrap();

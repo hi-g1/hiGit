@@ -167,14 +167,24 @@ impl Executor {
                 if after == before {
                     return Ok(());
                 }
-                Body::Action {
-                    id: journal::new_id(at),
-                    at,
-                    action: action.to_string(),
-                    input: input.clone(),
-                    before,
-                    after,
-                    kind,
+                // 충돌 중이라 index 트리를 만들 수 없으면 넣기·빼기를 되돌릴 수 없다(경계).
+                if kind == UndoKind::RestoreIndex
+                    && (before.index_tree.is_none() || after.index_tree.is_none())
+                {
+                    Body::Barrier {
+                        at,
+                        action: action.to_string(),
+                    }
+                } else {
+                    Body::Action {
+                        id: journal::new_id(at),
+                        at,
+                        action: action.to_string(),
+                        input: input.journal_copy(),
+                        before,
+                        after,
+                        kind,
+                    }
                 }
             }
             None if kind.is_barrier() => Body::Barrier {

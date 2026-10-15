@@ -204,22 +204,86 @@ fn pushed_commit_is_not_undone() {
     assert_eq!(head(dir), before);
 }
 
+fn staged(dir: &Path) -> String {
+    git(dir, &["diff", "--cached", "--name-only"])
+}
+
+fn unstage(core: &Core, dir: &Path, file: &str) {
+    core.execute(
+        dir,
+        &ActionInput::Unstage(PathsInput {
+            paths: vec![file.into()],
+        }),
+        None,
+    )
+    .unwrap();
+}
+
 #[test]
-fn staging_after_commit_is_a_barrier_and_new_work_clears_redo() {
+fn staging_after_commit_undoes_only_the_staging_and_new_work_clears_redo() {
     let repo = repo();
     let dir = repo.path();
     let core = core(dir);
     std::fs::write(dir.join("a.txt"), "1").unwrap();
     commit(&core, dir, "하나", true);
+    let saved = head(dir);
     std::fs::write(dir.join("b.txt"), "b").unwrap();
     stage(&core, dir, "b.txt");
-    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::NothingToUndo);
+    // "저장 → 넣기 → Ctrl+Z"는 넣기만 되돌린다(D-072).
+    core.undo(dir).unwrap();
+    assert_eq!(staged(dir), "");
+    assert_eq!(head(dir), saved);
+    core.redo(dir).unwrap();
+    assert_eq!(staged(dir), "b.txt\n");
 
     commit(&core, dir, "둘", false);
     core.undo(dir).unwrap();
     std::fs::write(dir.join("c.txt"), "c").unwrap();
     commit(&core, dir, "셋", true);
     assert_eq!(code(core.redo(dir).unwrap_err()), ErrorCode::NothingToUndo);
+}
+
+#[test]
+fn stage_and_unstage_undo_one_step_at_a_time() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join("a.txt"), "a").unwrap();
+    commit(&core, dir, "첫 버전", true);
+    std::fs::write(dir.join("b.txt"), "b").unwrap();
+    std::fs::write(dir.join("c.txt"), "c").unwrap();
+    stage(&core, dir, "b.txt");
+    stage(&core, dir, "c.txt");
+    unstage(&core, dir, "b.txt");
+    assert_eq!(staged(dir), "c.txt\n");
+    core.undo(dir).unwrap();
+    assert_eq!(staged(dir), "b.txt\nc.txt\n");
+    core.undo(dir).unwrap();
+    assert_eq!(staged(dir), "b.txt\n");
+    core.undo(dir).unwrap();
+    assert_eq!(staged(dir), "");
+    // 작업 폴더 파일은 그대로다.
+    assert!(dir.join("b.txt").exists() && dir.join("c.txt").exists());
+    // 이미 넣은 파일을 다시 넣으면 바뀐 것이 없어 줄이 생기지 않는다.
+    stage(&core, dir, "b.txt");
+    stage(&core, dir, "b.txt");
+    core.undo(dir).unwrap();
+    assert_eq!(staged(dir), "");
+}
+
+#[test]
+fn staging_outside_the_app_makes_index_undo_stale() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join("a.txt"), "a").unwrap();
+    commit(&core, dir, "첫 버전", true);
+    std::fs::write(dir.join("b.txt"), "b").unwrap();
+    std::fs::write(dir.join("c.txt"), "c").unwrap();
+    stage(&core, dir, "b.txt");
+    git(dir, &["add", "c.txt"]);
+    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::UndoStale);
+    assert_eq!(staged(dir), "b.txt\nc.txt\n");
 }
 
 #[test]

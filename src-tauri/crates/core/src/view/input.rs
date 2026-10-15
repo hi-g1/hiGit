@@ -38,6 +38,20 @@ impl ActionInput {
             ActionInput::Sync(_) => "sync",
         }
     }
+
+    /// 작업 목록(journal)에 남길 사본. 줄 하나가 커지지 않게 긴 경로 목록은 앞부분만 남긴다.
+    /// 되돌리기·다시 하기는 입력이 아니라 전후 상태로 하므로 잘라도 된다(D-072).
+    pub(crate) fn journal_copy(&self) -> ActionInput {
+        const MAX_PATHS: usize = 200;
+        let cut = |p: &PathsInput| PathsInput {
+            paths: p.paths.iter().take(MAX_PATHS).cloned().collect(),
+        };
+        match self {
+            ActionInput::Stage(p) => ActionInput::Stage(cut(p)),
+            ActionInput::Unstage(p) => ActionInput::Unstage(cut(p)),
+            other => other.clone(),
+        }
+    }
 }
 
 /// 파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다.

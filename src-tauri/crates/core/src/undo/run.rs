@@ -91,6 +91,9 @@ pub(crate) fn undo(
     }
     match entry.kind {
         UndoKind::RestoreRef => undo_commit(git, repo, &entry)?,
+        UndoKind::RestoreIndex => {
+            restore_index(git, repo, &now, &entry.after, &entry.before)?;
+        }
         UndoKind::SwitchBack => undo_switch(git, repo, &entry)?,
         UndoKind::DeleteCreated => undo_create(git, repo, &entry)?,
         // 원격 작업은 1b에서 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042).
@@ -118,6 +121,9 @@ pub(crate) fn redo(
     }
     match entry.kind {
         UndoKind::RestoreRef => redo_commit(git, repo, &entry)?,
+        UndoKind::RestoreIndex => {
+            restore_index(git, repo, &now, &entry.before, &entry.after)?;
+        }
         UndoKind::SwitchBack => redo_switch(git, repo, &entry)?,
         UndoKind::DeleteCreated => redo_create(git, repo, &entry)?,
         _ => return Err(CoreError::NothingToUndo),
@@ -140,6 +146,27 @@ fn outcome(entry: &Entry, branch: Option<String>) -> UndoOutcome {
         branch,
         message,
     }
+}
+
+/// 넣기·빼기 되돌리기와 다시 하기: index가 `from`의 트리 그대로일 때만 `to`의 트리로 바꾼다.
+/// 작업 폴더는 그대로다. 앱 밖에서 `git add` 등으로 index가 바뀌었으면 하지 않는다.
+fn restore_index(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    now: &UndoState,
+    from: &UndoState,
+    to: &UndoState,
+) -> Result<()> {
+    if now.index_tree.is_none() || now.index_tree != from.index_tree {
+        return Err(CoreError::UndoStale);
+    }
+    let tree = to
+        .index_tree
+        .as_deref()
+        .and_then(Oid::parse)
+        .ok_or(CoreError::NothingToUndo)?;
+    git.run(repo, &GitOp::ReadTree { tree })?;
+    Ok(())
 }
 
 fn stage_all(entry: &Entry) -> bool {

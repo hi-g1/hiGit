@@ -36,6 +36,12 @@ impl JournalKey {
         Self(bytes)
     }
 
+    /// 정해진 키(테스트에서 고정 문자열로 서명 호환을 확인할 때).
+    #[cfg(test)]
+    pub(crate) fn fixed(byte: u8) -> Self {
+        Self([byte; KEY_LEN])
+    }
+
     /// `dir/journal.key`를 읽고, 없거나 깨졌으면 새로 만들어 쓴다.
     pub fn load_or_create(dir: &Path) -> Self {
         let path = dir.join(FILE_NAME);

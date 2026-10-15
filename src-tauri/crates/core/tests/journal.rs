@@ -30,7 +30,7 @@ fn lines(dir: &Path) -> Vec<serde_json::Value> {
 }
 
 #[test]
-fn commit_is_recorded_and_stage_leaves_a_barrier() {
+fn stage_and_commit_are_recorded() {
     let repo = tempfile::tempdir().unwrap();
     let dir = repo.path();
     git(dir, &["init", "-q", "-b", "main"]);
@@ -64,8 +64,10 @@ fn commit_is_recorded_and_stage_leaves_a_barrier() {
 
     let l = lines(dir);
     assert_eq!(l.len(), 2, "{l:?}");
-    assert_eq!(l[0]["type"], "barrier");
+    assert_eq!(l[0]["type"], "action");
     assert_eq!(l[0]["action"], "stage");
+    assert_eq!(l[0]["kind"], "restoreIndex");
+    assert_ne!(l[0]["before"]["indexTree"], l[0]["after"]["indexTree"]);
     assert_eq!(l[1]["type"], "action");
     assert_eq!(l[1]["action"], "commit");
     assert_eq!(l[1]["kind"], "restoreRef");

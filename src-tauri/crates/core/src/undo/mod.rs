@@ -24,7 +24,7 @@ pub enum UndoKind {
     Nothing,
     /// HEAD·브랜치를 이전 버전으로. 고친 파일은 그대로(버전 저장).
     RestoreRef,
-    /// index를 이전 트리로(이번 버전에 넣기·빼기). 1b에는 없어 경계 줄만 남긴다(D-065).
+    /// index를 이전 트리로(이번 버전에 넣기·빼기, D-072). 충돌 중이라 트리가 없으면 경계 줄.
     RestoreIndex,
     /// 이전 브랜치로 갈아타고 맡겨 둔 파일을 꺼낸다(브랜치 갈아타기).
     SwitchBack,
@@ -44,6 +44,7 @@ impl UndoKind {
         matches!(
             self,
             UndoKind::RestoreRef
+                | UndoKind::RestoreIndex
                 | UndoKind::SwitchBack
                 | UndoKind::DeleteCreated
                 | UndoKind::Inverse
@@ -52,10 +53,7 @@ impl UndoKind {
 
     /// 되돌릴 수 없어서 경계 줄을 남기는지(그 앞 줄은 되돌리지 않는다, D-065).
     pub(crate) fn is_barrier(self) -> bool {
-        matches!(
-            self,
-            UndoKind::RestoreIndex | UndoKind::Irreversible | UndoKind::Barrier
-        )
+        matches!(self, UndoKind::Irreversible | UndoKind::Barrier)
     }
 }
 
