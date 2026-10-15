@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 1b-1 (계획 005 "합친 순서" 1~26번)
-- 단계: 0 (자동 결정 정리, 계획 검토)
-- 마지막 커밋: da7a5bc docs: plan home screen and merged 1b order
-- 다음 할 일: 005 순번 1 = 004-12 모든 crate에 `forbid(unsafe_code)`
+- 단계: 6 끝 (004-14 cargo-deny)
+- 마지막 커밋: 71606da ci: check rust dependencies with cargo-deny
+- 다음 할 일: 005 순번 7 = 004-1 git 실행 환경 보강
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 3 → 4 → 5.
@@ -26,12 +26,12 @@
 - CI: push마다 이전 실행 취소. `gh run list`, `gh api repos/hi-g1/hiGit/actions/runs/<id>/jobs`.
 
 ## 1b-1 단계 (계획 005 "합친 순서")
-- [ ] 1 004-12 forbid unsafe
-- [ ] 2 004-13 clippy unwrap·expect·panic
-- [ ] 3 004-11 ESLint innerHTML·eval 금지
-- [ ] 4 004-16 Actions 권한과 SHA 고정
-- [ ] 5 004-15 pnpm 설치 스크립트 제한
-- [ ] 6 004-14 cargo-deny
+- [x] 1 004-12 forbid unsafe
+- [x] 2 004-13 clippy unwrap·expect·panic
+- [x] 3 004-11 ESLint innerHTML·eval 금지
+- [x] 4 004-16 Actions 권한과 SHA 고정
+- [x] 5 004-15 pnpm 설치 스크립트 제한
+- [x] 6 004-14 cargo-deny
 - [ ] 7 004-1 git 실행 환경
 - [ ] 8 004-2 git 절대 경로
 - [ ] 9 004-3 `--end-of-options`
