@@ -24,6 +24,12 @@
     "undo": "restoreRef"
   },
   {
+    "id": "ignore",
+    "glossaryId": "ignore",
+    "risk": "safe",
+    "undo": "inverse"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",

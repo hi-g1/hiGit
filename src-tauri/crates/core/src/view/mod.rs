@@ -350,6 +350,9 @@ pub enum ActionResult {
         /// 겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다.
         overlap: Vec<String>,
     },
+    Ignored {
+        count: u32,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -377,6 +380,7 @@ impl From<Outcome> for ActionResult {
                 merged: r.merged,
                 overlap: r.overlap,
             },
+            Outcome::Ignored { count } => ActionResult::Ignored { count },
         }
     }
 }

@@ -308,6 +308,7 @@ fn registered_actions_match_spec_risk() {
             ("stage", "stage", Risk::Safe),
             ("unstage", "unstage", Risk::Safe),
             ("commit", "commit", Risk::Safe),
+            ("ignore", "ignore", Risk::Safe),
             ("switch", "switch", Risk::Normal),
             ("branch-create", "branch", Risk::Safe),
             ("fetch", "fetch", Risk::Safe),

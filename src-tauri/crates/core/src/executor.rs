@@ -10,6 +10,19 @@ use crate::{
     Availability, CoreError, ExecCtx, JournalMode, Outcome, Preview, Registry, Result, Risk,
 };
 
+/// journal에 남길 줄 하나의 재료.
+struct Line<'a> {
+    action: &'static str,
+    kind: UndoKind,
+    input: &'a ActionInput,
+    /// 실행 전 상태. 없으면 경계 줄이거나 남기지 않는다.
+    before: Option<UndoState>,
+    /// 실행 전후 값을 함께 남길 다른 ref.
+    tracked: &'a [String],
+    /// 상태가 그대로여도 남긴다.
+    always: bool,
+}
+
 /// 미리보기를 보여줬다는 증표. 실행 때 한 번만 쓸 수 있다.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PreviewToken(pub String);
@@ -141,45 +154,39 @@ impl Executor {
         let outcome = action.execute(ctx, input)?;
         if let Some(repo) = repo {
             // 작업은 이미 끝났다. 기록을 못 남기면 되돌리기만 안 될 뿐이라 결과는 그대로 돌려준다.
-            let _ = match outcome.journal_mode() {
-                JournalMode::Skip => Ok(()),
-                JournalMode::Barrier => {
-                    self.record(ctx, repo, meta.id, UndoKind::Barrier, input, None)
-                }
-                JournalMode::Journal => self.record(
-                    ctx,
-                    repo,
-                    meta.id,
-                    meta.undo,
-                    input,
-                    before.map(|b| (b, tracked.as_slice())),
-                ),
+            let mode = outcome.journal_mode();
+            let line = Line {
+                action: meta.id,
+                kind: if mode == JournalMode::Barrier {
+                    UndoKind::Barrier
+                } else {
+                    meta.undo
+                },
+                input,
+                before: before.filter(|_| mode != JournalMode::Barrier),
+                tracked: &tracked,
+                always: mode == JournalMode::Always,
             };
+            if mode != JournalMode::Skip {
+                let _ = self.record(ctx, repo, line);
+            }
         }
         Ok(outcome)
     }
 
-    fn record(
-        &self,
-        ctx: &ExecCtx<'_>,
-        repo: &git::RepoPath,
-        action: &str,
-        kind: UndoKind,
-        input: &ActionInput,
-        // 실행 전 상태와 함께 값을 남길 다른 ref 이름.
-        before: Option<(UndoState, &[String])>,
-    ) -> Result<()> {
+    fn record(&self, ctx: &ExecCtx<'_>, repo: &git::RepoPath, line: Line<'_>) -> Result<()> {
         let at = journal::now();
-        let body = match before {
-            Some((before, tracked)) => {
-                let after = UndoState::capture_with(ctx.git, repo, tracked)?;
+        let action = line.action;
+        let body = match line.before {
+            Some(before) => {
+                let after = UndoState::capture_with(ctx.git, repo, line.tracked)?;
                 // 아무것도 바뀌지 않았으면(주고받을 것이 없거나 겹쳐서 멈춘 동기화, 올리기만 한 경우)
                 // 되돌릴 것도 없다. 줄을 남기면 그 앞의 작업을 되돌리지 못하게 막는다.
-                if after == before {
+                if after == before && !line.always {
                     return Ok(());
                 }
                 // 충돌 중이라 index 트리를 만들 수 없으면 넣기·빼기를 되돌릴 수 없다(경계).
-                if kind == UndoKind::RestoreIndex
+                if line.kind == UndoKind::RestoreIndex
                     && (before.index_tree.is_none() || after.index_tree.is_none())
                 {
                     Body::Barrier {
@@ -191,14 +198,14 @@ impl Executor {
                         id: journal::new_id(at),
                         at,
                         action: action.to_string(),
-                        input: input.journal_copy(),
+                        input: line.input.journal_copy(),
                         before,
                         after,
-                        kind,
+                        kind: line.kind,
                     }
                 }
             }
-            None if kind.is_barrier() => Body::Barrier {
+            None if line.kind.is_barrier() => Body::Barrier {
                 at,
                 action: action.to_string(),
             },

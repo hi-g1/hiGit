@@ -91,6 +91,10 @@ pub enum Outcome {
     Fetched,
     /// 가져오기·올리기·동기화 결과.
     Synced(crate::actions::SyncReport),
+    /// 제외할 파일에 넣었다.
+    Ignored {
+        count: u32,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -102,12 +106,17 @@ pub enum JournalMode {
     Barrier,
     /// 아무것도 남기지 않는다(합치기를 시작만 하고 멈춘 경우 등).
     Skip,
+    /// 브랜치·index가 그대로여도 남긴다(`.gitignore`처럼 상태에 담지 않는 것을 바꾼 경우).
+    Always,
 }
 
 impl Outcome {
     /// 이 결과를 journal에 어떻게 남길지. 합치는 중으로 끝나는 결과들이 쓴다(반복 2).
     pub fn journal_mode(&self) -> JournalMode {
-        JournalMode::Journal
+        match self {
+            Outcome::Ignored { .. } => JournalMode::Always,
+            _ => JournalMode::Journal,
+        }
     }
 }
 

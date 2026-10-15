@@ -227,6 +227,7 @@ fn action_input_tags_match_registry() {
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
+            | ActionInput::Ignore(_)
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -241,7 +242,8 @@ fn action_input_tags_match_registry() {
     let samples = [
         ActionInput::Init,
         ActionInput::Stage(paths.clone()),
-        ActionInput::Unstage(paths),
+        ActionInput::Unstage(paths.clone()),
+        ActionInput::Ignore(paths),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
             stage_all: false,

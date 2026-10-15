@@ -2,6 +2,7 @@
 
 mod branch_create;
 mod commit;
+pub(crate) mod ignore;
 mod init;
 pub(crate) mod names;
 pub(crate) mod paths;
@@ -11,6 +12,7 @@ pub(crate) mod switch;
 
 pub use branch_create::BranchCreateAction;
 pub use commit::CommitAction;
+pub use ignore::IgnoreAction;
 pub use init::InitAction;
 pub use remote::{RemoteAction, SyncReport};
 pub use stage::PathsAction;
@@ -54,6 +56,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(PathsAction::stage()))?;
     registry.register(Box::new(PathsAction::unstage()))?;
     registry.register(Box::new(CommitAction::new()))?;
+    registry.register(Box::new(IgnoreAction::new()))?;
     registry.register(Box::new(SwitchAction::new()))?;
     registry.register(Box::new(BranchCreateAction::new()))?;
     registry.register(Box::new(RemoteAction::fetch()))?;

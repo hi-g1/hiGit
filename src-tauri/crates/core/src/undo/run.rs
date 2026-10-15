@@ -118,6 +118,10 @@ pub(crate) fn undo(
             undo_create(git, repo, &entry)?;
             Undid::Restored
         }
+        UndoKind::Inverse if entry.action == "ignore" => {
+            undo_ignore(git, repo, &now, &entry)?;
+            Undid::Restored
+        }
         // 올리기·가져오기·동기화는 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042, D-073).
         UndoKind::Inverse if entry.action == "pull" => return Err(CoreError::NothingToUndo),
         UndoKind::Inverse => return Err(CoreError::UndoPushed),
@@ -300,6 +304,50 @@ fn revert_pushed(
 fn redo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
     let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
     git.run(repo, &GitOp::ResetKeep { oid: after })?;
+    Ok(())
+}
+
+/// 제외할 파일 되돌리기: 덧붙인 규칙 줄이 `.gitignore` 끝에 그대로 있고 index가 그때 그대로일
+/// 때만 그 줄을 지우고, 빼냈던 새 파일을 다시 넣는다. 다시 하기는 없다(액션을 다시 누른다).
+fn undo_ignore(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    now: &UndoState,
+    entry: &Entry,
+) -> Result<()> {
+    use crate::actions::ignore;
+    let ActionInput::Ignore(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    if now.index_tree != entry.after.index_tree {
+        return Err(CoreError::UndoStale);
+    }
+    let lines: Vec<String> = input
+        .paths
+        .iter()
+        .map(|p| ignore::rule_line(p))
+        .collect::<Result<_>>()?;
+    let text = ignore::read_rules(repo.as_path())?;
+    let added = ignore::block(&lines, ignore::newline_of(&text));
+    let Some(kept) = text.strip_suffix(&added) else {
+        return Err(CoreError::UndoStale);
+    };
+    // 앱이 처음 만든 `.gitignore`였으면(비고 버전에 없음) 빈 파일을 남기지 않고 지운다.
+    let tracked = git
+        .index_entries(repo)?
+        .iter()
+        .any(|e| e.path == ".gitignore");
+    if kept.is_empty() && !tracked {
+        std::fs::remove_file(repo.as_path().join(".gitignore"))
+            .map_err(|_| CoreError::InvalidInput("제외할 파일 목록을 바꿀 수 없어요"))?;
+    } else {
+        ignore::write_rules(repo.as_path(), kept)?;
+    }
+    if entry.before.index_tree != entry.after.index_tree
+        && let Some(tree) = entry.before.index_tree.as_deref().and_then(Oid::parse)
+    {
+        git.run(repo, &GitOp::ReadTree { tree })?;
+    }
     Ok(())
 }
 

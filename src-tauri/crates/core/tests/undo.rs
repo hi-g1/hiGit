@@ -5,12 +5,15 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use higit_core::view::{ActionInput, CommitInput, ErrorCode, ErrorView, OpenHow, PathsInput};
+use higit_core::view::{
+    ActionInput, ActionResult, CommitInput, ErrorCode, ErrorView, OpenHow, PathsInput,
+};
 use higit_core::{Core, GitBackend};
 
 fn git(dir: &Path, args: &[&str]) -> String {
     let out = std::process::Command::new("git")
         .args(["-c", "core.autocrlf=false", "-c", "commit.gpgsign=false"])
+        .args(["-c", "core.quotepath=off"])
         .args(args)
         .current_dir(dir)
         .output()
@@ -368,5 +371,72 @@ fn journal_from_another_key_is_ignored() {
     assert_eq!(
         code(core(dir).undo(dir).unwrap_err()),
         ErrorCode::NothingToUndo
+    );
+}
+
+fn ignore(core: &Core, dir: &Path, files: &[&str]) -> Result<ActionResult, higit_core::CoreError> {
+    core.execute(
+        dir,
+        &ActionInput::Ignore(PathsInput {
+            paths: files.iter().map(|f| f.to_string()).collect(),
+        }),
+        None,
+    )
+}
+
+#[test]
+fn ignoring_new_files_and_undoing_it() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+    commit(&core, dir, "첫 버전", true);
+    std::fs::write(dir.join(".env"), "x\n").unwrap();
+    std::fs::write(dir.join("#메모 *.txt"), "y\n").unwrap();
+    std::fs::write(dir.join("넣은 새 파일.key"), "z\n").unwrap();
+    stage(&core, dir, "넣은 새 파일.key");
+    let r = ignore(&core, dir, &[".env", "#메모 *.txt", "넣은 새 파일.key"]).unwrap();
+    assert_eq!(r, ActionResult::Ignored { count: 3 });
+    // 세 파일 모두 바뀐 내용 목록에서 사라지고, 넣었던 것은 빠진다.
+    assert_eq!(git(dir, &["status", "--porcelain"]), "?? .gitignore\n");
+    assert_eq!(
+        std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
+        "/.env\n/\\#메모 \\*.txt\n/넣은 새 파일.key\n"
+    );
+    core.undo(dir).unwrap();
+    assert!(
+        !dir.join(".gitignore").exists(),
+        "앱이 만든 빈 파일은 남기지 않는다"
+    );
+    assert_eq!(staged(dir), "넣은 새 파일.key\n");
+    // 이미 버전에 든 파일은 받지 않는다.
+    assert_eq!(
+        code(ignore(&core, dir, &["a.txt"]).unwrap_err()),
+        ErrorCode::InvalidInput
+    );
+}
+
+#[test]
+fn ignore_keeps_crlf_and_undo_stops_if_the_file_changed() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join(".gitignore"), "node_modules/\r\ndist/").unwrap();
+    git(dir, &["add", ".gitignore"]);
+    git(dir, &["commit", "-q", "-m", "규칙"]);
+    std::fs::write(dir.join("비밀.pem"), "k\n").unwrap();
+    ignore(&core, dir, &["비밀.pem"]).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
+        "node_modules/\r\ndist/\r\n/비밀.pem\r\n"
+    );
+    // 그사이 사람이 규칙을 더 적었으면 되돌리지 않는다.
+    let mut text = std::fs::read_to_string(dir.join(".gitignore")).unwrap();
+    text.push_str("*.log\r\n");
+    std::fs::write(dir.join(".gitignore"), &text).unwrap();
+    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::UndoStale);
+    assert_eq!(
+        std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
+        text
     );
 }

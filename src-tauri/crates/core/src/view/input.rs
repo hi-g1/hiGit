@@ -14,6 +14,8 @@ pub enum ActionInput {
     Stage(PathsInput),
     Unstage(PathsInput),
     Commit(CommitInput),
+    /// 제외할 파일에 추가(새 파일만, 200개까지).
+    Ignore(PathsInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -30,6 +32,7 @@ impl ActionInput {
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
+            ActionInput::Ignore(_) => "ignore",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
