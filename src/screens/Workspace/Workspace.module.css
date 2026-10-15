@@ -4,41 +4,43 @@
   height: 100%;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: var(--border-width) solid var(--border);
+/* 칸 사이는 간격 없이 1px 선, 둥근 모서리·그림자 없음(design.md "배치") */
+.twoPane,
+.onePane {
+  display: grid;
+  flex: 1;
+  min-height: 0;
   background: var(--surface);
 }
 
-.titles {
+.twoPane {
+  grid-template-columns: minmax(280px, 320px) 1fr;
+}
+
+.onePane {
+  grid-template-columns: 1fr;
+}
+
+.left,
+.right {
   display: flex;
-  flex: 1;
-  align-items: baseline;
-  gap: var(--space-3);
+  flex-direction: column;
   min-width: 0;
-}
-
-.name {
-  font-size: var(--font-size-title);
-}
-
-.path {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panels {
-  display: grid;
-  flex: 1;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
   min-height: 0;
-  padding: var(--space-4);
+}
+
+.twoPane .left {
+  border-right: var(--border-width) solid var(--border);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.note {
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
 }
