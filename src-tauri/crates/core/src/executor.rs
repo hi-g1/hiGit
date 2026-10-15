@@ -157,6 +157,21 @@ mod tests {
         fn diff(&self, _: &RepoPath, _: &git::DiffTarget) -> git::Result<git::FileDiff> {
             unreachable!()
         }
+        fn branches(&self, _: &RepoPath) -> git::Result<Vec<git::Branch>> {
+            unreachable!()
+        }
+        fn remotes(&self, _: &RepoPath) -> git::Result<Vec<git::Remote>> {
+            unreachable!()
+        }
+        fn list_refs(&self, _: &RepoPath, _: &str) -> git::Result<Vec<git::RefEntry>> {
+            unreachable!()
+        }
+        fn remote_head(&self, _: &RepoPath, _: &str) -> git::Result<Option<String>> {
+            unreachable!()
+        }
+        fn check_branch_name(&self, _: &str) -> git::Result<bool> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }

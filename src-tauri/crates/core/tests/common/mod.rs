@@ -5,7 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-use git::{Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
+use git::{
+    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RefEntry, Remote,
+    RepoPath, Status,
+};
 use higit_core::view::ActionInput;
 use higit_core::{
     Action, ActionMeta, Availability, ExecCtx, GitBackend, Outcome, RepoState, Result, Risk,
@@ -25,6 +28,10 @@ pub struct FakeGit {
     /// run에 들어왔는지.
     pub entered: AtomicBool,
     pub log_calls: AtomicUsize,
+    pub branches: Mutex<Vec<Branch>>,
+    pub remotes: Mutex<Vec<Remote>>,
+    pub refs: Mutex<Vec<RefEntry>>,
+    pub remote_heads: Mutex<Vec<(String, String)>>,
 }
 
 impl FakeGit {
@@ -42,6 +49,10 @@ impl FakeGit {
             hold: AtomicBool::new(false),
             entered: AtomicBool::new(false),
             log_calls: AtomicUsize::new(0),
+            branches: Mutex::new(Vec::new()),
+            remotes: Mutex::new(Vec::new()),
+            refs: Mutex::new(Vec::new()),
+            remote_heads: Mutex::new(Vec::new()),
         }
     }
 
@@ -89,6 +100,42 @@ impl GitBackend for FakeGit {
 
     fn diff(&self, _repo: &RepoPath, _target: &DiffTarget) -> git::Result<FileDiff> {
         Ok(self.file_diff.lock().unwrap().clone())
+    }
+
+    fn branches(&self, _repo: &RepoPath) -> git::Result<Vec<Branch>> {
+        Ok(self.branches.lock().unwrap().clone())
+    }
+
+    fn remotes(&self, _repo: &RepoPath) -> git::Result<Vec<Remote>> {
+        Ok(self.remotes.lock().unwrap().clone())
+    }
+
+    fn list_refs(&self, _repo: &RepoPath, prefix: &str) -> git::Result<Vec<RefEntry>> {
+        Ok(self
+            .refs
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| r.name.starts_with(prefix))
+            .cloned()
+            .collect())
+    }
+
+    fn remote_head(&self, _repo: &RepoPath, remote: &str) -> git::Result<Option<String>> {
+        Ok(self
+            .remote_heads
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(r, _)| r == remote)
+            .map(|(_, b)| b.clone()))
+    }
+
+    fn check_branch_name(&self, name: &str) -> git::Result<bool> {
+        Ok(!name.is_empty()
+            && !name.starts_with('-')
+            && !name.contains(' ')
+            && !name.contains(".."))
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

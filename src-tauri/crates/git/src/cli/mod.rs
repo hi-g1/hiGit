@@ -1,4 +1,7 @@
 mod args;
+#[cfg(test)]
+mod branch_tests;
+mod branches;
 mod diff;
 mod log;
 #[cfg(test)]
@@ -15,8 +18,8 @@ pub use runner::ConfigureCommand;
 use runner::Runner;
 
 use crate::{
-    Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion,
-    LogQuery, OpOutput, RepoPath, Result, Status,
+    Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp,
+    GitVersion, LogQuery, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -183,6 +186,75 @@ impl GitBackend for CliBackend {
             }
         };
         diff::parse(&out)
+    }
+
+    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>> {
+        let remotes = self.remotes(repo)?;
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &[
+                "for-each-ref",
+                branches::BRANCH_FORMAT,
+                "refs/heads",
+                "refs/remotes",
+            ],
+        )?;
+        branches::parse_branches(&out.stdout_lossy(), &remotes)
+    }
+
+    fn remotes(&self, repo: &RepoPath) -> Result<Vec<Remote>> {
+        // 원격이 없으면 종료 코드 1.
+        match self.runner.run(
+            Some(repo.as_path()),
+            &["config", "-z", "--get-regexp", r"^remote\..*\.url$"],
+        ) {
+            Ok(out) => Ok(branches::parse_remotes(&out.stdout_lossy())),
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(Vec::new()),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn list_refs(&self, repo: &RepoPath, prefix: &str) -> Result<Vec<RefEntry>> {
+        if !prefix.starts_with("refs/") {
+            return Err(GitError::Parse(format!("ref 접두사: {prefix}")));
+        }
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &["for-each-ref", branches::REF_FORMAT, prefix],
+        )?;
+        branches::parse_refs(&out.stdout_lossy())
+    }
+
+    fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>> {
+        let name = format!("refs/remotes/{remote}/HEAD");
+        let mut args = vec!["symbolic-ref", "-q"];
+        push_revs(&mut args, Cmd::SymbolicRef, self.git_version(), &[&name]);
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => {
+                let target = out.stdout_lossy();
+                let prefix = format!("refs/remotes/{remote}/");
+                Ok(target
+                    .trim_end_matches(['\n', '\r'])
+                    .strip_prefix(&prefix)
+                    .map(str::to_string))
+            }
+            // 별칭이 없으면 종료 코드 1(-q).
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn check_branch_name(&self, name: &str) -> Result<bool> {
+        if branches::obviously_bad_branch_name(name) {
+            return Ok(false);
+        }
+        // 전체 형식으로 검사한다. `--branch`는 `@{-1}`을 이전 브랜치 이름으로 풀어 통과시킨다.
+        let full = format!("refs/heads/{name}");
+        match self.runner.run(None, &["check-ref-format", &full]) {
+            Ok(_) => Ok(true),
+            Err(GitError::Failed { code: Some(_), .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {

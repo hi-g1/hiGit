@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Result, Status,
+    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, OpOutput, RefEntry, Remote,
+    RepoPath, Result, Status,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -24,6 +25,21 @@ pub trait GitBackend: Send + Sync {
 
     /// 파일 하나를 마지막 저장과 줄 단위로 비교한다.
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>;
+
+    /// 로컬·원격 브랜치 목록. 원격의 `HEAD` 별칭은 뺀다. 저장이 없으면 빈 목록.
+    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;
+
+    /// 원격 목록(이름과 주소).
+    fn remotes(&self, repo: &RepoPath) -> Result<Vec<Remote>>;
+
+    /// `prefix`(예: `refs/higit/parked/`) 아래 ref 목록.
+    fn list_refs(&self, repo: &RepoPath, prefix: &str) -> Result<Vec<RefEntry>>;
+
+    /// 원격의 기본 브랜치 이름(`refs/remotes/<원격>/HEAD`가 가리키는 것). 없으면 `None`.
+    fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>>;
+
+    /// 새 브랜치 이름으로 쓸 수 있는지. git 규칙에 더해 `-`로 시작하는 이름과 `HEAD`를 막는다.
+    fn check_branch_name(&self, name: &str) -> Result<bool>;
 
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;

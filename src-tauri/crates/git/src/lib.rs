@@ -18,6 +18,7 @@ pub use cli::{CliBackend, ConfigureCommand};
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{
-    BranchInfo, Change, Commit, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitOp,
-    GitVersion, Hunk, LineKind, LogQuery, OpOutput, RepoPath, Status, StatusEntry,
+    Branch, BranchInfo, BranchKind, Change, Commit, DiffKind, DiffLine, DiffTarget, EntryKind,
+    FileDiff, GitOp, GitVersion, Hunk, LineKind, LogQuery, OpOutput, RefEntry, Remote, RepoPath,
+    Status, StatusEntry,
 };

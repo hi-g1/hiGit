@@ -104,6 +104,49 @@ pub enum EntryKind {
     Untracked,
 }
 
+/// 브랜치 하나(`for-each-ref`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Branch {
+    /// 로컬은 `main`, 원격은 `origin/main`.
+    pub name: String,
+    /// `refs/heads/main` 같은 전체 이름.
+    pub refname: String,
+    pub kind: BranchKind,
+    pub oid: String,
+    /// 지금 브랜치.
+    pub is_head: bool,
+    /// 연결된 원격 브랜치(`origin/main`). 로컬 브랜치만.
+    pub upstream: Option<String>,
+    pub ahead: u32,
+    pub behind: u32,
+    /// upstream이 원격에서 사라졌다.
+    pub gone: bool,
+    /// 마지막 버전의 작성자 이름.
+    pub last_author: String,
+    /// 마지막 버전의 시각(unix 초, committer 기준).
+    pub last_time: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BranchKind {
+    Local,
+    Remote { remote: String, branch: String },
+}
+
+/// 원격 저장소 하나.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Remote {
+    pub name: String,
+    pub url: String,
+}
+
+/// ref 하나(이름과 가리키는 해시).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RefEntry {
+    pub name: String,
+    pub oid: String,
+}
+
 /// 저장(커밋) 하나.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Commit {
