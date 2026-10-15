@@ -12,6 +12,12 @@ export const ko = {
   compareArea: "비교 보기",
   pickFileToCompare: "파일을 고르면 비교가 보여요.",
   allFiles: "모든 파일",
+  diffSummary: ({ added, removed }: { added: number; removed: number }) =>
+    `마지막 버전과 지금 파일을 비교해요 · ${added}줄 추가, ${removed}줄 삭제`,
+  binaryFile: "이진 파일이라 내용을 비교할 수 없어요.",
+  noDiff: "바뀐 줄이 없어요.",
+  diffTruncated: "파일이 커서 앞부분만 보여요.",
+  noNewlineAtEnd: "파일 끝 줄바꿈 없음",
   loading: "불러오는 중…",
   showDetail: "자세히 보기",
   notARepo: "이 폴더는 아직 Git으로 관리하지 않는 폴더예요.",

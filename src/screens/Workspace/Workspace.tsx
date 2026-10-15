@@ -1,3 +1,4 @@
+import { DiffView } from "../../features/diff/DiffView";
 import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
 import type { RepoInfo } from "../../lib/api";
@@ -15,8 +16,11 @@ import styles from "./Workspace.module.css";
 export function Workspace({ repo }: { repo: RepoInfo }) {
   const m = useMessages();
   const tab = useRepoStore((s) => s.leftTab);
+  const selectedPath = useRepoStore((s) => s.selectedPath);
   const status = useStatus(repo.path);
   const log = useLog(repo.path);
+  // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 비교를 닫는다.
+  const selected = status.data?.files.find((f) => f.path === selectedPath);
 
   return (
     <div className={styles.workspace}>
@@ -53,7 +57,19 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         </section>
         {tab === "changes" && (
           <section className={styles.right} aria-label={m.compareArea}>
-            <EmptyState>{m.pickFileToCompare}</EmptyState>
+            {selected ? (
+              <DiffView
+                key={selected.path}
+                repo={repo.path}
+                request={{
+                  path: selected.path,
+                  origPath: selected.origPath,
+                  untracked: selected.change === "untracked",
+                }}
+              />
+            ) : (
+              <EmptyState>{m.pickFileToCompare}</EmptyState>
+            )}
           </section>
         )}
       </div>

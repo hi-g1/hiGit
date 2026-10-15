@@ -11,6 +11,12 @@ export const en: Messages = {
   compareArea: "Compare",
   pickFileToCompare: "Pick a file to see the comparison.",
   allFiles: "All files",
+  diffSummary: ({ added, removed }: { added: number; removed: number }) =>
+    `Comparing the last version with the current file · ${added} added, ${removed} removed`,
+  binaryFile: "This is a binary file, so its content can't be compared.",
+  noDiff: "No lines changed.",
+  diffTruncated: "The file is large, so only the beginning is shown.",
+  noNewlineAtEnd: "no newline at end of file",
   loading: "Loading…",
   showDetail: "Show details",
   notARepo: "This folder is not managed with Git yet.",

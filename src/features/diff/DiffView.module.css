@@ -1,0 +1,102 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.title {
+  font-size: var(--font-size-title);
+}
+
+.path {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 긴 줄은 가로로 스크롤한다 */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+}
+
+.table {
+  min-width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+}
+
+.no {
+  width: 1%;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sign {
+  width: 1%;
+  padding: 0 var(--space-1);
+  user-select: none;
+}
+
+.code {
+  padding-right: var(--space-4);
+  white-space: pre;
+}
+
+.added {
+  background: var(--diff-add-bg);
+}
+
+.added .sign {
+  color: var(--added);
+}
+
+.removed {
+  background: var(--diff-del-bg);
+}
+
+.removed .sign {
+  color: var(--deleted);
+}
+
+.hunk td {
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.eof {
+  margin-left: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+}
+
+.note {
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
