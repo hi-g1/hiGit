@@ -17,7 +17,7 @@ export const MINI_WIDTH = 240;
  */
 export function RoutePreview({ view, density, label }: { view: HomeMapView; density: "preview" | "mini"; label?: string }) {
   const m = useMessages();
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(density === "mini" ? MINI_WIDTH : 800);
   useEffect(() => {
     const el = box.current;
@@ -31,8 +31,9 @@ export function RoutePreview({ view, density, label }: { view: HomeMapView; dens
   const scene = layoutHorizontal(view, width, density, { here: m.hereNow, changed: m.changedFilesCount });
   const palette = density === "mini" ? monoPalette(view.defaultBranch) : branchPalette(view.defaultBranch);
   return (
-    <div ref={box} className={density === "mini" ? styles.mini : styles.preview}>
+    // 줄 단추 안에도 놓이므로 span으로 그린다(단추 안에는 div를 둘 수 없다).
+    <span ref={box} className={density === "mini" ? styles.mini : styles.preview}>
       <SvgRenderer scene={scene} palette={palette} label={label} />
-    </div>
+    </span>
   );
 }

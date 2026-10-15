@@ -192,6 +192,12 @@
   white-space: nowrap;
 }
 
+.rowMap {
+  flex: none;
+  width: 240px;
+  height: 28px;
+}
+
 .rowStatus {
   overflow: hidden;
   color: var(--text-muted);

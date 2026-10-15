@@ -157,6 +157,29 @@ describe("시작 화면", () => {
     expect(api.routePreview).not.toHaveBeenCalled();
   });
 
+  it("작은 노선도는 줄이 화면에 들어올 때 부른다", async () => {
+    const watchers: ((entries: { isIntersecting: boolean }[]) => void)[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
+          watchers.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(api.recentProjects).mockResolvedValue([project("my-shop", 10), project("blog", 60)]);
+    vi.mocked(api.projectSummary).mockResolvedValue(summary());
+    renderStart();
+    expect(await screen.findByText("blog")).toBeInTheDocument();
+    await screen.findByRole("img", { name: /버전 기록/ });
+    expect(api.routePreview).not.toHaveBeenCalledWith("/home/me/blog", 6);
+    act(() => watchers.forEach((w) => w([{ isIntersecting: true }])));
+    await vi.waitFor(() => expect(api.routePreview).toHaveBeenCalledWith("/home/me/blog", 6));
+    vi.unstubAllGlobals();
+  });
+
   it("연 프로젝트가 없으면 빈 상태와 찾은 Git 버전", async () => {
     vi.mocked(api.recentProjects).mockResolvedValue([]);
     renderStart();

@@ -1,10 +1,12 @@
 .preview {
+  display: block;
   width: 100%;
   max-width: 1100px;
   overflow: hidden;
 }
 
 .mini {
+  display: block;
   flex: none;
   width: 240px;
   overflow: hidden;
