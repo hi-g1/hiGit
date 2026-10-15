@@ -9,3 +9,8 @@ publish = false
 [dependencies]
 git = { path = "../git" }
 platform = { path = "../platform" }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
