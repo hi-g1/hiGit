@@ -7,6 +7,7 @@ import { useAppStatus } from "./lib/queries";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
+import { ToastHost } from "./ui/Toast";
 
 export function createQueryClient() {
   return new QueryClient({
@@ -20,7 +21,12 @@ export function createQueryClient() {
 
 export function AppProviders({ children, client }: { children: ReactNode; client?: QueryClient }) {
   const [queryClient] = useState(() => client ?? createQueryClient());
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <ToastHost />
+    </QueryClientProvider>
+  );
 }
 
 /** 라우터 없이 열린 저장소가 있으면 작업 공간, 없으면 홈. */

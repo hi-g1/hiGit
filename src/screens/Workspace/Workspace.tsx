@@ -2,6 +2,7 @@ import { CommitBox } from "../../features/commit/CommitBox";
 import { useEffect } from "react";
 import { DiffView } from "../../features/diff/DiffView";
 import { HistoryList } from "../../features/history/HistoryList";
+import { useUndo } from "../../features/undo/useUndo";
 import { toHistoryRows } from "../../features/history/model";
 import type { RepoInfo } from "../../lib/api";
 import { HISTORY_LIMIT, useLog, useStatus } from "../../lib/queries";
@@ -24,6 +25,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const status = useStatus(repo.path);
   const log = useLog(repo.path);
   const watch = useRepoWatch(repo.path);
+  // Ctrl+Z·Ctrl+Shift+Z(D-042). 버전 저장 결과 토스트도 여기서 띄운다.
+  useUndo(repo.path);
   const selectPath = useRepoStore((s) => s.selectPath);
   const selected = status.data?.files.find((f) => f.path === selectedPath);
   // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 선택도 지운다.

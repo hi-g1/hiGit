@@ -17,6 +17,11 @@ export const ko = {
   // 시작 화면(D-031)
   gitUpdate: "Git을 업데이트해 주세요. 보안 수정이 빠진 버전이에요.",
   gitDownload: "내려받기",
+  undo: "되돌리기",
+  redo: "다시 하기",
+  undone: "되돌렸어요",
+  redone: "다시 했어요",
+  saved: "저장했어요",
   startTitle: "프로젝트",
   lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,
   continueWork: "이어서 하기",
