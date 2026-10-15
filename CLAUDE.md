@@ -22,7 +22,7 @@ Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 앱. Tauri 2(Rust) + R
 - 모든 git 호출은 `crates/git`의 `GitBackend`를 통한다. 출력은 `--porcelain`/`-z` 같은 기계용 형식만 파싱한다(D-003).
 - 크레이트 의존 방향: `app → core → (git, hosting, platform, watcher)`. 아래 계층끼리 서로 의존하지 않는다.
 - 화면에 Git 용어를 쓸 때는 항상 `<Term id="…" />`. 새 용어는 `docs/spec.md` 표와 `src/glossary/ko.ts`, `en.ts`를 함께 고친다(D-006, D-015).
-- 위험도 `caution` 이상 액션은 실행기의 미리보기·백업·되돌리기 흐름을 우회하지 않는다(D-007).
+- 위험도 `caution` 이상 액션은 실행기의 백업 ref·journal 흐름을 우회하지 않는다. 되돌릴 수 없는(`undo`가 `Irreversible`인) 액션만 실행 전에 확인을 받는다(D-043).
 - 색·간격·글꼴은 `src/styles/tokens.css` 변수만 쓴다. 색 값을 직접 쓰지 않는다.
 - OS별 코드는 `crates/platform`에만 둔다.
 - 사용자에게 보이는 문구는 한국어 존댓말, 짧게. Git 원문 오류는 "자세히 보기"로 접는다.

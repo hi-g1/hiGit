@@ -106,6 +106,7 @@ pub struct ActionMeta {
     pub id: &'static str,          // "commit"
     pub glossary_id: &'static str, // 용어표 id. 쉬운 이름·원래 이름·설명은 여기서 온다
     pub risk: Risk,                // Safe | Normal | Caution | Danger
+    pub undo: UndoKind,            // 되돌리는 방법(D-042). Irreversible이면 실행 전 확인(D-043)
 }
 
 // core::view (D-020). 화면은 태그 붙은 enum으로 액션과 입력을 함께 보낸다.
@@ -116,14 +117,15 @@ pub enum ActionInput { Init, /* Commit(CommitInput), … */ }
 
 `RepoState`는 열린 폴더와 저장소 여부를 함께 담는다(`folder`, `repo: Option<RepoPath>`). 그래서 저장소가 아닌 폴더에서만 쓸 수 있는 init도 같은 `available`로 판단한다.
 
-`core`의 실행기(`Executor`)가 위험도에 따라 공통 흐름을 강제한다. 액션 각각이 안전장치를 따로 구현하지 않는다.
+`core`의 실행기(`Executor`)가 위험도와 `undo`에 따라 공통 흐름을 강제한다. 액션 각각이 안전장치를 따로 구현하지 않는다(D-043).
 
 ```
 execute(action, input):
-  if risk >= Caution: 프론트가 preview를 먼저 받아 보여줬는지 확인 (preview 토큰)
+  if undo == Irreversible: 프론트가 확인을 받았는지 확인 (확인 토큰)
   if risk >= Caution: 백업 참조 생성  refs/higit/backup/<timestamp>/<HEAD 이름>
+  before = 되돌리는 데 필요한 상태 (HEAD, 브랜치, 맡겨 둔 stash oid 등. undo 종류가 정함)
   result = action.execute()
-  기록: UndoJournal에 {action, 이전 HEAD, 백업 참조, 시각} 추가
+  if undo != Irreversible: journal에 {action, input, before, 백업 참조, 시각} 추가 → 화면에 되돌리기 띄움
   (화면 갱신은 파일 변경 감시가 맡는다. 실행기가 이벤트를 보내지 않는다)
 ```
 
@@ -152,10 +154,27 @@ impl Queries {
 - 화면(`useRepoWatch`)은 작업 폴더 변경이면 변경 사항·비교, `.git` 변경이면 변경 사항·버전 기록·비교를 다시 읽는다(1초에 한 번). 감시가 꺼지면 안내 줄과 "다시 읽기"를 보여주고 창 포커스 새로 고침으로 대신한다(D-025).
 - 알려진 제약: 무시된 폴더에도 감시 등록은 된다(Ubuntu inotify 한도에 걸리면 멈춤으로 떨어짐). `core.excludesFile`이 없을 때 git의 기본 전역 무시 파일은 읽지 않는다.
 
-### UndoJournal (crates/core)
+### 되돌리기와 UndoJournal (crates/core, D-042)
 - 앱이 한 작업 목록을 `.git/higit/journal.jsonl`에 남긴다(저장소마다 따로, 저장소를 옮겨도 따라감).
-- "방금 작업 취소" = 마지막 항목의 이전 상태로 복구(필요하면 stash로 작업 중 변경 보호).
-- "복구" 화면 = journal + `git reflog`를 시간순으로 합쳐 보여준다.
+- 레지스트리의 Action마다 `undo`를 정한다. 되돌리기는 별도 Action을 새로 만들지 않고 journal 항목과 그 Action의 `undo`로 실행기가 처리한다.
+
+```rust
+pub enum UndoKind {
+    RestoreRef,      // HEAD·브랜치를 before의 oid로 되돌림. 고친 파일은 그대로(버전 저장, 이 버전으로 돌아가기)
+    RestoreIndex,    // index를 before의 tree로(이번 버전에 넣기·빼기)
+    SwitchBack,      // 이전 브랜치로 갈아타고 맡겨 둔 stash를 다시 꺼냄(브랜치 갈아타기)
+    DeleteCreated,   // 만든 ref를 지움(새 브랜치, 태그)
+    Inverse,         // 기록을 바꾸지 않는 반대 동작(원격에 올린 뒤의 되돌리기, revert)
+    Irreversible,    // 되돌릴 수 없음. 실행 전 확인(덮어쓰며 올리기, 고친 것 버리기)
+}
+```
+
+- 되돌리기(Ctrl+Z, 화면 아래 "되돌리기")는 journal 마지막 항목을 꺼내 `undo` 종류대로 되돌리고 항목에 `undone`을 적는다. 다시 하기(Ctrl+Shift+Z)는 `undone` 항목의 input으로 Action을 다시 실행한다.
+- 되돌리기 전에 HEAD가 journal의 결과와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) 되돌리지 않고 "복구" 화면으로 안내한다.
+- 되돌리는 동작도 실행기를 거쳐 백업 ref를 남긴다. 그래서 되돌리기를 잘못 눌러도 살릴 수 있다.
+- 원격에 올린 버전을 바꾸는 되돌리기는 `RestoreRef` 대신 `Inverse`로 떨어지거나 막는다(올린 기록을 몰래 바꾸지 않음).
+- 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 일반 stash 목록과 섞지 않는다.
+- "복구" 화면 = journal + `git reflog` + `refs/higit/backup/*`를 시간순으로 합쳐 보여준다.
 
 ### HostingProvider (crates/hosting)
 
@@ -236,7 +255,7 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 1. `docs/spec.md` 용어표에 행 추가(id, 쉬운 이름, 원래 이름, 설명, 위험도).
 2. `src/glossary/ko.ts`와 `en.ts`에 같은 항목 추가.
 3. 필요하면 `crates/git`의 `GitOp`에 변형 추가 + `CliBackend` 매핑 + 파서 테스트.
-4. `core::view::ActionInput`에 변형을 더하고(입력이 있으면 `<Id>Input` 구조체), `crates/core/actions/<id>.rs`에 `Action` 구현, 레지스트리에 등록. 조회 기능이면 Action 대신 `core::query`에 메서드와 `core::view` 타입을 추가한다(D-010).
+4. `core::view::ActionInput`에 변형을 더하고(입력이 있으면 `<Id>Input` 구조체), `crates/core/actions/<id>.rs`에 `Action` 구현, 레지스트리에 등록. `ActionMeta.undo`로 되돌리는 방법을 정한다(되돌릴 수 없으면 `Irreversible`). 조회 기능이면 Action 대신 `core::query`에 메서드와 `core::view` 타입을 추가한다(D-010).
 5. 기본 버튼·메뉴는 자동. 전용 UI가 필요하면 `src/features/<id>/`.
 6. 테스트: 임시 저장소에서 실행 → 결과 확인 → 되돌리기 확인.
 

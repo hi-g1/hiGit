@@ -25,7 +25,7 @@ effort: high
 - [ ] 크레이트 의존 방향 위반이 없다(`cargo tree -p git`, `-p hosting`, `-p platform`에 다른 내부 크레이트가 없음).
 - [ ] 새 `Action`의 `glossary_id`가 `src/glossary/ko.ts`와 `docs/spec.md` 용어표 둘 다에 있다.
 - [ ] 화면 문구에 Git 용어를 `<Term>` 없이 하드코딩하지 않았다.
-- [ ] 위험도 `caution` 이상 액션이 미리보기·백업 흐름을 건너뛰지 않는다.
+- [ ] 위험도 `caution` 이상 액션이 실행기의 백업 ref·journal 흐름을 건너뛰지 않는다. 새 Action에 `undo`가 정해져 있고, `Irreversible`이면 실행 전 확인을 거친다(D-043).
 - [ ] git 출력 파싱이 기계용 형식(`--porcelain`, `-z`, `%x00`)만 쓴다. 한글 파일명 테스트가 있다.
 - [ ] `cfg(windows)` / `cfg(target_os = "linux")` 분기가 `crates/platform` 밖에 없다.
 - [ ] CSS에 토큰 대신 색 값을 직접 쓴 곳이 없다(`rg "#[0-9a-fA-F]{3,6}" src --glob '!**/tokens.css'`).
