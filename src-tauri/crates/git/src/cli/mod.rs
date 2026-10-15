@@ -3,6 +3,8 @@ mod args;
 mod blob_tests;
 mod blobs;
 #[cfg(test)]
+mod branch_ops_tests;
+#[cfg(test)]
 mod branch_tests;
 mod branches;
 mod diff;
@@ -482,6 +484,18 @@ impl GitBackend for CliBackend {
         }
     }
 
+    fn check_tag_name(&self, name: &str) -> Result<bool> {
+        if branches::obviously_bad_branch_name(name) {
+            return Ok(false);
+        }
+        let full = format!("refs/tags/{name}");
+        match self.runner.run(None, &["check-ref-format", &full]) {
+            Ok(_) => Ok(true),
+            Err(GitError::Failed { code: Some(_), .. }) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     fn resolve_ref(&self, repo: &RepoPath, name: &str) -> Result<Option<Oid>> {
         let target = format!("{name}^{{commit}}");
         let mut args = vec!["rev-parse", "--verify", "-q"];
@@ -922,6 +936,56 @@ impl GitBackend for CliBackend {
                 }
                 push_revs(&mut args, Cmd::Revert, self.git_version(), &[oid.as_str()]);
                 self.run_local_watched(repo, &args, None)?
+            }
+            // 이름은 core가 검사했고 `--end-of-options` 뒤에 둔다.
+            GitOp::TagCreate { name, oid } => {
+                // tag.gpgSign이 켜져 있으면 가벼운 태그도 서명한 주석 태그가 되므로 끈다.
+                let mut args = vec!["-c", "tag.gpgSign=false", "tag"];
+                push_revs(
+                    &mut args,
+                    Cmd::Tag,
+                    self.git_version(),
+                    &[name, oid.as_str()],
+                );
+                self.runner.run(dir, &args)?
+            }
+            GitOp::TagDelete { name } => {
+                let mut args = vec!["tag", "-d"];
+                push_revs(&mut args, Cmd::Tag, self.git_version(), &[name]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::BranchDelete { name } => {
+                let mut args = vec!["branch", "-D"];
+                push_revs(&mut args, Cmd::Branch, self.git_version(), &[name]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::BranchRename { from, to, force } => {
+                let mut args = vec!["branch", if *force { "-M" } else { "-m" }];
+                push_revs(&mut args, Cmd::Branch, self.git_version(), &[from, to]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::UnsetUpstream { branch } => {
+                let mut args = vec!["branch", "--unset-upstream"];
+                push_revs(&mut args, Cmd::Branch, self.git_version(), &[branch]);
+                match self.runner.run(dir, &args) {
+                    Ok(out) => out,
+                    // 연결된 원격 브랜치가 없으면 이미 끊긴 것이다.
+                    Err(GitError::Failed { stderr, .. }) if stderr.contains("has no upstream") => {
+                        return Ok(OpOutput::default());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            GitOp::SetUpstream { branch, upstream } => {
+                let to = format!("--set-upstream-to={upstream}");
+                let mut args = vec!["branch", to.as_str()];
+                push_revs(&mut args, Cmd::Branch, self.git_version(), &[branch]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::CreateAndSwitchAt { name, oid } => {
+                let mut args = vec!["switch", "--no-guess", "-c", name.as_str()];
+                push_revs(&mut args, Cmd::Switch, self.git_version(), &[oid.as_str()]);
+                self.runner.run(dir, &args)?
             }
             GitOp::OperationContinue { kind } => {
                 // 이어서 버전을 만들므로 hook·서명이 돌 수 있다(진행 알림과 강제 멈춤).

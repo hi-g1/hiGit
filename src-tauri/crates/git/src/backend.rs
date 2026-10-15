@@ -40,6 +40,9 @@ pub trait GitBackend: Send + Sync {
     /// 로컬 브랜치 끝에서 닿는 버전인지(D-099).
     fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool>;
 
+    /// 태그 이름으로 쓸 수 있는지(`check-ref-format refs/tags/<이름>`, `-` 시작 금지, D-104).
+    fn check_tag_name(&self, name: &str) -> Result<bool>;
+
     /// 버전에서 바뀐 파일(첫 부모와 비교, 첫 버전은 빈 트리와). 500개까지(D-105).
     fn commit_files(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles>;
 

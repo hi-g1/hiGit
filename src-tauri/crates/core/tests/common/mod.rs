@@ -152,6 +152,10 @@ impl GitBackend for FakeGit {
         Ok(true)
     }
 
+    fn check_tag_name(&self, name: &str) -> git::Result<bool> {
+        Ok(!name.is_empty() && !name.starts_with('-') && !name.contains(' '))
+    }
+
     fn commit_files(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<git::CommitFiles> {
         Ok(git::CommitFiles::default())
     }

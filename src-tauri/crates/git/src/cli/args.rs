@@ -35,6 +35,7 @@ pub(crate) enum Cmd {
     DiffTree,
     CherryPick,
     Revert,
+    Tag,
     /// 2.34.1에서 `--end-of-options`를 경로로 읽는다.
     Checkout,
     /// 2.34.1에서 옵션 위치 오류를 낸다.

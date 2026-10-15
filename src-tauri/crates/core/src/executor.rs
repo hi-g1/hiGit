@@ -308,6 +308,9 @@ mod tests {
         fn commit_files(&self, _: &RepoPath, _: &git::Oid) -> git::Result<git::CommitFiles> {
             unreachable!()
         }
+        fn check_tag_name(&self, _: &str) -> git::Result<bool> {
+            unreachable!()
+        }
         fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
             unreachable!()
         }

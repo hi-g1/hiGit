@@ -411,6 +411,24 @@ pub enum GitOp {
     /// `oid`의 변경을 취소하는 새 버전(`revert --no-edit`, 합치기 버전은 `-m`). 멈추면 정리하지 않는다.
     /// (올린 뒤 Ctrl+Z가 쓰는 `Revert`는 실패하면 정리한다.)
     RevertStart { oid: Oid, mainline: Option<u32> },
+    /// 가벼운 태그를 만든다(`tag <이름> <해시>`, 서명 설정을 끈다, D-104).
+    TagCreate { name: String, oid: Oid },
+    /// 태그를 지운다(`tag -d`).
+    TagDelete { name: String },
+    /// 로컬 브랜치를 지운다(`branch -D`, 설정 구역도 지운다, D-103).
+    BranchDelete { name: String },
+    /// 로컬 브랜치 이름을 바꾼다(`branch -m`, 대소문자만 다르면 `force`로 `-M`).
+    BranchRename {
+        from: String,
+        to: String,
+        force: bool,
+    },
+    /// 연결된 원격 브랜치를 끊는다. 이미 없으면 성공으로 본다.
+    UnsetUpstream { branch: String },
+    /// 원격 브랜치를 잇는다(`branch --set-upstream-to`).
+    SetUpstream { branch: String, upstream: String },
+    /// `oid`에서 새 브랜치를 만들고 갈아탄다(`switch --no-guess -c <이름> <해시>`).
+    CreateAndSwitchAt { name: String, oid: Oid },
     /// 멈춘 복사·되돌리기·기록 정리를 이어간다(`--continue`). core가 표식을 확인한 뒤에만 부른다.
     OperationContinue { kind: OperationKind },
     /// 지금 멈춘 버전을 건너뛴다(`--skip`, 해결 결과가 비었을 때).
