@@ -17,6 +17,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # 러너 디스크가 차서 링커가 죽는 일을 막는다(debug 정보가 target의 대부분). 로컬 빌드는 그대로다.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
   deny:
@@ -70,6 +73,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ubuntu 러너 디스크 비우기
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
 
       - name: Ubuntu 시스템 패키지
         if: runner.os == 'Linux'
