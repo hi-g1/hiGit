@@ -188,6 +188,7 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
    - Windows/Ubuntu: Windows에서 `-F -`로 넘긴 UTF-8 메시지가 그대로 저장되는지(`i18n.commitEncoding` 기본 UTF-8) 테스트로 확인. 테스트 환경에서 사용자 전역 설정이 섞이지 않게 `GIT_CONFIG_GLOBAL`을 임시 파일로.
 
 8. git: 브랜치 만들기·바꾸기 (`git: add branch create and switch ops`) — 1b
+   - 메모(2026-10-15): 005 합친 순서 13번에서 바뀜(`CreateAndSwitch`, `SwitchTrack`).
    - 변경 파일: `types.rs`(`GitOp::CreateBranch { name, start: Option<String> }`, `Switch { branch, track: Option<String> }`), `cli/mod.rs`.
    - 매핑: CreateBranch `git branch <name> [<start>]`. `-`로 시작하는 이름이 옵션으로 읽히지 않도록 core가 6단계의 이름 검사를 먼저 통과시킨 이름만 넘긴다. Switch: 로컬 브랜치 `git switch <branch>`, 원격 브랜치 `git switch -c <local> --track <remote>/<branch>`. `--no-guess`로 이름 추측을 끈다(동작을 명시적으로).
    - 테스트: 만들기 후 `branches`에 보임, 같은 이름 → `BranchExists`, 바꾸기 후 `status.branch.head`, 덮어쓸 변경이 있는 바꾸기 → `WouldOverwrite`, 겹치지 않는 변경은 따라옴(H-15), 원격 브랜치로 바꾸기(로컬 bare 원격).
@@ -195,6 +196,7 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
    - Windows/Ubuntu: 대소문자만 다른 브랜치 이름(`Feature`/`feature`)은 Windows 파일 시스템에서 충돌한다 → 테스트로 결과를 기록하고 core의 이름 검사에서 기존 브랜치와 대소문자 무시 비교로 막을지 H로(H-18).
 
 9. git: 새로 고침·가져오기·올리기 (`git: add fetch, pull and push ops`) — 1b
+   - 메모(2026-10-15): 005 합친 순서 25번에서 바뀜(`Pull` 대신 `MergeFf`·`Merge`·`MergeAbort`, 백그라운드 fetch).
    - 변경 파일: `types.rs`(`GitOp::Fetch`, `Pull`, `Push { set_upstream: Option<(String, String)> }`), `cli/mod.rs`, `cli/runner.rs`(네트워크 작업용 env).
    - 매핑(H-10~H-13 추천안 기준): Fetch `git fetch --all`(prune 안 함), Pull `git pull --ff-only`, Push `git push` 또는 `git push -u <remote> HEAD:refs/heads/<branch>`.
    - 네트워크 작업에는 추가로 `GIT_ASKPASS`를 비워 두고(`GIT_TERMINAL_PROMPT=0`은 이미 있음), SSH 질문으로 멈추지 않게 하는 방법을 H-13 결정대로 넣는다. 자격 증명 도우미(Windows Git Credential Manager 창)는 막지 않는다.
@@ -235,6 +237,7 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
     - Windows/Ubuntu: 경로 검사에서 `C:` 드라이브 접두사와 `\\` UNC도 거부되는지 두 OS 단위 테스트(문자열 검사라 OS 분기 불필요).
 
 12. core 액션: 브랜치 만들기·바꾸기 (`core: add branch-create and switch actions`) — 1b
+    - 메모(2026-10-15): 005 H9로 대체됨.
     - `view/input.rs`: `BranchCreate(BranchCreateInput { name, start: Option<String> })`, `Switch(SwitchInput { branch: String, remote: Option<String> })`.
     - `actions/{branch_create.rs, switch.rs}`. 메타: `branch-create`/`branch`/Safe, `switch`/`switch`/Normal. "만들고 바로 바꾸기"는 화면이 두 액션을 차례로 부른다(한 액션으로 묶으면 위험도가 `branch`의 safe와 어긋남).
     - `available`: 저장소 + 저장이 하나 이상(`has_commits`, 저장 없는 저장소에서 브랜치를 만들 수 없음 → 새 `UnavailableReason::NoCommits`).
@@ -242,6 +245,7 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
     - 완료 기준: 11b와 같음.
 
 13. core 액션: 새로 고침·가져오기·올리기 (`core: add fetch, pull and push actions`) — 1b
+    - 메모(2026-10-15): 005 H13에서 바뀜(동기화 액션 추가).
     - `view/input.rs`: `Fetch`, `Pull`, `Push`(셋 다 입력 없음 unit 변형).
     - `actions/{fetch.rs, pull.rs, push.rs}`. 메타: `fetch`/Safe, `pull`/Normal, `push`/Normal.
     - `available`: 원격이 하나 이상(`NoRemote`). pull은 upstream이 있어야(`NoUpstream`). push는 브랜치 위에 있어야(detached면 `Detached`).
@@ -291,16 +295,19 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
     - 완료 기준: `pnpm test`, `pnpm lint`. 두 OS 수동: 한글 내용, CRLF 파일, 5,000줄 스크롤.
 
 18. 버전 저장 상자 (`features: save version box`)
+    - 메모(2026-10-15): 005 H7(문서 제목형, D-044)로 다시 만든다.
     - 변경 파일: `src/features/commit/{CommitBox.tsx, CommitBox.module.css, CommitBox.test.tsx}`.
     - 왼쪽 칸 아래. 입력칸 안내 문구 "무엇을 바꿨나요?", 주 버튼 `<Term id="commit" />`(= "버전 저장", `--primary`, 작업 공간의 유일한 주 버튼). 넣은 파일 0개 또는 메시지가 공백뿐이면 꺼짐(H-14). 꺼진 이유는 버튼 아래 둘째 줄("이번 버전에 넣을 파일을 골라 주세요." / "무엇을 바꿨는지 적어 주세요."). Ctrl+Enter로 저장, `isComposing`이면 무시. 성공 시 입력을 비우고 `status`, `log` 무효화, "버전을 저장했어요 · <짧은 해시>".
     - 테스트: 버튼 활성 조건과 둘째 줄, Ctrl+Enter, 조합 중 Enter 무시, 성공 후 비움, `identityMissing` 문구.
     - 완료 기준: `pnpm test`. 두 OS 수동: 한글 IME로 메시지 입력 중 Enter가 저장을 실행하지 않음.
 
 19. 브랜치 목록·만들기·바꾸기 (`features: branch menu, create and switch`) — 1b
+    - 메모(2026-10-15): 005 H10으로 대체됨.
     - 상단 바 브랜치 단추의 드롭다운(`@radix-ui/react-popover`, D-004). 현재 브랜치는 `--accent` 막대 대신 체크 표시 + 굵게(002 Q10). "새 `<Term id="branch" />`" → 대화상자(이름 검사 결과를 입력 중에 둘째 줄로). 바꿀 때 `wouldOverwrite`면 안내와 "자세히 보기".
     - 완료 기준: `pnpm test`. 수동: 두 OS에서 만들기·바꾸기.
 
 20. 새로 고침·가져오기·올리기 (`features: refresh, get updates and upload in top bar`) — 1b
+    - 메모(2026-10-15): 005 H15(동기화 버튼 하나, D-045)로 대체됨.
     - 상단 바 오른쪽에 `<Term id="fetch" />`(원격이 없으면 화면만 다시 읽음), `<Term id="pull" />` ↓N, `<Term id="push" />` ↑N. 동기화 단추는 이 단계에서 정한다(002 Q5). `pushRejected` 해결 버튼은 [가져오기]. `notFastForward`는 "합치기는 아직 준비 중이에요."
     - 완료 기준: `pnpm test`. 수동: GitHub 비공개 저장소에서 두 OS 각각 올리기·가져오기.
 
