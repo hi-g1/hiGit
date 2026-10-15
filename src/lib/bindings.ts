@@ -29,6 +29,8 @@ export const commands = {
 	redoLast: (folder: string) => __TAURI_INVOKE<UndoResult>("redo_last", { folder }),
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
+	/**  버전별 바뀐 줄 수(노선도 선 굵기, D-089). 한 번에 100개까지. */
+	queryLogStats: (repo: string, oids: string[]) => __TAURI_INVOKE<CommitStatView[]>("query_log_stats", { repo, oids }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
@@ -200,6 +202,14 @@ export type CommitRow = {
 	 *  내보내므로 TS 타입만 u32(number)로 지정한다. 값은 serde가 숫자 그대로 보낸다.
 	 */
 	authorTime: number,
+};
+
+/**  버전 하나의 바뀐 파일·줄 수(노선도 선 굵기, D-089). */
+export type CommitStatView = {
+	oid: string,
+	files: number,
+	added: number,
+	removed: number,
 };
 
 /**  어떤 작업이 충돌을 남겼는지. */

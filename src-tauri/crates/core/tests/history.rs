@@ -297,3 +297,28 @@ fn an_empty_repo_has_an_empty_page() {
     );
     assert!(first.commits.is_empty() && first.tips.is_empty() && first.head.is_none());
 }
+
+#[test]
+fn log_stats_for_shown_versions() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    let head = git(dir, &["rev-parse", "HEAD"]);
+    let stats = core.queries().log_stats(dir, vec![head.clone()]).unwrap();
+    assert_eq!(stats.len(), 1);
+    assert_eq!(stats[0].oid, head);
+    assert_eq!(
+        (stats[0].files, stats[0].added, stats[0].removed),
+        (1, 1, 1)
+    );
+    let code =
+        |oids: Vec<String>| ErrorView::from(&core.queries().log_stats(dir, oids).unwrap_err()).code;
+    assert_eq!(code(vec![head.clone(); 101]), ErrorCode::InvalidInput);
+    assert_eq!(code(vec!["HEAD".into()]), ErrorCode::InvalidInput);
+    let other = tempfile::tempdir().unwrap();
+    let err = core
+        .queries()
+        .log_stats(other.path(), vec![head])
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+}

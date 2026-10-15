@@ -243,6 +243,16 @@ pub struct LogPage {
     pub unpushed: Vec<String>,
 }
 
+/// 버전 하나의 바뀐 파일·줄 수(노선도 선 굵기, D-089).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitStatView {
+    pub oid: String,
+    pub files: u32,
+    pub added: u32,
+    pub removed: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RefLabelView {

@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
-    HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PendingWorkView, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, SecretCheckRequest,
-    SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView,
+    FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PendingWorkView,
+    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
+    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -195,6 +195,20 @@ pub async fn query_log(
 ) -> CmdResult<LogPage> {
     blocking(state, move |core| {
         core.queries().log(&PathBuf::from(repo), query)
+    })
+    .await
+}
+
+/// 버전별 바뀐 줄 수(노선도 선 굵기, D-089). 한 번에 100개까지.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_log_stats(
+    state: State<'_, AppState>,
+    repo: String,
+    oids: Vec<String>,
+) -> CmdResult<Vec<CommitStatView>> {
+    blocking(state, move |core| {
+        core.queries().log_stats(&PathBuf::from(repo), oids)
     })
     .await
 }

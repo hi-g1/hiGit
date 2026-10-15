@@ -18,6 +18,7 @@ const COMMANDS: &[&str] = &[
     "redo_last",
     "query_status",
     "query_log",
+    "query_log_stats",
     "query_diff",
     "query_branches",
     "query_branch_name",

@@ -23,6 +23,7 @@
     "allow-redo-last",
     "allow-query-status",
     "allow-query-log",
+    "allow-query-log-stats",
     "allow-query-diff",
     "allow-query-branches",
     "allow-query-branch-name",

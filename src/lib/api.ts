@@ -118,6 +118,8 @@ export const api = {
   redoLast: (folder: string) => call(commands.redoLast(folder)),
   status: (repo: string) => call(commands.queryStatus(repo)),
   log: (repo: string, query: LogQuery) => call(commands.queryLog(repo, query)),
+  /** 버전별 바뀐 줄 수(노선도 선 굵기, D-089). 100개까지. */
+  logStats: (repo: string, oids: string[]) => call(commands.queryLogStats(repo, oids)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),

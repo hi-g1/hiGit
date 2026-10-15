@@ -766,6 +766,35 @@ impl Queries {
         Ok(page)
     }
 
+    /// 버전별 바뀐 파일·줄 수(D-089). 한 번에 100개까지. 2MB·10초 안에 못 받은 버전은 결과에
+    /// 없다(화면은 "모름"으로 둔다, D-096).
+    pub fn log_stats(
+        &self,
+        repo: &Path,
+        oids: Vec<String>,
+    ) -> Result<Vec<crate::view::CommitStatView>> {
+        const MAX_STATS: usize = 100;
+        let root = self.opened_repo(repo)?;
+        if oids.len() > MAX_STATS {
+            return Err(CoreError::InvalidInput("한 번에 묻는 버전이 너무 많아요"));
+        }
+        let oids = oids
+            .iter()
+            .map(|o| git::Oid::parse(o).ok_or(CoreError::InvalidInput("버전이 해시가 아니에요")))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(self
+            .git
+            .commit_stats(&root, &oids)?
+            .into_iter()
+            .map(|s| crate::view::CommitStatView {
+                oid: s.oid.to_string(),
+                files: s.files,
+                added: s.added,
+                removed: s.removed,
+            })
+            .collect())
+    }
+
     /// 지금 브랜치에서 upstream에 아직 없는 버전(최대 500개). upstream이 없으면 빈 목록.
     fn unpushed(
         &self,
