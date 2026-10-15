@@ -1,3 +1,4 @@
+import { CommitBox } from "../../features/commit/CommitBox";
 import { DiffView } from "../../features/diff/DiffView";
 import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
@@ -53,6 +54,12 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
                   </>
                 ))}
             </div>
+          )}
+          {tab === "changes" && (
+            <CommitBox
+              folder={repo.path}
+              includedCount={status.data?.files.filter((f) => f.staged).length ?? 0}
+            />
           )}
         </section>
         {tab === "changes" && (
