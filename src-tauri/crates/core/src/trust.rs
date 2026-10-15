@@ -200,7 +200,8 @@ fn safe_value(key: &str, value: &str) -> Option<&'static str> {
             .then_some("false");
         }
         "core.hookspath" => Some(""),
-        "core.sshcommand" => Some("ssh"),
+        // 질문을 끈 값으로 덮어쓴다. 앱은 이 값을 사용자가 정한 SSH 명령으로 보고 그대로 쓴다(D-023).
+        "core.sshcommand" => Some("ssh -o BatchMode=yes"),
         "core.editor" | "sequence.editor" => Some(":"),
         "core.pager" => Some("cat"),
         "core.askpass"
@@ -294,6 +295,10 @@ mod tests {
         assert_eq!(safe_value("user.name", "x"), None);
         assert_eq!(safe_value("core.autocrlf", "true"), None);
         assert_eq!(safe_value("remote.origin.url", "x"), None);
+        assert_eq!(
+            safe_value("core.sshcommand", "ssh -o ProxyCommand=x"),
+            Some("ssh -o BatchMode=yes")
+        );
         assert_eq!(safe_value("core.gitproxy", "x"), Some(""));
         assert_eq!(safe_value("core.alternaterefscommand", "x"), Some(""));
         assert_eq!(safe_value("gpg.ssh.defaultkeycommand", "x"), Some(""));
