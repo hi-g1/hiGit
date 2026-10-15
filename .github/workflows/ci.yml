@@ -30,6 +30,36 @@ jobs:
           manifest-path: src-tauri/Cargo.toml
           command: check
 
+  git-min:
+    # GitHub 러너의 git은 최신이라, Ubuntu 22.04 기본 git(2.34.1)으로 Rust 테스트를 따로 돌린다.
+    # --end-of-options 버전 표, 2.38 미만 겹침 검사(D-050)가 여기서 실제로 돈다.
+    name: ubuntu-22.04 기본 git
+    runs-on: ubuntu-22.04
+    container: ubuntu:22.04
+    steps:
+      - name: 시스템 패키지
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git build-essential curl ca-certificates pkg-config
+          git --version
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Rust 도구 (rust-toolchain.toml)
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          "$HOME/.cargo/bin/rustup" toolchain install
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+          key: git-min
+
+      - name: cargo test (app 제외)
+        working-directory: src-tauri
+        run: cargo test --workspace --exclude app
+
   build-and-test:
     name: ${{ matrix.os }}
     strategy:
