@@ -1,0 +1,37 @@
+import type { Messages } from "./ko";
+
+export const en: Messages = {
+  appTagline: "Git made easy, even if you have never used it",
+  openFolder: "Open folder",
+  openOtherFolder: "Open another folder",
+  refresh: "Refresh",
+  loading: "Loading…",
+  showDetail: "Show details",
+  notARepo: "This folder is not managed with Git yet.",
+  noChanges: "No files changed since the last save.",
+  noCommits: "Nothing has been saved yet.",
+  moreCommits: "Showing the latest 200 only.",
+  renamedFrom: (path: string) => `Renamed from ${path}`,
+  errors: {
+    gitMissing: "Git is not installed. Install Git and start the app again.",
+    gitTooOld: "Git 2.30 or later is required. Please update Git.",
+    folderNotFound: "Could not open the folder.",
+    notARepo: "This folder is not managed with Git yet.",
+    alreadyRepo: "This folder is already managed with Git.",
+    unknownAction: "Unknown action.",
+    previewRequired: "Please check the preview first.",
+    previewMismatch: "The preview has expired. Please check it again.",
+    notYetSupported: "This action is not supported yet.",
+    gitFailed: "The Git operation failed.",
+    internal: "Something unexpected happened.",
+  },
+  changeKind: {
+    added: "Added",
+    modified: "Modified",
+    deleted: "Deleted",
+    renamed: "Renamed",
+    typeChanged: "Type changed",
+    conflicted: "Conflict",
+    untracked: "New file",
+  },
+};

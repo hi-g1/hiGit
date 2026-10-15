@@ -1,0 +1,22 @@
+.kind {
+  flex: none;
+  width: 64px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.added,
+.untracked {
+  color: var(--added);
+}
+
+.modified,
+.renamed,
+.typeChanged {
+  color: var(--modified);
+}
+
+.deleted,
+.conflicted {
+  color: var(--deleted);
+}

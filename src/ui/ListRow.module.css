@@ -1,0 +1,34 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-height);
+  padding: 0 var(--space-4);
+}
+
+.row:hover {
+  background: var(--surface-hover);
+}
+
+.mono {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}

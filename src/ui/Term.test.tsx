@@ -59,6 +59,11 @@ describe("Term", () => {
     expect(tooltip).toHaveTextContent("저장하기");
   });
 
+  it("버튼 안에서는 따로 포커스되지 않는다", () => {
+    render(<Term id="init" focusable={false} />);
+    expect(screen.getByText("관리 시작")).not.toHaveAttribute("tabindex");
+  });
+
   it("영어 용어표를 쓸 수 있다", () => {
     act(() => useUiStore.setState({ locale: "en" }));
     render(<Term id="commit" />);
