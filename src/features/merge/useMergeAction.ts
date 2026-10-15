@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ApiError, api } from "../../lib/api";
+import { invalidateLog } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { useToastStore } from "../../ui/toastStore";
@@ -28,7 +29,8 @@ export function useMergeAction(repo: string, onDone: (text: string) => void) {
       show(m.errors[e instanceof ApiError ? e.code : "internal"]);
     } finally {
       setPending(false);
-      for (const key of ["status", "log", "branches", "homeMap", "mergeHint", "mergeState"]) {
+      invalidateLog(queryClient, repo);
+      for (const key of ["status", "branches", "homeMap", "mergeHint", "mergeState"]) {
         void queryClient.invalidateQueries({ queryKey: [key, repo] });
       }
     }

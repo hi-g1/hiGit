@@ -2,7 +2,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
-import { useBranchNameCheck, useBranches, useMergeHint } from "../../lib/queries";
+import { invalidateLog, useBranchNameCheck, useBranches, useMergeHint } from "../../lib/queries";
 import { formatDate } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
@@ -102,7 +102,8 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
       show(m.errors[e instanceof ApiError ? e.code : "internal"]);
     } finally {
       setPending(false);
-      for (const key of [["status", repo], ["log", repo], ["branches", repo]]) {
+      invalidateLog(queryClient, repo);
+      for (const key of [["status", repo], ["branches", repo]]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     }

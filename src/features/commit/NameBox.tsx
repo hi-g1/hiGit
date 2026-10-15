@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ChangedFile, SecretFinding } from "../../lib/api";
 import { api } from "../../lib/api";
-import { queryKeys } from "../../lib/queries";
+import { invalidateLog, queryKeys } from "../../lib/queries";
 import { SHORTCUTS, matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
@@ -87,7 +87,7 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.status(folder) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.log(folder) });
+      invalidateLog(queryClient, folder);
     },
   });
 

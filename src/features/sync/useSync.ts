@@ -1,5 +1,6 @@
 import { useIsMutating, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "../../lib/api";
+import { invalidateLog } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { useToastStore } from "../../ui/toastStore";
@@ -33,7 +34,8 @@ export function useSync(repo: string): { run: () => void; running: boolean } {
       else set({ error: e });
     },
     onSettled: () => {
-      for (const key of [["status", repo], ["log", repo], ["branches", repo], ["mergeState", repo], ["homeMap", repo]]) {
+      invalidateLog(queryClient, repo);
+      for (const key of [["status", repo], ["branches", repo], ["mergeState", repo], ["homeMap", repo]]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     },

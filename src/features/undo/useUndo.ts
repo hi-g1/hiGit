@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { ApiError, api } from "../../lib/api";
+import { invalidateLog } from "../../lib/queries";
 import { SHORTCUTS } from "../../lib/shortcuts";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
@@ -19,7 +20,8 @@ export function useUndo(repo: string) {
   const setRestoredMessage = useUndoStore((s) => s.setRestoredMessage);
 
   const refresh = useCallback(() => {
-    for (const key of [["status", repo], ["log", repo], ["branches", repo], ["summary", repo]]) {
+    invalidateLog(queryClient, repo);
+    for (const key of [["status", repo], ["branches", repo], ["summary", repo]]) {
       void queryClient.invalidateQueries({ queryKey: key });
     }
   }, [queryClient, repo]);

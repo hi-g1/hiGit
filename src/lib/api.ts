@@ -34,6 +34,7 @@ export type {
   ProjectSummaryView,
   RecentProject,
   RefLabelView,
+  CommitStatView,
   HunkView,
   LineKindView,
   LogPage,

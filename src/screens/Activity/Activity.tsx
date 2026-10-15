@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { groupByDay, restoreInput } from "../../features/activity/model";
 import type { TermId } from "../../glossary/types";
 import { ApiError, api, type RecoveryItem } from "../../lib/api";
-import { useActions, useRecovery } from "../../lib/queries";
+import { invalidateLog, useActions, useRecovery } from "../../lib/queries";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -62,7 +62,8 @@ export function Activity({ repo, onDone }: Props) {
       show(m.errors[e instanceof ApiError ? e.code : "internal"]);
     } finally {
       setPending(null);
-      for (const key of ["status", "log", "recovery", "homeMap", "branches", "stashes", "mergeHint"]) {
+      invalidateLog(queryClient, repo);
+      for (const key of ["status", "recovery", "homeMap", "branches", "stashes", "mergeHint"]) {
         void queryClient.invalidateQueries({ queryKey: [key, repo] });
       }
     }

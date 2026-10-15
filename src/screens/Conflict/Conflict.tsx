@@ -14,7 +14,7 @@ import {
   type HunkPick,
 } from "../../features/conflict/model";
 import { api, type ConflictStateView } from "../../lib/api";
-import { useConflictFile } from "../../lib/queries";
+import { invalidateLog, useConflictFile } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -59,7 +59,8 @@ export function Conflict({ repo, state, onDone }: Props) {
   const done = canFinish(files, picks);
 
   const refresh = () => {
-    for (const k of ["status", "log", "mergeState", "homeMap", "branches", "mergeHint"]) {
+    invalidateLog(queryClient, repo);
+    for (const k of ["status", "mergeState", "homeMap", "branches", "mergeHint"]) {
       void queryClient.invalidateQueries({ queryKey: [k, repo] });
     }
   };

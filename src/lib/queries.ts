@@ -1,6 +1,6 @@
 // 서버 상태(TanStack Query). 화면은 이 훅으로 백엔드를 읽는다.
-import { useQuery } from "@tanstack/react-query";
-import { api, type ApiError, type DiffRequest } from "./api";
+import { type InfiniteData, type QueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { api, type ApiError, type DiffRequest, type LogPage, type LogScope } from "./api";
 
 export const HISTORY_LIMIT = 200;
 
@@ -100,11 +100,38 @@ export function useStatus(repo: string) {
   });
 }
 
-export function useLog(repo: string) {
-  return useQuery<Awaited<ReturnType<typeof api.log>>, ApiError>({
-    queryKey: queryKeys.log(repo),
-    queryFn: () => api.log(repo, { skip: 0, limit: HISTORY_LIMIT }),
+/** 받아 둘 버전 수 상한. 넘으면 더 받지 않는다. */
+export const HISTORY_MAX = 20_000;
+
+type LogPageParam = { skip: number; tips: string[] | null };
+
+/**
+ * 버전 기록 쪽들(D-088). 다음 쪽은 첫 쪽이 정한 끝점(`tips`)과 받은 수(`skip`)로 이어 받아 그사이
+ * ref가 움직여도 겹치거나 빠지지 않는다.
+ */
+export function useLogPages(repo: string, scope: LogScope) {
+  return useInfiniteQuery<LogPage, ApiError, InfiniteData<LogPage, LogPageParam>, readonly unknown[], LogPageParam>({
+    queryKey: [...queryKeys.log(repo), scope],
+    initialPageParam: { skip: 0, tips: null },
+    queryFn: ({ pageParam }) =>
+      api.log(repo, { skip: pageParam.skip, limit: HISTORY_LIMIT, scope, tips: pageParam.tips }),
+    getNextPageParam: (last, pages) => {
+      const received = pages.reduce((n, p) => n + p.commits.length, 0);
+      if (!last.hasMore || received >= HISTORY_MAX) return undefined;
+      return { skip: received, tips: pages[0]!.tips };
+    },
   });
+}
+
+/**
+ * 버전 기록을 다시 읽게 한다. 받은 쪽을 첫 쪽 하나로 자른 뒤 무효화해, 2만 개를 받아 둔 상태에서도
+ * 첫 쪽 한 번만 다시 받는다(useInfiniteQuery는 무효화하면 모든 쪽을 다시 받는다).
+ */
+export function invalidateLog(client: QueryClient, repo: string): void {
+  client.setQueriesData<InfiniteData<LogPage, LogPageParam>>({ queryKey: queryKeys.log(repo) }, (data) =>
+    data && data.pages.length > 1 ? { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) } : data,
+  );
+  void client.invalidateQueries({ queryKey: queryKeys.log(repo) });
 }
 
 export function useDiff(repo: string, request: DiffRequest) {

@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { onRepoChanged, onWatchStatus } from "./events";
-import { queryKeys } from "./queries";
+import { invalidateLog, queryKeys } from "./queries";
 
 /** 변경 알림을 묶는 간격. 빌드처럼 파일이 쏟아질 때 화면을 너무 자주 다시 읽지 않는다. */
 export const WATCH_THROTTLE_MS = 1000;
@@ -29,7 +29,7 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
 
   const reload = () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.status(repo) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.log(repo) });
+    invalidateLog(queryClient, repo);
     void queryClient.invalidateQueries({ queryKey: ["diff", repo] });
     void queryClient.invalidateQueries({ queryKey: queryKeys.homeMap(repo) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.branches(repo) });
@@ -52,7 +52,7 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
         void queryClient.invalidateQueries({ queryKey: ["diff", repo] });
       }
       if (pending.git) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.log(repo) });
+        invalidateLog(queryClient, repo);
         void queryClient.invalidateQueries({ queryKey: queryKeys.branches(repo) });
       }
       // 노선도는 버전(.git)과 고친 파일 수(작업 폴더) 둘 다에 따라 바뀐다.
