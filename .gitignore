@@ -1,0 +1,21 @@
+# 의존성
+node_modules/
+
+# 빌드 결과
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# 로그와 임시 파일
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# 편집기
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code 개인 설정
+.claude/settings.local.json
