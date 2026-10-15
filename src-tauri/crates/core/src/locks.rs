@@ -23,11 +23,19 @@ pub(crate) struct LockFile {
 pub(crate) fn find(git_dir: &Path, common_dir: &Path) -> Vec<LockFile> {
     let mut out = Vec::new();
     top_level(git_dir, &mut out);
-    if !platform::same_path(git_dir, common_dir) {
+    if !same_dir(git_dir, common_dir) {
         top_level(common_dir, &mut out);
     }
     walk(&common_dir.join("refs"), "refs", 1, &mut out);
     out
+}
+
+/// 같은 폴더인지. git이 주는 경로는 모양이 달라도(Windows의 `C:/…`와 `C:\…`) 같은 곳일 수 있다.
+fn same_dir(a: &Path, b: &Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => platform::same_path(a, b),
+    }
 }
 
 /// 버려진 잠금. 모두 수정한 지 60초가 지났고 시스템에 도는 git이 없을 때만 돌려준다. 하나라도
@@ -164,6 +172,15 @@ mod tests {
             names(&find(d, d)),
             vec!["HEAD.lock", "index.lock", "refs/heads/feature/x.lock"]
         );
+    }
+
+    #[test]
+    fn the_same_folder_written_differently_is_scanned_once() {
+        let dir = git_dir();
+        let d = dir.path();
+        std::fs::write(d.join("index.lock"), "").unwrap();
+        let other_form = d.join("refs").join("..");
+        assert_eq!(names(&find(d, &other_form)), vec!["index.lock"]);
     }
 
     #[test]
