@@ -515,7 +515,12 @@ impl GitBackend for CliBackend {
                 } else {
                     NetMode::Foreground
                 };
-                let mut args = vec!["fetch", "--no-prune"];
+                // FETCH_HEAD는 쓰지 않는다(바뀔 때마다 파일 감시가 알림을 낸다). 저절로 하는 확인은
+                // 서브모듈까지 받지 않는다(별도 설정으로 명령이 돌 수 있다).
+                let mut args = vec!["fetch", "--no-prune", "--no-write-fetch-head"];
+                if *background {
+                    args.push("--no-recurse-submodules");
+                }
                 match remote {
                     Some(r) => push_revs(&mut args, Cmd::Fetch, self.git_version(), &[r]),
                     None => args.push("--all"),

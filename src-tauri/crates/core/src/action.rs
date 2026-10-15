@@ -75,6 +75,10 @@ pub enum Outcome {
     BranchCreated {
         name: String,
     },
+    /// 원격을 확인했다.
+    Fetched,
+    /// 가져오기·올리기·동기화 결과.
+    Synced(crate::actions::SyncReport),
 }
 
 /// 액션이 실행될 때 받는 것.

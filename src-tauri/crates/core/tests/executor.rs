@@ -249,6 +249,10 @@ fn registered_actions_match_spec_risk() {
             ("commit", "commit", Risk::Safe),
             ("switch", "switch", Risk::Normal),
             ("branch-create", "branch", Risk::Safe),
+            ("fetch", "fetch", Risk::Safe),
+            ("pull", "pull", Risk::Normal),
+            ("push", "push", Risk::Normal),
+            ("sync", "sync", Risk::Normal),
         ]
     );
 }

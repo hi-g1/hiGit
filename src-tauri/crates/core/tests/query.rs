@@ -200,17 +200,8 @@ fn init_through_core() {
 
     let metas = core.action_metas();
     let ids: Vec<_> = metas.iter().map(|m| m.id.as_str()).collect();
-    assert_eq!(
-        ids,
-        [
-            "init",
-            "stage",
-            "unstage",
-            "commit",
-            "switch",
-            "branch-create"
-        ]
-    );
+    assert_eq!(&ids[..4], ["init", "stage", "unstage", "commit"]);
+    assert_eq!(ids.len(), higit_core::actions::all_metas().len());
 
     core.open_project(dir.path(), OpenHow::Picked).unwrap();
     let result = core.execute(dir.path(), &ActionInput::Init, None).unwrap();
@@ -237,7 +228,11 @@ fn action_input_tags_match_registry() {
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
             | ActionInput::Switch(_)
-            | ActionInput::BranchCreate(_) => {}
+            | ActionInput::BranchCreate(_)
+            | ActionInput::Fetch(_)
+            | ActionInput::Pull
+            | ActionInput::Push
+            | ActionInput::Sync(_) => {}
         }
     }
     let paths = PathsInput {
@@ -257,6 +252,12 @@ fn action_input_tags_match_registry() {
         }),
         ActionInput::BranchCreate(higit_core::view::BranchCreateInput {
             name: "새것".into(),
+        }),
+        ActionInput::Fetch(higit_core::view::FetchInput { background: true }),
+        ActionInput::Pull,
+        ActionInput::Push,
+        ActionInput::Sync(higit_core::view::SyncInput {
+            locale: "ko".into(),
         }),
     ];
     samples.iter().for_each(every_variant);

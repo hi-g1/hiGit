@@ -49,6 +49,10 @@ pub enum CoreError {
     #[error("신뢰 확인이 필요합니다")]
     NeedsTrust,
 
+    /// 원격 저장소가 없다.
+    #[error("원격 저장소가 없습니다")]
+    NoRemote,
+
     /// 합치기·리베이스 중이라 하지 않았다.
     #[error("진행 중인 작업이 있습니다")]
     OperationInProgress,

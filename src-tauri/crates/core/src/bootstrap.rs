@@ -28,8 +28,10 @@ pub struct Core {
     git_build: platform::GitBuild,
     executor: Executor,
     queries: Queries,
-    /// 지금 액션이 실행 중인 저장소(또는 폴더). 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
+    /// 지금 작업 폴더를 쓰는 작업이 실행 중인 저장소. 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
     busy: Mutex<HashSet<PathBuf>>,
+    /// 지금 원격과 통신 중인 저장소. 원격 확인(fetch)은 이것만 잡아 버전 저장을 막지 않는다(H13).
+    net_busy: Mutex<HashSet<PathBuf>>,
     /// 지금 감시 중인 저장소. watch.rs가 쓴다.
     pub(crate) watcher: Mutex<Option<watcher::RepoWatcher>>,
     recent: Arc<RecentStore>,
@@ -37,6 +39,28 @@ pub struct Core {
     pub(crate) opened: Arc<OpenedRepos>,
     /// 저장소 신뢰 기록(D-039).
     trust: Arc<TrustStore>,
+}
+
+/// 작업이 잡는 잠금.
+#[derive(Clone, Copy)]
+enum Locks {
+    Worktree,
+    Network,
+    Both,
+}
+
+impl Locks {
+    fn sets<'a>(
+        self,
+        worktree: &'a Mutex<HashSet<PathBuf>>,
+        network: &'a Mutex<HashSet<PathBuf>>,
+    ) -> Vec<&'a Mutex<HashSet<PathBuf>>> {
+        match self {
+            Locks::Worktree => vec![worktree],
+            Locks::Network => vec![network],
+            Locks::Both => vec![worktree, network],
+        }
+    }
 }
 
 /// 실행이 끝나면(오류여도) 잠금을 푼다.
@@ -118,6 +142,7 @@ impl Core {
             git_version,
             git_build: platform::GitBuild::Unknown,
             busy: Mutex::new(HashSet::new()),
+            net_busy: Mutex::new(HashSet::new()),
             watcher: Mutex::new(None),
             recent,
             opened,
@@ -273,7 +298,12 @@ impl Core {
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
         let token = preview_token.map(PreviewToken);
-        let outcome = self.with_repo_lock(folder, |executor, ctx| {
+        let locks = match input.action_id() {
+            "fetch" => Locks::Network,
+            "pull" | "push" | "sync" => Locks::Both,
+            _ => Locks::Worktree,
+        };
+        let outcome = self.with_locks(folder, locks, |executor, ctx| {
             executor.execute(ctx, input.action_id(), input, token.as_ref())
         })?;
         if let crate::Outcome::RepoCreated(repo) = &outcome {
@@ -295,10 +325,19 @@ impl Core {
             .map(Into::into)
     }
 
-    /// 저장소 잠금을 잡고(같은 저장소에서 한 번에 하나) 실행기에 맡긴다.
     fn with_repo_lock<T>(
         &self,
         folder: &Path,
+        f: impl FnOnce(&Executor, &ExecCtx<'_>) -> Result<T>,
+    ) -> Result<T> {
+        self.with_locks(folder, Locks::Worktree, f)
+    }
+
+    /// 저장소 잠금을 잡고(같은 저장소에서 한 번에 하나) 실행기에 맡긴다.
+    fn with_locks<T>(
+        &self,
+        folder: &Path,
+        locks: Locks,
         f: impl FnOnce(&Executor, &ExecCtx<'_>) -> Result<T>,
     ) -> Result<T> {
         let state = self.state_of(folder)?;
@@ -307,18 +346,20 @@ impl Core {
             .as_ref()
             .map(|r| r.as_path().to_path_buf())
             .unwrap_or_else(|| state.folder.clone());
-        if !self
-            .busy
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(key.clone())
-        {
-            return Err(CoreError::Busy);
+        let mut guards = Vec::new();
+        for set in locks.sets(&self.busy, &self.net_busy) {
+            if !set
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .insert(key.clone())
+            {
+                return Err(CoreError::Busy);
+            }
+            guards.push(BusyGuard {
+                busy: set,
+                key: key.clone(),
+            });
         }
-        let _guard = BusyGuard {
-            busy: &self.busy,
-            key,
-        };
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,

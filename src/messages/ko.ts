@@ -138,6 +138,7 @@ export const ko = {
     parkBlocked: "맡긴 파일을 원래대로 꺼내지 못했어요. 파일은 안전하게 남아 있어요.",
     needsTrust: "믿고 열지 정해야 해요.",
     dubiousOwnership: "폴더 주인이 다른 사용자예요.",
+    noRemote: `연결된 ${josa(t("remote"), "이/가")} 없어요.`,
     watchUnavailable: "파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요.",
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",

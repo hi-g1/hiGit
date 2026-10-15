@@ -129,6 +129,7 @@ export const en: Messages = {
     parkBlocked: "The parked files couldn't be brought back. They are still kept safely.",
     needsTrust: "Decide whether to trust this project first.",
     dubiousOwnership: "This folder belongs to another user.",
+    noRemote: `No ${t("remote").toLowerCase()} is connected.`,
     watchUnavailable: "File changes are not detected automatically. The view reloads when you return to the window.",
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",

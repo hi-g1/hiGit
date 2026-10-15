@@ -16,6 +16,10 @@ pub enum ActionInput {
     Commit(CommitInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
+    Fetch(FetchInput),
+    Pull,
+    Push,
+    Sync(SyncInput),
 }
 
 impl ActionInput {
@@ -28,6 +32,10 @@ impl ActionInput {
             ActionInput::Commit(_) => "commit",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
+            ActionInput::Fetch(_) => "fetch",
+            ActionInput::Pull => "pull",
+            ActionInput::Push => "push",
+            ActionInput::Sync(_) => "sync",
         }
     }
 }
@@ -60,4 +68,18 @@ pub struct SwitchInput {
 #[serde(rename_all = "camelCase")]
 pub struct BranchCreateInput {
     pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchInput {
+    /// 저절로 하는 원격 확인이면 true. 질문 창을 띄우지 않고 60초 안에 끝낸다(D-045, D-055).
+    pub background: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncInput {
+    /// 합친 버전 메시지에 쓸 앱 언어("ko", "en").
+    pub locale: String,
 }

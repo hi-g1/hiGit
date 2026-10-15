@@ -5,12 +5,14 @@ mod commit;
 mod init;
 pub(crate) mod names;
 pub(crate) mod paths;
+mod remote;
 mod stage;
 pub(crate) mod switch;
 
 pub use branch_create::BranchCreateAction;
 pub use commit::CommitAction;
 pub use init::InitAction;
+pub use remote::{RemoteAction, SyncReport};
 pub use stage::PathsAction;
 pub use switch::{SwitchAction, SwitchReport};
 
@@ -40,6 +42,10 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(CommitAction::new()))?;
     registry.register(Box::new(SwitchAction::new()))?;
     registry.register(Box::new(BranchCreateAction::new()))?;
+    registry.register(Box::new(RemoteAction::fetch()))?;
+    registry.register(Box::new(RemoteAction::pull()))?;
+    registry.register(Box::new(RemoteAction::push()))?;
+    registry.register(Box::new(RemoteAction::sync()))?;
     Ok(())
 }
 

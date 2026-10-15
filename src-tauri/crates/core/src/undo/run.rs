@@ -93,6 +93,9 @@ pub(crate) fn undo(
         UndoKind::RestoreRef => undo_commit(git, repo, &entry)?,
         UndoKind::SwitchBack => undo_switch(git, repo, &entry)?,
         UndoKind::DeleteCreated => undo_create(git, repo, &entry)?,
+        // 원격 작업은 1b에서 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042).
+        UndoKind::Inverse if entry.action == "pull" => return Err(CoreError::NothingToUndo),
+        UndoKind::Inverse => return Err(CoreError::UndoPushed),
         _ => return Err(CoreError::NothingToUndo),
     }
     journal.append(&Body::Undo {

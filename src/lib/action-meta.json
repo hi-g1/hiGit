@@ -34,5 +34,29 @@
     "glossaryId": "branch",
     "risk": "safe",
     "undo": "deleteCreated"
+  },
+  {
+    "id": "fetch",
+    "glossaryId": "fetch",
+    "risk": "safe",
+    "undo": "nothing"
+  },
+  {
+    "id": "pull",
+    "glossaryId": "pull",
+    "risk": "normal",
+    "undo": "inverse"
+  },
+  {
+    "id": "push",
+    "glossaryId": "push",
+    "risk": "normal",
+    "undo": "inverse"
+  },
+  {
+    "id": "sync",
+    "glossaryId": "sync",
+    "risk": "normal",
+    "undo": "inverse"
   }
 ]

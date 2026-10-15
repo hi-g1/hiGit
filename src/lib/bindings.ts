@@ -42,7 +42,7 @@ export const WATCH_STATUS_EVENT = "watch-status" as const;
 /* Types */
 export type ActionInput = 
 /**  관리 시작. 입력 없음. */
-{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput };
+{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -54,7 +54,9 @@ export type ActionMetaView = {
 /**  액션 실행 결과. */
 export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
-parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string };
+parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
+/**  겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다. */
+overlap: string[] };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -164,7 +166,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -172,6 +174,11 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 export type ErrorView = {
 	code: ErrorCode,
 	detail: string | null,
+};
+
+export type FetchInput = {
+	/**  저절로 하는 원격 확인이면 true. 질문 창을 띄우지 않고 60초 안에 끝낸다(D-045, D-055). */
+	background: boolean,
 };
 
 export type FileDiffView = {
@@ -277,6 +284,11 @@ export type StatusView = {
 export type SwitchInput = {
 	branch: string,
 	remote: string | null,
+};
+
+export type SyncInput = {
+	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
+	locale: string,
 };
 
 /**  신뢰 확인에서 고른 것(D-039). */

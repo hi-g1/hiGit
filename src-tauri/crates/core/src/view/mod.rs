@@ -9,7 +9,9 @@ mod input;
 
 pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
-pub use input::{ActionInput, BranchCreateInput, CommitInput, PathsInput, SwitchInput};
+pub use input::{
+    ActionInput, BranchCreateInput, CommitInput, FetchInput, PathsInput, SwitchInput, SyncInput,
+};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -329,6 +331,14 @@ pub enum ActionResult {
     BranchCreated {
         name: String,
     },
+    Fetched,
+    Synced {
+        received: u32,
+        sent: u32,
+        merged: bool,
+        /// 겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다.
+        overlap: Vec<String>,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -349,6 +359,13 @@ impl From<Outcome> for ActionResult {
                 unpark_blocked: r.unpark_blocked,
             },
             Outcome::BranchCreated { name } => ActionResult::BranchCreated { name },
+            Outcome::Fetched => ActionResult::Fetched,
+            Outcome::Synced(r) => ActionResult::Synced {
+                received: r.received,
+                sent: r.sent,
+                merged: r.merged,
+                overlap: r.overlap,
+            },
         }
     }
 }
@@ -384,6 +401,7 @@ pub enum ErrorCode {
     OperationInProgress,
     ParkBlocked,
     NeedsTrust,
+    NoRemote,
     WatchUnavailable,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
@@ -457,6 +475,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::UndoPushed => ErrorCode::UndoPushed,
             CoreError::OperationInProgress => ErrorCode::OperationInProgress,
             CoreError::NeedsTrust => ErrorCode::NeedsTrust,
+            CoreError::NoRemote => ErrorCode::NoRemote,
             CoreError::ParkBlocked(_) => ErrorCode::ParkBlocked,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
