@@ -45,7 +45,7 @@ pub use runner::{ConfigureCommand, ProcessControl};
 use crate::{
     BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
     GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
-    Remote, RepoPath, Result, StashEntry, Status,
+    ReflogEntry, Remote, RepoPath, Result, StashEntry, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -468,6 +468,38 @@ impl GitBackend for CliBackend {
                 Some((k, v)) => (k.to_string(), v.to_string()),
                 // 값 없이 키만 쓴 불리언(`[core] bare`)
                 None => (record.to_string(), String::new()),
+            })
+            .collect())
+    }
+
+    fn reflog(&self, repo: &RepoPath, limit: u32) -> Result<Vec<ReflogEntry>> {
+        if crate::GitBackend::resolve_ref(self, repo, "HEAD")?.is_none() {
+            return Ok(Vec::new());
+        }
+        let count = format!("-n{limit}");
+        let out = self.runner.run(
+            Some(repo.as_path()),
+            &[
+                "log",
+                "-g",
+                "-z",
+                &count,
+                "--format=%H%x00%ct%x00%gs%x00%s",
+                "HEAD",
+            ],
+        )?;
+        let text = out.stdout_lossy();
+        let fields: Vec<&str> = text.split('\0').collect();
+        let (records, _) = fields.as_chunks::<4>();
+        Ok(records
+            .iter()
+            .filter_map(|[oid, at, subject, summary]| {
+                Some(ReflogEntry {
+                    oid: Oid::parse(oid.trim_start_matches('\n'))?,
+                    at: at.parse().ok()?,
+                    subject: subject.to_string(),
+                    summary: summary.to_string(),
+                })
             })
             .collect())
     }

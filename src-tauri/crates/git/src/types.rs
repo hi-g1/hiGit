@@ -197,6 +197,18 @@ pub enum MergeSegment {
     },
 }
 
+/// HEAD reflog 한 줄(작업 내역, D-085).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReflogEntry {
+    pub oid: Oid,
+    /// 그 일이 있은 시각(unix 초).
+    pub at: i64,
+    /// git이 적은 일(`commit: 이름`, `checkout: moving from a to b`). 원문이라 화면은 접어 둔다.
+    pub subject: String,
+    /// 그 버전의 메시지 첫 줄.
+    pub summary: String,
+}
+
 /// stash 목록 한 줄(`refs/stash`의 reflog).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StashEntry {

@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, IndexEntry, LogQuery,
-    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, Remote, RepoPath, Result,
-    StashEntry, Status,
+    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, ReflogEntry, Remote, RepoPath,
+    Result, StashEntry, Status,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -87,6 +87,9 @@ pub trait GitBackend: Send + Sync {
 
     /// 저장소 설정(local, worktree. include 포함)의 (키, 값) 목록. 키는 git이 주는 소문자 형태.
     fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>;
+
+    /// HEAD reflog(최근 것부터 `limit`개). 버전이 없으면 빈 값.
+    fn reflog(&self, repo: &RepoPath, limit: u32) -> Result<Vec<ReflogEntry>>;
 
     /// stash 목록(최근 것부터). 목록이 없으면 빈 값.
     fn stash_list(&self, repo: &RepoPath) -> Result<Vec<StashEntry>>;

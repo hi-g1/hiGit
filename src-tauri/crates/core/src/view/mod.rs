@@ -9,6 +9,7 @@ mod diff;
 mod input;
 mod map;
 mod merge;
+mod recovery;
 mod secret;
 mod stash;
 
@@ -25,6 +26,7 @@ pub use input::{
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
+pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use stash::{StashItem, StashListView};
 

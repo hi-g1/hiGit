@@ -599,6 +599,10 @@ fn unopened_paths_are_rejected() {
     not_opened(core.undo(dir.path()).map(drop));
     not_opened(core.redo(dir.path()).map(drop));
     not_opened(core.watch(dir.path(), Arc::new(|_| {})));
+    not_opened(core.recovery(dir.path()).map(drop));
+    not_opened(q.stashes(dir.path()).map(drop));
+    not_opened(q.merge_hint(dir.path()).map(drop));
+    not_opened(q.conflict_state(dir.path()).map(drop));
     core.open_project(dir.path(), OpenHow::Picked).unwrap();
     assert!(core.queries().status(dir.path()).is_ok());
 }

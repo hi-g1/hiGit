@@ -37,6 +37,8 @@ export const commands = {
 	queryMergeHint: (repo: string) => __TAURI_INVOKE<MergeHintView>("query_merge_hint", { repo }),
 	/**  임시 보관 목록(D-076). */
 	queryStashes: (repo: string) => __TAURI_INVOKE<StashListView>("query_stashes", { repo }),
+	/**  작업 내역(D-085). */
+	queryRecovery: (repo: string) => __TAURI_INVOKE<RecoveryView>("query_recovery", { repo }),
 	/**  충돌 해결 화면 상태(D-069). */
 	queryConflictState: (repo: string) => __TAURI_INVOKE<ConflictStateView>("query_conflict_state", { repo }),
 	/**  충돌 파일 하나의 고를 곳(D-086). */
@@ -452,6 +454,43 @@ export type RecentProject = {
 	lastOpenedAt: number,
 };
 
+export type RecoveryItem = {
+	/**  목록 안에서만 쓰는 구분 값. */
+	id: string,
+	/**  그 일이 있은 시각(unix 초). */
+	at: number,
+	source: RecoverySource,
+	/**  앱 작업이면 액션 id(화면이 용어로 보여준다). */
+	action: string | null,
+	/**  원천별 이름: 백업 이름표, 브랜치 이름, 보관 메시지, reflog 원문. */
+	label: string,
+	/**  그 버전의 메시지 첫 줄. */
+	summary: string,
+	/**  되살리기·꺼내기에 그대로 돌려보내는 값(버전 해시). */
+	oid: string | null,
+	/**  꺼내기에 그대로 돌려보내는 ref 이름(백업·맡긴 파일). */
+	refname: string | null,
+	restore: RestoreKind,
+	/**  앱 작업 중 되돌린 것. */
+	undone: boolean,
+};
+
+export type RecoverySource = 
+/**  앱 작업 목록(journal). */
+"journal" | 
+/**  git의 HEAD 기록(앱 밖 작업 포함). */
+"reflog" | 
+/**  앱이 남긴 백업 ref. */
+"backup" | 
+/**  브랜치에 맡겨 둔 파일. */
+"parked" | 
+/**  임시 보관. */
+"stash";
+
+export type RecoveryView = {
+	items: RecoveryItem[],
+};
+
 /**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */
 export type RepoChanged = {
 	repo: string,
@@ -465,6 +504,9 @@ export type RepoInfo = {
 	/**  폴더 이름(화면 제목용). */
 	name: string,
 };
+
+/**  되살리는 방법. `Version`은 "이 시점으로 되돌리기", `Changes`는 "꺼내기". */
+export type RestoreKind = "none" | "version" | "changes";
 
 export type RiskView = "safe" | "normal" | "caution" | "danger";
 

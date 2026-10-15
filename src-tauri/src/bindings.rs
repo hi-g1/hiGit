@@ -37,6 +37,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_secret_check,
             commands::query_merge_hint,
             commands::query_stashes,
+            commands::query_recovery,
             commands::query_conflict_state,
             commands::query_conflict_file,
             commands::query_project_summary,

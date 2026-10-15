@@ -82,6 +82,13 @@ impl Executor {
         crate::undo::run::undo(ctx.git, repo, &journal)
     }
 
+    /// 작업 내역(D-085). journal 서명 키를 쓰므로 실행기가 맡는다.
+    pub fn recovery(&self, ctx: &ExecCtx<'_>) -> Result<Vec<crate::view::RecoveryItem>> {
+        let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
+        let journal = Journal::at(&ctx.git.git_dir(repo)?, self.journal_key.clone());
+        crate::recovery::collect(ctx.git, repo, &journal)
+    }
+
     /// 마지막으로 되돌린 작업을 다시 한다. 그 뒤에 새 작업이 있으면 할 것이 없다.
     pub fn redo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
         let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
@@ -338,6 +345,9 @@ mod tests {
             unreachable!()
         }
         fn current_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
+            unreachable!()
+        }
+        fn reflog(&self, _: &RepoPath, _: u32) -> git::Result<Vec<git::ReflogEntry>> {
             unreachable!()
         }
         fn stash_list(&self, _: &RepoPath) -> git::Result<Vec<git::StashEntry>> {

@@ -8,8 +8,8 @@ use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
     HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PreviewView, ProjectOpenResult,
-    ProjectSummaryView, RecentProject, SecretCheckRequest, SecretCheckView, StashListView,
-    StatusView, TrustChoice, UndoResult,
+    ProjectSummaryView, RecentProject, RecoveryView, SecretCheckRequest, SecretCheckView,
+    StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -283,6 +283,13 @@ pub async fn query_conflict_file(
         core.queries().conflict_file(&PathBuf::from(repo), &path)
     })
     .await
+}
+
+/// 작업 내역(D-085).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_recovery(state: State<'_, AppState>, repo: String) -> CmdResult<RecoveryView> {
+    blocking(state, move |core| core.recovery(&PathBuf::from(repo))).await
 }
 
 /// 임시 보관 목록(D-076).

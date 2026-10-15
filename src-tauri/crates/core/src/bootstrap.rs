@@ -401,6 +401,18 @@ impl Core {
         result.map(Into::into)
     }
 
+    /// 작업 내역(D-085). 조회라 잠금을 잡지 않는다.
+    pub fn recovery(&self, folder: &Path) -> Result<crate::view::RecoveryView> {
+        let state = self.state_of(folder)?;
+        let ctx = ExecCtx {
+            git: self.git.as_ref(),
+            state: &state,
+        };
+        Ok(crate::view::RecoveryView {
+            items: self.executor.recovery(&ctx)?,
+        })
+    }
+
     /// 로그 폴더(D-078). 로그를 남기지 않으면 `None`.
     pub fn log_dir(&self) -> Option<&Path> {
         self.logger.dir()

@@ -257,6 +257,10 @@ impl GitBackend for FakeGit {
         Ok(self.parked_paths.lock().unwrap().clone())
     }
 
+    fn reflog(&self, _repo: &RepoPath, _limit: u32) -> git::Result<Vec<git::ReflogEntry>> {
+        Ok(Vec::new())
+    }
+
     fn stash_list(&self, _repo: &RepoPath) -> git::Result<Vec<git::StashEntry>> {
         Ok(Vec::new())
     }

@@ -139,15 +139,35 @@ impl Journal {
             .collect()
     }
 
+    /// 작업 내역용: 형식이 맞는 줄을 서명이 맞는지와 함께. 서명이 맞지 않는 줄(다른 컴퓨터, 받은
+    /// zip)도 보여 주되 되살리기는 하지 않는다(D-063, D-085).
+    pub(crate) fn read_all(&self) -> Vec<(Body, bool)> {
+        if self.check_place().is_err() {
+            return Vec::new();
+        }
+        let Ok(bytes) = read_tail(&self.path) else {
+            return Vec::new();
+        };
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .filter_map(|line| self.parse_any(line))
+            .collect()
+    }
+
     fn parse(&self, line: &str) -> Option<Body> {
+        match self.parse_any(line)? {
+            (body, true) => Some(body),
+            (_, false) => None,
+        }
+    }
+
+    fn parse_any(&self, line: &str) -> Option<(Body, bool)> {
         let record: Record = serde_json::from_str(line).ok()?;
         if record.v != VERSION {
             return None;
         }
         let text = canonical(&record.body).ok()?;
-        if !self.key.verify(&text, &record.sig) {
-            return None;
-        }
+        let verified = self.key.verify(&text, &record.sig);
         let valid = match &record.body {
             Body::Action {
                 id, before, after, ..
@@ -155,7 +175,7 @@ impl Journal {
             Body::Undo { target, .. } | Body::Redo { target, .. } => target.len() <= 64,
             Body::Barrier { .. } => true,
         };
-        valid.then_some(record.body)
+        valid.then_some((record.body, verified))
     }
 }
 

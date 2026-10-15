@@ -17,6 +17,7 @@ pub mod log;
 pub(crate) mod parked;
 mod query;
 pub mod recent;
+mod recovery;
 mod redact;
 mod registry;
 mod secrets;
