@@ -521,6 +521,10 @@ mod tests {
         let dir = repo.path();
         git(dir, &["init", "-q", "-b", "main"]);
         git(dir, &["config", "core.autocrlf", "false"]);
+        // 앱 쪽 git(되돌리는 새 버전)도 이름이 있어야 한다. CI에는 전역 이름이 없다.
+        git(dir, &["config", "user.name", "t"]);
+        git(dir, &["config", "user.email", "t@example.com"]);
+        git(dir, &["config", "commit.gpgsign", "false"]);
         std::fs::write(dir.join("a.txt"), "1\n").unwrap();
         std::fs::write(dir.join("b.txt"), "b\n").unwrap();
         git(dir, &["add", "-A"]);
