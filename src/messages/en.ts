@@ -1,7 +1,7 @@
 // 문장 안의 용어는 glossary 쉬운 이름에서 꺼낸다(D-029).
 import { en as glossary } from "../glossary/en";
 import type { TermId } from "../glossary/types";
-import type { SecretRule } from "../lib/api";
+import type { RecoverySource, SecretRule } from "../lib/api";
 import type { Messages } from "./ko";
 
 const t = (id: TermId) => glossary[id].friendly;
@@ -39,6 +39,22 @@ export const en: Messages = {
   sideSubmodule: "Submodule",
   sideLink: (target: string) => `Link → ${target}`,
   merged: "Merged",
+  activityArea: t("reflog"),
+  activityNote: "Your current version stays even if you go back",
+  activityEmpty: "Nothing yet",
+  activitySource: {
+    journal: "App action",
+    reflog: "Git history",
+    backup: "Backup",
+    parked: "Parked files",
+    stash: t("stash"),
+  } satisfies Record<RecoverySource, string>,
+  restoreHere: "Go back to this point",
+  takeOut: "Take out",
+  restored: "Went back",
+  tookOutToast: "Taken out",
+  openLogs: "Open log folder",
+  openActivity: t("reflog"),
   resolveOverlap: "Resolve overlap",
   parkedSide: "Parked files",
   finishUnpark: "Finish taking out",

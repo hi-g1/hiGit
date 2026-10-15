@@ -41,6 +41,7 @@ export type {
   MergeHintView,
   StashItem,
   RecoveryItem,
+  RecoverySource,
   RecoveryView,
   StashListView,
   ConflictFileView,

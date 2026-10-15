@@ -12,6 +12,7 @@ import { AppProviders, createQueryClient } from "../../App";
 import { ApiError, api } from "../../lib/api";
 import { TOAST_DURATION_MS } from "../../ui/Toast";
 import { useToastStore } from "../../ui/toastStore";
+import { useRepoStore } from "../../state/repoStore";
 import { useUndoStore } from "./undoStore";
 import { useUndo } from "./useUndo";
 
@@ -91,6 +92,17 @@ describe("되돌리기", () => {
       window.dispatchEvent(ctrlZ());
     });
     expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it("앱 밖에서 바뀌었으면 토스트의 작업 내역 단추가 그 화면을 연다", async () => {
+    vi.mocked(api.undoLast).mockRejectedValue(new ApiError({ code: "undoStale", detail: null }));
+    renderHook(() => useUndo("/repo"), { wrapper });
+    await act(async () => {
+      window.dispatchEvent(ctrlZ());
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "작업 내역" }));
+    expect(useRepoStore.getState().view).toBe("activity");
+    act(() => useRepoStore.setState({ view: "home" }));
   });
 
   it("결과 토스트의 되돌리기 버튼은 Ctrl+Z와 같은 일을 한다", async () => {

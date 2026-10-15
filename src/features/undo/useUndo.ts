@@ -5,6 +5,7 @@ import { SHORTCUTS } from "../../lib/shortcuts";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useToastStore } from "../../ui/toastStore";
+import { useRepoStore } from "../../state/repoStore";
 import { useUndoStore } from "./undoStore";
 
 /**
@@ -23,12 +24,18 @@ export function useUndo(repo: string) {
     }
   }, [queryClient, repo]);
 
+  const setView = useRepoStore((s) => s.setView);
   const fail = useCallback(
     (e: unknown) => {
       const code = e instanceof ApiError ? e.code : "internal";
+      // 앱 밖에서 바뀌었거나 올린 것이면 작업 내역에서 되살린다(D-085).
+      if (code === "undoStale" || code === "undoPushed") {
+        show(m.errors[code], { label: m.openActivity, onClick: () => setView("activity") });
+        return;
+      }
       show(m.errors[code]);
     },
-    [m, show],
+    [m, show, setView],
   );
 
   const redo = useCallback(async () => {

@@ -13,6 +13,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { Activity } from "../Activity/Activity";
 import { Conflict } from "../Conflict/Conflict";
 import { History } from "../History/History";
 import { ChangedFiles } from "./ChangedFiles";
@@ -77,6 +78,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
       ) : view === "history" ? (
         <History repo={repo.path} />
+      ) : view === "activity" ? (
+        <Activity repo={repo.path} onDone={notifyDone} />
       ) : (
         <>
         <HomeMap repo={repo.path} onDone={notifyDone} />

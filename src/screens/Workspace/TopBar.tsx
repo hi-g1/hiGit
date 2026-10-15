@@ -34,7 +34,9 @@ export function TopBar({
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
   const toggleHistory = () => setView(view === "history" ? "home" : "history");
+  const toggleActivity = () => setView(view === "activity" ? "home" : "activity");
   useShortcut("history", toggleHistory, !merging);
+  useShortcut("activity", toggleActivity, !merging);
 
   return (
     <header className={styles.bar}>
@@ -64,6 +66,17 @@ export function TopBar({
       >
         <Term id="log" focusable={false} />
       </button>
+      )}
+      {!merging && (
+        <button
+          type="button"
+          className={`${styles.textButton} ${view === "activity" ? styles.on : ""}`}
+          aria-pressed={view === "activity"}
+          aria-keyshortcuts="Control+Shift+H"
+          onClick={toggleActivity}
+        >
+          <Term id="reflog" focusable={false} />
+        </button>
       )}
     </header>
   );

@@ -63,6 +63,7 @@ describe("useRepoWatch", () => {
       "log",
       "mergeHint",
       "mergeState",
+      "recovery",
       "status",
     ]);
   });

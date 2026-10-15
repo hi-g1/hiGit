@@ -18,7 +18,16 @@ export const queryKeys = {
   mergeState: (repo: string) => ["mergeState", repo] as const,
   conflictFile: (repo: string, path: string) => ["conflictFile", repo, path] as const,
   mergeHint: (repo: string) => ["mergeHint", repo] as const,
+  recovery: (repo: string) => ["recovery", repo] as const,
 };
+
+/** 작업 내역(D-085). */
+export function useRecovery(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.recovery>>, ApiError>({
+    queryKey: queryKeys.recovery(repo),
+    queryFn: () => api.recovery(repo),
+  });
+}
 
 /** 합치는 중인지와 충돌 파일(D-069). 앱을 켜자마자 합치는 중이면 충돌 화면을 연다. */
 export function useConflictState(repo: string) {

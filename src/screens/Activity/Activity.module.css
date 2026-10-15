@@ -1,0 +1,93 @@
+/* 작업 내역(D-085, 세이브 카드). 창 전체 폭. */
+.activity {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  background: var(--surface);
+}
+
+.note {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+}
+
+.day {
+  margin-bottom: var(--space-4);
+}
+
+.dayTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 56px minmax(120px, 220px) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+.label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.raw {
+  grid-column: 2 / 4;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.raw summary {
+  cursor: pointer;
+}
+
+/* 되돌린 작업은 투명도 대신 글자색으로 흐리게(design.md "흐린 줄") */
+.undone .title,
+.undone .summary {
+  color: var(--text-muted);
+}
+
+.footer {
+  padding-top: var(--space-2);
+}

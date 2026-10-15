@@ -4,8 +4,8 @@ import type { RepoInfo } from "../lib/api";
 /** 마지막 프로젝트를 열지 못해 시작 화면에 온 까닭(D-032). */
 export type StartNotice = { kind: "lastMissing" | "lastNotRepo"; name: string };
 
-/** 작업 공간 화면: 홈(고친 파일과 비교) 또는 버전 기록(D-058). */
-export type WorkspaceView = "home" | "history";
+/** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085). */
+export type WorkspaceView = "home" | "history" | "activity";
 
 type RepoState = {
   /** 작업 공간에 열린 저장소. 없으면 홈 화면. */

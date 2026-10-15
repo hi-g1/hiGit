@@ -4,7 +4,7 @@
 import { ko as glossary } from "../glossary/ko";
 import type { TermId } from "../glossary/types";
 import type { LastVersion, ShortCase, StatusCase } from "../features/start/summary";
-import type { ErrorCode, ChangeKind, SecretRule } from "../lib/api";
+import type { ErrorCode, ChangeKind, RecoverySource, SecretRule } from "../lib/api";
 import { josa } from "./josa";
 
 /** 문장에 끼울 쉬운 이름 */
@@ -45,6 +45,23 @@ export const ko = {
   sideSubmodule: "하위 저장소",
   sideLink: (target: string) => `링크 → ${target}`,
   merged: "합쳤어요",
+  // 작업 내역(D-085)
+  activityArea: t("reflog"),
+  activityNote: "되살려도 지금 버전은 남아요",
+  activityEmpty: "아직 기록이 없어요",
+  activitySource: {
+    journal: "앱 작업",
+    reflog: "Git 기록",
+    backup: "백업",
+    parked: "맡겨 둔 파일",
+    stash: t("stash"),
+  } satisfies Record<RecoverySource, string>,
+  restoreHere: "이 시점으로 되돌리기",
+  takeOut: "꺼내기",
+  restored: "되돌렸어요",
+  tookOutToast: "꺼냈어요",
+  openLogs: "로그 폴더 열기",
+  openActivity: t("reflog"),
   // 꺼내다 겹친 맡긴 파일(D-083)
   resolveOverlap: "겹침 해결",
   parkedSide: "맡겨 둔 파일",
