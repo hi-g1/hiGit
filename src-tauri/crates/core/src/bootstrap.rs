@@ -269,6 +269,19 @@ impl Core {
         }
         self.opened.insert(&repo);
         self.recent.touch(&repo);
+        // 30일 지난 백업 ref를 조금씩 정리한다(D-079). 신뢰 확인 뒤라 끈 설정은 끈 채로 돈다.
+        // 정리가 실패해도 열기는 성공이다.
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let _ = crate::undo::backup::prune(
+            self.git.as_ref(),
+            &repo_path,
+            now,
+            crate::undo::backup::KEEP_DAYS,
+            crate::undo::backup::PRUNE_AT_ONCE,
+        );
         Ok(ProjectOpenResult::Opened {
             repo: RepoInfo::from_path(&repo),
         })

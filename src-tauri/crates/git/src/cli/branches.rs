@@ -5,7 +5,8 @@ use crate::{Branch, BranchKind, GitError, RefEntry, Remote, Result};
 /// `for-each-ref` 한 줄의 필드. 레코드는 줄로 나뉜다(ref 이름과 사람 이름에는 줄바꿈이 없다).
 pub(crate) const BRANCH_FORMAT: &str = "--format=%(refname)%00%(objectname)%00%(HEAD)%00%(upstream:short)%00%(upstream:track,nobracket)%00%(authorname)%00%(committerdate:unix)";
 
-pub(crate) const REF_FORMAT: &str = "--format=%(refname)%00%(objectname)";
+pub(crate) const REF_FORMAT: &str =
+    "--format=%(refname)%00%(objectname)%00%(creatordate:unix)%00%(contents:subject)";
 
 /// `for-each-ref` 출력을 브랜치 목록으로. 원격 이름은 `remotes`로 가린다(이름에 `/`가 있을 수 있다).
 pub(crate) fn parse_branches(out: &str, remotes: &[Remote]) -> Result<Vec<Branch>> {
@@ -75,15 +76,23 @@ fn parse_track(track: &str) -> (u32, u32, bool) {
     (ahead, behind, false)
 }
 
+/// `refname\0objectname\0시각\0메시지 첫 줄` 줄들.
 pub(crate) fn parse_refs(out: &str) -> Result<Vec<RefEntry>> {
     out.lines()
         .filter(|l| !l.is_empty())
-        .map(|line| match line.split_once('\0') {
-            Some((name, oid)) => Ok(RefEntry {
+        .map(|line| {
+            let mut parts = line.splitn(4, '\0');
+            let (Some(name), Some(oid)) = (parts.next(), parts.next()) else {
+                return Err(GitError::Parse(format!("ref 줄: {line}")));
+            };
+            let time = parts.next().and_then(|t| t.parse().ok()).unwrap_or(0);
+            let summary = parts.next().unwrap_or("").to_string();
+            Ok(RefEntry {
                 name: name.to_string(),
                 oid: oid.to_string(),
-            }),
-            None => Err(GitError::Parse(format!("ref 줄: {line}"))),
+                time,
+                summary,
+            })
         })
         .collect()
 }

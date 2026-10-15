@@ -190,6 +190,8 @@ impl GitBackend for FakeGit {
             None => refs.push(RefEntry {
                 name: name.to_string(),
                 oid: new.to_string(),
+                time: 0,
+                summary: String::new(),
             }),
         }
         Ok(())

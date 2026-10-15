@@ -212,6 +212,10 @@ pub struct StashEntry {
 pub struct RefEntry {
     pub name: String,
     pub oid: String,
+    /// 가리키는 버전의 시각(unix 초).
+    pub time: i64,
+    /// 가리키는 버전의 메시지 첫 줄.
+    pub summary: String,
 }
 
 /// 두 버전을 합칠 때 겹치는지(작업 폴더를 건드리지 않고 미리 본 결과).
