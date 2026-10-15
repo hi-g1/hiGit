@@ -1,0 +1,46 @@
+/* 역 메뉴(r-log.png): 떠 있는 판, 항목 줄 */
+.anchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.content {
+  z-index: 100;
+  min-width: 220px;
+  padding: var(--space-1) 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.item {
+  padding: var(--space-2) var(--space-4);
+  color: var(--text);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  outline: none;
+}
+
+.item[data-highlighted] {
+  background: var(--surface-hover);
+}
+
+.item[data-disabled] {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.separator {
+  height: var(--border-width);
+  margin: var(--space-1) 0;
+  background: var(--border);
+}
+
+@media (forced-colors: active) {
+  .content {
+    border-color: CanvasText;
+  }
+}

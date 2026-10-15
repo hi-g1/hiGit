@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { log: vi.fn(), logStats: vi.fn(async () => []) },
+  api: {
+    log: vi.fn(),
+    logStats: vi.fn(async () => []),
+    status: vi.fn(async () => ({
+      branch: { name: "main", hasCommits: true, upstream: null, ahead: 0, behind: 0 },
+      files: [],
+    })),
+  },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -45,7 +52,7 @@ function serve(total: number, size: number, head = 0) {
 function show() {
   return render(
     <AppProviders client={createQueryClient()}>
-      <History repo="/repo" />
+      <History repo="/repo" onDone={() => {}} />
     </AppProviders>,
   );
 }

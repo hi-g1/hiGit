@@ -164,6 +164,11 @@ export const ko = {
   zoomStatus: (zoom: string, n: number) => `${zoom} · ${n}개`,
   tipsCut: (n: number) => `${t("branch")} 200개까지 · ${n}개 더`,
   notPushedMark: "안 올림",
+  stationMenu: "버전 메뉴",
+  copyVersionId: "버전 번호 복사",
+  copied: "복사했어요",
+  copyFailed: "복사하지 못했어요",
+  moreItems: "더 보기",
   routeFold: (n: number) => `버전 ${n}개 · 펼치기`,
   routeFoldLabel: (n: number) => `접힌 버전 ${n}개`,
   routeRowLabel: (r: RouteRowParts) =>

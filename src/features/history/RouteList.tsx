@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -28,6 +36,12 @@ type Props = {
   onNearEnd?: () => void;
   /** 그리는 행 범위가 바뀌면(줄 수 늦게 받기). */
   onWindow?: (first: number, last: number) => void;
+  /** 사람이 스크롤하면(열린 역 메뉴를 닫는다). */
+  onUserScroll?: () => void;
+  /** 목록 요소를 알려 준다(역 메뉴가 포커스를 돌려주고 바깥 누름을 가린다). */
+  onListElement?: (el: HTMLDivElement | null) => void;
+  /** 목록 안에 함께 스크롤되며 놓이는 것(역 메뉴의 자리, 목록 안 좌표). */
+  children?: ReactNode;
   /** 상대 날짜의 기준 시각(ms). */
   now: number;
   /** 목록 이름("버전 기록"). */
@@ -48,12 +62,17 @@ export function RouteList({
   onActivate,
   onNearEnd,
   onWindow,
+  onUserScroll,
+  onListElement,
+  children,
   now,
   label,
 }: Props) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement | null>(null);
+  // 코드가 옮긴 스크롤(고른 행 보이기)은 사람의 스크롤이 아니다.
+  const programmatic = useRef(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewHeight, setViewHeight] = useState(600);
   const frame = useRef<number | null>(null);
@@ -74,6 +93,8 @@ export function RouteList({
   }, []);
 
   const onScroll = () => {
+    if (programmatic.current) programmatic.current = false;
+    else onUserScroll?.();
     if (frame.current !== null) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = null;
@@ -94,6 +115,7 @@ export function RouteList({
       if (el) {
         const top = scrollToRow(next, el.scrollTop, viewHeight, ROW_H);
         if (top !== el.scrollTop) {
+          programmatic.current = true;
           el.scrollTop = top;
           setScrollTop(top);
         }
@@ -140,6 +162,7 @@ export function RouteList({
     onActivate(node.id);
   };
 
+
   const { first, last } = visibleRows(scrollTop, viewHeight, ROW_H, total);
   useEffect(() => {
     onWindow?.(first, last);
@@ -150,6 +173,7 @@ export function RouteList({
     if (!el || selected < 0) return;
     const top = scrollToRow(selected, el.scrollTop, viewHeight, ROW_H);
     if (top !== el.scrollTop) {
+      programmatic.current = true;
       el.scrollTop = top;
       setScrollTop(top);
     }
@@ -176,7 +200,10 @@ export function RouteList({
 
   return (
     <div
-      ref={box}
+      ref={(el) => {
+        box.current = el;
+        onListElement?.(el);
+      }}
       className={styles.list}
       role="listbox"
       aria-label={label}
@@ -236,6 +263,7 @@ export function RouteList({
             </div>
           );
         })}
+        {children}
       </div>
     </div>
   );

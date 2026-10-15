@@ -1,0 +1,205 @@
+import { QueryClient } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api")>()),
+  api: {
+    log: vi.fn(),
+    logStats: vi.fn(async () => []),
+    status: vi.fn(async () => ({ branch: { name: "main", hasCommits: true, upstream: null, ahead: 0, behind: 0 }, files: [] })),
+  },
+}));
+
+import { AppProviders, createQueryClient } from "../../../App";
+import { api, type LogQuery } from "../../../lib/api";
+import actionMeta from "../../../lib/action-meta.json";
+import { ko } from "../../../messages/ko";
+import { useHistoryStore } from "../../../state/historyStore";
+import { useRepoStore } from "../../../state/repoStore";
+import { History } from "../../../screens/History/History";
+import { logPage } from "../../../test/logPage";
+import { useToastStore } from "../../../ui/toastStore";
+import { commitNode } from "../model";
+import { headAncestors, stationInfo } from "./info";
+import { STATION_ITEMS, type MenuCtx, type MenuEnv, type StationMenuItem } from "./items";
+import { StationMenu } from "./StationMenu";
+
+const oid = (i: number) => `${i}`.padStart(40, "0");
+
+function serve() {
+  vi.mocked(api.log).mockImplementation(async (_r: string, q: LogQuery) =>
+    logPage({
+      commits: [0, 1, 2].map((i) => ({
+        oid: oid(i),
+        shortOid: oid(i).slice(0, 7),
+        parents: i < 2 ? [oid(i + 1)] : [],
+        summary: `버전 ${i}`,
+        authorName: "지원",
+        authorEmail: "j@e",
+        authorTime: 1_700_000_000,
+      })),
+      head: q.tips ? null : oid(0),
+      tips: ["t"],
+    }),
+  );
+}
+
+function showHistory() {
+  render(
+    <AppProviders client={createQueryClient()}>
+      <History repo="/repo" onDone={() => {}} />
+    </AppProviders>,
+  );
+}
+
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  act(() => {
+    useHistoryStore.setState({ selectedId: null, zoom: "all", scope: "all", expanded: new Set() });
+    useToastStore.setState({ toast: null });
+    useRepoStore.setState({ view: "history" });
+  });
+});
+
+describe("역 메뉴", () => {
+  it("Enter로 열고, 버전 번호 복사 하나만 있고 더 보기는 없다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    const menu = await screen.findByRole("menu", { name: "버전 메뉴" });
+    expect(menu).toHaveTextContent("버전 번호 복사");
+    expect(screen.queryByText("더 보기")).not.toBeInTheDocument();
+  });
+
+  it("Esc는 메뉴만 닫고 목록에 포커스를 돌려준다. 한 번 더 누르면 홈", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    await screen.findByRole("menu");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    expect(useRepoStore.getState().view).toBe("history");
+    expect(list).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(useRepoStore.getState().view).toBe("home");
+  });
+
+  it("버전 번호 복사: 클립보드에 해시를 넣고 토스트", async () => {
+    serve();
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    // user-event는 클립보드를 제 것으로 바꾸므로 눌림만 보낸다.
+    fireEvent.click(await screen.findByRole("menuitem", { name: "버전 번호 복사" }));
+    expect(writeText).toHaveBeenCalledWith(oid(0));
+    await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사했어요"));
+  });
+
+  it("클립보드가 없으면 옛 방법으로, 그것도 안 되면 알린다", async () => {
+    serve();
+    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    const exec = vi.fn(() => false);
+    document.execCommand = exec;
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    // user-event는 클립보드를 제 것으로 바꾸므로 눌림만 보낸다.
+    fireEvent.click(await screen.findByRole("menuitem", { name: "버전 번호 복사" }));
+    expect(exec).toHaveBeenCalledWith("copy");
+    await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사하지 못했어요"));
+  });
+
+  it("같은 역을 다시 누르면 닫는다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
+    await screen.findByRole("menu");
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  });
+});
+
+describe("역 메뉴 항목 표", () => {
+  const info = stationInfo(commitNode(oid(1), [oid(2)], { summary: "a" }), new Set(), new Set())!;
+  const env: MenuEnv = { repo: "/r", currentBranch: "main", changedFiles: 0, merging: false };
+  const ctx: MenuCtx = { repo: "/r", toast: () => {}, queryClient: new QueryClient(), onDone: () => {}, m: ko };
+  const item = (id: string, group: "main" | "more", availability: StationMenuItem["availability"]): StationMenuItem => ({
+    id,
+    group,
+    label: () => id,
+    availability,
+    run: () => {},
+  });
+
+  it("보임·숨김·흐림(까닭 툴팁)과 더 보기", async () => {
+    render(
+      <AppProviders client={createQueryClient()}>
+        <StationMenu
+          open
+          onOpenChange={() => {}}
+          info={info}
+          env={env}
+          ctx={ctx}
+          anchor={{ x: 0, y: 0 }}
+          returnFocus={() => {}}
+          isInside={() => false}
+          items={[
+            item("보임", "main", () => "show"),
+            item("숨김", "main", () => "hide"),
+            item("흐림", "main", () => ({ disabled: () => "고친 파일이 있어요" })),
+            item("깊이", "more", () => "show"),
+          ]}
+        />
+      </AppProviders>,
+    );
+    expect(await screen.findByRole("menuitem", { name: "보임" })).toBeInTheDocument();
+    expect(screen.queryByText("숨김")).not.toBeInTheDocument();
+    const dim = screen.getByRole("menuitem", { name: "흐림" });
+    expect(dim).toHaveAttribute("data-disabled");
+    expect(dim).toHaveAttribute("title", "고친 파일이 있어요");
+    expect(screen.getByText("더 보기")).toBeInTheDocument();
+  });
+
+  it("2b 실제 표에는 버전 번호 복사뿐이고, 액션 항목은 action-meta에 있는 id여야 한다", () => {
+    expect(STATION_ITEMS.map((i) => i.id)).toEqual(["copy-id"]);
+    const ids = new Set(actionMeta.map((a) => a.id));
+    for (const i of STATION_ITEMS) if (i.actionId) expect(ids.has(i.actionId), i.id).toBe(true);
+    expect(STATION_ITEMS.every((i) => i.availability(info, env) !== "hide")).toBe(true);
+  });
+
+  it("역 정보: 합치기·첫 버전·지금 위치·조상·이름들", () => {
+    const nodes = [
+      commitNode("h", ["m"], { isHead: true, branches: ["main", "기능"] }),
+      commitNode("m", ["a", "s"], { tags: ["v1"], unpushed: true }),
+      commitNode("s", ["a"]),
+      commitNode("a", []),
+    ];
+    const anc = headAncestors(nodes);
+    const head = stationInfo(nodes[0]!, new Set(["h", "m", "a"]), anc)!;
+    expect(head).toMatchObject({ isHead: true, onHeadLine: true, branches: ["main", "기능"] });
+    const merge = stationInfo(nodes[1]!, new Set(["h", "m", "a"]), anc)!;
+    expect(merge).toMatchObject({ isMerge: true, tags: ["v1"], unpushed: true });
+    const side = stationInfo(nodes[2]!, new Set(["h", "m", "a"]), anc)!;
+    expect(side).toMatchObject({ onHeadLine: false, isAncestorOfHead: true });
+    expect(stationInfo(nodes[3]!, new Set(), anc)!.isRoot).toBe(true);
+    expect(stationInfo({ ...nodes[3]!, kind: "fold" }, new Set(), anc)).toBeNull();
+  });
+});

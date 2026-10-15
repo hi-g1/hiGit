@@ -139,6 +139,11 @@ export const en: Messages = {
   zoomStatus: (zoom: string, n: number) => `${zoom} · ${n}`,
   tipsCut: (n: number) => `Up to 200 ${t("branch").toLowerCase()}es · ${n} more`,
   notPushedMark: "not uploaded",
+  stationMenu: "Version menu",
+  copyVersionId: "Copy version ID",
+  copied: "Copied",
+  copyFailed: "Couldn't copy",
+  moreItems: "More",
   routeFold: (n: number) => `${n} versions · expand`,
   routeFoldLabel: (n: number) => `${n} folded versions`,
   routeRowLabel: (r: RouteRowParts) =>

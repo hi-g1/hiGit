@@ -1,11 +1,15 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildRoute, ROW_H, verticalScene } from "../../features/history/layout/route";
 import { simplify, ZOOMS, type Zoom } from "../../features/history/layout/simplify";
+import { headAncestors, stationInfo } from "../../features/history/menu/info";
+import type { MenuCtx, MenuEnv } from "../../features/history/menu/items";
+import { StationMenu } from "../../features/history/menu/StationMenu";
 import { toRouteNodes } from "../../features/history/model";
 import { branchPalette } from "../../features/history/render/palette";
 import { RouteList } from "../../features/history/RouteList";
 import { useCommitStats } from "../../features/history/stats";
-import { HISTORY_MAX, useLogPages } from "../../lib/queries";
+import { HISTORY_MAX, useLogPages, useStatus } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
 import { useWheelZoom } from "../../lib/wheelZoom";
 import { useMessages } from "../../messages";
@@ -14,6 +18,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term, TermTooltip } from "../../ui/Term";
+import { useToastStore } from "../../ui/toastStore";
 import styles from "./History.module.css";
 
 /** 접혀서 행이 모자랄 때 저절로 이어 받는 쪽 수. */
@@ -25,8 +30,11 @@ const SEEK_PAGES = 25;
  * 버전 기록 화면(D-058, D-087~D-095): 창 전체 폭 노선도(r-log.png). 머리에 범위 전환과 확대·축소,
  * "지금 여기". Esc나 상단 바 "버전 기록"을 다시 누르면 홈으로 돌아간다.
  */
-export function History({ repo }: { repo: string }) {
+export function History({ repo, onDone }: { repo: string; onDone: (text: string) => void }) {
   const m = useMessages();
+  const queryClient = useQueryClient();
+  const show = useToastStore((s) => s.show);
+  const changedFiles = useStatus(repo).data?.files.length ?? 0;
   const setView = useRepoStore((s) => s.setView);
   const { selectedId, zoom, scope, expanded, select, setZoom, setScope, expand } = useHistoryStore();
   const log = useLogPages(repo, scope);
@@ -121,14 +129,31 @@ export function History({ repo }: { repo: string }) {
   useShortcut("zoomOut", () => changeZoom("out"));
   useWheelZoom(box, changeZoom);
 
+  // 역 메뉴(D-092): 역을 누르거나 Enter로 연다. 같은 역을 다시 누르면 닫는다.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const listEl = useRef<HTMLDivElement | null>(null);
   const onActivate = useCallback(
     (id: string) => {
       const node = shown.find((n) => n.id === id);
-      if (node?.kind === "fold") expand(id);
-      // 역 메뉴는 M13.
+      if (node?.kind === "fold") {
+        expand(id);
+        setMenuOpen(false);
+      } else if (node?.kind === "commit") {
+        setMenuOpen((open) => !(open && id === selectedId));
+      }
     },
-    [shown, expand],
+    [shown, expand, selectedId],
   );
+  const ancestors = useMemo(() => headAncestors(shown), [shown]);
+  const selectedRow = selectedId === null ? -1 : shown.findIndex((n) => n.id === selectedId);
+  const selectedNode = selectedRow >= 0 ? shown[selectedRow] : undefined;
+  const info = selectedNode ? stationInfo(selectedNode, route.layout.onHeadLine, ancestors) : null;
+  const anchor = {
+    x: (scene.stations.find((s) => s.id === selectedId)?.x ?? 0) + 16,
+    y: selectedRow * ROW_H + ROW_H / 2,
+  };
+  const env: MenuEnv = { repo, currentBranch: first?.currentBranch ?? null, changedFiles, merging: false };
+  const ctx: MenuCtx = { repo, toast: show, queryClient, onDone, m };
 
   const zoomName = (z: Zoom) =>
     z === "tags" ? (
@@ -209,9 +234,24 @@ export function History({ repo }: { repo: string }) {
             onActivate={onActivate}
             onNearEnd={more}
             onWindow={onWindow}
+            onUserScroll={() => setMenuOpen(false)}
+            onListElement={(el) => {
+              listEl.current = el;
+            }}
             now={now}
             label={m.historyArea}
-          />
+          >
+            <StationMenu
+              open={menuOpen && info !== null}
+              onOpenChange={setMenuOpen}
+              info={info}
+              env={env}
+              ctx={ctx}
+              anchor={anchor}
+              returnFocus={() => listEl.current?.focus()}
+              isInside={(node) => listEl.current?.contains(node) ?? false}
+            />
+          </RouteList>
         ))}
       {pages && (first?.tipsCut ?? 0) > 0 && <p className={styles.note}>{m.tipsCut(first!.tipsCut)}</p>}
       {pages && !hasNextPage && received >= HISTORY_MAX && <p className={styles.note}>{m.moreCommits(received)}</p>}
