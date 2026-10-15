@@ -65,7 +65,7 @@ describe("ChangedFiles", () => {
   it("모두 체크 상자는 세 상태이고, 일부만 넣었으면 나머지를 넣는다", async () => {
     const user = userEvent.setup();
     renderList([file("a", true), file("b", false), file("c", false)]);
-    const all = screen.getByRole("checkbox", { name: "이번 버전에 넣기: 모든 파일" });
+    const all = screen.getByRole("checkbox", { name: /^이번 버전에 넣기: 고친 파일 \d+개$/ });
     expect(all).toHaveProperty("indeterminate", true);
     await user.click(all);
     expect(api.executeAction).toHaveBeenCalledWith("/repo", {
@@ -77,7 +77,7 @@ describe("ChangedFiles", () => {
   it("모두 넣었으면 모두 뺀다", async () => {
     const user = userEvent.setup();
     renderList([file("a", true), file("b", true)]);
-    const all = screen.getByRole("checkbox", { name: "이번 버전에서 빼기: 모든 파일" });
+    const all = screen.getByRole("checkbox", { name: /^이번 버전에서 빼기: 고친 파일 \d+개$/ });
     expect(all).toBeChecked();
     await user.click(all);
     expect(api.executeAction).toHaveBeenCalledWith("/repo", {
@@ -101,5 +101,18 @@ describe("ChangedFiles", () => {
     expect(useRepoStore.getState().selectedPath).toBe("b.txt");
     expect(screen.getByRole("button", { name: /b\.txt/ })).toHaveAttribute("aria-pressed", "true");
     expect(api.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("↑↓로 비교할 파일을 옮긴다", async () => {
+    const user = userEvent.setup();
+    renderList([file("a.txt", false), file("b.txt", false), file("c.txt", false)]);
+    act(() => useRepoStore.setState({ selectedPath: "a.txt" }));
+    document.getElementById("changed-files")!.focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(useRepoStore.getState().selectedPath).toBe("c.txt");
+    await user.keyboard("{ArrowDown}");
+    expect(useRepoStore.getState().selectedPath).toBe("c.txt");
+    await user.keyboard("{ArrowUp}");
+    expect(useRepoStore.getState().selectedPath).toBe("b.txt");
   });
 });

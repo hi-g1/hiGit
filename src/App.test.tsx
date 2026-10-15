@@ -53,7 +53,7 @@ afterEach(() => {
   act(() =>
     useRepoStore.setState({
       repo: null,
-      leftTab: "changes",
+      view: "home",
       selectedPath: null,
       pendingInit: null,
       startNotice: null,
@@ -99,26 +99,25 @@ describe("홈에서 폴더 열기", () => {
     await openFolder();
 
     expect(await screen.findByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
-    expect(await screen.findByText("src/한글 파일.txt")).toBeInTheDocument();
+    expect((await screen.findAllByText("src/한글 파일.txt")).length).toBeGreaterThan(0);
     expect(screen.getByText("옛 이름.md에서 이름 바꿈")).toBeInTheDocument();
     expect(api.status).toHaveBeenCalledWith(repo.path);
     // 폴더 고르기도 프로젝트 열기 한 곳을 거친다(D-032)
     expect(api.openProject).toHaveBeenCalledWith(repo.path, "picked");
-    // 2단: 왼쪽 탭과 오른쪽 비교 칸, 세 번째 칸은 없다(D-025)
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["변경 사항2", "버전 기록"]);
-    expect(screen.getByText("파일을 고르면 비교가 보여요.")).toBeInTheDocument();
+    // 홈: 왼쪽 고친 파일, 오른쪽 비교. 첫 파일의 비교가 이미 열려 있다.
+    expect(screen.getByText("고친 파일 2개")).toBeInTheDocument();
+    await vi.waitFor(() => expect(useRepoStore.getState().selectedPath).toBe("src/한글 파일.txt"));
 
-    // 버전 기록 탭은 목록을 창 전체 폭으로
+    // 상단 바 "버전 기록"(Ctrl+H)은 창 전체 폭 화면, Esc로 돌아온다(D-058).
     const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: "버전 기록" }));
+    await user.click(screen.getByRole("button", { name: "버전 기록" }));
     expect(await screen.findByText("첫 저장")).toBeInTheDocument();
     expect(screen.getByText("aaaaaaa")).toBeInTheDocument();
-    expect(screen.queryByText("파일을 고르면 비교가 보여요.")).not.toBeInTheDocument();
-
-    // 좌우 화살표로 탭을 옮긴다
-    await user.keyboard("{ArrowLeft}");
-    expect(screen.getByRole("tab", { name: /변경 사항/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText("고친 파일 2개")).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(await screen.findByText("고친 파일 2개")).toBeInTheDocument();
+    await user.keyboard("{Control>}h{/Control}");
+    expect(await screen.findByText("첫 저장")).toBeInTheDocument();
   });
 
   it("저장소가 아닌 폴더는 버전 관리 시작으로 저장소를 만든다", async () => {
@@ -137,8 +136,8 @@ describe("홈에서 폴더 열기", () => {
 
     expect(api.executeAction).toHaveBeenCalledWith("/home/me/새 폴더", { id: "init" });
     expect(await screen.findByRole("heading", { name: "새 폴더" })).toBeInTheDocument();
-    expect(await screen.findByText("마지막 버전 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "버전 기록" }));
+    expect((await screen.findAllByText("고친 파일 없음")).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "버전 기록" }));
     expect(await screen.findByText("아직 저장한 버전이 없어요.")).toBeInTheDocument();
   });
 

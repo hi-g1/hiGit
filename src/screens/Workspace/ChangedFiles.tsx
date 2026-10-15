@@ -1,5 +1,6 @@
 import { useStageMutation } from "../../features/stage/useStageMutation";
 import type { ChangedFile } from "../../lib/api";
+import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Checkbox } from "../../ui/Checkbox";
@@ -34,20 +35,34 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
         : { include: true, paths: files.filter((f) => !f.staged).map((f) => f.path) },
     );
 
+  // ↑↓로 비교할 파일을 옮긴다(단축키 표의 fileList 범위, D-056).
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = matches("nextFile", e.nativeEvent) ? 1 : matches("prevFile", e.nativeEvent) ? -1 : 0;
+    if (step === 0 || files.length === 0) return;
+    e.preventDefault();
+    const at = files.findIndex((f) => f.path === selected);
+    const next = files[Math.min(Math.max(at + step, 0), files.length - 1)];
+    if (next) select(next.path);
+  };
+
   return (
     // 버전을 저장하면 포커스가 여기로 온다(다음 Ctrl+Z가 글자 되돌리기로 가지 않게).
-    <div id="changed-files" tabIndex={-1} className={styles.list}>
+    <div id="changed-files" tabIndex={-1} className={styles.list} onKeyDown={onKeyDown}>
       <div className={`${rowStyles.row} ${styles.head}`}>
         <TermTooltip id={all ? "unstage" : "stage"}>
           <Checkbox
             checked={all}
             indeterminate={included > 0 && !all}
             disabled={stage.isPending}
-            aria-label={`${all ? leaveOutLabel : includeLabel}: ${m.allFiles}`}
+            aria-label={`${all ? leaveOutLabel : includeLabel}: ${m.changedFilesCount(files.length)}`}
             onChange={toggleAll}
           />
         </TermTooltip>
-        <span className={rowStyles.muted}>{m.allFiles}</span>
+        <TermTooltip id="status">
+          <span className={rowStyles.muted} tabIndex={0}>
+            {m.changedFilesCount(files.length)}
+          </span>
+        </TermTooltip>
       </div>
       {stage.error && <ErrorNotice error={stage.error} />}
       <ul className={rowStyles.list}>

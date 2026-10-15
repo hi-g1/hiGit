@@ -1,49 +1,44 @@
-import { NameBox } from "../../features/commit/NameBox";
 import { useEffect } from "react";
+import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
-import { HistoryList } from "../../features/history/HistoryList";
 import { useUndo } from "../../features/undo/useUndo";
-import { toHistoryRows } from "../../features/history/model";
-import type { RepoInfo } from "../../lib/api";
-import { HISTORY_LIMIT, useLog, useStatus } from "../../lib/queries";
+import type { RepoInfo, StatusView } from "../../lib/api";
+import { useStatus } from "../../lib/queries";
 import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { History } from "../History/History";
 import { ChangedFiles } from "./ChangedFiles";
-import { LeftTabs } from "./LeftTabs";
 import { TopBar } from "./TopBar";
 import styles from "./Workspace.module.css";
 
-/** 작업 공간: 상단 바 + 2단(D-025). 버전 기록 탭은 목록을 창 전체 폭으로 쓴다. */
+/**
+ * 작업 공간: 상단 바(D-045) + 홈 2단 또는 버전 기록 화면(D-058).
+ * 홈 왼쪽: 버전 이름 칸(D-044)과 고친 파일 목록. 오른쪽: 고른 파일의 비교.
+ */
 export function Workspace({ repo }: { repo: RepoInfo }) {
   const m = useMessages();
-  const tab = useRepoStore((s) => s.leftTab);
+  const view = useRepoStore((s) => s.view);
   const selectedPath = useRepoStore((s) => s.selectedPath);
+  const selectPath = useRepoStore((s) => s.selectPath);
   const status = useStatus(repo.path);
-  const log = useLog(repo.path);
   const watch = useRepoWatch(repo.path);
   // Ctrl+Z·Ctrl+Shift+Z(D-042). 버전 저장 결과 토스트도 여기서 띄운다.
   const { notifyDone } = useUndo(repo.path);
-  const selectPath = useRepoStore((s) => s.selectPath);
-  const selected = status.data?.files.find((f) => f.path === selectedPath);
-  // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 선택도 지운다.
-  // 같은 경로가 나중에 다시 생겨도 비교가 저절로 열리지 않게 한다.
+  const files = status.data?.files;
+  const selected = files?.find((f) => f.path === selectedPath);
+  // 홈에 들어오면 첫 파일의 비교가 열려 있다. 고른 파일이 사라지면(버전으로 저장됨) 다음 첫 파일로.
   useEffect(() => {
-    if (status.data && selectedPath !== null && !selected) selectPath(null);
-  }, [status.data, selectedPath, selected, selectPath]);
-  // 시작 화면의 "바뀐 파일 N개 보기"로 왔으면 첫 바뀐 파일을 고른다.
-  const selectFirstChange = useRepoStore((s) => s.selectFirstChange);
-  const setSelectFirstChange = useRepoStore((s) => s.setSelectFirstChange);
-  useEffect(() => {
-    const first = status.data?.files[0];
-    if (selectFirstChange && first) {
-      selectPath(first.path);
-      setSelectFirstChange(false);
+    if (!files) return;
+    if (files.length === 0) {
+      if (selectedPath !== null) selectPath(null);
+    } else if (!selected) {
+      selectPath(files[0]!.path);
     }
-  }, [selectFirstChange, status.data, selectPath, setSelectFirstChange]);
+  }, [files, selected, selectedPath, selectPath]);
 
   return (
     <div className={styles.workspace}>
@@ -56,45 +51,33 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           </Button>
         </div>
       )}
-      <div className={tab === "changes" ? styles.twoPane : styles.onePane}>
-        <section className={styles.left}>
-          <LeftTabs changeCount={status.data?.files.length} />
-          {tab === "changes" ? (
-            <div id="panel-changes" role="tabpanel" aria-labelledby="tab-changes" className={styles.scroll}>
-              {status.data && (
-                <NameBox
-                  folder={repo.path}
-                  files={status.data.files}
-                  onSaved={notifyDone}
-                  focusAfterSave={() => document.getElementById("changed-files")?.focus()}
-                />
-              )}
+      {view === "history" ? (
+        <History repo={repo.path} />
+      ) : (
+        <div className={styles.twoPane}>
+          <section className={styles.left}>
+            <div className={styles.scroll}>
               {status.isPending && <EmptyState>{m.loading}</EmptyState>}
               {status.error && <ErrorNotice error={status.error} />}
-              {status.data &&
-                (status.data.files.length === 0 ? (
-                  <EmptyState>{m.noChanges}</EmptyState>
-                ) : (
-                  <ChangedFiles folder={repo.path} files={status.data.files} />
-                ))}
+              {status.data && (
+                <>
+                  {status.data.files.length > 0 && (
+                    <NameBox
+                      folder={repo.path}
+                      files={status.data.files}
+                      onSaved={notifyDone}
+                      focusAfterSave={() => document.getElementById("changed-files")?.focus()}
+                    />
+                  )}
+                  {status.data.files.length === 0 ? (
+                    <p className={styles.noFiles}>{m.noChangedFiles}</p>
+                  ) : (
+                    <ChangedFiles folder={repo.path} files={status.data.files} />
+                  )}
+                </>
+              )}
             </div>
-          ) : (
-            <div id="panel-history" role="tabpanel" aria-labelledby="tab-history" className={styles.scroll}>
-              {log.isPending && <EmptyState>{m.loading}</EmptyState>}
-              {log.error && <ErrorNotice error={log.error} />}
-              {log.data &&
-                (log.data.commits.length === 0 ? (
-                  <EmptyState>{m.noCommits}</EmptyState>
-                ) : (
-                  <>
-                    <HistoryList rows={toHistoryRows(log.data)} now={log.dataUpdatedAt} />
-                    {log.data.hasMore && <p className={styles.note}>{m.moreCommits(HISTORY_LIMIT)}</p>}
-                  </>
-                ))}
-            </div>
-          )}
-        </section>
-        {tab === "changes" && (
+          </section>
           <section className={styles.right} aria-label={m.compareArea}>
             {selected ? (
               <DiffView
@@ -107,11 +90,24 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
                 }}
               />
             ) : (
-              <EmptyState>{m.pickFileToCompare}</EmptyState>
+              status.data && <AllSaved status={status.data} />
             )}
           </section>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 고친 파일이 없을 때 오른쪽(r-saved.png). 이름과 숫자만(D-049). 동기화 버튼은 H15. */
+function AllSaved({ status }: { status: StatusView }) {
+  const m = useMessages();
+  const { branch } = status;
+  return (
+    <div className={styles.saved}>
+      {branch.name && <p className={styles.savedBranch}>{branch.name}</p>}
+      <p className={styles.savedTitle}>{m.noChangedFiles}</p>
+      {branch.upstream && branch.ahead > 0 && <p className={styles.savedMeta}>{m.unpushed(branch.ahead)}</p>}
     </div>
   );
 }

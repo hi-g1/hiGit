@@ -1,4 +1,5 @@
-import { render as rtlRender, screen } from "@testing-library/react";
+import { act, render as rtlRender, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
 
 import { AppProviders, createQueryClient } from "../../App";
 import type { StatusView } from "../../lib/api";
+import { useRepoStore } from "../../state/repoStore";
 import { TopBar as RealTopBar } from "./TopBar";
 
 const render = (ui: ReactElement) => rtlRender(<AppProviders client={createQueryClient()}>{ui}</AppProviders>);
@@ -31,25 +33,18 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: /main/ })).toHaveAttribute("aria-keyshortcuts", "Control+B");
   });
 
-  it("연결된 원격 브랜치가 있으면 올릴·가져올 버전 수", () => {
-    render(<TopBar repo={repo} status={status({ upstream: "origin/main", ahead: 2, behind: 1 })} />);
-    expect(screen.getByText("올리기").parentElement).toHaveTextContent("올리기 2");
-    expect(screen.getByText("가져오기").parentElement).toHaveTextContent("가져오기 1");
-  });
-
-  it("올린 적이 없으면 그렇게 알려준다", () => {
-    render(<TopBar repo={repo} status={status({ upstream: null })} />);
-    expect(screen.getByText("아직 올린 적 없음")).toBeInTheDocument();
+  it("오른쪽 버전 기록 단추는 Ctrl+H이고 누르면 화면을 바꾼다", async () => {
+    render(<TopBar repo={repo} status={status({})} />);
+    const button = screen.getByRole("button", { name: "버전 기록" });
+    expect(button).toHaveAttribute("aria-keyshortcuts", "Control+H");
+    expect(button).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(button);
+    expect(useRepoStore.getState().view).toBe("history");
+    act(() => useRepoStore.setState({ view: "home" }));
   });
 
   it("특정 버전을 보는 중이면 브랜치 이름 대신 안내", () => {
     render(<TopBar repo={repo} status={status({ name: null })} />);
     expect(screen.getByText("특정 버전을 보는 중")).toBeInTheDocument();
-  });
-
-  it("저장한 버전이 없으면 올리기 상태를 보여주지 않는다", () => {
-    render(<TopBar repo={repo} status={status({ hasCommits: false })} />);
-    expect(screen.queryByText("아직 올린 적 없음")).not.toBeInTheDocument();
-    expect(screen.queryByText("올리기")).not.toBeInTheDocument();
   });
 });

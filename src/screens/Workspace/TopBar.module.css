@@ -32,11 +32,37 @@
   border-radius: 50%;
 }
 
-.sync {
-  display: inline-flex;
-  gap: var(--space-3);
+/* 프로젝트 메뉴와 브랜치 사이 세로 선 */
+.divider {
+  width: var(--border-width);
+  height: 20px;
+  background: var(--border);
+}
+
+/* 오른쪽 글자 버튼(버전 기록). 본문색, 켜져 있으면 굵게(design.md "버튼") */
+.textButton {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
   color: var(--text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.textButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.on {
+  color: var(--text);
+  font-weight: var(--font-weight-bold);
 }
 
 .spacer {

@@ -5,20 +5,12 @@
 }
 
 /* 칸 사이는 간격 없이 1px 선, 둥근 모서리·그림자 없음(design.md "배치") */
-.twoPane,
-.onePane {
+.twoPane {
   display: grid;
   flex: 1;
+  grid-template-columns: minmax(280px, 340px) 1fr;
   min-height: 0;
   background: var(--surface);
-}
-
-.twoPane {
-  grid-template-columns: minmax(280px, 320px) 1fr;
-}
-
-.onePane {
-  grid-template-columns: 1fr;
 }
 
 .left,
@@ -55,4 +47,32 @@
   background: var(--surface-sunken);
   color: var(--text-muted);
   font-size: var(--font-size-sm);
+}
+
+.noFiles {
+  padding: var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+}
+
+/* 고친 파일이 없을 때 오른쪽 가운데(r-saved.png) */
+.saved {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-8);
+}
+
+.savedBranch,
+.savedMeta {
+  color: var(--text-muted);
+  font-size: var(--font-size-md);
+}
+
+.savedTitle {
+  font-size: var(--font-size-name);
+  font-weight: var(--font-weight-bold);
 }
