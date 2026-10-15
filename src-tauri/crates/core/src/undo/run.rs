@@ -17,6 +17,16 @@ pub struct UndoOutcome {
     pub branch: Option<String>,
     /// 버전 저장을 되돌렸으면 그때 쓴 메시지(이름 칸에 다시 채운다).
     pub message: Option<String>,
+    /// 올린 버전이라 되돌리는 새 버전을 만들었다(D-073).
+    pub reverted: bool,
+}
+
+/// 종류별 되돌리기가 한 일.
+enum Undid {
+    /// 브랜치·index·ref를 이전 상태로 돌렸다. 다시 하기가 된다.
+    Restored,
+    /// 올린 버전이라 되돌리는 새 버전을 만들었다. 그 앞 줄은 더 되돌리지 않는다.
+    Reverted,
 }
 
 struct Entry {
@@ -91,27 +101,46 @@ pub(crate) fn undo(
     if now.head != entry.after.head || now.branch != entry.after.branch {
         return Err(CoreError::UndoStale);
     }
-    match entry.kind {
+    let undid = match entry.kind {
         // HEAD는 그대로이고 다른 ref만 옮긴 작업("main에 합치기")은 아래 ref 되돌리기만 한다.
-        UndoKind::RestoreRef if entry.before.head == entry.after.head => {}
+        UndoKind::RestoreRef if entry.before.head == entry.after.head => Undid::Restored,
         UndoKind::RestoreRef => undo_commit(git, repo, &entry)?,
         UndoKind::RestoreTree => undo_tree(git, repo, &entry)?,
         UndoKind::RestoreIndex => {
             restore_index(git, repo, &now, &entry.after, &entry.before)?;
+            Undid::Restored
         }
-        UndoKind::SwitchBack => undo_switch(git, repo, &entry)?,
-        UndoKind::DeleteCreated => undo_create(git, repo, &entry)?,
-        // 원격 작업은 1b에서 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042).
+        UndoKind::SwitchBack => {
+            undo_switch(git, repo, &entry)?;
+            Undid::Restored
+        }
+        UndoKind::DeleteCreated => {
+            undo_create(git, repo, &entry)?;
+            Undid::Restored
+        }
+        // 올리기·가져오기·동기화는 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042, D-073).
         UndoKind::Inverse if entry.action == "pull" => return Err(CoreError::NothingToUndo),
         UndoKind::Inverse => return Err(CoreError::UndoPushed),
         _ => return Err(CoreError::NothingToUndo),
+    };
+    let reverted = matches!(undid, Undid::Reverted);
+    if !reverted {
+        restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
     }
-    restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
     journal.append(&Body::Undo {
         target: entry.id.clone(),
         at: journal::now(),
     })?;
-    Ok(outcome(&entry, entry.before.branch.clone()))
+    if reverted {
+        // HEAD가 새 버전이 되었다. 그 앞 줄과 다시 하기는 더 쓰지 않는다.
+        journal.append(&Body::Barrier {
+            at: journal::now(),
+            action: "revert".into(),
+        })?;
+    }
+    let mut result = outcome(&entry, entry.before.branch.clone());
+    result.reverted = reverted;
+    Ok(result)
 }
 
 pub(crate) fn redo(
@@ -155,6 +184,7 @@ fn outcome(entry: &Entry, branch: Option<String>) -> UndoOutcome {
         kind: entry.kind,
         branch,
         message,
+        reverted: false,
     }
 }
 
@@ -221,16 +251,50 @@ fn is_pushed(git: &dyn GitBackend, repo: &RepoPath, oid: &Oid) -> Result<bool> {
 }
 
 /// 합치기·되살리기 되돌리기: 지금 버전을 백업한 뒤 브랜치와 파일을 이전 버전으로(고친 파일은 둔다).
-fn undo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+/// 뒤로 옮기면 빠지는 버전이 이미 올라가 있으면 되돌리는 새 버전으로 한다(D-073).
+fn undo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<Undid> {
     let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
     let before = entry.before.head_oid().ok_or(CoreError::NothingToUndo)?;
-    if is_pushed(git, repo, &after)? {
-        return Err(CoreError::UndoPushed);
+    // 앞으로 옮기는 되돌리기(되살리기를 되돌림)는 기록에서 빠지는 버전이 없다.
+    let moving_back = !git.is_ancestor(repo, after.as_str(), before.as_str())?;
+    if moving_back && is_pushed(git, repo, &after)? {
+        return revert_pushed(git, repo, &after, &before);
     }
     let label = entry.after.branch.as_deref().unwrap_or("HEAD");
     backup::backup_oid(git, repo, &after, &format!("undo-{label}"))?;
     git.run(repo, &GitOp::ResetKeep { oid: before })?;
-    Ok(())
+    Ok(Undid::Restored)
+}
+
+/// 올린 버전 `after`의 변경을 취소하는 새 버전을 만든다. `after`가 `before` 바로 위의 버전
+/// (합치기 버전이면 첫 부모가 `before`)일 때만 한다. 넣은 파일이 있으면 하지 않는다.
+fn revert_pushed(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    after: &Oid,
+    before: &Oid,
+) -> Result<Undid> {
+    let first_parent = git.resolve_ref(repo, &format!("{after}^1"))?;
+    if first_parent.as_ref() != Some(before) {
+        return Err(CoreError::UndoPushed);
+    }
+    let staged = git
+        .status(repo)?
+        .entries
+        .iter()
+        .any(|e| !matches!(e.index, git::Change::Unmodified | git::Change::Untracked));
+    if staged {
+        return Err(CoreError::StagedChanges);
+    }
+    let merge = git.resolve_ref(repo, &format!("{after}^2"))?.is_some();
+    git.run(
+        repo,
+        &GitOp::Revert {
+            oid: after.clone(),
+            mainline: merge.then_some(1),
+        },
+    )?;
+    Ok(Undid::Reverted)
 }
 
 fn redo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
@@ -243,8 +307,9 @@ fn stage_all(entry: &Entry) -> bool {
     matches!(&entry.input, ActionInput::Commit(c) if c.stage_all)
 }
 
-/// 버전 저장 되돌리기: 브랜치를 이전 버전으로(고친 파일은 그대로). 올린 버전은 바꾸지 않는다.
-fn undo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+/// 버전 저장 되돌리기: 브랜치를 이전 버전으로(고친 파일은 그대로). 올린 버전은 기록을 바꾸지
+/// 않고 되돌리는 새 버전을 만든다(D-073).
+fn undo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<Undid> {
     let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
     let branch = entry
         .after
@@ -252,7 +317,8 @@ fn undo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
         .as_deref()
         .ok_or(CoreError::NothingToUndo)?;
     if is_pushed(git, repo, &after)? {
-        return Err(CoreError::UndoPushed);
+        let before = entry.before.head_oid().ok_or(CoreError::UndoPushed)?;
+        return revert_pushed(git, repo, &after, &before);
     }
     // 되돌리기 전에 지금 버전을 백업 ref로 살려 둔다. 못 남기면 되돌리지 않는다.
     backup::backup_oid(git, repo, &after, &format!("undo-{branch}"))?;
@@ -268,7 +334,7 @@ fn undo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
     {
         git.run(repo, &GitOp::ReadTree { tree })?;
     }
-    Ok(())
+    Ok(Undid::Restored)
 }
 
 /// 다시 하기: 액션을 다시 실행하지 않고 되돌리기 전의 버전으로 브랜치를 되살린다(D-065).
@@ -523,6 +589,57 @@ mod tests {
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), second, "HEAD는 그대로");
         redo(&backend, &repo, &journal).unwrap();
         assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), second);
+    }
+
+    /// 원격에 올리고 upstream을 건다.
+    fn push_to_bare(dir: &Path) -> tempfile::TempDir {
+        let remote = tempfile::tempdir().unwrap();
+        git(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+        git(
+            dir,
+            &["remote", "add", "origin", &remote.path().to_string_lossy()],
+        );
+        git(dir, &["push", "-q", "-u", "origin", "main"]);
+        remote
+    }
+
+    #[test]
+    fn undoing_a_pushed_merge_reverts_against_the_first_parent() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        git(dir, &["switch", "-q", "-c", "기능", &first]);
+        std::fs::write(dir.join("c.txt"), "c\n").unwrap();
+        git(dir, &["add", "c.txt"]);
+        git(dir, &["commit", "-q", "-m", "c"]);
+        git(dir, &["switch", "-q", "main"]);
+        git(dir, &["merge", "-q", "--no-ff", "-m", "합침", "기능"]);
+        let merged = git(dir, &["rev-parse", "HEAD"]);
+        let _remote = push_to_bare(dir);
+        let (backend, repo, journal) = setup(dir);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&second), state(&merged)))
+            .unwrap();
+        let result = undo(&backend, &repo, &journal).unwrap();
+        assert!(result.reverted);
+        assert_eq!(git(dir, &["rev-parse", "HEAD~1"]), merged);
+        assert!(!dir.join("c.txt").exists(), "합쳐 온 파일이 빠진다");
+        assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "2\n");
+    }
+
+    #[test]
+    fn undoing_a_move_back_to_an_older_version_just_moves_forward() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let _remote = push_to_bare(dir);
+        // 되살리기로 첫 버전에 돌아온 상태(올린 버전 위). 되돌리면 앞으로 간다.
+        git(dir, &["reset", "-q", "--keep", &first]);
+        let (backend, repo, journal) = setup(dir);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&second), state(&first)))
+            .unwrap();
+        let result = undo(&backend, &repo, &journal).unwrap();
+        assert!(!result.reverted);
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
     }
 
     #[test]

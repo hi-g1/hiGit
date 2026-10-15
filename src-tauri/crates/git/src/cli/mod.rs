@@ -562,6 +562,33 @@ impl GitBackend for CliBackend {
             GitOp::ResetSoft { oid } => self
                 .runner
                 .run(dir, &["reset", "--soft", "-q", oid.as_str()])?,
+            GitOp::Revert { oid, mainline } => {
+                let number;
+                let mut args = vec!["revert", "--no-edit"];
+                if let Some(n) = mainline {
+                    number = n.to_string();
+                    args.extend(["-m", number.as_str()]);
+                }
+                // `Oid`는 16진수만이라 옵션으로 읽히지 않는다.
+                args.push(oid.as_str());
+                match self.runner.run(dir, &args) {
+                    Ok(out) => out,
+                    Err(e) => {
+                        // 충돌이나 hook 거부로 멈췄으면 시작 전으로 돌린다. 버전 하나 되돌리기가 저장 단계에서
+                        // 멈추면 되돌리기 중 표시 없이 바뀐 내용만 index에 남아 `--abort`가 듣지 않는다.
+                        // 그때는 넣은 내용이 있을 때만 `reset --merge`로 지운다(고친 파일은 남긴다).
+                        if self.runner.run(dir, &["revert", "--abort"]).is_err()
+                            && self
+                                .runner
+                                .run(dir, &["diff", "--cached", "--quiet"])
+                                .is_err()
+                        {
+                            let _ = self.runner.run(dir, &["reset", "--merge", "-q"]);
+                        }
+                        return Err(e);
+                    }
+                }
+            }
             // `reset`에는 `--end-of-options`를 넣지 않는다(args.rs). `Oid`는 16진수만이라 옵션으로 읽히지 않는다.
             GitOp::ResetKeep { oid } => self
                 .runner

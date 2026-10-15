@@ -261,13 +261,17 @@ fn save_in_app(core: &Core, dir: &Path, file: &str, text: &str) {
 }
 
 #[test]
-fn undoing_after_a_sync_says_it_was_uploaded() {
+fn undoing_a_save_after_sync_makes_a_reverting_version() {
     let s = setup();
     let core = core(s.mine.path());
     save_in_app(&core, s.mine.path(), "c.txt", "내 것\n");
     sync(&core, s.mine.path()).unwrap();
-    let err = core.undo(s.mine.path()).unwrap_err();
-    assert_eq!(ErrorView::from(&err).code, ErrorCode::UndoPushed);
+    // 올린 버전은 기록을 지우지 않고 되돌리는 새 버전으로(D-073). 원격은 다음 동기화 때 바뀐다.
+    let r = core.undo(s.mine.path()).unwrap();
+    assert!(r.reverted);
+    assert!(!s.mine.path().join("c.txt").exists());
+    let st = git(s.mine.path(), &["status", "-sb"]);
+    assert!(st.contains("ahead 1"), "{st}");
 }
 
 #[test]

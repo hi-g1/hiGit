@@ -53,6 +53,10 @@ pub enum CoreError {
     #[error("원격 저장소가 없습니다")]
     NoRemote,
 
+    /// 이번 버전에 넣은 파일이 있어 하지 않았다(합치기·되돌리는 새 버전에 섞이지 않게).
+    #[error("이번 버전에 넣은 파일이 있습니다")]
+    StagedChanges,
+
     /// 합치기·리베이스 중이라 하지 않았다.
     #[error("진행 중인 작업이 있습니다")]
     OperationInProgress,

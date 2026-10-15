@@ -231,6 +231,8 @@ pub struct UndoResult {
     pub branch: Option<String>,
     /// 버전 저장을 되돌렸으면 그때 쓴 메시지. 화면이 이름 칸에 다시 채운다.
     pub message: Option<String>,
+    /// 올린 버전이라 기록을 지우지 않고 되돌리는 새 버전을 만들었다(D-073). 다시 하기는 없다.
+    pub reverted: bool,
 }
 
 impl From<crate::undo::UndoOutcome> for UndoResult {
@@ -240,6 +242,7 @@ impl From<crate::undo::UndoOutcome> for UndoResult {
             kind: o.kind.into(),
             branch: o.branch,
             message: o.message,
+            reverted: o.reverted,
         }
     }
 }
@@ -403,6 +406,7 @@ pub enum ErrorCode {
     NothingToUndo,
     UndoStale,
     UndoPushed,
+    StagedChanges,
     OperationInProgress,
     ParkBlocked,
     NeedsTrust,
@@ -477,6 +481,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NothingToUndo => ErrorCode::NothingToUndo,
             CoreError::UndoStale => ErrorCode::UndoStale,
             CoreError::UndoPushed => ErrorCode::UndoPushed,
+            CoreError::StagedChanges => ErrorCode::StagedChanges,
             CoreError::OperationInProgress => ErrorCode::OperationInProgress,
             CoreError::NeedsTrust => ErrorCode::NeedsTrust,
             CoreError::NoRemote => ErrorCode::NoRemote,

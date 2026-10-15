@@ -46,6 +46,11 @@ export function useUndo(repo: string) {
     try {
       const result = await api.undoLast(repo);
       refresh();
+      // 올린 버전을 되돌리는 새 버전을 만들었으면 다시 하기가 없다(D-073).
+      if (result.reverted) {
+        show(m.reverted);
+        return;
+      }
       if (result.message !== null) setRestoredMessage(result.message);
       show(m.undone, { label: m.redo, kbd: SHORTCUTS.redo.label, onClick: () => void redo() });
     } catch (e) {

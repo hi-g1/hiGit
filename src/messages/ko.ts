@@ -21,6 +21,7 @@ export const ko = {
   redo: "다시 하기",
   undone: "되돌렸어요",
   redone: "다시 했어요",
+  reverted: "되돌리는 새 버전을 만들었어요",
   saved: "저장했어요",
   suggest: {
     one: (kind: "update" | "add" | "delete" | "rename", name: string) =>
@@ -139,7 +140,8 @@ export const ko = {
     notOpened: "열지 않은 프로젝트예요. 프로젝트를 다시 열어 주세요.",
     nothingToUndo: "되돌릴 작업이 없어요.",
     undoStale: "앱 밖에서 바뀌어서 되돌리지 않았어요.",
-    undoPushed: `이미 ${t("remote")}에 올린 버전은 되돌리지 않아요.`,
+    undoPushed: "올린 것은 되돌릴 수 없어요.",
+    stagedChanges: `이번 버전에 넣은 파일이 있어요. 먼저 ${josa(t("commit"), "을/를")} 하거나 파일을 빼 주세요.`,
     operationInProgress: `${josa(t("merge"), "을/를")} 마치거나 그만둔 뒤에 할 수 있어요.`,
     parkBlocked: "맡긴 파일을 원래대로 꺼내지 못했어요. 파일은 안전하게 남아 있어요.",
     needsTrust: "믿고 열지 정해야 해요.",

@@ -169,7 +169,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -342,6 +342,8 @@ export type UndoResult = {
 	branch: string | null,
 	/**  버전 저장을 되돌렸으면 그때 쓴 메시지. 화면이 이름 칸에 다시 채운다. */
 	message: string | null,
+	/**  올린 버전이라 기록을 지우지 않고 되돌리는 새 버전을 만들었다(D-073). 다시 하기는 없다. */
+	reverted: boolean,
 };
 
 /**  감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다. */

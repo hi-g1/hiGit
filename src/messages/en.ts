@@ -15,6 +15,7 @@ export const en: Messages = {
   redo: "Redo",
   undone: "Undone",
   redone: "Redone",
+  reverted: "Made a new version that undoes it",
   saved: "Saved",
   suggest: {
     one: (kind: "update" | "add" | "delete" | "rename", name: string) =>
@@ -130,7 +131,8 @@ export const en: Messages = {
     notOpened: "This project isn't open. Please open it again.",
     nothingToUndo: "Nothing to undo.",
     undoStale: "It changed outside the app, so it wasn't undone.",
-    undoPushed: `Versions already uploaded to the ${t("remote").toLowerCase()} aren't undone.`,
+    undoPushed: "What's uploaded can't be undone.",
+    stagedChanges: "Some files are in this version. Remove them or save first.",
     operationInProgress: `Finish or stop the ${t("merge").toLowerCase()} first.`,
     parkBlocked: "The parked files couldn't be brought back. They are still kept safely.",
     needsTrust: "Decide whether to trust this project first.",

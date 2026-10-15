@@ -204,6 +204,78 @@ fn pushed_commit_is_not_undone() {
     assert_eq!(head(dir), before);
 }
 
+/// 버전 둘을 앱으로 저장하고 원격에 올린 저장소. (원격, 저장소)
+fn pushed_two() -> (tempfile::TempDir, tempfile::TempDir, Core) {
+    let remote = tempfile::tempdir().unwrap();
+    git(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join("a.txt"), "1\n").unwrap();
+    commit(&core, dir, "하나", true);
+    std::fs::write(dir.join("a.txt"), "2\n").unwrap();
+    commit(&core, dir, "둘", true);
+    let url = remote.path().to_string_lossy().into_owned();
+    git(dir, &["remote", "add", "origin", &url]);
+    git(dir, &["push", "-q", "-u", "origin", "main"]);
+    (remote, repo, core)
+}
+
+#[test]
+fn undoing_a_pushed_save_makes_a_reverting_version() {
+    let (_remote, repo, core) = pushed_two();
+    let dir = repo.path();
+    let pushed = head(dir).unwrap();
+    let result = core.undo(dir).unwrap();
+    assert!(result.reverted);
+    // 기록은 그대로이고 되돌리는 새 버전이 위에 생긴다(D-073).
+    assert_ne!(head(dir).unwrap(), pushed);
+    assert_eq!(git(dir, &["rev-parse", "HEAD~1"]).trim(), pushed);
+    assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "1\n");
+    assert_eq!(git(dir, &["status", "--porcelain"]), "");
+    // 다시 하기도, 그 앞 줄 되돌리기도 없다.
+    assert_eq!(code(core.redo(dir).unwrap_err()), ErrorCode::NothingToUndo);
+    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::NothingToUndo);
+}
+
+#[test]
+fn reverting_needs_nothing_staged_and_keeps_edits_safe() {
+    let (_remote, repo, core) = pushed_two();
+    let dir = repo.path();
+    let pushed = head(dir);
+    std::fs::write(dir.join("b.txt"), "b\n").unwrap();
+    git(dir, &["add", "b.txt"]);
+    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::StagedChanges);
+    git(dir, &["reset", "-q"]);
+    // 되돌릴 파일을 고쳐 두었으면 git이 거절하고 아무것도 바뀌지 않는다.
+    std::fs::write(dir.join("a.txt"), "내 고침\n").unwrap();
+    assert_eq!(code(core.undo(dir).unwrap_err()), ErrorCode::WouldOverwrite);
+    assert_eq!(head(dir), pushed);
+    assert_eq!(
+        std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+        "내 고침\n"
+    );
+    assert!(!dir.join(".git/REVERT_HEAD").exists());
+}
+
+#[test]
+fn a_hook_refusing_the_revert_leaves_nothing_behind() {
+    let (_remote, repo, core) = pushed_two();
+    let dir = repo.path();
+    let pushed = head(dir);
+    // 되돌리기(revert)는 prepare-commit-msg를 돈다(pre-commit·commit-msg는 돌지 않는다).
+    let hook = dir.join(".git/hooks/prepare-commit-msg");
+    std::fs::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
+    let _ = std::process::Command::new("chmod")
+        .arg("+x")
+        .arg(&hook)
+        .status();
+    assert!(core.undo(dir).is_err());
+    assert_eq!(head(dir), pushed);
+    assert_eq!(git(dir, &["status", "--porcelain"]), "");
+    assert!(!dir.join(".git/REVERT_HEAD").exists());
+}
+
 fn staged(dir: &Path) -> String {
     git(dir, &["diff", "--cached", "--name-only"])
 }

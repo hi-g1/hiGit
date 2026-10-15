@@ -260,6 +260,10 @@ pub enum GitOp {
     StageAll,
     /// 브랜치를 `oid`로 되돌린다. index와 작업 폴더는 그대로(`reset --soft`, 버전 저장 되돌리기).
     ResetSoft { oid: Oid },
+    /// `oid`의 변경을 취소하는 새 버전을 만든다(`revert --no-edit`, 합치기 버전은 `-m`).
+    /// 실패하면 반쯤 된 되돌리기를 그만두고(`revert --abort`, 안 되면 `reset --merge`) 오류를 돌려준다.
+    /// 정리가 넣은 파일을 되돌리므로 core는 넣은 파일이 없을 때만 부른다.
+    Revert { oid: Oid, mainline: Option<u32> },
     /// 브랜치와 파일을 `oid`로 옮기되 고친 파일은 둔다(`reset --keep`, 합치기·되살리기 되돌리기).
     /// 고친 파일이 옮길 파일과 겹치면 아무것도 바꾸지 않고 `WouldOverwrite`.
     ResetKeep { oid: Oid },

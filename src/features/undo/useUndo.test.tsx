@@ -33,7 +33,7 @@ afterEach(() => {
 
 describe("되돌리기", () => {
   it("Ctrl+Z는 되돌리고 저장 메시지를 이름 칸으로 돌려준다", async () => {
-    vi.mocked(api.undoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: "로그인 화면" });
+    vi.mocked(api.undoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: "로그인 화면", reverted: false });
     renderHook(() => useUndo("/repo"), { wrapper });
     await act(async () => {
       window.dispatchEvent(ctrlZ());
@@ -55,13 +55,30 @@ describe("되돌리기", () => {
   });
 
   it("다시 하기는 Ctrl+Shift+Z", async () => {
-    vi.mocked(api.redoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: null });
+    vi.mocked(api.redoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: null, reverted: false });
     renderHook(() => useUndo("/repo"), { wrapper });
     await act(async () => {
       window.dispatchEvent(ctrlZ(true));
     });
     expect(api.redoLast).toHaveBeenCalled();
     expect(await screen.findByText("다시 했어요")).toBeInTheDocument();
+  });
+
+  it("올린 버전은 되돌리는 새 버전을 알리고 다시 하기 단추가 없다", async () => {
+    vi.mocked(api.undoLast).mockResolvedValue({
+      action: "commit",
+      kind: "restoreRef",
+      branch: "main",
+      message: "로그인 화면",
+      reverted: true,
+    });
+    renderHook(() => useUndo("/repo"), { wrapper });
+    await act(async () => {
+      window.dispatchEvent(ctrlZ());
+    });
+    expect(await screen.findByText("되돌리는 새 버전을 만들었어요")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /다시 하기/ })).not.toBeInTheDocument();
+    expect(useUndoStore.getState().restoredMessage).toBeNull();
   });
 
   it.each([
@@ -77,7 +94,7 @@ describe("되돌리기", () => {
   });
 
   it("결과 토스트의 되돌리기 버튼은 Ctrl+Z와 같은 일을 한다", async () => {
-    vi.mocked(api.undoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: "x" });
+    vi.mocked(api.undoLast).mockResolvedValue({ action: "commit", kind: "restoreRef", branch: "main", message: "x", reverted: false });
     const { result } = renderHook(() => useUndo("/repo"), { wrapper });
     act(() => result.current.notifyDone("저장했어요"));
     await userEvent.click(await screen.findByRole("button", { name: /되돌리기/ }));
