@@ -1,0 +1,32 @@
+[package]
+name = "app"
+description = "hiGit: Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 앱"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "app_lib"
+
+[[bin]]
+name = "higit"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+tauri = { workspace = true }
+
+[workspace]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+
+[workspace.dependencies]
+tauri = { version = "2.12", features = [] }
+tauri-build = { version = "2.7", features = [] }
