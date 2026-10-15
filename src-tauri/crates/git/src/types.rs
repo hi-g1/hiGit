@@ -192,6 +192,16 @@ pub enum GitOp {
     Unstage { paths: Vec<String> },
     /// 넣은 내용을 메시지와 함께 저장한다. 사용자의 commit hook과 서명 설정을 따른다.
     Commit { message: String },
+    /// 지금 버전에서 새 브랜치를 만들고 갈아탄다(`switch -c`). 작업 폴더는 그대로라 고친 파일이 따라간다.
+    /// 이름은 core가 `check_branch_name`으로 먼저 검사한다.
+    CreateAndSwitch { name: String },
+    /// 있는 로컬 브랜치로 갈아탄다. 이름 추측(`--guess`)은 끈다.
+    Switch { branch: String },
+    /// 원격 브랜치(`origin/x`)에서 같은 이름의 로컬 브랜치를 만들어 연결하고 갈아탄다.
+    SwitchTrack {
+        local: String,
+        remote_branch: String,
+    },
 }
 
 /// 쓰기 작업의 출력 원문.

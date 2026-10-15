@@ -304,6 +304,23 @@ impl GitBackend for CliBackend {
                 self.runner
                     .run_with_stdin(dir, &["commit", "-F", "-"], message.as_bytes())?
             }
+            // `-c`의 값으로 넘기므로 `-`로 시작해도 옵션으로 읽히지 않는다(이름은 core가 이미 검사).
+            GitOp::CreateAndSwitch { name } => self
+                .runner
+                .run(dir, &["switch", "--no-guess", "-c", name])?,
+            GitOp::Switch { branch } => {
+                let mut args = vec!["switch", "--no-guess"];
+                push_revs(&mut args, Cmd::Switch, self.git_version(), &[branch]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::SwitchTrack {
+                local,
+                remote_branch,
+            } => {
+                let mut args = vec!["switch", "-c", local, "--track"];
+                push_revs(&mut args, Cmd::Switch, self.git_version(), &[remote_branch]);
+                self.runner.run(dir, &args)?
+            }
         };
         Ok(OpOutput {
             stdout: out.stdout_lossy(),

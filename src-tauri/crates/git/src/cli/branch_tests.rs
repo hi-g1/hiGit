@@ -1,7 +1,7 @@
 //! 브랜치·원격 조회를 실제 git으로 시험한다.
 
 use crate::testutil;
-use crate::{BranchKind, CliBackend, GitBackend, RepoPath};
+use crate::{BranchKind, CliBackend, FailureKind, GitBackend, GitOp, RepoPath};
 
 fn commit(dir: &std::path::Path, file: &str, text: &str) {
     std::fs::write(dir.join(file), text).unwrap();
@@ -146,4 +146,139 @@ fn branch_name_check() {
     ] {
         assert!(!backend.check_branch_name(bad).unwrap(), "{bad}");
     }
+}
+
+fn head(backend: &CliBackend, path: &RepoPath) -> Option<String> {
+    backend.status(path).unwrap().branch.head
+}
+
+#[test]
+fn create_and_switch_keeps_changes() {
+    let repo = testutil::init_repo();
+    commit(repo.path(), "a.txt", "하나");
+    std::fs::write(repo.path().join("a.txt"), "고침").unwrap();
+    std::fs::write(repo.path().join("새 파일.txt"), "새").unwrap();
+    let backend = testutil::backend();
+    let path = RepoPath::new(repo.path());
+    backend
+        .run(
+            &path,
+            &GitOp::CreateAndSwitch {
+                name: "기능/새것".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(head(&backend, &path).as_deref(), Some("기능/새것"));
+    // 고친 파일이 따라온다.
+    assert_eq!(
+        std::fs::read_to_string(repo.path().join("a.txt")).unwrap(),
+        "고침"
+    );
+    assert!(repo.path().join("새 파일.txt").exists());
+
+    let err = backend
+        .run(
+            &path,
+            &GitOp::CreateAndSwitch {
+                name: "main".into(),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), FailureKind::BranchExists, "{}", err.detail());
+}
+
+#[test]
+fn switch_between_local_branches() {
+    let repo = testutil::init_repo();
+    commit(repo.path(), "a.txt", "하나");
+    testutil::git(repo.path(), &["branch", "other"]);
+    let backend = testutil::backend();
+    let path = RepoPath::new(repo.path());
+    backend
+        .run(
+            &path,
+            &GitOp::Switch {
+                branch: "other".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(head(&backend, &path).as_deref(), Some("other"));
+
+    // other에서 a.txt를 바꿔 저장하고, main으로 돌아가며 덮어쓸 변경을 만든다.
+    commit(repo.path(), "a.txt", "other 쪽");
+    std::fs::write(repo.path().join("a.txt"), "저장 안 한 고침").unwrap();
+    let err = backend
+        .run(
+            &path,
+            &GitOp::Switch {
+                branch: "main".into(),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), FailureKind::WouldOverwrite, "{}", err.detail());
+
+    // 이름을 추측해 원격 브랜치를 만들지 않는다.
+    let err = backend
+        .run(
+            &path,
+            &GitOp::Switch {
+                branch: "없는-브랜치".into(),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(
+        head(&backend, &path).as_deref(),
+        Some("other"),
+        "{}",
+        err.detail()
+    );
+}
+
+#[test]
+fn switch_to_option_like_branch_is_not_an_option() {
+    let repo = testutil::init_repo();
+    commit(repo.path(), "a.txt", "하나");
+    testutil::git(repo.path(), &["update-ref", "refs/heads/-x", "HEAD"]);
+    let backend = testutil::backend();
+    if !super::args::supports_end_of_options(super::args::Cmd::Switch, backend.version().unwrap()) {
+        eprintln!("이 git은 --end-of-options 확인 범위 밖이라 건너뜁니다.");
+        return;
+    }
+    let path = RepoPath::new(repo.path());
+    backend
+        .run(
+            &path,
+            &GitOp::Switch {
+                branch: "-x".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(head(&backend, &path).as_deref(), Some("-x"));
+}
+
+#[test]
+fn switch_track_creates_local_branch_from_remote() {
+    let remote = tempfile::tempdir().unwrap();
+    testutil::git(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+    let repo = testutil::init_repo();
+    commit(repo.path(), "a.txt", "하나");
+    let url = remote.path().to_string_lossy().into_owned();
+    testutil::git(repo.path(), &["remote", "add", "origin", &url]);
+    testutil::git(repo.path(), &["push", "-q", "origin", "main:원격것"]);
+    testutil::git(repo.path(), &["fetch", "-q", "origin"]);
+    let backend = local_backend();
+    let path = RepoPath::new(repo.path());
+    backend
+        .run(
+            &path,
+            &GitOp::SwitchTrack {
+                local: "원격것".into(),
+                remote_branch: "origin/원격것".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(head(&backend, &path).as_deref(), Some("원격것"));
+    let b = backend.branches(&path).unwrap();
+    let local = b.iter().find(|x| x.name == "원격것").unwrap();
+    assert_eq!(local.upstream.as_deref(), Some("origin/원격것"));
 }
