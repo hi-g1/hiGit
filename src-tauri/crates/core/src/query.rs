@@ -170,7 +170,8 @@ impl Queries {
                 continue;
             }
             let message = stash_message(&e.subject).to_string();
-            let files = self.git.parked_paths(&root, &e.oid)?.len();
+            // 받은 저장소의 이상한 항목 하나가 목록 전체를 막지 않게, 못 읽으면 0개로 센다.
+            let files = self.git.parked_paths(&root, &e.oid).map_or(0, |p| p.len());
             let branch = message
                 .strip_prefix(STASH_PREFIX)
                 .map(|b| b.trim().to_string())
@@ -464,7 +465,11 @@ impl Queries {
             else {
                 continue;
             };
-            let count = self.git.parked_paths(&root, &oid)?.len();
+            // 못 읽는 맡긴 ref(받은 저장소가 꽂은 것)는 없는 것으로 본다.
+            let Ok(paths) = self.git.parked_paths(&root, &oid) else {
+                continue;
+            };
+            let count = paths.len();
             parked.push((branch, u32::try_from(count).unwrap_or(u32::MAX)));
         }
         let parked_count = |name: &str| {

@@ -31,7 +31,12 @@ pub(crate) fn leftovers(
         };
         let name_ok = crate::actions::names::validate_ref_like(branch).is_ok()
             && ref_name(branch).len() - PARKED_PREFIX.len() <= MAX_NAME_BYTES;
-        if !name_ok || !safe_paths(&git.parked_paths(repo, &e.oid)?) {
+        // 든 파일을 읽지 못하는 항목(커밋이 아님, git이 거부한 경로)도 건너뛴다. 항목 하나가
+        // 조회 전체를 막지 않게 한다.
+        let paths_ok = git
+            .parked_paths(repo, &e.oid)
+            .is_ok_and(|paths| safe_paths(&paths));
+        if !name_ok || !paths_ok {
             continue;
         }
         out.push(Leftover {
@@ -57,12 +62,9 @@ pub(crate) fn branch_of(refname: &str) -> Option<String> {
     Some(encoded.replace("%2F", "/").replace("%25", "%"))
 }
 
-/// 저장소 안의 상대 경로이고 `.git` 폴더를 건드리지 않는다.
+/// 저장소 안의 상대 경로이고 `.git` 폴더(Windows의 다른 이름 포함)를 건드리지 않는다.
 fn safe_paths(paths: &[String]) -> bool {
-    crate::actions::paths::validate(paths).is_ok()
-        && !paths
-            .iter()
-            .any(|p| p.split('/').any(|c| c.eq_ignore_ascii_case(".git")))
+    crate::actions::paths::validate(paths).is_ok() && paths.iter().all(|p| git::safe_relative(p))
 }
 
 /// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`.

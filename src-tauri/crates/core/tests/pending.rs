@@ -307,3 +307,83 @@ fn recover_parked_moves_leftovers_to_parked_refs() {
         .collect();
     assert_eq!(listed, vec![odd, mine]);
 }
+
+fn git_in(dir: &Path, args: &[&str], input: &str) -> String {
+    use std::io::Write;
+    let mut child = std::process::Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let out = child.wait_with_output().unwrap();
+    assert!(out.status.success(), "git {args:?}");
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
+}
+
+/// 받은 저장소가 꽂아 둘 수 있는 가짜 맡긴 항목: 새 파일 쪽 트리에 `<folder>/config`가 든다.
+fn fake_parked(dir: &Path, folder: &str) -> String {
+    let blob = git_in(dir, &["hash-object", "-w", "--stdin"], "x\n");
+    let sub = git_in(dir, &["mktree"], &format!("100644 blob {blob}\tconfig\n"));
+    let bad = git_in(dir, &["mktree"], &format!("040000 tree {sub}\t{folder}\n"));
+    let tree = git(dir, &["rev-parse", "HEAD^{tree}"]);
+    let index = git(
+        dir,
+        &["commit-tree", &tree, "-p", "HEAD", "-m", "index on main"],
+    );
+    let untracked = git(dir, &["commit-tree", &bad, "-m", "untracked files on main"]);
+    let stash = git(
+        dir,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            "HEAD",
+            "-p",
+            &index,
+            "-p",
+            &untracked,
+            "-m",
+            "On main: higit parked main",
+        ],
+    );
+    git(dir, &["stash", "store", "-m", "higit parked main", &stash]);
+    stash
+}
+
+#[test]
+fn fake_parked_entries_touching_the_git_folder_are_not_recovered() {
+    let repo = repo();
+    let dir = repo.path();
+    let dot_git = fake_parked(dir, ".git");
+    let short_name = fake_parked(dir, "GIT~1");
+    let core = core(dir);
+    assert_eq!(core.pending_work(dir).unwrap().leftover_parked, 0);
+    assert_eq!(
+        core.execute(dir, &ActionInput::RecoverParked, None)
+            .unwrap(),
+        higit_core::view::ActionResult::ParkedRecovered { count: 0 }
+    );
+    let refs = git(dir, &["for-each-ref", "--format=%(refname)", "refs/higit/"]);
+    assert!(refs.is_empty(), "{refs}");
+    // 임시 보관 목록에는 그대로 보이고, 목록 조회가 막히지 않는다.
+    let listed: Vec<String> = core
+        .queries()
+        .stashes(dir)
+        .unwrap()
+        .items
+        .into_iter()
+        .map(|i| i.oid)
+        .collect();
+    assert_eq!(listed, vec![short_name, dot_git.clone()]);
+    // 못 읽는 맡긴 ref가 있어도 브랜치 목록이 막히지 않는다.
+    git(dir, &["update-ref", "refs/higit/parked/main", &dot_git]);
+    core.queries().branches(dir).unwrap();
+}
