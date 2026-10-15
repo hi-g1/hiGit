@@ -322,3 +322,138 @@ fn log_stats_for_shown_versions() {
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
 }
+
+/// 1만 개 버전(갈라짐·합치기·태그 포함) 저장소를 fast-import로 만든다.
+fn big_repo(versions: usize) -> tempfile::TempDir {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let repo = tempfile::tempdir().unwrap();
+    let dir = repo.path();
+    git(dir, &["init", "-q", "-b", "main"]);
+    git(dir, &["config", "user.name", "테스트"]);
+    git(dir, &["config", "user.email", "t@example.com"]);
+    let mut stream = String::new();
+    let mut mark = 0usize;
+    let mut main_tip = 0usize;
+    let mut commit =
+        |stream: &mut String, branch: &str, from: usize, merge: Option<usize>, i: usize| -> usize {
+            mark += 1;
+            let msg = format!("버전 {i}");
+            let body = format!("{i}\n");
+            stream.push_str(&format!("commit refs/heads/{branch}\nmark :{mark}\n"));
+            stream.push_str(&format!(
+                "committer 테스트 <t@example.com> {} +0000\n",
+                1_600_000_000 + i
+            ));
+            stream.push_str(&format!("data {}\n{msg}\n", msg.len()));
+            if from > 0 {
+                stream.push_str(&format!("from :{from}\n"));
+            }
+            if let Some(m) = merge {
+                stream.push_str(&format!("merge :{m}\n"));
+            }
+            stream.push_str(&format!(
+                "M 644 inline f{}.txt\ndata {}\n{body}\n",
+                i % 50,
+                body.len()
+            ));
+            mark
+        };
+    let mut i = 0;
+    while i < versions {
+        if i % 1000 == 999 {
+            // 곁가지 세 개를 만들고 main에 합친다.
+            let mut side = main_tip;
+            for _ in 0..3 {
+                i += 1;
+                side = commit(&mut stream, "곁", side, None, i);
+            }
+            i += 1;
+            main_tip = commit(&mut stream, "main", main_tip, Some(side), i);
+        } else {
+            i += 1;
+            main_tip = commit(&mut stream, "main", main_tip, None, i);
+        }
+        if i % 500 == 0 {
+            stream.push_str(&format!("tag v{i}\nfrom :{main_tip}\ntagger 테스트 <t@example.com> 1600000000 +0000\ndata 1\nt\n"));
+        }
+    }
+    let mut child = Command::new("git")
+        .args(["fast-import", "--quiet"])
+        .current_dir(dir)
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stream.as_bytes())
+        .unwrap();
+    assert!(child.wait().unwrap().success());
+    git(dir, &["reset", "-q", "--hard", "main"]);
+    repo
+}
+
+/// 성능 측정(반복 2b M16). `cargo test -p higit-core --test history -- --ignored --nocapture`로 돌린다.
+#[test]
+#[ignore]
+fn perf_ten_thousand_versions() {
+    let repo = big_repo(10_000);
+    let dir = repo.path();
+    let core = core(dir);
+    let time = |label: &str, f: &mut dyn FnMut()| {
+        let start = std::time::Instant::now();
+        f();
+        let ms = start.elapsed().as_millis();
+        println!("{label}: {ms}ms");
+        ms
+    };
+    let mut first = None;
+    let first_ms = time("첫 쪽 200개", &mut || {
+        first = Some(page(
+            &core,
+            dir,
+            LogQuery {
+                limit: 200,
+                ..Default::default()
+            },
+        ));
+    });
+    let tips = first.unwrap().tips;
+    time("깊은 쪽 skip 9800", &mut || {
+        page(
+            &core,
+            dir,
+            LogQuery {
+                skip: 9800,
+                limit: 200,
+                tips: Some(tips.clone()),
+                ..Default::default()
+            },
+        );
+    });
+    time("25쪽 이어 받기", &mut || {
+        for p in 1..=25 {
+            page(
+                &core,
+                dir,
+                LogQuery {
+                    skip: p * 200,
+                    limit: 200,
+                    tips: Some(tips.clone()),
+                    ..Default::default()
+                },
+            );
+        }
+    });
+    let head = git(dir, &["rev-parse", "HEAD"]);
+    let oids: Vec<String> = git(dir, &["rev-list", "--max-count=100", &head])
+        .lines()
+        .map(str::to_string)
+        .collect();
+    time("줄 수 100개", &mut || {
+        core.queries().log_stats(dir, oids.clone()).unwrap();
+    });
+    assert!(first_ms < 3_000, "첫 쪽이 너무 느리다: {first_ms}ms");
+}
