@@ -28,6 +28,7 @@ const view: BranchListView = {
   remote: [row("origin/main", { remote: "origin" }), row("origin/원격만", { remote: "origin" })],
   defaultBranch: "main",
   orphanParked: [],
+  remotes: ["origin"],
 };
 
 describe("브랜치 목록 모델", () => {

@@ -1,5 +1,6 @@
 import { BranchList } from "../../features/branches/BranchList";
 import { branchColor } from "../../features/branches/color";
+import { SyncButton } from "../../features/sync/SyncButton";
 import type { RepoInfo, StatusView } from "../../lib/api";
 import { useBranches } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
@@ -24,7 +25,9 @@ export function TopBar({
 }) {
   const m = useMessages();
   const branch = status?.branch;
-  const defaultBranch = useBranches(repo.path).data?.defaultBranch ?? null;
+  const branches = useBranches(repo.path).data;
+  const defaultBranch = branches?.defaultBranch ?? null;
+  const hasRemote = (branches?.remotes.length ?? 0) > 0;
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
   const toggleHistory = () => setView(view === "history" ? "home" : "history");
@@ -42,6 +45,9 @@ export function TopBar({
         </BranchList>
       )}
       <span className={styles.spacer} />
+      {branch && hasRemote && (
+        <SyncButton repo={repo.path} branch={branch} changedFiles={status?.files.length ?? 0} />
+      )}
       <button
         type="button"
         className={`${styles.textButton} ${view === "history" ? styles.on : ""}`}

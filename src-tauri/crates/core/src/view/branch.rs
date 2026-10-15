@@ -13,6 +13,8 @@ pub struct BranchListView {
     pub default_branch: Option<String>,
     /// 앱 밖에서 브랜치를 지워 맡긴 파일만 남은 브랜치 이름(D-054).
     pub orphan_parked: Vec<String>,
+    /// 원격 이름. 비어 있으면 동기화 버튼을 숨긴다(D-045).
+    pub remotes: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

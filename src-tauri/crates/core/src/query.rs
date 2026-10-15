@@ -197,6 +197,7 @@ impl Queries {
             remote,
             default_branch,
             orphan_parked,
+            remotes: remotes.into_iter().map(|r| r.name).collect(),
         })
     }
 

@@ -32,6 +32,7 @@ const view: BranchListView = {
   remote: [],
   defaultBranch: "main",
   orphanParked: [],
+  remotes: ["origin"],
 };
 
 function show(onDone = vi.fn()) {

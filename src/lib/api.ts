@@ -17,6 +17,7 @@ export type {
   BranchListView,
   BranchNameCheck,
   BranchRow,
+  BranchView,
   ChangeKind,
   ChangedFile,
   CommitRow,

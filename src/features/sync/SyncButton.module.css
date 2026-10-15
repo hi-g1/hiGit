@@ -1,0 +1,61 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--surface-hover);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.button:disabled {
+  cursor: progress;
+}
+
+/* 고친 파일이 없고 주고받을 것이 있으면 화면의 주 버튼(design.md "버튼") */
+.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.primary:hover {
+  background: var(--primary-hover);
+}
+
+.count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.overlap {
+  color: var(--deleted);
+  font-size: var(--font-size-sm);
+}
+
+/* 원격 확인 실패: 색만으로 알리지 않게 툴팁과 이름을 함께 둔다(design.md "상태 표시") */
+.failed {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--modified);
+}

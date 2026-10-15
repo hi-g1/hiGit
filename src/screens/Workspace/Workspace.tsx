@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { SyncButton } from "../../features/sync/SyncButton";
+import { useSyncStore } from "../../features/sync/syncStore";
+import { useAutoFetch } from "../../features/sync/useAutoFetch";
 import { useUndo } from "../../features/undo/useUndo";
 import type { RepoInfo, StatusView } from "../../lib/api";
-import { useStatus } from "../../lib/queries";
+import { useBranches, useStatus } from "../../lib/queries";
 import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -28,6 +31,10 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const watch = useRepoWatch(repo.path);
   // Ctrl+Z·Ctrl+Shift+Z(D-042). 버전 저장 결과 토스트도 여기서 띄운다.
   const { notifyDone } = useUndo(repo.path);
+  const hasRemote = (useBranches(repo.path).data?.remotes.length ?? 0) > 0;
+  // 원격 확인은 저절로(D-045, D-055). 원격이 없으면 하지 않는다.
+  useAutoFetch(repo.path, hasRemote);
+  const syncError = useSyncStore((s) => s.error);
   const files = status.data?.files;
   const selected = files?.find((f) => f.path === selectedPath);
   // 홈에 들어오면 첫 파일의 비교가 열려 있다. 고른 파일이 사라지면(버전으로 저장됨) 다음 첫 파일로.
@@ -49,6 +56,11 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           <Button variant="secondary" onClick={watch.reload}>
             {m.reload}
           </Button>
+        </div>
+      )}
+      {syncError !== null && syncError !== undefined && (
+        <div className={styles.syncError}>
+          <ErrorNotice error={syncError} />
         </div>
       )}
       {view === "history" ? (
@@ -90,7 +102,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
                 }}
               />
             ) : (
-              status.data && <AllSaved status={status.data} />
+              status.data && <AllSaved repo={repo.path} status={status.data} hasRemote={hasRemote} />
             )}
           </section>
         </div>
@@ -99,8 +111,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   );
 }
 
-/** 고친 파일이 없을 때 오른쪽(r-saved.png). 이름과 숫자만(D-049). 동기화 버튼은 H15. */
-function AllSaved({ status }: { status: StatusView }) {
+/** 고친 파일이 없을 때 오른쪽(r-saved.png). 이름과 숫자만(D-049). */
+function AllSaved({ repo, status, hasRemote }: { repo: string; status: StatusView; hasRemote: boolean }) {
   const m = useMessages();
   const { branch } = status;
   return (
@@ -108,6 +120,11 @@ function AllSaved({ status }: { status: StatusView }) {
       {branch.name && <p className={styles.savedBranch}>{branch.name}</p>}
       <p className={styles.savedTitle}>{m.noChangedFiles}</p>
       {branch.upstream && branch.ahead > 0 && <p className={styles.savedMeta}>{m.unpushed(branch.ahead)}</p>}
+      {hasRemote && branch.name && (
+        <div>
+          <SyncButton repo={repo} branch={branch} changedFiles={0} shortcut={false} />
+        </div>
+      )}
     </div>
   );
 }

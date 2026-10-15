@@ -78,6 +78,8 @@ export type BranchListView = {
 	defaultBranch: string | null,
 	/**  앱 밖에서 브랜치를 지워 맡긴 파일만 남은 브랜치 이름(D-054). */
 	orphanParked: string[],
+	/**  원격 이름. 비어 있으면 동기화 버튼을 숨긴다(D-045). */
+	remotes: string[],
 };
 
 export type BranchNameCheck = {
