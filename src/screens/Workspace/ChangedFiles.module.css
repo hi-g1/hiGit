@@ -51,3 +51,11 @@
   box-shadow: inset var(--selected-bar) 0 0 var(--accent);
   background: var(--surface-hover);
 }
+
+.list:focus {
+  outline: none;
+}
+
+.list:focus-visible {
+  box-shadow: inset 2px 0 0 var(--accent);
+}

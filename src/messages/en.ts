@@ -16,6 +16,15 @@ export const en: Messages = {
   undone: "Undone",
   redone: "Redone",
   saved: "Saved",
+  suggest: {
+    one: (kind: "update" | "add" | "delete" | "rename", name: string) =>
+      ({ update: `Update ${name}`, add: `Add ${name}`, delete: `Delete ${name}`, rename: `Rename ${name}` })[kind],
+    many: (kind: "update" | "add" | "delete" | "rename", name: string, more: number) =>
+      `${({ update: "Update", add: "Add", delete: "Delete", rename: "Update" })[kind]} ${name} and ${more} more`,
+  },
+  versionName: "Version name",
+  descriptionPlaceholder: "Add a description",
+  noChangedFiles: "No changed files",
   startTitle: "Projects",
   lastPlace: (when: string) => `Last worked on · ${when}`,
   continueWork: "Continue",
@@ -73,10 +82,6 @@ export const en: Messages = {
   noDiff: "No lines changed.",
   diffTruncated: "The file is large, so only the beginning is shown.",
   noNewlineAtEnd: "no newline at end of file",
-  commitPlaceholder: "What did you change?",
-  commitNeedsFiles: "No files included. Click the checkbox in front of a file.",
-  commitNeedsMessage: "Describe what you changed.",
-  committed: (shortOid: string) => `Version saved · ${shortOid}`,
   loading: "Loading…",
   showDetail: "Show details",
   notARepo: "This folder is not managed with Git yet.",

@@ -1,4 +1,4 @@
-import { CommitBox } from "../../features/commit/CommitBox";
+import { NameBox } from "../../features/commit/NameBox";
 import { useEffect } from "react";
 import { DiffView } from "../../features/diff/DiffView";
 import { HistoryList } from "../../features/history/HistoryList";
@@ -26,7 +26,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const log = useLog(repo.path);
   const watch = useRepoWatch(repo.path);
   // Ctrl+Z·Ctrl+Shift+Z(D-042). 버전 저장 결과 토스트도 여기서 띄운다.
-  useUndo(repo.path);
+  const { notifyDone } = useUndo(repo.path);
   const selectPath = useRepoStore((s) => s.selectPath);
   const selected = status.data?.files.find((f) => f.path === selectedPath);
   // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 선택도 지운다.
@@ -61,6 +61,14 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           <LeftTabs changeCount={status.data?.files.length} />
           {tab === "changes" ? (
             <div id="panel-changes" role="tabpanel" aria-labelledby="tab-changes" className={styles.scroll}>
+              {status.data && (
+                <NameBox
+                  folder={repo.path}
+                  files={status.data.files}
+                  onSaved={notifyDone}
+                  focusAfterSave={() => document.getElementById("changed-files")?.focus()}
+                />
+              )}
               {status.isPending && <EmptyState>{m.loading}</EmptyState>}
               {status.error && <ErrorNotice error={status.error} />}
               {status.data &&
@@ -84,12 +92,6 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
                   </>
                 ))}
             </div>
-          )}
-          {tab === "changes" && (
-            <CommitBox
-              folder={repo.path}
-              includedCount={status.data?.files.filter((f) => f.staged).length ?? 0}
-            />
           )}
         </section>
         {tab === "changes" && (

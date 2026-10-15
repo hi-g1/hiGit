@@ -40,6 +40,9 @@
   --font-size-title: 15px;
   --font-size-home: 20px;
 
+  /* 버전 이름 칸(문서 제목형, D-044) */
+  --font-size-name: 20px;
+
   /* 시작 화면 프로젝트 이름(D-031) */
   --font-size-display: 26px;
   --font-weight-regular: 400;

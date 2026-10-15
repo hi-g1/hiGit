@@ -35,7 +35,8 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
     );
 
   return (
-    <div>
+    // 버전을 저장하면 포커스가 여기로 온다(다음 Ctrl+Z가 글자 되돌리기로 가지 않게).
+    <div id="changed-files" tabIndex={-1} className={styles.list}>
       <div className={`${rowStyles.row} ${styles.head}`}>
         <TermTooltip id={all ? "unstage" : "stage"}>
           <Checkbox

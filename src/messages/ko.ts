@@ -22,6 +22,15 @@ export const ko = {
   undone: "되돌렸어요",
   redone: "다시 했어요",
   saved: "저장했어요",
+  suggest: {
+    one: (kind: "update" | "add" | "delete" | "rename", name: string) =>
+      ({ update: `${name} 고침`, add: `${name} 추가`, delete: `${name} 삭제`, rename: `${name} 이름 바꿈` })[kind],
+    many: (kind: "update" | "add" | "delete" | "rename", name: string, more: number) =>
+      `${name} 외 ${more}개 ${({ update: "고침", add: "추가", delete: "삭제", rename: "고침" })[kind]}`,
+  },
+  versionName: "버전 이름",
+  descriptionPlaceholder: "설명 추가",
+  noChangedFiles: "고친 파일 없음",
   startTitle: "프로젝트",
   lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,
   continueWork: "이어서 하기",
@@ -81,10 +90,6 @@ export const ko = {
   noDiff: "바뀐 줄이 없어요.",
   diffTruncated: "파일이 커서 앞부분만 보여요.",
   noNewlineAtEnd: "파일 끝 줄바꿈 없음",
-  commitPlaceholder: "무엇을 바꿨나요?",
-  commitNeedsFiles: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
-  commitNeedsMessage: "무엇을 바꿨는지 적어 주세요.",
-  committed: (shortOid: string) => `버전을 저장했어요 · ${shortOid}`,
   loading: "불러오는 중…",
   showDetail: "자세히 보기",
   notARepo: "이 폴더는 아직 Git으로 관리하지 않는 폴더예요.",

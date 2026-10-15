@@ -1,0 +1,59 @@
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+/* 문서 제목처럼: 테두리 없는 큰 글자. 포커스는 아래 밑줄로 보인다(D-044). */
+.name,
+.description {
+  width: 100%;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.name {
+  overflow: hidden;
+  font-size: var(--font-size-name);
+  font-weight: var(--font-weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description {
+  min-height: calc(var(--font-size-md) * var(--line-height) + 4px);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height);
+  resize: none;
+  field-sizing: content;
+}
+
+.name::placeholder,
+.description::placeholder {
+  color: var(--text-muted);
+}
+
+.name:focus-visible,
+.description:focus-visible {
+  border-bottom-color: var(--accent);
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
