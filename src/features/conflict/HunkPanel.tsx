@@ -21,7 +21,7 @@ function SideHeader({ side, info }: { side: Side; info: ConflictSide | null }) {
       <Term id={side} />
       {info && (
         <span className={styles.meta}>
-          {info.label} · {info.author} · {formatDate(info.at, now, locale)} · {info.summary}
+          {[info.label, info.author, formatDate(info.at, now, locale), info.summary].filter(Boolean).join(" · ")}
         </span>
       )}
     </span>

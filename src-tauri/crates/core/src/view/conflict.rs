@@ -9,6 +9,8 @@ use specta::Type;
 pub enum ConflictContext {
     /// 합치기(`MERGE_HEAD`).
     Merge,
+    /// 꺼내다 겹친 맡긴 파일(D-083). 합칠 쪽은 "맡겨 둔 파일"이다.
+    Unpark,
 }
 
 /// 카드 이름표: "내 브랜치 · 사람 · 날짜 · 이름".

@@ -19,9 +19,86 @@ pub(crate) fn branch_of(refname: &str) -> Option<String> {
     Some(encoded.replace("%2F", "/").replace("%25", "%"))
 }
 
+/// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`.
+/// 이 파일이 있을 때만 충돌 해결 화면이 "맡겨 둔 파일" 맥락으로 읽는다(터미널의 `stash pop`과 구분).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct UnparkMarker {
+    pub branch: String,
+    pub oid: String,
+}
+
+fn marker_path(git_dir: &std::path::Path) -> std::path::PathBuf {
+    git_dir.join("higit").join("unpark.json")
+}
+
+/// `higit` 폴더와 표식 파일이 링크가 아닐 때만 쓰고 읽는다(journal과 같은 까닭).
+fn place_ok(git_dir: &std::path::Path) -> bool {
+    let dir = git_dir.join("higit");
+    let not_link = |p: &std::path::Path, want_dir: bool| match std::fs::symlink_metadata(p) {
+        Ok(m) => !m.file_type().is_symlink() && m.is_dir() == want_dir,
+        Err(_) => true,
+    };
+    not_link(&dir, true) && not_link(&marker_path(git_dir), false)
+}
+
+pub(crate) fn write_marker(git_dir: &std::path::Path, marker: &UnparkMarker) -> crate::Result<()> {
+    let fail = |_| crate::CoreError::InvalidInput("겹침 해결을 시작하지 못했어요");
+    if !place_ok(git_dir) {
+        return Err(crate::CoreError::InvalidInput(
+            "겹침 해결을 시작하지 못했어요",
+        ));
+    }
+    std::fs::create_dir_all(git_dir.join("higit")).map_err(fail)?;
+    if !place_ok(git_dir) {
+        return Err(crate::CoreError::InvalidInput(
+            "겹침 해결을 시작하지 못했어요",
+        ));
+    }
+    let text = serde_json::to_string(marker)
+        .map_err(|_| crate::CoreError::InvalidInput("겹침 해결을 시작하지 못했어요"))?;
+    std::fs::write(marker_path(git_dir), text).map_err(fail)
+}
+
+pub(crate) fn read_marker(git_dir: &std::path::Path) -> Option<UnparkMarker> {
+    if !place_ok(git_dir) {
+        return None;
+    }
+    let text = std::fs::read_to_string(marker_path(git_dir)).ok()?;
+    let marker: UnparkMarker = serde_json::from_str(&text).ok()?;
+    let valid = git::Oid::parse(&marker.oid).is_some()
+        && crate::actions::names::validate_ref_like(&marker.branch).is_ok();
+    valid.then_some(marker)
+}
+
+pub(crate) fn clear_marker(git_dir: &std::path::Path) {
+    if place_ok(git_dir) {
+        let _ = std::fs::remove_file(marker_path(git_dir));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn marker_round_trip_and_bad_values() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(read_marker(dir.path()), None);
+        let m = UnparkMarker {
+            branch: "기능/한글".into(),
+            oid: "a".repeat(40),
+        };
+        write_marker(dir.path(), &m).unwrap();
+        assert_eq!(read_marker(dir.path()), Some(m));
+        std::fs::write(
+            dir.path().join("higit/unpark.json"),
+            r#"{"branch":"-x","oid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
+        )
+        .unwrap();
+        assert_eq!(read_marker(dir.path()), None);
+        clear_marker(dir.path());
+        assert!(!dir.path().join("higit/unpark.json").exists());
+    }
 
     #[test]
     fn round_trip() {

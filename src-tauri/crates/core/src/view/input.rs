@@ -204,6 +204,8 @@ pub struct TakeOutInput {
 pub enum TakeOutSource {
     /// 임시 보관 목록의 항목.
     Stash { oid: String },
+    /// 지금 브랜치에 맡겨 둔 파일. 겹치면 충돌 해결 화면으로 간다(D-083).
+    Parked { branch: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

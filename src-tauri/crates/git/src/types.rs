@@ -288,6 +288,12 @@ pub enum GitOp {
     StashDropOid { oid: Oid },
     /// 맡긴 파일을 꺼낸다. 작업 폴더가 깨끗해야 하고, 겹치면 깨끗하게 되돌린 뒤 `UnparkConflict`.
     Unpark { oid: Oid },
+    /// 맡긴 파일을 꺼내되 겹친 곳은 충돌로 남긴다(`stash apply`, 충돌 해결 화면용, D-083).
+    /// 작업 폴더가 깨끗해야 하고, 맡길 때 새 파일이던 것이 이미 있으면 `UnparkConflict`.
+    /// 겹쳤으면 [`OpOutput::stdout`]이 아니라 index의 충돌 항목으로 알 수 있다.
+    UnparkKeep { oid: Oid },
+    /// `UnparkKeep`으로 남긴 상태를 꺼내기 전으로 되돌린다. 바뀐 파일이 모두 그 stash의 경로일 때만.
+    UnparkAbort { oid: Oid },
     /// 원격의 새 버전을 받아 온다(내 파일은 그대로). `remote`가 없으면 모든 원격. prune은 하지 않는다.
     Fetch {
         remote: Option<String>,

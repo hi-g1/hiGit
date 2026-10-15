@@ -92,7 +92,7 @@ export function Conflict({ repo, state, onDone }: Props) {
           input: { resolutions: toResolutions(files, picks), locale },
         });
         store.clear();
-        onDone(m.merged);
+        onDone(unpark ? m.parkedResolved : m.merged);
       } else {
         await api.executeAction(repo, { id: "conflict-abort" });
         store.clear();
@@ -113,6 +113,9 @@ export function Conflict({ repo, state, onDone }: Props) {
   useShortcut("nextHunk", () => move(1), active);
   useShortcut("prevHunk", () => move(-1), active);
 
+  // 꺼내다 겹친 맡긴 파일이면 합칠 쪽은 "맡겨 둔 파일"이고, 마치면 버전 대신 고친 파일로 남는다(D-083).
+  const unpark = state.context === "unpark";
+  const theirs = state.theirs && unpark ? { ...state.theirs, label: m.parkedSide, summary: "" } : state.theirs;
   const view = file.data;
   const hunk = view?.kind === "text" ? view.hunks[place?.hunk ?? 0] : undefined;
 
@@ -121,7 +124,7 @@ export function Conflict({ repo, state, onDone }: Props) {
       <header className={styles.head}>
         <span className={styles.route}>
           <span className={styles.dotTheirs} aria-hidden="true" />
-          <span>{state.theirs?.label}</span>
+          <span>{theirs?.label}</span>
           <span aria-hidden="true">→</span>
           <span className={styles.dotOurs} aria-hidden="true" />
           <span>{state.ours?.label}</span>
@@ -130,12 +133,12 @@ export function Conflict({ repo, state, onDone }: Props) {
         <span className={styles.spacer} />
         <TermTooltip id="merge">
           <Button variant="text" disabled={busy} onClick={() => void run(false)}>
-            {m.abortMerge}
+            {unpark ? m.abortUnpark : m.abortMerge}
           </Button>
         </TermTooltip>
         {done && (
           <Button id="finish-merge" variant="primary" disabled={busy} onClick={() => void run(true)}>
-            {m.finishMerge}
+            {unpark ? m.finishUnpark : m.finishMerge}
           </Button>
         )}
       </header>
@@ -186,7 +189,7 @@ export function Conflict({ repo, state, onDone }: Props) {
                 hunk={hunk}
                 pick={hunkPick(picks, place.path, place.hunk)}
                 ours={state.ours}
-                theirs={state.theirs}
+                theirs={theirs}
                 onPick={choose}
               />
             )}
@@ -195,7 +198,7 @@ export function Conflict({ repo, state, onDone }: Props) {
                 file={view}
                 pick={picks[place.path]}
                 ours={state.ours}
-                theirs={state.theirs}
+                theirs={theirs}
                 onPick={(side) => choose({ kind: side })}
               />
             )}

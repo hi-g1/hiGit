@@ -19,6 +19,40 @@ pub(crate) fn stash_message(subject: &str) -> &str {
     subject.split_once(": ").map_or(subject, |(_, m)| m)
 }
 
+/// 지금 브랜치에 맡겨 둔 파일을 꺼낸다. 겹치면 충돌을 남기고 표식을 적어 충돌 해결 화면으로(D-083).
+fn take_out_parked(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    branch: &str,
+) -> Result<Outcome> {
+    crate::actions::names::validate_ref_like(branch)?;
+    if git.current_branch(repo)?.as_deref() != Some(branch) {
+        return Err(CoreError::InvalidInput(
+            "지금 브랜치의 맡긴 파일만 꺼낼 수 있어요",
+        ));
+    }
+    let name = crate::parked::ref_name(branch);
+    let oid = git
+        .resolve_ref(repo, &name)?
+        .ok_or(CoreError::InvalidInput("맡겨 둔 파일이 없어요"))?;
+    git.run(repo, &GitOp::UnparkKeep { oid: oid.clone() })?;
+    let paths = crate::actions::merge::conflict_paths(git, repo)?;
+    if paths.is_empty() {
+        // 깨끗이 꺼냈다. 맡긴 ref는 백업으로 옮긴 뒤 지운다(D-054).
+        crate::undo::backup::backup_oid(git, repo, &oid, &format!("parked-{branch}"))?;
+        git.delete_ref(repo, &name, &git::RefExpect::Is(oid))?;
+        return Ok(Outcome::TookOut);
+    }
+    crate::parked::write_marker(
+        &git.git_dir(repo)?,
+        &crate::parked::UnparkMarker {
+            branch: branch.to_string(),
+            oid: oid.to_string(),
+        },
+    )?;
+    Ok(Outcome::MergeConflicts { paths })
+}
+
 pub struct StashAction {
     meta: ActionMeta,
 }
@@ -100,6 +134,7 @@ impl Action for StashAction {
                     git.run(repo, &GitOp::StashDropOid { oid })?;
                     Ok(Outcome::TookOut)
                 }
+                TakeOutSource::Parked { branch } => take_out_parked(git, repo, branch),
             },
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }

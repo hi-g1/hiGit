@@ -558,6 +558,8 @@ impl GitBackend for CliBackend {
             GitOp::StashDropIf { oid } => return self.stash_drop_if(repo, oid),
             GitOp::StashDropOid { oid } => return self.stash_drop_oid(repo, oid),
             GitOp::Unpark { oid } => return self.unpark(repo, oid),
+            GitOp::UnparkKeep { oid } => return self.unpark_keep(repo, oid),
+            GitOp::UnparkAbort { oid } => return self.unpark_abort(repo, oid),
             GitOp::Fetch { remote, background } => {
                 let mode = if *background {
                     NetMode::Background

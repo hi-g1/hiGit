@@ -112,6 +112,8 @@ pub enum Outcome {
     Stashed,
     /// 보관해 둔 것을 꺼냈다.
     TookOut,
+    /// 꺼내다 겹친 맡긴 파일을 충돌 해결 화면에서 풀었다(고친 파일로 남음, D-083).
+    ParkedResolved,
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -137,6 +139,8 @@ impl Outcome {
             Outcome::Synced(r) if r.merge_started => JournalMode::Skip,
             // 꺼내기는 HEAD를 바꾸지 않아 앞선 되돌리기를 막지 않는다.
             Outcome::TookOut => JournalMode::Skip,
+            // 맡긴 ref를 지웠다. 그 앞의 갈아타기를 되돌리면 맡긴 파일이 엉키므로 경계를 둔다.
+            Outcome::ParkedResolved => JournalMode::Barrier,
             _ => JournalMode::Journal,
         }
     }

@@ -108,6 +108,26 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
     }
   };
 
+  // 꺼내다 겹친 맡긴 파일을 충돌 해결 화면에서 푼다(D-083). 겹치지 않게 됐으면 바로 꺼낸다.
+  const resolveParked = async (branch: string) => {
+    setPending(true);
+    try {
+      const result = await api.executeAction(repo, {
+        id: "take-out",
+        input: { source: { kind: "parked", branch } },
+      });
+      close();
+      if (result.kind === "tookOut") show(m.parkedResolved);
+    } catch (e) {
+      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+    } finally {
+      setPending(false);
+      for (const key of ["status", "branches", "mergeState", "homeMap"]) {
+        void queryClient.invalidateQueries({ queryKey: [key, repo] });
+      }
+    }
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -139,6 +159,13 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
         onKeyDown={onKeyDown}
       />
       {view && <List view={view} choices={choices} query={query} active={active} onPick={(c) => void run(c)} />}
+      {!query.trim() && view?.local.some((b) => b.isHead && b.parkBlocked) && current !== null && (
+        <div className={styles.mergeInto}>
+          <Button disabled={pending} onClick={() => void resolveParked(current)}>
+            {m.resolveOverlap}
+          </Button>
+        </div>
+      )}
       {!query.trim() && hint?.kind === "into" && hint.branch !== null && (
         <div className={styles.mergeInto}>
           <TermTooltip id="merge">

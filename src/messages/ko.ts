@@ -45,6 +45,12 @@ export const ko = {
   sideSubmodule: "하위 저장소",
   sideLink: (target: string) => `링크 → ${target}`,
   merged: "합쳤어요",
+  // 꺼내다 겹친 맡긴 파일(D-083)
+  resolveOverlap: "겹침 해결",
+  parkedSide: "맡겨 둔 파일",
+  finishUnpark: "꺼내기 마치기",
+  abortUnpark: "꺼내기 그만두기",
+  parkedResolved: "맡겨 둔 파일을 꺼냈어요",
   mainNewVersions: (branch: string, n: number) => `${branch}에 새 버전 ${n}개`,
   bringMerge: (branch: string) => `${branch} 가져와 ${t("merge")}`,
   mergeIntoBranch: (branch: string) => `${branch}에 ${t("merge")}`,

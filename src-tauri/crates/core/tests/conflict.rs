@@ -326,3 +326,154 @@ mod finish {
         assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
     }
 }
+
+mod unpark {
+    use super::*;
+    use higit_core::view::{
+        ActionInput, ActionResult, ConflictContext, ConflictFinishInput, FileChoice,
+        FileResolution, HunkChoice, SwitchInput, TakeOutInput, TakeOutSource,
+    };
+
+    /// main에서 고친 a.txt를 기능으로 갈아타며 맡긴 뒤, 터미널에서 main의 같은 줄을 다르게 저장했다.
+    /// 지금은 main에 있고 맡긴 파일을 꺼내면 겹친다.
+    fn parked_overlap() -> (tempfile::TempDir, Core) {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        for (k, v) in [
+            ("core.autocrlf", "false"),
+            ("user.name", "테스트"),
+            ("user.email", "t@example.com"),
+            ("commit.gpgsign", "false"),
+        ] {
+            git(dir, &["config", k, v]);
+        }
+        std::fs::write(dir.join("a.txt"), "1\n2\n3\n").unwrap();
+        commit_all(dir, "처음");
+        git(dir, &["branch", "기능"]);
+        let core = core(dir);
+        std::fs::write(dir.join("a.txt"), "1\n내 고침\n3\n").unwrap();
+        core.execute(
+            dir,
+            &ActionInput::Switch(SwitchInput {
+                branch: "기능".into(),
+                remote: None,
+            }),
+            None,
+        )
+        .unwrap();
+        git(dir, &["switch", "-q", "main"]);
+        std::fs::write(dir.join("a.txt"), "1\n다른 고침\n3\n").unwrap();
+        commit_all(dir, "다른 고침");
+        (repo, core)
+    }
+
+    fn take_out(core: &Core, dir: &Path) -> ActionResult {
+        core.execute(
+            dir,
+            &ActionInput::TakeOut(TakeOutInput {
+                source: TakeOutSource::Parked {
+                    branch: "main".into(),
+                },
+            }),
+            None,
+        )
+        .unwrap()
+    }
+
+    fn parked_ref(dir: &Path) -> String {
+        git(
+            dir,
+            &["for-each-ref", "--format=%(refname)", "refs/higit/parked/"],
+        )
+    }
+
+    #[test]
+    fn resolving_parked_files_leaves_them_as_edits() {
+        let (repo, core) = parked_overlap();
+        let dir = repo.path();
+        let head = git(dir, &["rev-parse", "HEAD"]);
+        assert_eq!(
+            take_out(&core, dir),
+            ActionResult::MergeConflicts {
+                paths: vec!["a.txt".into()]
+            }
+        );
+        let state = core.queries().conflict_state(dir).unwrap();
+        assert!(state.active && !state.other_operation);
+        assert_eq!(state.context, ConflictContext::Unpark);
+        assert_eq!(state.files.len(), 1);
+        let r = core
+            .execute(
+                dir,
+                &ActionInput::ConflictFinish(ConflictFinishInput {
+                    resolutions: vec![FileResolution {
+                        path: "a.txt".into(),
+                        choice: FileChoice::Hunks {
+                            choices: vec![HunkChoice::Theirs],
+                        },
+                    }],
+                    locale: "ko".into(),
+                }),
+                None,
+            )
+            .unwrap();
+        assert_eq!(r, ActionResult::ParkedResolved);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "1\n내 고침\n3\n"
+        );
+        assert_eq!(git(dir, &["status", "--porcelain"]), "M a.txt");
+        assert_eq!(
+            git(dir, &["rev-parse", "HEAD"]),
+            head,
+            "버전은 만들지 않는다"
+        );
+        assert_eq!(parked_ref(dir), "");
+        let backups = git(
+            dir,
+            &["for-each-ref", "--format=%(refname)", "refs/higit/backup/"],
+        );
+        assert!(backups.contains("parked-main"), "{backups}");
+        assert!(!dir.join(".git/higit/unpark.json").exists());
+        assert!(!core.queries().conflict_state(dir).unwrap().active);
+    }
+
+    #[test]
+    fn stopping_goes_back_and_keeps_the_parked_files() {
+        let (repo, core) = parked_overlap();
+        let dir = repo.path();
+        take_out(&core, dir);
+        let r = core
+            .execute(dir, &ActionInput::ConflictAbort, None)
+            .unwrap();
+        assert_eq!(r, ActionResult::ConflictAborted);
+        assert_eq!(git(dir, &["status", "--porcelain"]), "");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "1\n다른 고침\n3\n"
+        );
+        assert_eq!(parked_ref(dir), "refs/higit/parked/main");
+        assert!(!dir.join(".git/higit/unpark.json").exists());
+    }
+
+    #[test]
+    fn a_stash_pop_in_a_terminal_is_not_the_apps_unpark() {
+        let (repo, core) = parked_overlap();
+        let dir = repo.path();
+        // 터미널에서 맡긴 stash를 직접 적용해 충돌을 만들었다(표식 없음).
+        let oid = git(dir, &["rev-parse", "refs/higit/parked/main"]);
+        let _ = std::process::Command::new("git")
+            .args(["stash", "apply", &oid])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        let state = core.queries().conflict_state(dir).unwrap();
+        assert!(!state.active);
+        assert!(state.other_operation);
+        let err = core
+            .execute(dir, &ActionInput::ConflictAbort, None)
+            .unwrap_err();
+        assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+    }
+}

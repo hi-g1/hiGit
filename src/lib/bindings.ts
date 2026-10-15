@@ -93,7 +93,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  합치기를 마쳤다(합친 버전을 만들었다). */
 { kind: "conflictFinished" } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -189,7 +189,9 @@ export type CommitRow = {
 /**  어떤 작업이 충돌을 남겼는지. */
 export type ConflictContext = 
 /**  합치기(`MERGE_HEAD`). */
-"merge";
+"merge" | 
+/**  꺼내다 겹친 맡긴 파일(D-083). 합칠 쪽은 "맡겨 둔 파일"이다. */
+"unpark";
 
 /**  `Text`는 곳마다 고르고, `Whole`은 파일 단위로 한쪽을 고른다. */
 export type ConflictFileKind = "text" | "whole";
@@ -544,7 +546,9 @@ export type TakeOutInput = {
 /**  꺼낼 곳. 화면은 조회가 준 값만 보낸다(core가 다시 확인한다). */
 export type TakeOutSource = 
 /**  임시 보관 목록의 항목. */
-{ kind: "stash"; oid: string };
+{ kind: "stash"; oid: string } | 
+/**  지금 브랜치에 맡겨 둔 파일. 겹치면 충돌 해결 화면으로 간다(D-083). */
+{ kind: "parked"; branch: string };
 
 /**  신뢰 확인에서 고른 것(D-039). */
 export type TrustChoice = 

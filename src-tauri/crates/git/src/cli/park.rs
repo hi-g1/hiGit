@@ -31,6 +31,92 @@ impl CliBackend {
         })
     }
 
+    /// 꺼내되 겹친 곳은 충돌로 남긴다. 겹치지 않으면 `unpark`와 같다.
+    pub(super) fn unpark_keep(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
+        let dir = repo.as_path();
+        let status = crate::GitBackend::status(self, repo)?;
+        if !status.entries.is_empty() {
+            return Err(GitError::Refused {
+                kind: FailureKind::WouldOverwrite,
+                detail: "고친 파일이 있어 맡긴 파일을 꺼내지 않았어요".into(),
+            });
+        }
+        // 새 파일끼리 겹치면 `stash apply`가 충돌을 남기지 못하고 멈춘다.
+        let untracked = self.stash_untracked_paths(repo, oid)?;
+        if let Some(clash) = untracked.iter().find(|p| exists(dir, p)) {
+            return Err(GitError::Refused {
+                kind: FailureKind::UnparkConflict,
+                detail: format!("already exists: {clash}"),
+            });
+        }
+        let mut args = vec!["stash", "apply"];
+        push_revs(&mut args, Cmd::Stash, self.git_version(), &[oid.as_str()]);
+        match self.runner.run(Some(dir), &args) {
+            Ok(out) => Ok(OpOutput {
+                stdout: out.stdout_lossy(),
+                stderr: out.stderr_lossy(),
+                oid: Some(oid.clone()),
+            }),
+            // 겹쳐서 충돌 항목을 남겼으면 성공으로 본다. 그 밖의 실패는 꺼내기 전으로 돌린다.
+            Err(e) => {
+                let conflicted = self.ls_index(repo)?.iter().any(|e| e.stage > 0);
+                if conflicted {
+                    return Ok(OpOutput {
+                        oid: Some(oid.clone()),
+                        ..OpOutput::default()
+                    });
+                }
+                self.runner.run(Some(dir), &["reset", "--hard", "-q"])?;
+                for path in &untracked {
+                    let _ = std::fs::remove_file(dir.join(path));
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// `unpark_keep`이 남긴 상태를 꺼내기 전으로. 그 stash에 없는 파일이 바뀌었으면 하지 않는다.
+    pub(super) fn unpark_abort(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
+        let dir = repo.as_path();
+        let mut owned = self.stash_paths(repo, oid)?;
+        owned.extend(self.stash_untracked_paths(repo, oid)?);
+        let status = crate::GitBackend::status(self, repo)?;
+        if let Some(other) = status.entries.iter().find(|e| !owned.contains(&e.path)) {
+            return Err(GitError::Refused {
+                kind: FailureKind::WouldOverwrite,
+                detail: format!("not from the parked files: {}", other.path),
+            });
+        }
+        self.runner.run(Some(dir), &["reset", "--hard", "-q"])?;
+        for path in self.stash_untracked_paths(repo, oid)? {
+            let _ = std::fs::remove_file(dir.join(path));
+        }
+        Ok(OpOutput::default())
+    }
+
+    /// stash가 고친 파일 경로(첫 부모와 stash 커밋 사이).
+    fn stash_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>> {
+        let first = format!("{oid}^1");
+        let mut args = vec!["diff", "--name-only", "-z", "--no-renames"];
+        push_revs(
+            &mut args,
+            Cmd::Diff,
+            self.git_version(),
+            &[&first, oid.as_str()],
+        );
+        let out = self.runner.run(Some(repo.as_path()), &args)?;
+        let paths: Vec<String> = out
+            .stdout_lossy()
+            .split('\0')
+            .filter(|p| !p.is_empty())
+            .map(str::to_string)
+            .collect();
+        if let Some(bad) = paths.iter().find(|p| !safe_relative(p)) {
+            return Err(GitError::Parse(format!("stash 경로: {bad}")));
+        }
+        Ok(paths)
+    }
+
     /// stash 목록(`log -g refs/stash`). 레코드는 `해시\0시각\0제목\0`.
     pub(super) fn stashes(&self, repo: &RepoPath) -> Result<Vec<crate::StashEntry>> {
         if self.stash_top(repo)?.is_none() {

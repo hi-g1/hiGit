@@ -10,6 +10,31 @@ const MAX_TEXT: u64 = 1024 * 1024;
 const CONTEXT: usize = 3;
 const PREVIEW: usize = 40;
 
+/// 지금 충돌을 남긴 작업.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Context {
+    /// 합치기(`MERGE_HEAD`).
+    Merge,
+    /// 앱이 시작한 맡긴 파일 꺼내기(D-083). 표식과 맡긴 ref가 서로 맞을 때만.
+    Unpark(crate::parked::UnparkMarker),
+}
+
+/// 앱이 다룰 수 있는 충돌 맥락. 합치는 중이면 `Merge`, 앱이 시작한 꺼내기가 충돌을 남겼으면
+/// `Unpark`, 아니면 `None`(다른 도구의 작업이거나 충돌 없음).
+pub(crate) fn context(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Context>> {
+    if git.resolve_ref(repo, "MERGE_HEAD")?.is_some() {
+        return Ok(Some(Context::Merge));
+    }
+    let Some(marker) = crate::parked::read_marker(&git.git_dir(repo)?) else {
+        return Ok(None);
+    };
+    let on_branch = git.current_branch(repo)?.as_deref() == Some(marker.branch.as_str());
+    let parked = git.resolve_ref(repo, &crate::parked::ref_name(&marker.branch))?;
+    let same = parked.as_ref().map(|o| o.as_str()) == Some(marker.oid.as_str());
+    let conflicted = git.index_entries(repo)?.iter().any(|e| e.stage > 0);
+    Ok((on_branch && same && conflicted).then_some(Context::Unpark(marker)))
+}
+
 /// 경로 하나의 충돌 항목(stage 1: 원래, 2: 내 쪽, 3: 합칠 쪽).
 #[derive(Debug, Clone)]
 pub(crate) struct ConflictPath {

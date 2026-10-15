@@ -383,6 +383,7 @@ pub enum ActionResult {
     ConflictAborted,
     Stashed,
     TookOut,
+    ParkedResolved,
 }
 
 impl From<Outcome> for ActionResult {
@@ -424,6 +425,7 @@ impl From<Outcome> for ActionResult {
             Outcome::ConflictAborted => ActionResult::ConflictAborted,
             Outcome::Stashed => ActionResult::Stashed,
             Outcome::TookOut => ActionResult::TookOut,
+            Outcome::ParkedResolved => ActionResult::ParkedResolved,
         }
     }
 }

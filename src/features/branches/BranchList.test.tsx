@@ -63,6 +63,21 @@ describe("브랜치 목록", () => {
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("합쳤어요"));
   });
 
+  it("지금 브랜치의 맡긴 파일이 겹쳤으면 겹침 해결", async () => {
+    show();
+    vi.mocked(api.branches).mockResolvedValue({
+      ...view,
+      local: [row("로그인 기능", { isHead: true, parkedCount: 2, parkBlocked: true }), ...view.local.slice(1)],
+    });
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "mergeConflicts", paths: ["a.txt"] });
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "겹침 해결" }));
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", {
+      id: "take-out",
+      input: { source: { kind: "parked", branch: "로그인 기능" } },
+    });
+  });
+
   it("제안이 없으면 main에 합치기도 없다", async () => {
     show();
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));

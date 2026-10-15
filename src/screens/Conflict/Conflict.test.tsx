@@ -134,6 +134,18 @@ describe("충돌 해결 화면", () => {
     expect(within(preview).getByText("새 줄 2")).toBeInTheDocument();
   });
 
+  it("맡긴 파일 꺼내기면 합칠 쪽이 맡겨 둔 파일이고 단추 이름이 다르다", async () => {
+    vi.mocked(api.conflictFile).mockResolvedValue(textFile);
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Conflict repo="/repo" state={{ ...state, context: "unpark", files: [state.files[0]!] }} onDone={vi.fn()} />
+      </AppProviders>,
+    );
+    expect(screen.getAllByText("맡겨 둔 파일").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "꺼내기 그만두기" })).toBeInTheDocument();
+    expect(screen.queryByText(/버튼 문구 통일/)).not.toBeInTheDocument();
+  });
+
   it("합치기 그만두기는 늘 보이고 conflict-abort를 부른다", async () => {
     show();
     await userEvent.click(screen.getByRole("button", { name: "합치기 그만두기" }));

@@ -4,9 +4,8 @@ use std::collections::HashSet;
 
 use git::GitOp;
 
-use super::merge::merging;
 use super::{paths, repo_of};
-use crate::conflict::{ConflictPath, Pick, assemble, conflict_paths, load_file};
+use crate::conflict::{ConflictPath, Context, Pick, assemble, conflict_paths, load_file};
 use crate::view::{ActionInput, ConflictFileKind, FileChoice, HunkChoice, SideState};
 use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
@@ -120,26 +119,78 @@ impl Action for ConflictAction {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
         refuse_other_operation(git, repo)?;
-        if !merging(git, repo)? {
+        let Some(context) = crate::conflict::context(git, repo)? else {
             return Err(CoreError::InvalidInput("합치는 중이 아니에요"));
-        }
+        };
         let conflicts = conflict_paths(git.index_entries(repo)?);
-        match (self.meta.id, input) {
-            ("conflict-abort", ActionInput::ConflictAbort) => {
+        match (self.meta.id, input, context) {
+            ("conflict-abort", ActionInput::ConflictAbort, Context::Merge) => {
                 back_up_conflicts(git, repo, &conflicts)?;
                 git.run(repo, &GitOp::MergeAbort)?;
                 Ok(Outcome::ConflictAborted)
             }
-            ("conflict-finish", ActionInput::ConflictFinish(input)) => {
-                finish(git, repo, &conflicts, input)?;
+            ("conflict-abort", ActionInput::ConflictAbort, Context::Unpark(marker)) => {
+                back_up_conflicts(git, repo, &conflicts)?;
+                let oid = git::Oid::parse(&marker.oid).ok_or(CoreError::ConflictChanged)?;
+                // 맡긴 ref는 그대로 두고 꺼내기 전으로 돌린다.
+                git.run(repo, &GitOp::UnparkAbort { oid })?;
+                crate::parked::clear_marker(&git.git_dir(repo)?);
+                Ok(Outcome::ConflictAborted)
+            }
+            ("conflict-finish", ActionInput::ConflictFinish(input), Context::Merge) => {
+                write_resolutions(git, repo, &conflicts, input)?;
+                commit_merge(git, repo, &input.locale)?;
                 Ok(Outcome::ConflictFinished)
+            }
+            ("conflict-finish", ActionInput::ConflictFinish(input), Context::Unpark(marker)) => {
+                write_resolutions(git, repo, &conflicts, input)?;
+                finish_unpark(git, repo, &marker)?;
+                Ok(Outcome::ParkedResolved)
             }
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }
     }
 }
 
-fn finish(
+/// 꺼내다 겹친 맡긴 파일을 마친다: 넣은 상태로 남은 것을 모두 고친 파일로 돌리고, 맡긴 ref는
+/// 백업으로 옮긴 뒤 지우고, 표식을 지운다(D-083).
+fn finish_unpark(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    marker: &crate::parked::UnparkMarker,
+) -> Result<()> {
+    use git::Change;
+    let staged: Vec<String> = git
+        .status(repo)?
+        .entries
+        .iter()
+        .filter(|e| !matches!(e.index, Change::Unmodified | Change::Untracked))
+        .map(|e| e.path.clone())
+        .collect();
+    if !staged.is_empty() {
+        git.run(repo, &GitOp::Unstage { paths: staged })?;
+    }
+    let oid = git::Oid::parse(&marker.oid).ok_or(CoreError::ConflictChanged)?;
+    let name = crate::parked::ref_name(&marker.branch);
+    crate::undo::backup::backup_oid(git, repo, &oid, &format!("parked-{}", marker.branch))?;
+    git.delete_ref(repo, &name, &git::RefExpect::Is(oid))?;
+    crate::parked::clear_marker(&git.git_dir(repo)?);
+    Ok(())
+}
+
+/// 합친 버전을 만든다. 저장이 hook에 막혀도 해결한 것은 남아 다시 마치면 저장만 한다.
+fn commit_merge(git: &dyn git::GitBackend, repo: &git::RepoPath, locale: &str) -> Result<()> {
+    let label = theirs_label(git, repo)?;
+    let message = if locale.starts_with("ko") {
+        format!("{label} 가져와 합침")
+    } else {
+        format!("Merge {label}")
+    };
+    git.run(repo, &GitOp::Commit { message })?;
+    Ok(())
+}
+
+fn write_resolutions(
     git: &dyn git::GitBackend,
     repo: &git::RepoPath,
     conflicts: &[ConflictPath],
@@ -232,13 +283,5 @@ fn finish(
     for op in &writes {
         git.run(repo, op)?;
     }
-    // 모두 해결했으면 합친 버전을 만든다. 저장이 hook에 막혀도 해결한 것은 남아 다시 마치면 저장만 한다.
-    let label = theirs_label(git, repo)?;
-    let message = if input.locale.starts_with("ko") {
-        format!("{label} 가져와 합침")
-    } else {
-        format!("Merge {label}")
-    };
-    git.run(repo, &GitOp::Commit { message })?;
     Ok(())
 }

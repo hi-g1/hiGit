@@ -72,19 +72,29 @@ impl Queries {
         ]
         .iter()
         .any(|f| git_dir.join(f).exists());
+        let context = crate::conflict::context(self.git.as_ref(), &root)?;
         let mut view = ConflictStateView {
-            active: merge_head.is_some(),
-            context: ConflictContext::Merge,
+            active: context.is_some(),
+            context: match context {
+                Some(crate::conflict::Context::Unpark(_)) => ConflictContext::Unpark,
+                _ => ConflictContext::Merge,
+            },
             ours: None,
             theirs: None,
             files: Vec::new(),
             more_files: 0,
             clean_files: 0,
-            other_operation: merge_head.is_none() && (other || !conflicts.is_empty()),
+            other_operation: context.is_none() && (other || !conflicts.is_empty()),
         };
-        let Some(merge_head) = merge_head else {
-            return Ok(view);
+        let theirs_rev = match (&context, merge_head) {
+            (Some(crate::conflict::Context::Unpark(m)), _) => match git::Oid::parse(&m.oid) {
+                Some(oid) => oid,
+                None => return Ok(view),
+            },
+            (Some(crate::conflict::Context::Merge), Some(head)) => head,
+            _ => return Ok(view),
         };
+        let merge_head = theirs_rev;
         let branches = self.git.branches(&root)?;
         let side = |rev: &str, label: Option<String>| -> Result<Option<ConflictSide>> {
             let commit = self
