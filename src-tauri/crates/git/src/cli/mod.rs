@@ -349,6 +349,20 @@ impl GitBackend for CliBackend {
         Ok(PathBuf::from(text.trim_end_matches(['\n', '\r'])))
     }
 
+    fn common_dir(&self, repo: &RepoPath) -> Result<PathBuf> {
+        // `--path-format=absolute`는 2.31부터라, 상대 경로면 저장소 최상위(실행 위치) 기준으로 붙인다.
+        let out = self
+            .runner
+            .run(Some(repo.as_path()), &["rev-parse", "--git-common-dir"])?;
+        let text = out.stdout_utf8()?;
+        let path = PathBuf::from(text.trim_end_matches(['\n', '\r']));
+        Ok(if path.is_absolute() {
+            path
+        } else {
+            repo.as_path().join(path)
+        })
+    }
+
     fn is_ancestor(&self, repo: &RepoPath, ancestor: &str, descendant: &str) -> Result<bool> {
         let mut args = vec!["merge-base", "--is-ancestor"];
         push_revs(
@@ -425,23 +439,27 @@ impl GitBackend for CliBackend {
     }
 
     fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>> {
-        // 설정이 하나도 없으면 종료 코드 1이 아니라 빈 출력이다. 레코드는 `키\n값\0`.
+        // `--local`은 `extensions.worktreeConfig`의 config.worktree를 빠뜨리므로 범위를 함께 받아
+        // local·worktree만 남긴다. 전역·시스템과 앱이 붙인 `-c`(command)는 뺀다.
+        // 레코드는 `범위\0키\n값\0`. 설정이 하나도 없으면 종료 코드 1.
         let out = match self.runner.run(
             Some(repo.as_path()),
-            &["config", "--local", "--includes", "--list", "-z"],
+            &["config", "--show-scope", "--includes", "--list", "-z"],
         ) {
             Ok(out) => out,
             Err(GitError::Failed { code: Some(1), .. }) => return Ok(Vec::new()),
             Err(e) => return Err(e),
         };
-        Ok(out
-            .stdout_lossy()
-            .split('\0')
-            .filter(|r| !r.is_empty())
-            .map(|r| match r.split_once('\n') {
+        let text = out.stdout_lossy();
+        let fields: Vec<&str> = text.split('\0').collect();
+        let (pairs, _) = fields.as_chunks::<2>();
+        Ok(pairs
+            .iter()
+            .filter(|[scope, _]| matches!(*scope, "local" | "worktree"))
+            .map(|[_, record]| match record.split_once('\n') {
                 Some((k, v)) => (k.to_string(), v.to_string()),
                 // 값 없이 키만 쓴 불리언(`[core] bare`)
-                None => (r.to_string(), String::new()),
+                None => (record.to_string(), String::new()),
             })
             .collect())
     }
@@ -960,12 +978,66 @@ mod tests {
             .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
             .unwrap();
         assert_eq!(out.stdout_utf8().unwrap().trim(), "false");
+        // 앱이 붙인 덮어쓰기(command 범위)는 저장소 설정으로 읽지 않는다.
+        assert!(
+            !backend
+                .local_config(&path)
+                .unwrap()
+                .contains(&("core.fsmonitor".into(), "false".into()))
+        );
         backend.set_repo_overrides(&path, Vec::new());
         let out = backend
             .runner
             .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
             .unwrap();
         assert_eq!(out.stdout_utf8().unwrap().trim(), "touch pwned");
+
+        // worktree 설정도 읽는다.
+        testutil::git(
+            repo.path(),
+            &["config", "extensions.worktreeConfig", "true"],
+        );
+        testutil::git(
+            repo.path(),
+            &["config", "--worktree", "core.sshCommand", "evil"],
+        );
+        let config = backend.local_config(&path).unwrap();
+        assert!(config.contains(&("core.sshcommand".into(), "evil".into())));
+    }
+
+    #[test]
+    fn common_dir_of_a_linked_worktree_is_the_main_git_folder() {
+        let repo = testutil::init_repo();
+        testutil::git(
+            repo.path(),
+            &["commit", "-q", "--allow-empty", "-m", "첫 버전"],
+        );
+        let backend = testutil::backend();
+        let main = backend.common_dir(&RepoPath::new(repo.path())).unwrap();
+        assert!(main.join("HEAD").is_file(), "{main:?}");
+        let wt = tempfile::tempdir().unwrap();
+        let wt_path = wt.path().join("wt");
+        testutil::git(
+            repo.path(),
+            &[
+                "worktree",
+                "add",
+                "-q",
+                &wt_path.to_string_lossy(),
+                "-b",
+                "wt",
+            ],
+        );
+        let common = backend.common_dir(&RepoPath::new(&wt_path)).unwrap();
+        assert_eq!(common.canonicalize().unwrap(), main.canonicalize().unwrap());
+        assert_ne!(
+            backend
+                .git_dir(&RepoPath::new(&wt_path))
+                .unwrap()
+                .canonicalize()
+                .unwrap(),
+            main.canonicalize().unwrap()
+        );
     }
 
     #[test]

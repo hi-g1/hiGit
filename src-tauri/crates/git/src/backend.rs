@@ -53,6 +53,9 @@ pub trait GitBackend: Send + Sync {
     /// 이 작업 트리의 git 폴더(절대 경로). worktree면 `.git/worktrees/<이름>`.
     fn git_dir(&self, repo: &RepoPath) -> Result<PathBuf>;
 
+    /// worktree끼리 함께 쓰는 git 폴더(절대 경로). hooks와 설정이 여기 있다. worktree가 아니면 `git_dir`와 같다.
+    fn common_dir(&self, repo: &RepoPath) -> Result<PathBuf>;
+
     /// `ancestor`가 `descendant`의 조상이거나 같은 버전인지.
     fn is_ancestor(&self, repo: &RepoPath, ancestor: &str, descendant: &str) -> Result<bool>;
 
@@ -81,7 +84,7 @@ pub trait GitBackend: Send + Sync {
     /// 맡겨 둔 stash에 든 파일 경로(고친 파일과 새 파일).
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
 
-    /// 저장소 로컬 설정(include 포함)의 (키, 값) 목록. 키는 git이 주는 소문자 형태.
+    /// 저장소 설정(local, worktree. include 포함)의 (키, 값) 목록. 키는 git이 주는 소문자 형태.
     fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>;
 
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.

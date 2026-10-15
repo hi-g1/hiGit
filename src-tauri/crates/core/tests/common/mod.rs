@@ -211,6 +211,10 @@ impl GitBackend for FakeGit {
         Ok(repo.as_path().join(".git"))
     }
 
+    fn common_dir(&self, repo: &RepoPath) -> git::Result<PathBuf> {
+        self.git_dir(repo)
+    }
+
     fn is_ancestor(&self, _repo: &RepoPath, _a: &str, _b: &str) -> git::Result<bool> {
         Ok(false)
     }

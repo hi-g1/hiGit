@@ -150,7 +150,8 @@ impl TrustStore {
                 }
             }
         }
-        let hooks = hook_files(&git.git_dir(repo)?.join("hooks"));
+        // hooks는 worktree끼리 함께 쓰는 git 폴더에 있다(연결된 worktree의 git 폴더가 아니다).
+        let hooks = hook_files(&git.common_dir(repo)?.join("hooks"));
         for (name, content) in &hooks {
             keys.push(format!("hooks/{name}"));
             fingerprint.push(format!("hooks/{name}:{}", hex(&Sha256::digest(content))));
@@ -192,9 +193,13 @@ fn safe_value(key: &str, value: &str) -> Option<&'static str> {
         "core.sshcommand" => Some("ssh"),
         "core.editor" | "sequence.editor" => Some(":"),
         "core.pager" => Some("cat"),
-        "core.askpass" | "credential.helper" | "diff.external" | "uploadpack.packobjectshook" => {
-            Some("")
-        }
+        "core.askpass"
+        | "credential.helper"
+        | "diff.external"
+        | "uploadpack.packobjectshook"
+        | "core.gitproxy"
+        | "core.alternaterefscommand"
+        | "gpg.ssh.defaultkeycommand" => Some(""),
         "gpg.program" => Some("gpg"),
         "include.path" => Some(""),
         _ => None,
@@ -213,6 +218,8 @@ fn safe_value(key: &str, value: &str) -> Option<&'static str> {
         || ends("credential.", &[".helper"])
         || ends("gpg.", &[".program"])
         || ends("includeif.", &[".path"])
+        || ends("difftool.", &[".cmd"])
+        || ends("mergetool.", &[".cmd"])
     {
         Some("")
     } else {
@@ -220,19 +227,37 @@ fn safe_value(key: &str, value: &str) -> Option<&'static str> {
     }
 }
 
-/// hooks 폴더에서 `.sample`이 아닌 파일(이름, 내용).
+/// 지문에 쓰는 hook 내용 상한. hook은 작은 스크립트라 이보다 길면 앞부분만 본다.
+const HOOK_READ_LIMIT: u64 = 1024 * 1024;
+
+/// hooks 폴더에서 `.sample`이 아닌 파일과 링크(이름, 지문 재료). git은 링크된 hook도 실행한다.
+/// 링크는 따라가 읽지 않고 대상 경로를 지문으로 쓴다(`/dev/zero` 같은 곳을 읽지 않게).
 fn hook_files(dir: &Path) -> Vec<(String, Vec<u8>)> {
+    use std::io::Read;
     let Ok(read) = std::fs::read_dir(dir) else {
         return Vec::new();
     };
     let mut found: Vec<(String, Vec<u8>)> = read
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
-        .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| !n.ends_with(".sample"))
-        .map(|n| {
-            let content = std::fs::read(dir.join(&n)).unwrap_or_default();
-            (n, content)
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if name.ends_with(".sample") {
+                return None;
+            }
+            let kind = e.file_type().ok()?;
+            let content = if kind.is_symlink() {
+                let target = std::fs::read_link(e.path()).unwrap_or_default();
+                format!("link:{}", target.display()).into_bytes()
+            } else if kind.is_file() {
+                let mut buf = Vec::new();
+                if let Ok(file) = std::fs::File::open(e.path()) {
+                    let _ = file.take(HOOK_READ_LIMIT).read_to_end(&mut buf);
+                }
+                buf
+            } else {
+                return None;
+            };
+            Some((name, content))
         })
         .collect();
     found.sort();
@@ -259,5 +284,26 @@ mod tests {
         assert_eq!(safe_value("user.name", "x"), None);
         assert_eq!(safe_value("core.autocrlf", "true"), None);
         assert_eq!(safe_value("remote.origin.url", "x"), None);
+        assert_eq!(safe_value("core.gitproxy", "x"), Some(""));
+        assert_eq!(safe_value("core.alternaterefscommand", "x"), Some(""));
+        assert_eq!(safe_value("gpg.ssh.defaultkeycommand", "x"), Some(""));
+        assert_eq!(safe_value("mergetool.x.cmd", "x"), Some(""));
+    }
+
+    #[test]
+    fn linked_hooks_are_found_without_reading_the_target() {
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let evil = outside.path().join("evil.sh");
+        std::fs::write(&evil, "#!/bin/sh\n").unwrap();
+        std::fs::write(dir.path().join("pre-commit.sample"), "x").unwrap();
+        if let Err(e) = platform::symlink_file(&evil, &dir.path().join("post-checkout")) {
+            eprintln!("링크를 만들 수 없어 건너뜀: {e}");
+            return;
+        }
+        let found = hook_files(dir.path());
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].0, "post-checkout");
+        assert!(String::from_utf8_lossy(&found[0].1).starts_with("link:"));
     }
 }

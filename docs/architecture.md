@@ -81,6 +81,7 @@ pub trait GitBackend: Send + Sync {
     fn update_ref(&self, repo: &RepoPath, name: &str, new: &Oid, expect: &RefExpect) -> Result<()>; // 그사이 바뀌면 실패
     fn delete_ref(&self, repo: &RepoPath, name: &str, expect: &RefExpect) -> Result<()>;
     fn git_dir(&self, repo: &RepoPath) -> Result<PathBuf>;             // journal 위치. worktree면 .git/worktrees/<이름>
+    fn common_dir(&self, repo: &RepoPath) -> Result<PathBuf>;          // worktree끼리 함께 쓰는 git 폴더(hooks 위치)
     fn write_tree(&self, repo: &RepoPath) -> Result<Option<Oid>>;      // index 트리(되돌리기). 충돌 중이면 None
     // 반복 1b: 기록 비교 (홈·동기화)
     fn is_ancestor(&self, repo: &RepoPath, ancestor: &str, descendant: &str) -> Result<bool>;
@@ -89,7 +90,7 @@ pub trait GitBackend: Send + Sync {
     fn merge_check(&self, repo: &RepoPath, base: Option<&str>, ours: &str, theirs: &str) -> Result<MergeCheck>; // 겹침 미리 보기(D-050)
     // 반복 1b: 맡겨 두기·신뢰
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
-    fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>; // 신뢰 확인용(D-039)
+    fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>; // local·worktree 범위만. 신뢰 확인용(D-039)
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>); // "끄고 열기"의 -c 덮어쓰기
     // 쓰기 작업은 전부 여기로
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;

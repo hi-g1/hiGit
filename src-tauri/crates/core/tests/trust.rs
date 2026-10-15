@@ -185,6 +185,31 @@ fn keys_that_cannot_be_overridden_leave_only_trust() {
 }
 
 #[test]
+fn hooks_of_the_main_folder_count_in_a_linked_worktree() {
+    let data = tempfile::tempdir().unwrap();
+    let repo = tempfile::tempdir().unwrap();
+    let dir = repo.path();
+    git(dir, &["init", "-q", "-b", "main"]);
+    git(dir, &["config", "user.name", "t"]);
+    git(dir, &["config", "user.email", "t@example.com"]);
+    git(dir, &["commit", "-q", "--allow-empty", "-m", "첫 버전"]);
+    let wt_parent = tempfile::tempdir().unwrap();
+    let wt = wt_parent.path().join("wt");
+    git(
+        dir,
+        &["worktree", "add", "-q", &wt.to_string_lossy(), "-b", "wt"],
+    );
+    std::fs::write(dir.join(".git/hooks/post-checkout"), "#!/bin/sh\n").unwrap();
+    let r = core(data.path())
+        .open_project(&wt, OpenHow::Picked)
+        .unwrap();
+    let ProjectOpenResult::NeedsTrust { keys, .. } = r else {
+        panic!("{r:?}");
+    };
+    assert_eq!(keys, ["hooks/post-checkout"]);
+}
+
+#[test]
 fn clean_repo_opens_without_asking() {
     let data = tempfile::tempdir().unwrap();
     let repo = tempfile::tempdir().unwrap();

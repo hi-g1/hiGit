@@ -262,6 +262,9 @@ mod tests {
         fn git_dir(&self, _: &RepoPath) -> git::Result<std::path::PathBuf> {
             unreachable!()
         }
+        fn common_dir(&self, _: &RepoPath) -> git::Result<std::path::PathBuf> {
+            unreachable!()
+        }
         fn is_ancestor(&self, _: &RepoPath, _: &str, _: &str) -> git::Result<bool> {
             unreachable!()
         }
