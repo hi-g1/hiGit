@@ -2,6 +2,7 @@
 // fast: 스테이지된 파일 기준으로 바뀐 쪽만 빠르게(pre-commit). --all이면 두 쪽 모두.
 // full: 전체 테스트와 바인딩 최신 검사(pre-push).
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { selectGroups } from "./check-groups.mjs";
 
 const [mode = "fast", ...flags] = process.argv.slice(2);
@@ -15,6 +16,16 @@ function run(label, cmd, args, cwd = ".") {
     console.error(`\n✖ 검사 실패: ${label}`);
     console.error("  고친 뒤 다시 시도해 주세요. (--no-verify로 건너뛰지 않습니다)");
     process.exit(1);
+  }
+}
+
+const GENERATED = ["src/lib/bindings.ts", "src/lib/action-meta.json"];
+
+function read(path) {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
   }
 }
 
@@ -49,8 +60,14 @@ if (mode === "fast") {
   frontend();
   rustQuick();
   run("Rust 테스트", "cargo", ["test", "-q", "--workspace"], "src-tauri");
+  // 다시 생성해도 파일이 바뀌지 않아야 최신이다. git 상태(스테이지 여부)와 상관없이 내용으로 비교한다.
+  const before = GENERATED.map(read);
   run("바인딩 생성", "cargo", ["run", "-q", "-p", "app", "--bin", "gen-bindings"], "src-tauri");
-  run("바인딩이 최신인지", "git", ["diff", "--exit-code", "--", "src/lib"]);
+  const stale = GENERATED.filter((path, i) => read(path) !== before[i]);
+  if (stale.length > 0) {
+    console.error(`\n✖ 검사 실패: 바인딩이 최신이 아니었습니다. 다시 생성했으니 함께 커밋해 주세요: ${stale.join(", ")}`);
+    process.exit(1);
+  }
 } else {
   console.error(`알 수 없는 검사 종류: ${mode} (fast 또는 full)`);
   process.exit(1);
