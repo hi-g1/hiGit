@@ -10,6 +10,10 @@ use crate::Result;
 
 pub(crate) const BACKUP_PREFIX: &str = "refs/higit/backup/";
 
+/// 이름 조각의 상한(바이트). 파일 시스템의 파일 이름 상한(255)보다 넉넉히 작게 둔다.
+/// 넘으면 백업 ref를 쓰지 못하고, 그러면 되돌리기가 거부된다.
+const MAX_LABEL_BYTES: usize = 200;
+
 /// `refs/higit/backup/<UTC 시각>-<순번>/<이름>`. 이름은 맡긴 ref처럼 `/`를 바꿔 적는다.
 pub(crate) fn ref_name(label: &str) -> String {
     static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -18,7 +22,14 @@ pub(crate) fn ref_name(label: &str) -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let label = label.replace('%', "%25").replace('/', "%2F");
+    let mut label = label.replace('%', "%25").replace('/', "%2F");
+    if label.len() > MAX_LABEL_BYTES {
+        let mut end = MAX_LABEL_BYTES;
+        while !label.is_char_boundary(end) {
+            end -= 1;
+        }
+        label.truncate(end);
+    }
     format!("{BACKUP_PREFIX}{}-{n}/{label}", utc_stamp(secs))
 }
 
@@ -70,5 +81,14 @@ mod tests {
         assert_ne!(a, b);
         assert!(a.starts_with(BACKUP_PREFIX));
         assert!(a.ends_with("/feature%2Fx"), "{a}");
+    }
+
+    #[test]
+    fn long_labels_are_cut_on_a_character_boundary() {
+        let long = format!("undo-{}", "가/".repeat(100));
+        let name = ref_name(&long);
+        let label = name.rsplit('/').next().unwrap();
+        assert!(label.len() <= MAX_LABEL_BYTES, "{}", label.len());
+        assert!(label.starts_with("undo-가%2F"));
     }
 }
