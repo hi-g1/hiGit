@@ -106,6 +106,14 @@
     --diff-del-bg: #33201f;
     --conflict-ours-bg: #1d2e24;
     --conflict-theirs-bg: #1c2633;
+
+    /* 그래프 선·점(D-094). 글자에는 쓰지 않는다 */
+    --graph-1: #7fa7d6;
+    --graph-2: #6bbf8a;
+    --graph-3: #d9a54a;
+    --graph-4: #b59ae0;
+    --graph-5: #5fbcc4;
+    --graph-6: #c9967a;
     --scrollbar-thumb: #3a3c41;
     --overlay: rgb(0 0 0 / 55%);
   }
@@ -134,6 +142,14 @@
   --diff-del-bg: #33201f;
   --conflict-ours-bg: #1d2e24;
   --conflict-theirs-bg: #1c2633;
+
+  /* 그래프 선·점(D-094). 글자에는 쓰지 않는다 */
+  --graph-1: #7fa7d6;
+  --graph-2: #6bbf8a;
+  --graph-3: #d9a54a;
+  --graph-4: #b59ae0;
+  --graph-5: #5fbcc4;
+  --graph-6: #c9967a;
   --scrollbar-thumb: #3a3c41;
   --overlay: rgb(0 0 0 / 55%);
 }

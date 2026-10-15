@@ -66,6 +66,11 @@ const PAIRS: [string, string, number][] = [
   ["--primary", "--surface", 3],
   ["--border-strong", "--surface", 3],
   ["--border-strong", "--bg", 3],
+  // 노선도 선·점(그래픽 3:1, D-094). 글자에는 쓰지 않는다
+  ...[1, 2, 3, 4, 5, 6].flatMap((n): [string, string, number][] => [
+    [`--graph-${n}`, "--bg", 3],
+    [`--graph-${n}`, "--surface", 3],
+  ]),
 ];
 
 const themes = {
