@@ -112,6 +112,8 @@ export const ko = {
     sshAuthFailed: "SSH 인증에 실패했어요. 키가 등록되어 있는지 확인하고, 키에 비밀번호가 있으면 ssh-agent에 올려 주세요.",
     httpAuthFailed: `${t("remote")}에 로그인하지 못했어요.`,
     remoteUnreachable: `${t("remote")}에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.`,
+    protocolNotAllowed: "이 주소 방식은 쓸 수 없어요. https나 ssh 주소를 써 주세요.",
+    unparkConflict: "맡겨 둔 파일이 지금 버전과 겹쳐서 꺼내지 않았어요.",
     gitFailed: "Git 작업이 실패했어요.",
     internal: "예상하지 못한 문제가 생겼어요.",
   } satisfies Record<ErrorCode, string>,

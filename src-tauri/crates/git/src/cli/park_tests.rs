@@ -65,6 +65,11 @@ fn park_and_unpark_round_trip_without_touching_user_stash_list() {
 
     let oid = park(&path, "higit parked main").expect("맡길 것이 있다");
     assert!(entries(&path).is_empty(), "맡긴 뒤 작업 폴더는 깨끗하다");
+    let parked = testutil::backend().parked_paths(&path, &oid).unwrap();
+    assert_eq!(
+        parked,
+        ["a.txt", "b.txt", "새 파일 한글.txt", "지울 파일.txt"]
+    );
     assert_eq!(stash_list(dir), list_before, "사용자 stash 목록은 그대로");
 
     testutil::backend()

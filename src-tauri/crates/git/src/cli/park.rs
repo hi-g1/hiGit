@@ -87,6 +87,30 @@ impl CliBackend {
         }
     }
 
+    /// stash에 든 파일: 맡길 때 버전과 달라진 추적 파일 + 새 파일. 이름 순, 겹침 없이.
+    pub(super) fn parked_paths_impl(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>> {
+        let base = format!("{oid}^1");
+        let mut args = vec!["diff", "--name-only", "-z", "--no-renames", "--no-ext-diff"];
+        push_revs(
+            &mut args,
+            Cmd::Diff,
+            self.git_version(),
+            &[&base, oid.as_str()],
+        );
+        args.push("--");
+        let out = self.runner.run(Some(repo.as_path()), &args)?;
+        let mut paths: Vec<String> = out
+            .stdout_lossy()
+            .split('\0')
+            .filter(|p| !p.is_empty())
+            .map(str::to_string)
+            .collect();
+        paths.extend(self.stash_untracked_paths(repo, oid)?);
+        paths.sort();
+        paths.dedup();
+        Ok(paths)
+    }
+
     fn stash_top(&self, repo: &RepoPath) -> Result<Option<Oid>> {
         crate::GitBackend::resolve_ref(self, repo, "refs/stash")
     }

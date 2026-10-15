@@ -12,6 +12,7 @@ mod bootstrap;
 mod error;
 mod executor;
 pub mod git_security;
+mod parked;
 mod query;
 pub mod recent;
 mod registry;

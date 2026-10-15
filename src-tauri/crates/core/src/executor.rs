@@ -208,6 +208,9 @@ mod tests {
         ) -> git::Result<git::MergeCheck> {
             unreachable!()
         }
+        fn parked_paths(&self, _: &RepoPath, _: &git::Oid) -> git::Result<Vec<String>> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }

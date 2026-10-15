@@ -33,6 +33,7 @@ pub struct FakeGit {
     pub refs: Mutex<Vec<RefEntry>>,
     pub remote_heads: Mutex<Vec<(String, String)>>,
     pub merge_check: Mutex<MergeCheck>,
+    pub parked_paths: Mutex<Vec<String>>,
 }
 
 impl FakeGit {
@@ -55,6 +56,7 @@ impl FakeGit {
             refs: Mutex::new(Vec::new()),
             remote_heads: Mutex::new(Vec::new()),
             merge_check: Mutex::new(MergeCheck::Clean),
+            parked_paths: Mutex::new(Vec::new()),
         }
     }
 
@@ -227,6 +229,10 @@ impl GitBackend for FakeGit {
         _theirs: &str,
     ) -> git::Result<MergeCheck> {
         Ok(self.merge_check.lock().unwrap().clone())
+    }
+
+    fn parked_paths(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<Vec<String>> {
+        Ok(self.parked_paths.lock().unwrap().clone())
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

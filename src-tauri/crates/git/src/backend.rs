@@ -72,6 +72,9 @@ pub trait GitBackend: Send + Sync {
         theirs: &str,
     ) -> Result<MergeCheck>;
 
+    /// 맡겨 둔 stash에 든 파일 경로(고친 파일과 새 파일).
+    fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
+
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
 }

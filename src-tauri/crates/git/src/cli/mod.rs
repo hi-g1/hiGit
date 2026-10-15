@@ -362,6 +362,10 @@ impl GitBackend for CliBackend {
         self.merge_check_impl(repo, base, ours, theirs)
     }
 
+    fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>> {
+        self.parked_paths_impl(repo, oid)
+    }
+
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {
         let dir = Some(repo.as_path());
         // 경로 목록은 명령줄 대신 stdin으로 넘긴다(Windows 명령줄 길이 제한, 파일 수천 개).

@@ -13,6 +13,8 @@ const COMMANDS: &[&str] = &[
     "query_status",
     "query_log",
     "query_diff",
+    "query_branches",
+    "query_branch_name",
     "query_project_summary",
     "repo_watch",
     "repo_unwatch",

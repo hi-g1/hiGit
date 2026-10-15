@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use higit_core::view::{
-    ActionInput, ActionMetaView, ActionResult, AppStatus, DiffRequest, ErrorCode, ErrorView,
-    FileDiffView, LogPage, LogQuery, OpenHow, PreviewView, ProjectOpenResult, ProjectSummaryView,
-    RecentProject, StatusView,
+    ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
+    DiffRequest, ErrorCode, ErrorView, FileDiffView, LogPage, LogQuery, OpenHow, PreviewView,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -161,6 +161,29 @@ pub async fn query_diff(
 ) -> CmdResult<FileDiffView> {
     blocking(state, move |core| {
         core.queries().diff(&PathBuf::from(repo), &request)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn query_branches(state: State<'_, AppState>, repo: String) -> CmdResult<BranchListView> {
+    blocking(state, move |core| {
+        core.queries().branches(&PathBuf::from(repo))
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn query_branch_name(
+    state: State<'_, AppState>,
+    repo: String,
+    name: String,
+) -> CmdResult<BranchNameCheck> {
+    blocking(state, move |core| {
+        core.queries()
+            .check_branch_name(&PathBuf::from(repo), &name)
     })
     .await
 }

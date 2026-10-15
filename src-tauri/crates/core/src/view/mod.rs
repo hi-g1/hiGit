@@ -3,9 +3,11 @@
 
 use std::path::Path;
 
+mod branch;
 mod diff;
 mod input;
 
+pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{ActionInput, CommitInput, PathsInput};
 
@@ -320,6 +322,8 @@ pub enum ErrorCode {
     SshAuthFailed,
     HttpAuthFailed,
     RemoteUnreachable,
+    ProtocolNotAllowed,
+    UnparkConflict,
     /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
@@ -342,9 +346,8 @@ impl From<git::FailureKind> for ErrorCode {
             F::HttpAuthFailed => ErrorCode::HttpAuthFailed,
             F::RemoteUnreachable => ErrorCode::RemoteUnreachable,
             F::NotARepository => ErrorCode::NotARepo,
-            // 화면 오류 코드는 브랜치 조회 단계(계획 005 순번 21)에서 따로 둔다.
-            F::ProtocolNotAllowed => ErrorCode::GitFailed,
-            F::UnparkConflict => ErrorCode::GitFailed,
+            F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
+            F::UnparkConflict => ErrorCode::UnparkConflict,
             F::Other => ErrorCode::GitFailed,
         }
     }

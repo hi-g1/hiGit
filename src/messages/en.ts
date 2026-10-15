@@ -104,6 +104,8 @@ export const en: Messages = {
     sshAuthFailed: "SSH authentication failed. Check that your key is registered, and add it to ssh-agent if it has a passphrase.",
     httpAuthFailed: `Could not sign in to the ${t("remote").toLowerCase()}.`,
     remoteUnreachable: `Could not reach the ${t("remote").toLowerCase()}. Check the address and your connection.`,
+    protocolNotAllowed: "This address type isn't allowed. Please use an https or ssh address.",
+    unparkConflict: "The parked files overlap with this version, so they were left parked.",
     gitFailed: "The Git operation failed.",
     internal: "Something unexpected happened.",
   },

@@ -5,9 +5,11 @@ use git::{GitBackend, RepoPath};
 
 use crate::access::{OpenedRepos, check_path_len};
 use crate::actions::paths;
+use crate::parked;
 use crate::recent::RecentStore;
 use crate::view::{
-    CommitRow, DiffRequest, FileDiffView, LogPage, LogQuery, ProjectSummaryView, StatusView,
+    BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, LogPage,
+    LogQuery, NameProblem, ProjectSummaryView, StatusView,
 };
 use crate::{CoreError, Result};
 
@@ -109,6 +111,128 @@ impl Queries {
             conflicted_files: u32::try_from(conflicted).unwrap_or(u32::MAX),
             last_commit,
         })
+    }
+
+    /// 브랜치 목록(D-047). 맡겨 둔 파일 수와 기본 브랜치를 함께 준다.
+    pub fn branches(&self, repo: &Path) -> Result<BranchListView> {
+        let root = self.opened_repo(repo)?;
+        let branches = self.git.branches(&root)?;
+        let remotes = self.git.remotes(&root)?;
+        let parked_refs = self.git.list_refs(&root, parked::PARKED_PREFIX)?;
+        let default_branch = self.default_branch(&root, &branches, &remotes)?;
+
+        let mut parked: Vec<(String, u32)> = Vec::new();
+        for r in &parked_refs {
+            let (Some(branch), Some(oid)) = (parked::branch_of(&r.name), git::Oid::parse(&r.oid))
+            else {
+                continue;
+            };
+            let count = self.git.parked_paths(&root, &oid)?.len();
+            parked.push((branch, u32::try_from(count).unwrap_or(u32::MAX)));
+        }
+        let parked_count = |name: &str| {
+            parked
+                .iter()
+                .find(|(b, _)| b == name)
+                .map_or(0, |(_, n)| *n)
+        };
+
+        let mut local = Vec::new();
+        let mut remote = Vec::new();
+        for b in &branches {
+            let is_local = b.kind == git::BranchKind::Local;
+            let count = if is_local { parked_count(&b.name) } else { 0 };
+            let row = BranchRow {
+                name: b.name.clone(),
+                remote: match &b.kind {
+                    git::BranchKind::Remote { remote, .. } => Some(remote.clone()),
+                    git::BranchKind::Local => None,
+                },
+                is_head: b.is_head,
+                is_default: is_local && default_branch.as_deref() == Some(b.name.as_str()),
+                upstream: b.upstream.clone(),
+                ahead: b.ahead,
+                behind: b.behind,
+                gone: b.gone,
+                last_author: b.last_author.clone(),
+                last_at: b.last_time,
+                parked_count: count,
+                park_blocked: b.is_head && count > 0,
+            };
+            if is_local {
+                local.push(row);
+            } else {
+                remote.push(row);
+            }
+        }
+        let orphan_parked = parked
+            .iter()
+            .filter(|(name, _)| !local.iter().any(|b| &b.name == name))
+            .map(|(name, _)| name.clone())
+            .collect();
+        Ok(BranchListView {
+            local,
+            remote,
+            default_branch,
+            orphan_parked,
+        })
+    }
+
+    /// 새 브랜치 이름으로 쓸 수 있는지. 대소문자만 다른 기존 이름도 막는다(Windows ref 충돌).
+    pub fn check_branch_name(&self, repo: &Path, name: &str) -> Result<BranchNameCheck> {
+        let root = self.opened_repo(repo)?;
+        let problem = if name.trim().is_empty() {
+            Some(NameProblem::Empty)
+        } else if !self.git.check_branch_name(name)? {
+            Some(NameProblem::Invalid)
+        } else if self.git.branches(&root)?.iter().any(|b| {
+            b.kind == git::BranchKind::Local && b.name.to_lowercase() == name.to_lowercase()
+        }) {
+            Some(NameProblem::Exists)
+        } else {
+            None
+        };
+        Ok(BranchNameCheck {
+            ok: problem.is_none(),
+            problem,
+        })
+    }
+
+    /// 기본 브랜치: 지금 브랜치 upstream의 원격(없으면 origin, 그다음 첫 원격)의 HEAD,
+    /// 그것도 없으면 로컬 main, master 순(D-048).
+    fn default_branch(
+        &self,
+        root: &RepoPath,
+        branches: &[git::Branch],
+        remotes: &[git::Remote],
+    ) -> Result<Option<String>> {
+        let upstream_remote = branches
+            .iter()
+            .find(|b| b.is_head)
+            .and_then(|b| b.upstream.as_deref())
+            .and_then(|u| {
+                remotes
+                    .iter()
+                    .filter(|r| u.starts_with(&format!("{}/", r.name)))
+                    .max_by_key(|r| r.name.len())
+            });
+        let remote = upstream_remote
+            .or_else(|| remotes.iter().find(|r| r.name == "origin"))
+            .or_else(|| remotes.first());
+        if let Some(remote) = remote
+            && let Some(head) = self.git.remote_head(root, &remote.name)?
+        {
+            return Ok(Some(head));
+        }
+        let has_local = |n: &str| {
+            branches
+                .iter()
+                .any(|b| b.kind == git::BranchKind::Local && b.name == n)
+        };
+        Ok(["main", "master"]
+            .into_iter()
+            .find(|n| has_local(n))
+            .map(str::to_string))
     }
 
     pub fn log(&self, repo: &Path, query: LogQuery) -> Result<LogPage> {

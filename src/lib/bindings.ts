@@ -18,6 +18,8 @@ export const commands = {
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
+	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
+	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
@@ -49,6 +51,41 @@ export type AppStatus = {
 	gitSecurity: GitSecurity,
 	/**  배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`). */
 	gitPackageVersion: string | null,
+};
+
+export type BranchListView = {
+	local: BranchRow[],
+	/**  원격에만 있는 것도 포함한 원격 브랜치(`origin/main`). */
+	remote: BranchRow[],
+	/**  기본 브랜치 이름(원격 HEAD, 없으면 main·master 순, D-048). */
+	defaultBranch: string | null,
+	/**  앱 밖에서 브랜치를 지워 맡긴 파일만 남은 브랜치 이름(D-054). */
+	orphanParked: string[],
+};
+
+export type BranchNameCheck = {
+	ok: boolean,
+	problem: NameProblem | null,
+};
+
+export type BranchRow = {
+	/**  로컬은 `main`, 원격은 `origin/main`. */
+	name: string,
+	/**  원격 브랜치면 원격 이름. */
+	remote: string | null,
+	isHead: boolean,
+	isDefault: boolean,
+	upstream: string | null,
+	ahead: number,
+	behind: number,
+	gone: boolean,
+	lastAuthor: string,
+	/**  마지막 버전 시각(unix 초). TS에서는 number(CommitRow.author_time과 같은 이유). */
+	lastAt: number,
+	/**  이 브랜치에 맡겨 둔 파일 수. 없으면 0. */
+	parkedCount: number,
+	/**  맡겨 둔 파일이 있는데 지금 이 브랜치에 있다(겹쳐서 꺼내지 못함, D-054). */
+	parkBlocked: boolean,
 };
 
 export type BranchView = {
@@ -110,7 +147,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -146,6 +183,12 @@ export type LogQuery = {
 	skip: number,
 	limit: number,
 };
+
+export type NameProblem = "empty" | 
+/**  git 규칙에 맞지 않거나 `-`로 시작한다. */
+"invalid" | 
+/**  같은 이름(대소문자 무시)의 로컬 브랜치가 있다. */
+"exists";
 
 /**
  *  어떻게 여는지. 고른 폴더는 저장소가 아니면 버전 관리 시작 안내로, 최근 목록은 기록과 같은

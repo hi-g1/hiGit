@@ -18,6 +18,8 @@
     "allow-query-status",
     "allow-query-log",
     "allow-query-diff",
+    "allow-query-branches",
+    "allow-query-branch-name",
     "allow-query-project-summary",
     "allow-repo-watch",
     "allow-repo-unwatch"
