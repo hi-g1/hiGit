@@ -115,7 +115,7 @@ export const ko = {
     remoteUnreachable: `${t("remote")}에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.`,
     protocolNotAllowed: "이 주소 방식은 쓸 수 없어요. https나 ssh 주소를 써 주세요.",
     unparkConflict: "맡겨 둔 파일이 지금 버전과 겹쳐서 꺼내지 않았어요.",
-    timedOut: "원격 저장소가 응답하지 않아 그만뒀어요.",
+    timedOut: `${josa(t("remote"), "이/가")} 응답하지 않아 그만뒀어요.`,
     mergeConflict: "같은 곳을 서로 다르게 고쳐서 합치지 못했어요.",
     gitFailed: "Git 작업이 실패했어요.",
     internal: "예상하지 못한 문제가 생겼어요.",

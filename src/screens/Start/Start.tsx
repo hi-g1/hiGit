@@ -55,7 +55,7 @@ export function Start() {
         {appStatus.data?.gitSecurity === "outdated" && (
           <p className={styles.notice} role="status">
             {m.gitUpdate}{" "}
-            <button type="button" className={styles.textAction} onClick={() => void api.openGitDownload()}>
+            <button type="button" className={styles.textAction} onClick={() => api.openGitDownload().catch(() => undefined)}>
               {m.gitDownload}
             </button>
           </p>

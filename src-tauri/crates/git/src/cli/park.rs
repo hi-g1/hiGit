@@ -122,17 +122,62 @@ impl CliBackend {
             return Ok(Vec::new());
         }
         let mut args = vec!["ls-tree", "-r", "-z", "--name-only"];
-        push_revs(&mut args, Cmd::Show, self.git_version(), &[&third]);
+        push_revs(&mut args, Cmd::LsTree, self.git_version(), &[&third]);
         let out = self.runner.run(Some(repo.as_path()), &args)?;
-        Ok(out
+        let paths: Vec<String> = out
             .stdout_lossy()
             .split('\0')
             .filter(|p| !p.is_empty())
             .map(str::to_string)
-            .collect())
+            .collect();
+        // 맡긴 stash도 받은 저장소에 들어 있을 수 있는 입력이다(D-034). 이상한 경로가 있으면 꺼내지 않는다.
+        if let Some(bad) = paths.iter().find(|p| !safe_relative(p)) {
+            return Err(GitError::Refused {
+                kind: FailureKind::UnparkConflict,
+                detail: format!("unsafe path in parked files: {bad}"),
+            });
+        }
+        Ok(paths)
     }
+}
+
+/// 저장소 안 상대 경로인지: 절대 경로, 드라이브, `\`, `..`, 빈 조각, `.git` 조각을 거부한다.
+fn safe_relative(path: &str) -> bool {
+    let b = path.as_bytes();
+    let drive = b.len() >= 2 && b[0].is_ascii_alphabetic() && b[1] == b':';
+    !(path.starts_with('/')
+        || path.contains('\\')
+        || path.contains('\0')
+        || drive
+        || path
+            .split('/')
+            .any(|c| c.is_empty() || c == ".." || c.eq_ignore_ascii_case(".git")))
 }
 
 fn exists(dir: &Path, rel: &str) -> bool {
     dir.join(rel).symlink_metadata().is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::safe_relative;
+
+    #[test]
+    fn rejects_paths_that_leave_the_repo() {
+        for bad in [
+            "/etc/x",
+            "../x",
+            "a/../b",
+            "C:/x",
+            "a\\b",
+            ".git/config",
+            "a/.GIT/x",
+            "a//b",
+        ] {
+            assert!(!safe_relative(bad), "{bad}");
+        }
+        for good in ["a.txt", "폴더/새 파일.txt", ".gitignore", "a..b"] {
+            assert!(safe_relative(good), "{good}");
+        }
+    }
 }

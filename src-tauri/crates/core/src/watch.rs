@@ -22,9 +22,11 @@ impl Core {
     /// `repo`를 감시한다. 이전 감시는 멈춘다(한 번에 하나).
     /// 시작하지 못하면 `WatchUnavailable`. 화면은 창 포커스 때 새로 고침으로 대신한다.
     pub fn watch(&self, repo: &Path, sink: WatchSink) -> Result<()> {
-        self.unwatch();
+        // 검사를 먼저 해서, 열지 않은 경로로 불러도 지금 감시가 꺼지지 않게 한다.
+        crate::access::check_path_len(repo)?;
         let root = platform::normalize_repo_path(repo).map_err(CoreError::FolderNotFound)?;
         self.opened.require(&root)?;
+        self.unwatch();
         let excludes = self
             .git
             .excludes_file(&RepoPath::new(&root))?

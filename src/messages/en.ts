@@ -107,7 +107,7 @@ export const en: Messages = {
     remoteUnreachable: `Could not reach the ${t("remote").toLowerCase()}. Check the address and your connection.`,
     protocolNotAllowed: "This address type isn't allowed. Please use an https or ssh address.",
     unparkConflict: "The parked files overlap with this version, so they were left parked.",
-    timedOut: "The remote didn't respond, so the task was stopped.",
+    timedOut: `The ${t("remote").toLowerCase()} didn't respond, so the task was stopped.`,
     mergeConflict: "The same lines were changed differently, so they couldn't be merged.",
     gitFailed: "The Git operation failed.",
     internal: "Something unexpected happened.",
