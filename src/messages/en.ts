@@ -138,7 +138,7 @@ export const en: Messages = {
   zoomIn: "Zoom in",
   zoomOut: "Zoom out",
   zoomStatus: (zoom: string, n: number) => `${zoom} · ${n}`,
-  tipsCut: (n: number) => `Up to 200 ${t("branch").toLowerCase()}es · ${n} more`,
+  tipsCut: (n: number) => `up to 200 · ${n} more`,
   notPushedMark: "not uploaded",
   stationMenu: "Version menu",
   copyVersionId: "Copy version ID",

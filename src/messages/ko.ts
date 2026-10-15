@@ -163,7 +163,8 @@ export const ko = {
   zoomIn: "늘리기",
   zoomOut: "줄이기",
   zoomStatus: (zoom: string, n: number) => `${zoom} · ${n}개`,
-  tipsCut: (n: number) => `${t("branch")} 200개까지 · ${n}개 더`,
+  /** `<Term id="branch" />` 뒤에 붙는다. */
+  tipsCut: (n: number) => `200개까지 · ${n}개 더`,
   notPushedMark: "안 올림",
   stationMenu: "버전 메뉴",
   copyVersionId: "버전 번호 복사",

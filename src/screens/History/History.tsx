@@ -215,6 +215,7 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
             +
           </button>
         </div>
+        {/* 화면에 보이지 않고 스크린 리더만 읽는 상태 문장(용어는 t()로 문장 속에) */}
         <span className={styles.status} role="status">
           {m.zoomStatus(m.zoomNames[zoom], shown.length)}
         </span>
@@ -253,7 +254,11 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
             />
           </RouteList>
         ))}
-      {pages && (first?.tipsCut ?? 0) > 0 && <p className={styles.note}>{m.tipsCut(first!.tipsCut)}</p>}
+      {pages && (first?.tipsCut ?? 0) > 0 && (
+        <p className={styles.note}>
+          <Term id="branch" /> {m.tipsCut(first!.tipsCut)}
+        </p>
+      )}
       {pages && !hasNextPage && received >= HISTORY_MAX && <p className={styles.note}>{m.moreCommits(received)}</p>}
     </section>
   );
