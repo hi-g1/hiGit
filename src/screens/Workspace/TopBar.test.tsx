@@ -1,7 +1,20 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../../lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/api")>()),
+  api: {
+    branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: "main", orphanParked: [] })),
+  },
+}));
+
+import { AppProviders, createQueryClient } from "../../App";
 import type { StatusView } from "../../lib/api";
-import { TopBar } from "./TopBar";
+import { TopBar as RealTopBar } from "./TopBar";
+
+const render = (ui: ReactElement) => rtlRender(<AppProviders client={createQueryClient()}>{ui}</AppProviders>);
+const TopBar = (props: Omit<Parameters<typeof RealTopBar>[0], "onDone">) => <RealTopBar {...props} onDone={vi.fn()} />;
 
 const repo = { path: "/home/me/내 프로젝트", name: "내 프로젝트" };
 const status = (branch: Partial<StatusView["branch"]>): StatusView => ({
@@ -15,8 +28,7 @@ describe("TopBar", () => {
     expect(screen.getByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
     // 프로젝트 이름은 프로젝트 메뉴 단추이고, 경로는 툴팁이다.
     expect(screen.getByRole("button", { name: "프로젝트 메뉴: 내 프로젝트" })).toHaveAttribute("title", repo.path);
-    expect(screen.getByText("브랜치")).toBeInTheDocument();
-    expect(screen.getByText("main")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /main/ })).toHaveAttribute("aria-keyshortcuts", "Control+B");
   });
 
   it("연결된 원격 브랜치가 있으면 올릴·가져올 버전 수", () => {

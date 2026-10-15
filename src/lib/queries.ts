@@ -12,6 +12,8 @@ export const queryKeys = {
   status: (repo: string) => ["status", repo] as const,
   log: (repo: string) => ["log", repo] as const,
   diff: (repo: string, path: string, untracked: boolean) => ["diff", repo, path, untracked] as const,
+  branches: (repo: string) => ["branches", repo] as const,
+  branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
 };
 
 export function useAppStatus() {
@@ -67,5 +69,22 @@ export function useProjectSummary(repo: string) {
     queryKey: queryKeys.summary(repo),
     queryFn: () => api.projectSummary(repo),
     staleTime: 30_000,
+  });
+}
+
+export function useBranches(repo: string, enabled = true) {
+  return useQuery<Awaited<ReturnType<typeof api.branches>>, ApiError>({
+    queryKey: queryKeys.branches(repo),
+    queryFn: () => api.branches(repo),
+    enabled,
+  });
+}
+
+export function useBranchNameCheck(repo: string, name: string) {
+  return useQuery<Awaited<ReturnType<typeof api.checkBranchName>>, ApiError>({
+    queryKey: queryKeys.branchName(repo, name),
+    queryFn: () => api.checkBranchName(repo, name),
+    enabled: name.trim() !== "",
+    staleTime: 10_000,
   });
 }

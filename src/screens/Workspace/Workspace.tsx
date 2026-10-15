@@ -47,7 +47,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
 
   return (
     <div className={styles.workspace}>
-      <TopBar repo={repo} status={status.data} />
+      <TopBar repo={repo} status={status.data} onDone={notifyDone} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">
           <span>{m.errors.watchUnavailable}</span>

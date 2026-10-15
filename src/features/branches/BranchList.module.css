@@ -1,0 +1,135 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--surface-hover);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.panel {
+  z-index: 40;
+  width: min(520px, calc(100vw - 2 * var(--space-4)));
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  max-height: min(480px, 70vh);
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.search {
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-size-md);
+}
+
+.search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.section {
+  margin: var(--space-2) var(--space-4) var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.row,
+.orphan {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: var(--font-size-md);
+  text-align: left;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover,
+.active {
+  background: var(--surface-hover);
+}
+
+.orphan {
+  color: var(--text-muted);
+}
+
+.create {
+  border-top: var(--border-width) solid var(--border);
+  font-weight: var(--font-weight-bold);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.name {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.more {
+  margin: var(--space-1) var(--space-4) 0;
+  padding: var(--space-1) 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hint {
+  margin: var(--space-1) var(--space-4) 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
