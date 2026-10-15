@@ -20,6 +20,8 @@ mod merge_check_tests;
 mod network;
 #[cfg(test)]
 mod network_tests;
+#[cfg(test)]
+mod operation_tests;
 mod park;
 pub use park::safe_relative;
 #[cfg(test)]
@@ -889,6 +891,43 @@ impl GitBackend for CliBackend {
                 self.runner.run(dir, &args)?
             }
             // 2.34.1의 merge는 `-F -`(stdin)를 읽지 못해 `-m`으로 넘긴다. 인자는 배열이라 한글도 그대로다.
+            GitOp::Amend { message } => match message {
+                // 넣은 파일도 함께 고친다. hook·서명은 사용자 설정을 따른다(버전 저장과 같다).
+                Some(m) => self.run_local_watched(
+                    repo,
+                    &["commit", "--amend", "--cleanup=whitespace", "-F", "-"],
+                    Some(m.as_bytes()),
+                )?,
+                None => self.run_local_watched(repo, &["commit", "--amend", "--no-edit"], None)?,
+            },
+            GitOp::CherryPickStart { oid } => {
+                let mut args = vec!["cherry-pick"];
+                push_revs(
+                    &mut args,
+                    Cmd::CherryPick,
+                    self.git_version(),
+                    &[oid.as_str()],
+                );
+                self.run_local_watched(repo, &args, None)?
+            }
+            GitOp::RevertStart { oid, mainline } => {
+                let number;
+                let mut args = vec!["revert", "--no-edit"];
+                if let Some(n) = mainline {
+                    number = n.to_string();
+                    args.extend(["-m", number.as_str()]);
+                }
+                push_revs(&mut args, Cmd::Revert, self.git_version(), &[oid.as_str()]);
+                self.run_local_watched(repo, &args, None)?
+            }
+            GitOp::OperationContinue { kind } => {
+                // 이어서 버전을 만들므로 hook·서명이 돌 수 있다(진행 알림과 강제 멈춤).
+                self.run_local_watched(repo, &[kind.command(), "--continue"], None)?
+            }
+            GitOp::OperationSkip { kind } => {
+                self.run_local_watched(repo, &[kind.command(), "--skip"], None)?
+            }
+            GitOp::OperationAbort { kind } => self.runner.run(dir, &[kind.command(), "--abort"])?,
             GitOp::Merge { rev, message } => {
                 let mut args = vec!["merge", "--no-ff", "--no-edit", "-m", message];
                 push_revs(&mut args, Cmd::Merge, self.git_version(), &[rev]);

@@ -29,5 +29,6 @@ pub use types::{
     BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitFile, CommitFiles,
     CommitMessage, CommitStat, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitOp,
     GitVersion, GraphLogQuery, Hunk, IndexEntry, LineKind, LogQuery, MergeCheck, MergeSegment, Oid,
-    OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, StashEntry, Status, StatusEntry, TagRef,
+    OpOutput, OperationKind, RefEntry, ReflogEntry, Remote, RepoPath, StashEntry, Status,
+    StatusEntry, TagRef,
 };

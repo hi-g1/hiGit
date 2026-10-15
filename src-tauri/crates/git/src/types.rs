@@ -277,6 +277,24 @@ pub struct CommitStat {
     pub removed: u32,
 }
 
+/// 멈출 수 있는 작업의 종류(D-101).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperationKind {
+    CherryPick,
+    Revert,
+    Rebase,
+}
+
+impl OperationKind {
+    pub(crate) fn command(self) -> &'static str {
+        match self {
+            OperationKind::CherryPick => "cherry-pick",
+            OperationKind::Revert => "revert",
+            OperationKind::Rebase => "rebase",
+        }
+    }
+}
+
 /// 버전 하나의 전체 메시지(마지막 버전 고치기·기록 정리).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommitMessage {
@@ -384,6 +402,21 @@ pub enum GitOp {
     /// 실패하면 반쯤 된 되돌리기를 그만두고(`revert --abort`, 안 되면 `reset --merge`) 오류를 돌려준다.
     /// 정리가 넣은 파일을 되돌리므로 core는 넣은 파일이 없을 때만 부른다.
     Revert { oid: Oid, mainline: Option<u32> },
+    /// 마지막 버전을 고친다(`commit --amend`, 넣은 파일도 함께). 메시지가 있으면 stdin으로
+    /// (`--cleanup=whitespace`라 `#` 줄도 남는다), 없으면 메시지는 그대로(`--no-edit`).
+    Amend { message: Option<String> },
+    /// `oid` 하나를 지금 브랜치에 새 버전으로 복사한다(`cherry-pick`). 충돌·hook으로 멈추면 정리하지
+    /// 않는다(core가 상태를 보고 충돌 화면으로 넘기거나 그만둔다).
+    CherryPickStart { oid: Oid },
+    /// `oid`의 변경을 취소하는 새 버전(`revert --no-edit`, 합치기 버전은 `-m`). 멈추면 정리하지 않는다.
+    /// (올린 뒤 Ctrl+Z가 쓰는 `Revert`는 실패하면 정리한다.)
+    RevertStart { oid: Oid, mainline: Option<u32> },
+    /// 멈춘 복사·되돌리기·기록 정리를 이어간다(`--continue`). core가 표식을 확인한 뒤에만 부른다.
+    OperationContinue { kind: OperationKind },
+    /// 지금 멈춘 버전을 건너뛴다(`--skip`, 해결 결과가 비었을 때).
+    OperationSkip { kind: OperationKind },
+    /// 시작 전으로 돌린다(`--abort`).
+    OperationAbort { kind: OperationKind },
     /// 브랜치와 파일을 `oid`로 옮기되 고친 파일은 둔다(`reset --keep`, 합치기·되살리기 되돌리기).
     /// 고친 파일이 옮길 파일과 겹치면 아무것도 바꾸지 않고 `WouldOverwrite`.
     ResetKeep { oid: Oid },

@@ -116,7 +116,7 @@ pub trait GitBackend: Send + Sync {
 ```
 
 - 코드에는 해당 반복에 필요한 메서드만 구현해 넣는다. 위는 반복 2까지 구현한 것이다. 메서드를 더하면 가짜 구현 둘(`executor.rs` 테스트의 `NoGit`, `crates/core/tests/common/mod.rs`의 `FakeGit`)도 함께 고친다.
-- `GitOp`(반복 2까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `DiscardPaths`, `StashDropIf`, `StashDropOid`, `Unpark`, `UnparkKeep`, `UnparkAbort`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ResetKeep`, `ReadTree`, `ResolveFile`, `ResolveDelete`, `ResolveSide`, `SnapshotFiles`, `Revert`, `AddSafeDirectory`.
+- `GitOp`(반복 2까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `DiscardPaths`, `StashDropIf`, `StashDropOid`, `Unpark`, `UnparkKeep`, `UnparkAbort`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ResetKeep`, `ReadTree`, `ResolveFile`, `ResolveDelete`, `ResolveSide`, `SnapshotFiles`, `Revert`, `AddSafeDirectory`. 반복 3: `Amend`(`--cleanup=whitespace`, 메시지는 stdin), `CherryPickStart`·`RevertStart`(멈추면 정리하지 않음, core가 상태를 봄), `OperationContinue`·`OperationSkip`·`OperationAbort`(`OperationKind`: 복사·되돌리기·기록 정리).
 - `merge_check`는 git 2.38 이상이면 `merge-tree --write-tree`, 그보다 낮으면 임시 index에 `read-tree -m`으로 겹침만 본다(D-050). 사용자의 index와 작업 폴더는 건드리지 않는다.
 - `merge_segments`는 임시 폴더에 세 쪽을 쓰고 `merge-file -p --diff3 --marker-size=40`의 표시 줄만 읽는다. 입력 어디에든 길이 40의 표시 같은 줄이 있거나 이진 파일이면 오류로 돌려 화면이 파일 단위 선택으로 떨어진다. 표시 문자는 화면으로 나가지 않는다(D-086).
 - 충돌 해결: `ResolveFile`(블롭을 만들어 index에 넣고 `checkout-index`로 작업 폴더를 사용자 줄바꿈 설정대로 씀, 모드는 100644·100755·120000만), `ResolveDelete`(지우는 쪽), `ResolveSide`(이진·링크·큰 파일을 한쪽 그대로). 덮어쓰기 전 백업은 `SnapshotFiles`(작업 폴더 파일을 stash 모양 커밋으로, index·stash 목록은 그대로).
