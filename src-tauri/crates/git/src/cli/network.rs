@@ -22,8 +22,6 @@ pub enum NetMode {
     Background,
 }
 
-// 원격 GitOp(계획 005 순번 25)에서 쓴다.
-#[cfg_attr(not(test), allow(dead_code))]
 impl CliBackend {
     /// 원격 작업용 실행. `args`는 git 하위 명령부터.
     pub(crate) fn run_network(

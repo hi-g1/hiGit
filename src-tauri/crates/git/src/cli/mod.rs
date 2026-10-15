@@ -19,6 +19,8 @@ mod park_tests;
 mod ref_tests;
 mod refs;
 #[cfg(test)]
+mod remote_tests;
+#[cfg(test)]
 mod run_tests;
 mod runner;
 mod status;
@@ -453,6 +455,56 @@ impl GitBackend for CliBackend {
             GitOp::Park { message } => return self.park_push(repo, message),
             GitOp::StashDropIf { oid } => return self.stash_drop_if(repo, oid),
             GitOp::Unpark { oid } => return self.unpark(repo, oid),
+            GitOp::Fetch { remote, background } => {
+                let mode = if *background {
+                    NetMode::Background
+                } else {
+                    NetMode::Foreground
+                };
+                let mut args = vec!["fetch", "--no-prune"];
+                match remote {
+                    Some(r) => push_revs(&mut args, Cmd::Fetch, self.git_version(), &[r]),
+                    None => args.push("--all"),
+                }
+                self.run_network(repo, &args, mode)?
+            }
+            GitOp::MergeFf { rev } => {
+                let mut args = vec!["merge", "--ff-only", "--no-edit"];
+                push_revs(&mut args, Cmd::Merge, self.git_version(), &[rev]);
+                self.runner.run(dir, &args)?
+            }
+            // 2.34.1의 merge는 `-F -`(stdin)를 읽지 못해 `-m`으로 넘긴다. 인자는 배열이라 한글도 그대로다.
+            GitOp::Merge { rev, message } => {
+                let mut args = vec!["merge", "--no-ff", "--no-edit", "-m", message];
+                push_revs(&mut args, Cmd::Merge, self.git_version(), &[rev]);
+                self.runner.run(dir, &args)?
+            }
+            GitOp::MergeAbort => {
+                if !self.git_dir(repo)?.join("MERGE_HEAD").exists() {
+                    return Ok(OpOutput::default());
+                }
+                self.runner.run(dir, &["merge", "--abort"])?
+            }
+            GitOp::Push {
+                target,
+                set_upstream,
+            } => {
+                let mut args = vec!["push"];
+                if *set_upstream {
+                    args.push("-u");
+                }
+                let refspec;
+                if let Some((remote, branch)) = target {
+                    refspec = format!("HEAD:refs/heads/{branch}");
+                    push_revs(
+                        &mut args,
+                        Cmd::Push,
+                        self.git_version(),
+                        &[remote, &refspec],
+                    );
+                }
+                self.run_network(repo, &args, NetMode::Foreground)?
+            }
             GitOp::SwitchTrack {
                 local,
                 remote_branch,

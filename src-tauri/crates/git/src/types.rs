@@ -245,6 +245,22 @@ pub enum GitOp {
     StashDropIf { oid: Oid },
     /// 맡긴 파일을 꺼낸다. 작업 폴더가 깨끗해야 하고, 겹치면 깨끗하게 되돌린 뒤 `UnparkConflict`.
     Unpark { oid: Oid },
+    /// 원격의 새 버전을 받아 온다(내 파일은 그대로). `remote`가 없으면 모든 원격. prune은 하지 않는다.
+    Fetch {
+        remote: Option<String>,
+        background: bool,
+    },
+    /// `rev`로 앞으로만 감기(`merge --ff-only`). 갈라졌으면 `NotFastForward`.
+    MergeFf { rev: String },
+    /// `rev`를 합친 버전을 만든다(`--no-ff`, 메시지는 `-m`). 겹치면 `MergeConflict`.
+    Merge { rev: String, message: String },
+    /// 진행 중인 합치기를 그만둔다. 합치기 중이 아니면 아무것도 하지 않는다.
+    MergeAbort,
+    /// 올린다. `target`이 있으면 `<원격> HEAD:refs/heads/<브랜치>`, `set_upstream`이면 `-u`.
+    Push {
+        target: Option<(String, String)>,
+        set_upstream: bool,
+    },
 }
 
 /// 쓰기 작업의 출력 원문.

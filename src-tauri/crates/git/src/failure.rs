@@ -33,6 +33,8 @@ pub enum FailureKind {
     RemoteUnreachable,
     /// 폴더가 저장소가 아니다(`discover`가 씀).
     NotARepository,
+    /// 합치다 같은 곳이 겹쳤다.
+    MergeConflict,
     /// 시간 제한이 지나 끝냈다.
     TimedOut,
     /// 맡겨 둔 파일이 지금 버전과 겹쳐 꺼내지 않았다(D-054).
@@ -102,6 +104,10 @@ const RULES: &[(FailureKind, &[&str])] = &[
         &["has no upstream branch", "There is no tracking information"],
     ),
     (FailureKind::WouldOverwrite, &["would be overwritten by"]),
+    (
+        FailureKind::MergeConflict,
+        &["Automatic merge failed", "CONFLICT ("],
+    ),
     (
         FailureKind::IdentityMissing,
         &[

@@ -33,7 +33,6 @@ impl Default for ProcessControl {
 
 /// 호출 하나에만 바꾸는 환경 변수.
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) enum EnvChange<'a> {
     Set(&'a OsStr),
     Remove,
@@ -132,7 +131,6 @@ impl Runner {
         finish(args, out)
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
     /// 시간 제한이 지나면 프로세스 트리째 끝내고 `TimedOut`(D-041). 원격·백그라운드 작업에만 쓴다(D-066).
     pub fn run_limited(
         &self,
@@ -293,7 +291,6 @@ impl Runner {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 /// 파이프를 다른 스레드에서 끝까지 읽는다(파이프가 차서 git이 멈추지 않게).
 fn read_all<R: Read + Send + 'static>(pipe: Option<R>) -> std::thread::JoinHandle<Vec<u8>> {
     std::thread::spawn(move || {

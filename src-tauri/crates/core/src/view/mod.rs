@@ -325,6 +325,7 @@ pub enum ErrorCode {
     ProtocolNotAllowed,
     UnparkConflict,
     TimedOut,
+    MergeConflict,
     /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
@@ -350,6 +351,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
             F::UnparkConflict => ErrorCode::UnparkConflict,
             F::TimedOut => ErrorCode::TimedOut,
+            F::MergeConflict => ErrorCode::MergeConflict,
             F::Other => ErrorCode::GitFailed,
         }
     }
