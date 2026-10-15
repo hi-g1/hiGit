@@ -9,7 +9,7 @@
 
 ```
 ┌──────────────────────── 프론트엔드 (React, src/) ────────────────────────┐
-│ screens/      홈, 작업 공간, 저장 기록, 기록 정리, 충돌, 검토 요청, 설정 │
+│ screens/      홈, 작업 공간, 버전 기록, 기록 정리, 충돌 해결, 검토 요청, 설정 │
 │ features/     액션별 UI 조각 (미리보기 패널, 확인 대화상자)              │
 │ ui/           디자인 시스템 부품 (Button, Term, Tooltip, Dialog …)      │
 │ lib/api.ts    백엔드 명령 호출과 타입 (자동 생성 바인딩)                │
@@ -17,7 +17,7 @@
                      Tauri command / event (타입 공유)
 ┌───────────────────────────────┴── 백엔드 (Rust, src-tauri/) ────────────┐
 │ app        Tauri 진입점. 명령은 얇게: 입력 검사 → core 호출 → 결과 변환  │
-│ core       Action 레지스트리, Query, 안전망(백업·되돌리기), view 타입    │
+│ core       Action 레지스트리, Query, 복구(백업·되돌리기), view 타입      │
 │ git        GitBackend 트레이트 + CliBackend 구현, 출력 파서              │
 │ hosting    HostingProvider 트레이트 + GitHub 구현 (PR, 인증)            │
 │ platform   OS별 코드: 우클릭 메뉴 등록, git 실행 파일 찾기, 키체인      │
@@ -135,7 +135,7 @@ impl Queries {
 ### UndoJournal (crates/core)
 - 앱이 한 작업 목록을 `.git/higit/journal.jsonl`에 남긴다(저장소마다 따로, 저장소를 옮겨도 따라감).
 - "방금 작업 취소" = 마지막 항목의 이전 상태로 복구(필요하면 stash로 작업 중 변경 보호).
-- "안전망" 화면 = journal + `git reflog`를 시간순으로 합쳐 보여준다.
+- "복구" 화면 = journal + `git reflog`를 시간순으로 합쳐 보여준다.
 
 ### HostingProvider (crates/hosting)
 
@@ -164,12 +164,12 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 - 설정 "Git 원래 이름으로 보기"가 켜지면 `Term`이 원래 이름을 본문에 보여주고 툴팁에 쉬운 이름을 보여준다.
 - 테스트: 레지스트리의 모든 `glossary_id`가 glossary에 있는지 확인하는 테스트를 둔다.
 
-## 저장 기록 그리기 계층 (D-017 제안, 반복 0은 단순 목록)
+## 버전 기록 그리기 계층 (D-017 제안, 반복 0은 단순 목록)
 
 노선도 보기는 아직 제안이다. 반복 0은 목록만 만들되, 나중에 그리기를 붙일 때 데이터와 그리기가 섞이지 않게 아래 네 층으로 나눈다.
 
 ```
-query_log (core::view::LogPage)          데이터: 저장, 부모, 갈래·버전 이름표
+query_log (core::view::LogPage)          데이터: 버전, 부모, 브랜치·태그 이름표
    ↓
 features/history/model.ts                화면 모델: HistoryRow[] (반복 0의 목록도 이것만 쓴다)
    ↓
@@ -209,5 +209,5 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 - 끝단 테스트는 기능이 안정된 뒤 `tauri-driver`로 추가.
 
 ## 성능 기준(초기 목표)
-- 1만 개 저장 저장소에서 저장 기록 첫 화면 300ms 이내(가상 스크롤, 200개씩 불러오기).
+- 버전 1만 개 저장소에서 버전 기록 첫 화면 300ms 이내(가상 스크롤, 200개씩 불러오기).
 - 파일 변경 감시는 300ms 디바운스, `.git/` 내부 변경은 별도 처리.
