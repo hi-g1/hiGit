@@ -106,6 +106,7 @@ pub fn init() -> Result<Core> {
         .with_process_control(git::ProcessControl {
             prepare: Arc::new(platform::prepare_killable),
             kill: Arc::new(platform::kill_tree),
+            terminate: Arc::new(platform::terminate_tree),
         });
     // 앱 데이터 폴더를 못 만들면 최근 목록은 메모리에만 둔다(앱은 계속 쓸 수 있다).
     let data_dir = platform::app_data_dir(APP_ID).ok();

@@ -14,6 +14,11 @@ mod types;
 mod testutil;
 
 pub use backend::GitBackend;
+
+/// 진행 알림을 받는 함수(저장소, 경과, 마지막 출력 뒤 시간).
+pub type ProgressObserver = std::sync::Arc<
+    dyn Fn(&std::path::Path, std::time::Duration, std::time::Duration) + Send + Sync,
+>;
 pub use cli::{
     BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, NETWORK_TIMEOUT, NetMode, ProcessControl,
     RefExpect,

@@ -73,3 +73,101 @@ fn stuck_git_is_ended_with_its_children() {
     // 여기서는 시간 제한이 걸리는지만 본다.
     assert!(start.elapsed() < Duration::from_secs(45));
 }
+
+mod watched {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::GitBackend;
+    use crate::cli::runner::Watch;
+
+    fn run(args: &[&str], watch: &Watch<'_>) -> crate::Result<crate::cli::runner::GitOutput> {
+        let repo = testutil::init_repo();
+        testutil::backend()
+            .runner
+            .run_watched(Some(repo.path()), args, &[], None, watch)
+    }
+
+    #[test]
+    fn quiet_after_first_output_is_a_stall() {
+        let err = run(
+            &["-c", "alias.slow=!printf x >&2; sleep 2", "slow"],
+            &Watch {
+                stall: Some(Duration::from_millis(300)),
+                ..Watch::default()
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::Stalled);
+    }
+
+    #[test]
+    fn no_output_yet_is_not_a_stall() {
+        // 인증 창을 기다리듯 처음부터 조용하면 멈춤으로 보지 않는다.
+        run(
+            &["-c", "alias.wait=!sleep 1", "wait"],
+            &Watch {
+                stall: Some(Duration::from_millis(300)),
+                ..Watch::default()
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn cancel_flag_ends_it() {
+        let flag = Arc::new(AtomicBool::new(false));
+        let setter = flag.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(200));
+            setter.store(true, Ordering::SeqCst);
+        });
+        let err = run(
+            &["-c", "alias.slow=!sleep 2", "slow"],
+            &Watch {
+                cancel: Some(&flag),
+                ..Watch::default()
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::Cancelled);
+    }
+
+    #[test]
+    fn observer_hears_every_second() {
+        let calls = AtomicUsize::new(0);
+        let observe = |_: Duration, _: Duration| {
+            calls.fetch_add(1, Ordering::SeqCst);
+        };
+        run(
+            &["-c", "alias.wait=!sleep 2", "wait"],
+            &Watch {
+                observer: Some(&observe),
+                ..Watch::default()
+            },
+        )
+        .unwrap();
+        assert!(calls.load(Ordering::SeqCst) >= 1);
+    }
+
+    #[test]
+    fn a_requested_cancel_ends_the_next_network_command_until_cleared() {
+        let repo = testutil::init_repo();
+        let backend = testutil::backend();
+        let path = RepoPath::new(repo.path());
+        backend.request_cancel(&path);
+        let err = backend
+            .run_network(
+                &path,
+                &["-c", "alias.slow=!sleep 1", "slow"],
+                NetMode::Foreground,
+            )
+            .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::Cancelled);
+        backend.clear_cancel(&path);
+        backend
+            .run_network(&path, &["-c", "alias.ok=!true", "ok"], NetMode::Foreground)
+            .unwrap();
+    }
+}

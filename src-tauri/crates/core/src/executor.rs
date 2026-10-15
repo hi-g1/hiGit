@@ -376,6 +376,9 @@ mod tests {
         fn local_config(&self, _: &RepoPath) -> git::Result<Vec<(String, String)>> {
             unreachable!()
         }
+        fn request_cancel(&self, _: &RepoPath) {}
+        fn clear_cancel(&self, _: &RepoPath) {}
+        fn set_observer(&self, _: Option<git::ProgressObserver>) {}
         fn set_repo_overrides(&self, _: &RepoPath, _: Vec<String>) {
             unreachable!()
         }

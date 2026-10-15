@@ -492,6 +492,8 @@ pub enum ErrorCode {
     MergeConflict,
     DubiousOwnership,
     /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
+    Cancelled,
+    Stalled,
     GitFailed,
     Internal,
 }
@@ -517,6 +519,8 @@ impl From<git::FailureKind> for ErrorCode {
             F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
             F::UnparkConflict => ErrorCode::UnparkConflict,
             F::TimedOut => ErrorCode::TimedOut,
+            F::Cancelled => ErrorCode::Cancelled,
+            F::Stalled => ErrorCode::Stalled,
             F::MergeConflict => ErrorCode::MergeConflict,
             F::Other => ErrorCode::GitFailed,
         }

@@ -39,6 +39,10 @@ pub enum FailureKind {
     DubiousOwnership,
     /// 시간 제한이 지나 끝냈다.
     TimedOut,
+    /// 사람이 취소(강제로 멈추기)해서 끝냈다(D-080).
+    Cancelled,
+    /// 원격 작업이 출력 없이 오래 멈춰 있어 끝냈다(D-080).
+    Stalled,
     /// 맡겨 둔 파일이 지금 버전과 겹쳐 꺼내지 않았다(D-054).
     UnparkConflict,
     /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).

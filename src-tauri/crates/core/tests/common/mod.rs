@@ -292,6 +292,12 @@ impl GitBackend for FakeGit {
         Ok(self.local_config.lock().unwrap().clone())
     }
 
+    fn request_cancel(&self, _repo: &RepoPath) {}
+
+    fn clear_cancel(&self, _repo: &RepoPath) {}
+
+    fn set_observer(&self, _observer: Option<git::ProgressObserver>) {}
+
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.calls
             .lock()

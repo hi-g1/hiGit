@@ -13,6 +13,8 @@ use crate::{GitError, RepoPath, Result};
 pub const NETWORK_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 /// 저절로 하는 원격 확인의 시간 제한.
 pub const BACKGROUND_TIMEOUT: Duration = Duration::from_secs(60);
+/// 첫 출력 뒤 이만큼 아무 출력이 없으면 멈춘 것으로 보고 끝낸다(D-080).
+pub const STALL: Duration = Duration::from_secs(90);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetMode {
@@ -59,7 +61,20 @@ impl CliBackend {
             }
         };
         full.extend_from_slice(args);
-        self.runner.run_limited(dir, &full, &env, timeout)
+        let cancel = self.cancel_flag(repo);
+        let observer = self.observer_for(repo);
+        self.runner.run_watched(
+            dir,
+            &full,
+            &env,
+            None,
+            &super::runner::Watch {
+                timeout: Some(timeout),
+                stall: Some(STALL),
+                cancel: Some(&cancel),
+                observer: observer.as_deref(),
+            },
+        )
     }
 
     /// 사용자가 정한 SSH 명령(환경 변수 `GIT_SSH_COMMAND`나 설정 `core.sshCommand`).

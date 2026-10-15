@@ -17,6 +17,8 @@ pub struct ProcessControl {
     pub prepare: ConfigureCommand,
     /// 자식과 손자를 모두 끝낸다.
     pub kill: Arc<dyn Fn(&mut Child) + Send + Sync>,
+    /// 끝내 달라고 알린다(취소·멈춤). 2초 안에 끝나지 않으면 `kill`을 부른다.
+    pub terminate: Arc<dyn Fn(&mut Child) + Send + Sync>,
 }
 
 impl Default for ProcessControl {
@@ -27,8 +29,22 @@ impl Default for ProcessControl {
             kill: Arc::new(|child: &mut Child| {
                 let _ = child.kill();
             }),
+            terminate: Arc::new(|child: &mut Child| {
+                let _ = child.kill();
+            }),
         }
     }
+}
+
+/// `run_watched`의 감시 조건.
+#[derive(Default)]
+pub(crate) struct Watch<'a> {
+    pub timeout: Option<Duration>,
+    /// 첫 출력 뒤 이만큼 출력이 없으면 멈춘 것으로 본다.
+    pub stall: Option<Duration>,
+    pub cancel: Option<&'a std::sync::atomic::AtomicBool>,
+    /// 1초마다 (경과, 마지막 출력 뒤 시간).
+    pub observer: Option<&'a (dyn Fn(Duration, Duration) + Send + Sync)>,
 }
 
 /// 호출 하나에만 바꾸는 환경 변수.
@@ -147,13 +163,15 @@ impl Runner {
         finish(args, out)
     }
 
-    /// 시간 제한이 지나면 프로세스 트리째 끝내고 `TimedOut`(D-041). 원격·백그라운드 작업에만 쓴다(D-066).
-    pub fn run_limited(
+    /// 지켜보며 실행한다: 시간 제한(`TimedOut`), 첫 출력 뒤 오래 조용하면 멈춤(`Stalled`), 취소 깃발
+    /// (`Cancelled`), 1초마다 진행 알림. 취소·멈춤은 먼저 끝내 달라고 알리고 2초 뒤 강제로 끝낸다(D-080).
+    pub fn run_watched(
         &self,
         cwd: Option<&Path>,
         args: &[&str],
         envs: &[(&str, EnvChange<'_>)],
-        timeout: Duration,
+        stdin: Option<&[u8]>,
+        watch: &Watch<'_>,
     ) -> Result<GitOutput> {
         let mut cmd = self.command(cwd, args);
         for (key, change) in envs {
@@ -163,26 +181,92 @@ impl Runner {
             };
         }
         (self.process.prepare)(&mut cmd);
-        cmd.stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        cmd.stdin(if stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let writer = match (stdin, child.stdin.take()) {
+            (Some(input), Some(mut pipe)) => {
+                let input = input.to_vec();
+                Some(std::thread::spawn(move || pipe.write_all(&input)))
+            }
+            _ => None,
+        };
         let out_reader = read_all(child.stdout.take());
-        let err_reader = read_all(child.stderr.take());
+        // stderr는 조각마다 "마지막 출력 시각"을 고친다. 내용은 해석하지 않는다(D-003).
+        let last_output: Arc<std::sync::Mutex<Option<Instant>>> = Arc::default();
+        let err_reader = {
+            let last = last_output.clone();
+            let mut pipe = child.stderr.take();
+            std::thread::spawn(move || {
+                let mut buf = Vec::new();
+                let mut chunk = [0u8; 4096];
+                while let Some(p) = pipe.as_mut() {
+                    match p.read(&mut chunk) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => {
+                            buf.extend_from_slice(&chunk[..n]);
+                            *last
+                                .lock()
+                                .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                                Some(Instant::now());
+                        }
+                    }
+                }
+                buf
+            })
+        };
         let start = Instant::now();
+        let mut next_report = start + Duration::from_secs(1);
+        let refused = |kind: crate::FailureKind| GitError::Refused {
+            kind,
+            detail: format!("git {}", args.join(" ")),
+        };
         let status = loop {
             if let Some(status) = child.try_wait().map_err(GitError::Spawn)? {
                 break status;
             }
-            if start.elapsed() >= timeout {
+            let elapsed = start.elapsed();
+            let last = *last_output
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let idle = last.map_or(elapsed, |t| t.elapsed());
+            if watch
+                .cancel
+                .is_some_and(|c| c.load(std::sync::atomic::Ordering::SeqCst))
+            {
+                self.stop(&mut child);
+                return Err(refused(crate::FailureKind::Cancelled));
+            }
+            if watch.timeout.is_some_and(|t| elapsed >= t) {
                 (self.process.kill)(&mut child);
                 let _ = child.wait();
                 return Err(GitError::TimedOut {
                     args: args.iter().map(|a| a.to_string()).collect(),
                 });
             }
+            // 연결 전(인증 창을 기다리는 중)에는 멈춤으로 보지 않는다. 첫 출력이 온 뒤부터 잰다.
+            if let (Some(stall), Some(_)) = (watch.stall, last)
+                && idle >= stall
+            {
+                self.stop(&mut child);
+                return Err(refused(crate::FailureKind::Stalled));
+            }
+            if let Some(observe) = watch.observer
+                && Instant::now() >= next_report
+            {
+                observe(elapsed, idle);
+                next_report += Duration::from_secs(1);
+            }
             std::thread::sleep(Duration::from_millis(20));
         };
+        if let Some(w) = writer {
+            let _ = w.join();
+        }
         let stdout = out_reader.join().unwrap_or_default();
         let stderr = err_reader.join().unwrap_or_default();
         finish(
@@ -193,6 +277,20 @@ impl Runner {
                 stderr,
             },
         )
+    }
+
+    /// 끝내 달라고 알리고, 2초 안에 끝나지 않으면 강제로 끝낸다.
+    fn stop(&self, child: &mut Child) {
+        (self.process.terminate)(child);
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            if let Ok(Some(_)) = child.try_wait() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        (self.process.kill)(child);
+        let _ = child.wait();
     }
 
     /// `git merge-file -p --quiet <우리> <기준> <그쪽>`이 겹침 없이 합쳐지는지. 파일은 바꾸지 않는다.

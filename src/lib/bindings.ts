@@ -287,7 +287,7 @@ export type DiffRequest = {
 
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
-"gitFailed" | "internal";
+"cancelled" | "stalled" | "gitFailed" | "internal";
 
 /**  화면에 보내는 오류. 문구는 화면이 `code`로 고르고, `detail`은 "자세히 보기"의 원문이다. */
 export type ErrorView = {

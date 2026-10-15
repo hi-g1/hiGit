@@ -111,6 +111,15 @@ pub trait GitBackend: Send + Sync {
         theirs: &[u8],
     ) -> Result<Vec<MergeSegment>>;
 
+    /// 이 저장소에서 도는 원격 작업과 오래 걸리는 로컬 쓰기를 끝낸다(취소·강제로 멈추기, D-080).
+    /// 도는 것이 없으면 다음 작업이 시작하자마자 끝난다. 작업을 시작할 때 `clear_cancel`로 지운다.
+    fn request_cancel(&self, repo: &RepoPath);
+
+    fn clear_cancel(&self, repo: &RepoPath);
+
+    /// 오래 걸리는 작업의 진행 알림을 받는다(1초마다 저장소, 경과, 마지막 출력 뒤 시간).
+    fn set_observer(&self, observer: Option<crate::ProgressObserver>);
+
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);
 

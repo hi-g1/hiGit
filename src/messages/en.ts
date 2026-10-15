@@ -230,6 +230,8 @@ export const en: Messages = {
     unparkConflict: "The parked files overlap with this version, so they were left parked.",
     timedOut: `The ${t("remote").toLowerCase()} didn't respond, so the task was stopped.`,
     mergeConflict: "The same lines were changed differently, so they couldn't be merged.",
+    cancelled: "Cancelled.",
+    stalled: "It stopped responding, so it was stopped.",
     gitFailed: "The Git operation failed.",
     internal: "Something unexpected happened.",
   },

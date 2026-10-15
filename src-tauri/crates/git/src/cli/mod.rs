@@ -55,6 +55,12 @@ pub struct CliBackend {
     timeouts: (std::time::Duration, std::time::Duration),
     /// `version()` 결과. `--end-of-options`를 넣을지 고를 때 쓴다(args.rs).
     version: OnceLock<GitVersion>,
+    /// 저장소별 취소 깃발(취소 단추·강제로 멈추기, D-080).
+    cancels: std::sync::Mutex<
+        std::collections::HashMap<PathBuf, std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    >,
+    /// 오래 걸리는 작업의 진행 알림(저장소, 경과, 마지막 출력 뒤 시간).
+    observer: std::sync::Mutex<Option<crate::ProgressObserver>>,
 }
 
 impl CliBackend {
@@ -64,7 +70,61 @@ impl CliBackend {
             runner: Runner::new(git.into(), configure),
             timeouts: (network::NETWORK_TIMEOUT, network::BACKGROUND_TIMEOUT),
             version: OnceLock::new(),
+            cancels: std::sync::Mutex::default(),
+            observer: std::sync::Mutex::default(),
         }
+    }
+
+    /// 이 저장소의 취소 깃발.
+    pub(crate) fn cancel_flag(
+        &self,
+        repo: &RepoPath,
+    ) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
+        self.cancels
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .entry(repo.as_path().to_path_buf())
+            .or_default()
+            .clone()
+    }
+
+    /// 지켜보며 실행할 때 쓰는 진행 알림(이 저장소용으로 묶음).
+    pub(crate) fn observer_for(
+        &self,
+        repo: &RepoPath,
+    ) -> Option<Box<dyn Fn(std::time::Duration, std::time::Duration) + Send + Sync>> {
+        let observer = self
+            .observer
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()?;
+        let path = repo.as_path().to_path_buf();
+        Some(Box::new(move |elapsed, idle| {
+            observer(&path, elapsed, idle)
+        }))
+    }
+
+    /// 사용자 hook이나 서명이 오래 붙잡을 수 있는 로컬 쓰기(저장·합치기·되돌리기). 시간 제한 없이
+    /// 돌리되 사람이 확인하면 강제로 멈출 수 있게 한다(D-066, D-080).
+    fn run_local_watched(
+        &self,
+        repo: &RepoPath,
+        args: &[&str],
+        stdin: Option<&[u8]>,
+    ) -> Result<runner::GitOutput> {
+        let cancel = self.cancel_flag(repo);
+        let observer = self.observer_for(repo);
+        self.runner.run_watched(
+            Some(repo.as_path()),
+            args,
+            &[],
+            stdin,
+            &runner::Watch {
+                cancel: Some(&cancel),
+                observer: observer.as_deref(),
+                ..runner::Watch::default()
+            },
+        )
     }
 
     /// 시간 제한으로 git 프로세스 트리를 끝내는 방법(platform이 준다).
@@ -526,6 +586,23 @@ impl GitBackend for CliBackend {
         self.segments(repo, base, ours, theirs)
     }
 
+    fn request_cancel(&self, repo: &RepoPath) {
+        self.cancel_flag(repo)
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    fn clear_cancel(&self, repo: &RepoPath) {
+        self.cancel_flag(repo)
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    fn set_observer(&self, observer: Option<crate::ProgressObserver>) {
+        *self
+            .observer
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = observer;
+    }
+
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.runner.set_overrides(repo.as_path(), pairs);
     }
@@ -574,8 +651,7 @@ impl GitBackend for CliBackend {
             }
             // 메시지는 stdin으로 넘겨 한글·여러 줄·따옴표를 그대로 저장한다.
             GitOp::Commit { message } => {
-                self.runner
-                    .run_with_stdin(dir, &["commit", "-F", "-"], message.as_bytes())?
+                self.run_local_watched(repo, &["commit", "-F", "-"], Some(message.as_bytes()))?
             }
             // `-c`의 값으로 넘기므로 `-`로 시작해도 옵션으로 읽히지 않는다(이름은 core가 이미 검사).
             GitOp::CreateAndSwitch { name } => self
@@ -603,8 +679,10 @@ impl GitBackend for CliBackend {
                 };
                 // FETCH_HEAD는 쓰지 않는다(바뀔 때마다 파일 감시가 알림을 낸다). 서브모듈까지 받지
                 // 않는다(서브모듈 설정은 신뢰 확인 대상이 아니고, 그 안에서 명령이 돌 수 있다).
+                // `--progress`: 내용은 읽지 않고 출력이 오는지로 멈춤을 본다(D-080).
                 let mut args = vec![
                     "fetch",
+                    "--progress",
                     "--no-prune",
                     "--no-write-fetch-head",
                     "--no-recurse-submodules",
@@ -647,7 +725,7 @@ impl GitBackend for CliBackend {
                 }
                 // `Oid`는 16진수만이라 옵션으로 읽히지 않는다.
                 args.push(oid.as_str());
-                match self.runner.run(dir, &args) {
+                match self.run_local_watched(repo, &args, None) {
                     Ok(out) => out,
                     Err(e) => {
                         // 충돌이나 hook 거부로 멈췄으면 시작 전으로 돌린다. 버전 하나 되돌리기가 저장 단계에서
@@ -688,7 +766,7 @@ impl GitBackend for CliBackend {
             GitOp::Merge { rev, message } => {
                 let mut args = vec!["merge", "--no-ff", "--no-edit", "-m", message];
                 push_revs(&mut args, Cmd::Merge, self.git_version(), &[rev]);
-                self.runner.run(dir, &args)?
+                self.run_local_watched(repo, &args, None)?
             }
             GitOp::MergeAbort => {
                 if !self.git_dir(repo)?.join("MERGE_HEAD").exists() {
@@ -703,6 +781,7 @@ impl GitBackend for CliBackend {
                 // 태그·서브모듈·서명은 저장소 설정(push.followTags 등)을 따르지 않는다.
                 let mut args = vec![
                     "push",
+                    "--progress",
                     "--no-follow-tags",
                     "--no-recurse-submodules",
                     "--no-signed",
