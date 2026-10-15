@@ -30,6 +30,18 @@
     "undo": "inverse"
   },
   {
+    "id": "merge",
+    "glossaryId": "merge",
+    "risk": "normal",
+    "undo": "restoreTree"
+  },
+  {
+    "id": "merge-into",
+    "glossaryId": "merge",
+    "risk": "normal",
+    "undo": "restoreRef"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",

@@ -27,6 +27,7 @@
     "allow-query-branch-name",
     "allow-query-home-map",
     "allow-query-secret-check",
+    "allow-query-merge-hint",
     "allow-query-project-summary",
     "allow-repo-watch",
     "allow-repo-unwatch"

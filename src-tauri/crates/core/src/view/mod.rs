@@ -7,14 +7,17 @@ mod branch;
 mod diff;
 mod input;
 mod map;
+mod merge;
 mod secret;
 
 pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
-    ActionInput, BranchCreateInput, CommitInput, FetchInput, PathsInput, SwitchInput, SyncInput,
+    ActionInput, BranchCreateInput, CommitInput, FetchInput, MergeInput, MergeIntoInput,
+    PathsInput, SwitchInput, SyncInput,
 };
 pub use map::{HomeMapView, MapCommit};
+pub use merge::{MergeHintKind, MergeHintView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 
 use serde::{Deserialize, Serialize};
@@ -353,6 +356,15 @@ pub enum ActionResult {
     Ignored {
         count: u32,
     },
+    /// 합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다.
+    Merged {
+        branch: String,
+        fast_forward: bool,
+    },
+    /// 겹쳐서 합치는 중으로 멈췄다. 충돌 해결 화면으로 간다(D-069).
+    MergeConflicts {
+        paths: Vec<String>,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -381,6 +393,14 @@ impl From<Outcome> for ActionResult {
                 overlap: r.overlap,
             },
             Outcome::Ignored { count } => ActionResult::Ignored { count },
+            Outcome::Merged {
+                branch,
+                fast_forward,
+            } => ActionResult::Merged {
+                branch,
+                fast_forward,
+            },
+            Outcome::MergeConflicts { paths } => ActionResult::MergeConflicts { paths },
         }
     }
 }

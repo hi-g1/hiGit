@@ -162,7 +162,7 @@ export const en: Messages = {
     invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,
     branchExists: `A ${t("branch").toLowerCase()} with the same name already exists.`,
     wouldOverwrite: `Changes not saved as a version would be overwritten. Use ${t("commit")} first.`,
-    notFastForward: `Your versions and the ${t("remote").toLowerCase()} have diverged. ${t("merge")} is not ready yet.`,
+    notFastForward: `The two sides have diverged. ${t("merge")} first.`,
     pushRejected: `The ${t("remote").toLowerCase()} has new versions. Use ${t("pull")} before ${t("push")}.`,
     noUpstream: `This ${t("branch").toLowerCase()} has never been uploaded to the ${t("remote").toLowerCase()}.`,
     sshHostUnverified: "This server is new. Connect once from a terminal to trust it.",

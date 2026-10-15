@@ -32,6 +32,6 @@ describe("문장 속 용어", () => {
     const { ko } = await import("./ko");
     expect(ko.errors.branchExists).toBe("같은 이름의 작업 줄기가 이미 있어요.");
     expect(ko.errors.noUpstream).toContain("작업 줄기예요.");
-    expect(ko.errors.notFastForward).toContain("병합은 아직 준비 중이에요.");
+    expect(ko.errors.notFastForward).toContain("먼저 병합을 해 주세요.");
   });
 });

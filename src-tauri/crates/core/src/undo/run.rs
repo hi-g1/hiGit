@@ -92,10 +92,10 @@ pub(crate) fn undo(
     repo: &RepoPath,
     journal: &Journal,
 ) -> Result<UndoOutcome> {
-    let (mut applied, _) = stacks(journal.read());
-    let entry = applied.pop().ok_or(CoreError::NothingToUndo)?;
     // 합치기·충돌 중에는 되돌리지 않는다(되돌리기가 그 작업을 망친다).
     refuse_during_operation(git, repo)?;
+    let (mut applied, _) = stacks(journal.read());
+    let entry = applied.pop().ok_or(CoreError::NothingToUndo)?;
     let now = UndoState::capture(git, repo)?;
     // 앱 밖에서 버전이나 브랜치가 바뀌었으면 되돌리지 않는다(복구 화면으로 안내).
     if now.head != entry.after.head || now.branch != entry.after.branch {
@@ -152,9 +152,9 @@ pub(crate) fn redo(
     repo: &RepoPath,
     journal: &Journal,
 ) -> Result<UndoOutcome> {
+    refuse_during_operation(git, repo)?;
     let (_, mut undone) = stacks(journal.read());
     let entry = undone.pop().ok_or(CoreError::NothingToUndo)?;
-    refuse_during_operation(git, repo)?;
     let now = UndoState::capture(git, repo)?;
     if now.head != entry.before.head || now.branch != entry.before.branch {
         return Err(CoreError::UndoStale);

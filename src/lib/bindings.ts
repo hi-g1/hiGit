@@ -33,6 +33,8 @@ export const commands = {
 	queryHomeMap: (repo: string) => __TAURI_INVOKE<HomeMapView>("query_home_map", { repo }),
 	/**  버전 저장 전 비밀 파일 검사(D-077). */
 	querySecretCheck: (repo: string, request: SecretCheckRequest) => __TAURI_INVOKE<SecretCheckView>("query_secret_check", { repo, request }),
+	/**  합치기 제안(D-048, D-071). */
+	queryMergeHint: (repo: string) => __TAURI_INVOKE<MergeHintView>("query_merge_hint", { repo }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
@@ -49,7 +51,11 @@ export type ActionInput =
 /**  관리 시작. 입력 없음. */
 { id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
-{ id: "ignore"; input: PathsInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "ignore"; input: PathsInput } | 
+/**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
+{ id: "merge"; input: MergeInput } | 
+/**  지금 버전으로 기본 브랜치를 앞으로 감는다("main에 합치기", D-071). */
+{ id: "merge-into"; input: MergeIntoInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -63,7 +69,11 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
 parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
 /**  겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다. */
-overlap: string[] } | { kind: "ignored"; count: number };
+overlap: string[] } | { kind: "ignored"; count: number } | 
+/**  합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다. */
+{ kind: "merged"; branch: string; fast_forward: boolean } | 
+/**  겹쳐서 합치는 중으로 멈췄다. 충돌 해결 화면으로 간다(D-069). */
+{ kind: "mergeConflicts"; paths: string[] };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -245,6 +255,39 @@ export type MapCommit = {
 	oid: string,
 	shortOid: string,
 	summary: string,
+};
+
+export type MergeHintKind = 
+/**  제안할 것이 없다(기본 브랜치에 있음, 같음, 기본 브랜치 없음). */
+"none" | 
+/**  기본 브랜치에 새 버전이 있다: "main 가져와 합치기". */
+"bring" | 
+/**  내 브랜치만 앞서 있다: 브랜치 목록의 "main에 합치기". */
+"into";
+
+export type MergeHintView = {
+	kind: MergeHintKind,
+	/**  기본 브랜치 이름. */
+	branch: string | null,
+	/**  기본 브랜치에만 있는 버전 수. */
+	behind: number,
+	/**  내 브랜치에만 있는 버전 수. */
+	ahead: number,
+	/**  가져와 합치면 겹치는 파일(5개까지). 겹침 검사를 건너뛰었으면 비어 있다. */
+	overlap: string[],
+	overlapCount: number,
+};
+
+export type MergeInput = {
+	/**  가져올 로컬 브랜치 이름. */
+	branch: string,
+	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
+	locale: string,
+};
+
+export type MergeIntoInput = {
+	/**  앞으로 감을 브랜치(기본 브랜치). */
+	branch: string,
 };
 
 export type NameProblem = "empty" | 

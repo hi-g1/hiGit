@@ -38,6 +38,7 @@ export type {
   NameProblem,
   RepoInfo,
   RiskView,
+  MergeHintView,
   SecretCheckView,
   SecretFinding,
   SecretRule,
@@ -105,6 +106,8 @@ export const api = {
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),
+  /** 합치기 제안(D-048, D-071). */
+  mergeHint: (repo: string) => call(commands.queryMergeHint(repo)),
   /** 버전 저장 전 비밀 파일 검사(D-077). 결과에는 경로·규칙·줄 번호만. */
   secretCheck: (repo: string, stageAll: boolean) => call(commands.querySecretCheck(repo, { stageAll })),
   checkBranchName: (repo: string, name: string) => call(commands.queryBranchName(repo, name)),

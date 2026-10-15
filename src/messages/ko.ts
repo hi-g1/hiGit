@@ -171,7 +171,7 @@ export const ko = {
     invalidBranchName: `${t("branch")} 이름으로 쓸 수 없는 글자가 있어요.`,
     branchExists: `같은 이름의 ${josa(t("branch"), "이/가")} 이미 있어요.`,
     wouldOverwrite: `버전으로 저장하지 않은 변경이 덮어써져요. 먼저 ${t("commit")}부터 해 주세요.`,
-    notFastForward: `내 버전과 ${t("remote")}의 버전이 갈라져 있어요. ${josa(t("merge"), "은/는")} 아직 준비 중이에요.`,
+    notFastForward: `두 쪽 버전이 갈라져 있어요. 먼저 ${josa(t("merge"), "을/를")} 해 주세요.`,
     pushRejected: `${t("remote")}에 새 버전이 있어요. ${t("push")} 전에 ${t("pull")}부터 해 주세요.`,
     noUpstream: `아직 ${t("remote")}에 올린 적이 없는 ${josa(t("branch"), "이에요/예요")}.`,
     sshHostUnverified: "처음 접속하는 서버라 확인이 필요해요. 터미널에서 한 번 접속해 서버를 등록해 주세요.",

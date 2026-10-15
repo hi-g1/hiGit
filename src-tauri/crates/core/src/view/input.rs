@@ -16,6 +16,10 @@ pub enum ActionInput {
     Commit(CommitInput),
     /// 제외할 파일에 추가(새 파일만, 200개까지).
     Ignore(PathsInput),
+    /// 다른 브랜치를 지금 브랜치로 가져와 합친다(D-069).
+    Merge(MergeInput),
+    /// 지금 버전으로 기본 브랜치를 앞으로 감는다("main에 합치기", D-071).
+    MergeInto(MergeIntoInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -33,6 +37,8 @@ impl ActionInput {
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
             ActionInput::Ignore(_) => "ignore",
+            ActionInput::Merge(_) => "merge",
+            ActionInput::MergeInto(_) => "merge-into",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
@@ -92,6 +98,22 @@ pub struct BranchCreateInput {
 pub struct FetchInput {
     /// 저절로 하는 원격 확인이면 true. 질문 창을 띄우지 않고 60초 안에 끝낸다(D-045, D-055).
     pub background: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeInput {
+    /// 가져올 로컬 브랜치 이름.
+    pub branch: String,
+    /// 합친 버전 메시지에 쓸 앱 언어("ko", "en").
+    pub locale: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeIntoInput {
+    /// 앞으로 감을 브랜치(기본 브랜치).
+    pub branch: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

@@ -1,5 +1,7 @@
-use std::path::Path;
-use std::sync::Arc;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use git::{GitBackend, RepoPath};
 
@@ -10,8 +12,8 @@ use crate::recent::RecentStore;
 use crate::trust::{TrustDecision, TrustState, TrustStore};
 use crate::view::{
     BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, HomeMapView,
-    LogPage, LogQuery, MapCommit, NameProblem, ProjectSummaryView, SecretCheckRequest,
-    SecretCheckView, SecretFinding, SecretRule, StatusView,
+    LogPage, LogQuery, MapCommit, MergeHintKind, MergeHintView, NameProblem, ProjectSummaryView,
+    SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule, StatusView,
 };
 use crate::{CoreError, Result};
 
@@ -21,7 +23,14 @@ pub struct Queries {
     opened: Arc<OpenedRepos>,
     recent: Arc<RecentStore>,
     trust: Arc<TrustStore>,
+    /// 합치기 제안 결과(저장소 → (HEAD, 기본 브랜치 해시, 결과)). 둘이 그대로면 다시 계산하지 않는다.
+    hint_cache: Mutex<HashMap<PathBuf, (String, String, MergeHintView)>>,
+    /// 겹침 검사가 오래 걸린 저장소. 제안에서 겹친 파일 표시를 뺀다.
+    slow_overlap: Mutex<HashSet<PathBuf>>,
 }
+
+/// 합치기 제안의 겹침 검사가 이보다 오래 걸리면 그 저장소에서는 다시 하지 않는다.
+const SLOW_OVERLAP: Duration = Duration::from_secs(1);
 
 /// 한 번에 읽는 버전 기록의 최대 개수.
 pub const MAX_LOG_PAGE: u32 = 500;
@@ -38,7 +47,83 @@ impl Queries {
             opened,
             recent,
             trust,
+            hint_cache: Mutex::new(HashMap::new()),
+            slow_overlap: Mutex::new(HashSet::new()),
         }
+    }
+
+    /// 합치기 제안(D-048, D-071). 기본 브랜치에 새 버전이 있으면 "가져와 합치기", 내 브랜치만
+    /// 앞서 있으면 "main에 합치기". 기준은 홈 노선도와 같은 로컬 기본 브랜치다.
+    pub fn merge_hint(&self, repo: &Path) -> Result<MergeHintView> {
+        let root = self.opened_repo(repo)?;
+        let status = self.git.status(&root)?;
+        let (Some(current), Some(head)) = (status.branch.head.clone(), status.branch.oid.clone())
+        else {
+            return Ok(MergeHintView::none());
+        };
+        let branches = self.git.branches(&root)?;
+        let remotes = self.git.remotes(&root)?;
+        let Some(default) = self.default_branch(&root, &branches, &remotes)? else {
+            return Ok(MergeHintView::none());
+        };
+        let main_ref = format!("refs/heads/{default}");
+        let main_oid = match self.git.resolve_ref(&root, &main_ref)? {
+            Some(oid) if default != current => oid.to_string(),
+            _ => return Ok(MergeHintView::none()),
+        };
+        let key = root.as_path().to_path_buf();
+        if let Some((h, m, view)) = self
+            .hint_cache
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&key)
+            && *h == head
+            && *m == main_oid
+        {
+            return Ok(view.clone());
+        }
+        let (behind, ahead) = self.git.count_between(&root, &main_ref, "HEAD")?;
+        let kind = if behind > 0 {
+            MergeHintKind::Bring
+        } else if ahead > 0 {
+            MergeHintKind::Into
+        } else {
+            MergeHintKind::None
+        };
+        let mut view = MergeHintView {
+            kind,
+            branch: Some(default),
+            behind,
+            ahead,
+            overlap: Vec::new(),
+            overlap_count: 0,
+        };
+        let slow = self
+            .slow_overlap
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&key);
+        // 갈라졌을 때만 겹침을 본다. 오래 걸린 저장소에서는 다시 하지 않는다.
+        if behind > 0 && ahead > 0 && !slow {
+            let start = Instant::now();
+            if let git::MergeCheck::Overlap { paths } =
+                self.git.merge_check(&root, None, "HEAD", &main_ref)?
+            {
+                view.overlap_count = u32::try_from(paths.len()).unwrap_or(u32::MAX);
+                view.overlap = paths.into_iter().take(5).collect();
+            }
+            if start.elapsed() > SLOW_OVERLAP {
+                self.slow_overlap
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(key.clone());
+            }
+        }
+        self.hint_cache
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(key, (head, main_oid, view.clone()));
+        Ok(view)
     }
 
     /// 화면이 보낸 저장소 경로를 정규화하고, 열린 프로젝트인지 확인한다.

@@ -228,6 +228,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
             | ActionInput::Ignore(_)
+            | ActionInput::Merge(_)
+            | ActionInput::MergeInto(_)
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -244,6 +246,13 @@ fn action_input_tags_match_registry() {
         ActionInput::Stage(paths.clone()),
         ActionInput::Unstage(paths.clone()),
         ActionInput::Ignore(paths),
+        ActionInput::Merge(higit_core::view::MergeInput {
+            branch: "main".into(),
+            locale: "ko".into(),
+        }),
+        ActionInput::MergeInto(higit_core::view::MergeIntoInput {
+            branch: "main".into(),
+        }),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
             stage_all: false,

@@ -95,6 +95,15 @@ pub enum Outcome {
     Ignored {
         count: u32,
     },
+    /// 합쳤다(또는 "main에 합치기"로 앞으로 감았다).
+    Merged {
+        branch: String,
+        fast_forward: bool,
+    },
+    /// 겹쳐서 합치는 중으로 멈췄다. 상태는 저장소(`MERGE_HEAD`)에 있다.
+    MergeConflicts {
+        paths: Vec<String>,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -115,6 +124,8 @@ impl Outcome {
     pub fn journal_mode(&self) -> JournalMode {
         match self {
             Outcome::Ignored { .. } => JournalMode::Always,
+            // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
+            Outcome::MergeConflicts { .. } => JournalMode::Skip,
             _ => JournalMode::Journal,
         }
     }

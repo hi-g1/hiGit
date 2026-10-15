@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    DiffRequest, ErrorCode, ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, OpenHow,
-    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, SecretCheckRequest,
+    DiffRequest, ErrorCode, ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView,
+    OpenHow, PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, SecretCheckRequest,
     SecretCheckView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
@@ -253,6 +253,19 @@ pub async fn redo_last(state: State<'_, AppState>, folder: String) -> CmdResult<
 pub async fn query_home_map(state: State<'_, AppState>, repo: String) -> CmdResult<HomeMapView> {
     blocking(state, move |core| {
         core.queries().home_map(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 합치기 제안(D-048, D-071).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_merge_hint(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<MergeHintView> {
+    blocking(state, move |core| {
+        core.queries().merge_hint(&PathBuf::from(repo))
     })
     .await
 }
