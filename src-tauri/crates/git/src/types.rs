@@ -277,6 +277,13 @@ pub struct CommitStat {
     pub removed: u32,
 }
 
+/// 버전 하나의 전체 메시지(마지막 버전 고치기·기록 정리).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommitMessage {
+    pub oid: Oid,
+    pub message: String,
+}
+
 /// 버전을 가리키는 태그. 주석 태그는 가리키는 버전으로 한 단계 벗긴다.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TagRef {

@@ -44,6 +44,8 @@ pub struct FakeGit {
     /// `other_git_running`이 돌려줄 값.
     pub git_running: AtomicBool,
     pub tags: Mutex<Vec<git::TagRef>>,
+    /// `count_unpublished`가 돌려줄 값.
+    pub unpublished: Mutex<Option<u32>>,
 }
 
 impl FakeGit {
@@ -73,6 +75,7 @@ impl FakeGit {
             cancel_cleared: AtomicUsize::new(0),
             git_running: AtomicBool::new(false),
             tags: Mutex::new(Vec::new()),
+            unpublished: Mutex::new(Some(0)),
         }
     }
 
@@ -133,6 +136,40 @@ impl GitBackend for FakeGit {
 
     fn tags(&self, _repo: &RepoPath) -> git::Result<Vec<git::TagRef>> {
         Ok(self.tags.lock().unwrap().clone())
+    }
+
+    /// 올리지 않은 버전 수: `unpublished` 값(기본 0).
+    fn count_unpublished(
+        &self,
+        _repo: &RepoPath,
+        _tip: &Oid,
+        _base: Option<&Oid>,
+    ) -> git::Result<Option<u32>> {
+        Ok(*self.unpublished.lock().unwrap())
+    }
+
+    fn reachable_from_branches(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<bool> {
+        Ok(true)
+    }
+
+    fn commit_messages(
+        &self,
+        _repo: &RepoPath,
+        oids: &[Oid],
+    ) -> git::Result<Vec<git::CommitMessage>> {
+        let commits = self.commits.lock().unwrap();
+        Ok(oids
+            .iter()
+            .filter_map(|o| {
+                commits
+                    .iter()
+                    .find(|c| c.oid == o.as_str())
+                    .map(|c| git::CommitMessage {
+                        oid: o.clone(),
+                        message: c.summary.clone(),
+                    })
+            })
+            .collect())
     }
 
     /// 버전마다 파일 1개, 해시 첫 글자 값만큼 더한 줄(시험용 고정값).

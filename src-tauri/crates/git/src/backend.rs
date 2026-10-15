@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitStat, DiffTarget, FileDiff, GitOp, GitVersion, GraphLogQuery,
-    IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect,
-    ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp, GitVersion,
+    GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
+    RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -27,6 +27,21 @@ pub trait GitBackend: Send + Sync {
     /// 버전마다 바뀐 파일·줄 수. 출력 2MB, 10초 안에 받은 것만 돌려준다(뒤의 버전은 결과에
     /// 없다, D-096). 경로는 돌려주지 않는다.
     fn commit_stats(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitStat>>;
+
+    /// `tip`의 조상 중 어떤 원격 추적 브랜치에도 닿지 않는 버전 수(`base`의 조상은 세지 않음).
+    /// 원격 끝점이 너무 많아 판정하지 못하면 `None`(D-097: 부르는 쪽이 거절한다).
+    fn count_unpublished(
+        &self,
+        repo: &RepoPath,
+        tip: &Oid,
+        base: Option<&Oid>,
+    ) -> Result<Option<u32>>;
+
+    /// 로컬 브랜치 끝에서 닿는 버전인지(D-099).
+    fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool>;
+
+    /// 버전의 전체 메시지. 100개까지, 상한 안에서 읽은 것만.
+    fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>>;
 
     /// 버전을 가리키는 태그(이름순, 최대 1000개). 버전이 아닌 것을 가리키는 태그는 뺀다. 태그를
     /// 가리키는 태그는 git 버전에 따라 빠지거나(2.34) 그 버전을 가리킨다(새 git은 끝까지 벗김).

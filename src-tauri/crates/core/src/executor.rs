@@ -287,6 +287,24 @@ mod tests {
         fn commit_stats(&self, _: &RepoPath, _: &[git::Oid]) -> git::Result<Vec<git::CommitStat>> {
             unreachable!()
         }
+        fn count_unpublished(
+            &self,
+            _: &RepoPath,
+            _: &git::Oid,
+            _: Option<&git::Oid>,
+        ) -> git::Result<Option<u32>> {
+            unreachable!()
+        }
+        fn reachable_from_branches(&self, _: &RepoPath, _: &git::Oid) -> git::Result<bool> {
+            unreachable!()
+        }
+        fn commit_messages(
+            &self,
+            _: &RepoPath,
+            _: &[git::Oid],
+        ) -> git::Result<Vec<git::CommitMessage>> {
+            unreachable!()
+        }
         fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
             unreachable!()
         }

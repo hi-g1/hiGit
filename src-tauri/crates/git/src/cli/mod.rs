@@ -10,6 +10,9 @@ mod diff;
 mod diff_tests;
 #[cfg(test)]
 mod graph_tests;
+mod history;
+#[cfg(test)]
+mod history_tests;
 mod log;
 mod merge_check;
 #[cfg(test)]
@@ -47,9 +50,10 @@ use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitStat, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend,
-    GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment,
-    Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitMessage, CommitStat, DiffKind, DiffTarget, FailureKind,
+    FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery,
+    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result,
+    StashEntry, Status, TagRef,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -293,6 +297,23 @@ impl GitBackend for CliBackend {
             &String::from_utf8_lossy(&out.stdout),
             out.truncated,
         ))
+    }
+
+    fn count_unpublished(
+        &self,
+        repo: &RepoPath,
+        tip: &Oid,
+        base: Option<&Oid>,
+    ) -> Result<Option<u32>> {
+        self.count_unpublished_impl(repo, tip, base)
+    }
+
+    fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool> {
+        self.reachable_from_branches_impl(repo, oid)
+    }
+
+    fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>> {
+        self.commit_messages_impl(repo, oids)
     }
 
     fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>> {
