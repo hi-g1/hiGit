@@ -31,6 +31,8 @@ pub struct Queries {
     hint_cache: Mutex<HashMap<PathBuf, (String, String, MergeHintView)>>,
     /// 겹침 검사가 오래 걸린 저장소. 제안에서 겹친 파일 표시를 뺀다.
     slow_overlap: Mutex<HashSet<PathBuf>>,
+    /// 앱이 시작한 작업의 표식을 확인하는 키(D-102).
+    key: crate::undo::JournalKey,
 }
 
 /// 합치기 제안의 겹침 검사가 이보다 오래 걸리면 그 저장소에서는 다시 하지 않는다.
@@ -45,6 +47,7 @@ impl Queries {
         opened: Arc<OpenedRepos>,
         recent: Arc<RecentStore>,
         trust: Arc<TrustStore>,
+        key: crate::undo::JournalKey,
     ) -> Self {
         Self {
             git,
@@ -53,7 +56,12 @@ impl Queries {
             trust,
             hint_cache: Mutex::new(HashMap::new()),
             slow_overlap: Mutex::new(HashSet::new()),
+            key,
         }
+    }
+
+    pub(crate) fn set_key(&mut self, key: crate::undo::JournalKey) {
+        self.key = key;
     }
 
     /// 충돌 해결 화면의 상태(D-069). 합치는 중이 아니면 `active: false`.
@@ -64,7 +72,7 @@ impl Queries {
         let entries = self.git.index_entries(&root)?;
         let conflicts = crate::conflict::conflict_paths(entries);
         let other = crate::conflict::other_operation(&self.git.git_dir(&root)?).is_some();
-        let context = crate::conflict::context(self.git.as_ref(), &root)?;
+        let context = crate::conflict::context(self.git.as_ref(), &root, &self.key)?;
         let mut view = ConflictStateView {
             active: context.is_some(),
             context: match context {

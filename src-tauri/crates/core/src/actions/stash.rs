@@ -56,6 +56,7 @@ fn take_out_ref(git: &dyn git::GitBackend, repo: &git::RepoPath, refname: &str) 
 fn take_out_parked(
     git: &dyn git::GitBackend,
     repo: &git::RepoPath,
+    key: &crate::undo::JournalKey,
     branch: &str,
 ) -> Result<Outcome> {
     crate::actions::names::validate_ref_like(branch)?;
@@ -78,6 +79,7 @@ fn take_out_parked(
     }
     crate::parked::write_marker(
         &git.git_dir(repo)?,
+        key,
         &crate::parked::UnparkMarker {
             branch: branch.to_string(),
             oid: oid.to_string(),
@@ -167,7 +169,7 @@ impl Action for StashAction {
                     git.run(repo, &GitOp::StashDropOid { oid })?;
                     Ok(Outcome::TookOut)
                 }
-                TakeOutSource::Parked { branch } => take_out_parked(git, repo, branch),
+                TakeOutSource::Parked { branch } => take_out_parked(git, repo, ctx.key, branch),
                 TakeOutSource::Ref { refname } => take_out_ref(git, repo, refname),
             },
             _ => Err(CoreError::InputMismatch(self.meta.id)),

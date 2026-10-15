@@ -160,13 +160,18 @@ pub fn init() -> Result<Core> {
     }
     // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063).
     if let Some(dir) = &data_dir {
-        core.executor
-            .set_journal_key(crate::undo::JournalKey::load_or_create(dir));
+        core.set_key(crate::undo::JournalKey::load_or_create(dir));
     }
     Ok(core)
 }
 
 impl Core {
+    /// journal·표식 서명 키를 정한다. 실행기와 조회에 같이 준다.
+    fn set_key(&mut self, key: crate::undo::JournalKey) {
+        self.executor.set_journal_key(key.clone());
+        self.queries.set_key(key);
+    }
+
     /// 최근 목록을 메모리에만 두는 Core(테스트용).
     pub fn with_backend(git: Arc<dyn GitBackend>) -> Result<Self> {
         Self::with_backend_and_recent(git, RecentStore::in_memory())
@@ -194,9 +199,17 @@ impl Core {
         let recent = Arc::new(recent);
         let opened = Arc::new(OpenedRepos::default());
         let trust = Arc::new(trust);
+        // 실행기(journal·표식 쓰기)와 조회(표식 읽기)가 같은 키를 쓴다.
+        let key = crate::undo::JournalKey::ephemeral();
         Ok(Self {
-            executor: Executor::new(registry),
-            queries: Queries::new(git.clone(), opened.clone(), recent.clone(), trust.clone()),
+            executor: Executor::new(registry).with_journal_key(key.clone()),
+            queries: Queries::new(
+                git.clone(),
+                opened.clone(),
+                recent.clone(),
+                trust.clone(),
+                key,
+            ),
             git,
             git_version,
             git_build: platform::GitBuild::Unknown,
@@ -455,6 +468,7 @@ impl Core {
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,
+            key: self.executor.journal_key(),
         };
         let (_preview, token) = self.executor.preview(&ctx, input.action_id(), input)?;
         Ok(PreviewView { token: token.0 })
@@ -519,6 +533,7 @@ impl Core {
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,
+            key: self.executor.journal_key(),
         };
         Ok(crate::view::RecoveryView {
             items: self.executor.recovery(&ctx)?,
@@ -644,6 +659,7 @@ impl Core {
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,
+            key: self.executor.journal_key(),
         };
         f(&self.executor, &ctx)
     }

@@ -35,11 +35,15 @@ pub(crate) fn other_operation(git_dir: &std::path::Path) -> Option<crate::view::
 
 /// 앱이 다룰 수 있는 충돌 맥락. 합치는 중이면 `Merge`, 앱이 시작한 꺼내기가 충돌을 남겼으면
 /// `Unpark`, 아니면 `None`(다른 도구의 작업이거나 충돌 없음).
-pub(crate) fn context(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Context>> {
+pub(crate) fn context(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    key: &crate::undo::JournalKey,
+) -> Result<Option<Context>> {
     if git.resolve_ref(repo, "MERGE_HEAD")?.is_some() {
         return Ok(Some(Context::Merge));
     }
-    let Some(marker) = crate::parked::read_marker(&git.git_dir(repo)?) else {
+    let Some(marker) = crate::parked::read_marker(&git.git_dir(repo)?, key) else {
         return Ok(None);
     };
     let on_branch = git.current_branch(repo)?.as_deref() == Some(marker.branch.as_str());

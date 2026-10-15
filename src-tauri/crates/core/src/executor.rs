@@ -75,6 +75,11 @@ impl Executor {
         self.journal_key = key;
     }
 
+    /// journal과 표식(D-102)의 서명 키.
+    pub(crate) fn journal_key(&self) -> &JournalKey {
+        &self.journal_key
+    }
+
     /// 마지막 작업을 되돌린다(D-042). 저장소 잠금은 부르는 쪽(Core)이 잡는다.
     pub fn undo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
         let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
@@ -478,6 +483,7 @@ mod tests {
         let ctx = ExecCtx {
             git: &NoGit,
             state: &state,
+            key: &JournalKey::ephemeral(),
         };
         for _ in 0..3 {
             exec.preview(&ctx, "safe", &ActionInput::Init).unwrap();
@@ -497,6 +503,7 @@ mod tests {
         let ctx = ExecCtx {
             git: &NoGit,
             state: &state,
+            key: &JournalKey::ephemeral(),
         };
         for _ in 0..3 {
             exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();

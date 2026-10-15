@@ -39,6 +39,7 @@ fn stage_and_unstage_call_git_with_paths() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
 
     let out = exec
@@ -76,6 +77,7 @@ fn commit_returns_new_summary() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
 
     let out = exec
@@ -95,6 +97,7 @@ fn inputs_are_checked_before_git() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     let invalid = |r: higit_core::Result<Outcome>| matches!(r, Err(CoreError::InvalidInput(_)));
 
@@ -137,6 +140,7 @@ fn actions_need_a_repo() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a"]))),
@@ -280,6 +284,7 @@ fn stage_and_commit_refuse_while_files_are_in_conflict() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a.txt"]))),

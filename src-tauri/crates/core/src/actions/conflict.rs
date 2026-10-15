@@ -110,7 +110,7 @@ impl Action for ConflictAction {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
         refuse_other_operation(git, repo)?;
-        let Some(context) = crate::conflict::context(git, repo)? else {
+        let Some(context) = crate::conflict::context(git, repo, ctx.key)? else {
             return Err(CoreError::InvalidInput("합치는 중이 아니에요"));
         };
         let conflicts = conflict_paths(git.index_entries(repo)?);

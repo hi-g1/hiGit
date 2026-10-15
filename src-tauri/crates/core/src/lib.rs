@@ -17,6 +17,7 @@ mod guard;
 mod history;
 mod locks;
 pub mod log;
+mod marker;
 pub(crate) mod parked;
 mod query;
 pub mod recent;

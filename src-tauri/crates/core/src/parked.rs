@@ -2,6 +2,9 @@
 //!
 //! 브랜치 이름의 `%`와 `/`를 바꿔 적어 한 조각으로 만든다. 그래야 `a`와 `a/b`를 함께 맡길 수 있다.
 
+use crate::marker;
+use crate::undo::JournalKey;
+
 pub(crate) const PARKED_PREFIX: &str = "refs/higit/parked/";
 /// 맡긴 ref 이름 한 조각의 한도(바이트). 파일 시스템 이름 한도 255바이트 안쪽.
 pub(crate) const MAX_NAME_BYTES: usize = 200;
@@ -67,7 +70,7 @@ fn safe_paths(paths: &[String]) -> bool {
     crate::actions::paths::validate(paths).is_ok() && paths.iter().all(|p| git::safe_relative(p))
 }
 
-/// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`.
+/// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`, 서명은 `marker`.
 /// 이 파일이 있을 때만 충돌 해결 화면이 "맡겨 둔 파일" 맥락으로 읽는다(터미널의 `stash pop`과 구분).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub(crate) struct UnparkMarker {
@@ -75,53 +78,24 @@ pub(crate) struct UnparkMarker {
     pub oid: String,
 }
 
-fn marker_path(git_dir: &std::path::Path) -> std::path::PathBuf {
-    git_dir.join("higit").join("unpark.json")
-}
-
-/// `higit` 폴더와 표식 파일이 링크가 아닐 때만 쓰고 읽는다(journal과 같은 까닭).
-fn place_ok(git_dir: &std::path::Path) -> bool {
-    let dir = git_dir.join("higit");
-    let not_link = |p: &std::path::Path, want_dir: bool| match std::fs::symlink_metadata(p) {
-        Ok(m) => !m.file_type().is_symlink() && m.is_dir() == want_dir,
-        Err(_) => true,
-    };
-    not_link(&dir, true) && not_link(&marker_path(git_dir), false)
-}
-
-pub(crate) fn write_marker(git_dir: &std::path::Path, marker: &UnparkMarker) -> crate::Result<()> {
-    let fail = |_| crate::CoreError::InvalidInput("겹침 해결을 시작하지 못했어요");
-    if !place_ok(git_dir) {
-        return Err(crate::CoreError::InvalidInput(
-            "겹침 해결을 시작하지 못했어요",
-        ));
-    }
-    std::fs::create_dir_all(git_dir.join("higit")).map_err(fail)?;
-    if !place_ok(git_dir) {
-        return Err(crate::CoreError::InvalidInput(
-            "겹침 해결을 시작하지 못했어요",
-        ));
-    }
-    let text = serde_json::to_string(marker)
-        .map_err(|_| crate::CoreError::InvalidInput("겹침 해결을 시작하지 못했어요"))?;
-    std::fs::write(marker_path(git_dir), text).map_err(fail)
-}
-
-pub(crate) fn read_marker(git_dir: &std::path::Path) -> Option<UnparkMarker> {
-    if !place_ok(git_dir) {
-        return None;
-    }
-    let text = std::fs::read_to_string(marker_path(git_dir)).ok()?;
-    let marker: UnparkMarker = serde_json::from_str(&text).ok()?;
+/// 서명이 맞고(D-102) 값의 형식이 맞는 표식.
+pub(crate) fn read_marker(git_dir: &std::path::Path, key: &JournalKey) -> Option<UnparkMarker> {
+    let marker: UnparkMarker = marker::read(git_dir, marker::Name::Unpark, key)?;
     let valid = git::Oid::parse(&marker.oid).is_some()
         && crate::actions::names::validate_ref_like(&marker.branch).is_ok();
     valid.then_some(marker)
 }
 
+pub(crate) fn write_marker(
+    git_dir: &std::path::Path,
+    key: &JournalKey,
+    value: &UnparkMarker,
+) -> crate::Result<()> {
+    marker::write(git_dir, marker::Name::Unpark, key, value)
+}
+
 pub(crate) fn clear_marker(git_dir: &std::path::Path) {
-    if place_ok(git_dir) {
-        let _ = std::fs::remove_file(marker_path(git_dir));
-    }
+    marker::clear(git_dir, marker::Name::Unpark);
 }
 
 #[cfg(test)]
@@ -131,19 +105,28 @@ mod tests {
     #[test]
     fn marker_round_trip_and_bad_values() {
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(read_marker(dir.path()), None);
+        let key = JournalKey::ephemeral();
+        assert_eq!(read_marker(dir.path(), &key), None);
         let m = UnparkMarker {
             branch: "기능/한글".into(),
             oid: "a".repeat(40),
         };
-        write_marker(dir.path(), &m).unwrap();
-        assert_eq!(read_marker(dir.path()), Some(m));
+        write_marker(dir.path(), &key, &m).unwrap();
+        assert_eq!(read_marker(dir.path(), &key), Some(m));
+        // 서명이 맞아도 값이 규칙에 어긋나면 읽지 않는다.
+        let bad = UnparkMarker {
+            branch: "-x".into(),
+            oid: "a".repeat(40),
+        };
+        write_marker(dir.path(), &key, &bad).unwrap();
+        assert_eq!(read_marker(dir.path(), &key), None);
+        // 서명 없는 옛 형식은 읽지 않는다.
         std::fs::write(
             dir.path().join("higit/unpark.json"),
-            r#"{"branch":"-x","oid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
+            r#"{"branch":"main","oid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
         )
         .unwrap();
-        assert_eq!(read_marker(dir.path()), None);
+        assert_eq!(read_marker(dir.path(), &key), None);
         clear_marker(dir.path());
         assert!(!dir.path().join("higit/unpark.json").exists());
     }

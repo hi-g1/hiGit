@@ -29,6 +29,7 @@ fn init_turns_folder_into_repo() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
@@ -60,6 +61,7 @@ fn stage_and_commit_with_real_git() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
@@ -83,6 +85,7 @@ fn stage_and_commit_with_real_git() {
     let ctx = ExecCtx {
         git: &git,
         state: &state,
+        key: &higit_core::undo::JournalKey::ephemeral(),
     };
     exec.execute(
         &ctx,
