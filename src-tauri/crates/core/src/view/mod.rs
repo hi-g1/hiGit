@@ -320,6 +320,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::NotARepository => ErrorCode::NotARepo,
             // 화면 오류 코드는 브랜치 조회 단계(계획 005 순번 21)에서 따로 둔다.
             F::ProtocolNotAllowed => ErrorCode::GitFailed,
+            F::UnparkConflict => ErrorCode::GitFailed,
             F::Other => ErrorCode::GitFailed,
         }
     }

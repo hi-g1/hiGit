@@ -4,6 +4,9 @@ mod branch_tests;
 mod branches;
 mod diff;
 mod log;
+mod park;
+#[cfg(test)]
+mod park_tests;
 #[cfg(test)]
 mod ref_tests;
 mod refs;
@@ -402,6 +405,9 @@ impl GitBackend for CliBackend {
                 push_revs(&mut args, Cmd::Switch, self.git_version(), &[branch]);
                 self.runner.run(dir, &args)?
             }
+            GitOp::Park { message } => return self.park_push(repo, message),
+            GitOp::StashDropIf { oid } => return self.stash_drop_if(repo, oid),
+            GitOp::Unpark { oid } => return self.unpark(repo, oid),
             GitOp::SwitchTrack {
                 local,
                 remote_branch,
@@ -414,6 +420,7 @@ impl GitBackend for CliBackend {
         Ok(OpOutput {
             stdout: out.stdout_lossy(),
             stderr: out.stderr_lossy(),
+            oid: None,
         })
     }
 }

@@ -33,6 +33,8 @@ pub enum FailureKind {
     RemoteUnreachable,
     /// 폴더가 저장소가 아니다(`discover`가 씀).
     NotARepository,
+    /// 맡겨 둔 파일이 지금 버전과 겹쳐 꺼내지 않았다(D-054).
+    UnparkConflict,
     /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).
     ProtocolNotAllowed,
     Other,

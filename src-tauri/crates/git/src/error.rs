@@ -20,6 +20,10 @@ pub enum GitError {
         stderr: String,
     },
 
+    /// git을 부르기 전이나 실패를 정리한 뒤 이 크레이트가 스스로 멈췄다.
+    #[error("git 작업을 하지 않았습니다: {detail}")]
+    Refused { kind: FailureKind, detail: String },
+
     /// git 출력이 기대한 기계용 형식과 다르다.
     #[error("git 출력을 읽지 못했습니다: {0}")]
     Parse(String),
@@ -30,6 +34,7 @@ impl GitError {
     pub fn kind(&self) -> FailureKind {
         match self {
             GitError::Failed { stdout, stderr, .. } => failure::classify(stdout, stderr),
+            GitError::Refused { kind, .. } => *kind,
             _ => FailureKind::Other,
         }
     }
@@ -45,6 +50,7 @@ impl GitError {
                     stderr.clone()
                 }
             }
+            GitError::Refused { detail, .. } => detail.clone(),
             GitError::Parse(msg) => msg.clone(),
         }
     }

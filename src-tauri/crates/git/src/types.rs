@@ -228,6 +228,13 @@ pub enum GitOp {
         local: String,
         remote_branch: String,
     },
+    /// 고친 파일을 stash로 만든다. 만든 해시는 [`OpOutput::oid`], 맡길 것이 없으면 `None`.
+    /// 사용자의 stash 목록에서는 core가 ref를 쓴 뒤 [`GitOp::StashDropIf`]로 뺀다.
+    Park { message: String },
+    /// stash 목록 맨 위가 이 해시일 때만 뺀다.
+    StashDropIf { oid: Oid },
+    /// 맡긴 파일을 꺼낸다. 작업 폴더가 깨끗해야 하고, 겹치면 깨끗하게 되돌린 뒤 `UnparkConflict`.
+    Unpark { oid: Oid },
 }
 
 /// 쓰기 작업의 출력 원문.
@@ -235,6 +242,8 @@ pub enum GitOp {
 pub struct OpOutput {
     pub stdout: String,
     pub stderr: String,
+    /// 작업이 만든 해시가 있으면(맡겨 두기).
+    pub oid: Option<Oid>,
 }
 
 /// 비교할 파일. 경로는 저장소 기준, 구분자 `/`.
