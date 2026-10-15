@@ -778,9 +778,12 @@ impl GitBackend for CliBackend {
                     .run_with_stdin(dir, args, &runner::nul_separated(paths))?
             }
             // 메시지는 stdin으로 넘겨 한글·여러 줄·따옴표를 그대로 저장한다.
-            GitOp::Commit { message } => {
-                self.run_local_watched(repo, &["commit", "-F", "-"], Some(message.as_bytes()))?
-            }
+            // `commit.cleanup=strip` 설정이 사용자가 쓴 `#` 줄을 지우지 않게 공백만 정리한다.
+            GitOp::Commit { message } => self.run_local_watched(
+                repo,
+                &["commit", "--cleanup=whitespace", "-F", "-"],
+                Some(message.as_bytes()),
+            )?,
             // `-c`의 값으로 넘기므로 `-`로 시작해도 옵션으로 읽히지 않는다(이름은 core가 이미 검사).
             GitOp::CreateAndSwitch { name } => self
                 .runner

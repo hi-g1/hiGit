@@ -173,3 +173,23 @@ fn revert_start_stops_on_conflict_and_abort_restores() {
     .unwrap();
     assert!(!p.join("b.txt").exists());
 }
+
+#[test]
+fn commit_keeps_hash_lines_under_a_strip_setting() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    git(p, &["config", "commit.cleanup", "strip"]);
+    fs::write(p.join("a.txt"), "1").unwrap();
+    git(p, &["add", "-A"]);
+    run(
+        p,
+        &GitOp::Commit {
+            message: "제목\n\n#12 고침".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        git(p, &["log", "-1", "--format=%B"]).trim_end(),
+        "제목\n\n#12 고침"
+    );
+}
