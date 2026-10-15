@@ -208,7 +208,7 @@ execute(action, input):
 pub struct Queries { /* GitBackend를 품는다 */ }
 impl Queries {
     pub fn status(&self, repo: &Path) -> Result<view::StatusView>;            // 반복 0
-    pub fn log(&self, repo: &Path, q: view::LogQuery) -> Result<view::LogPage>; // 반복 0
+    pub fn log(&self, repo: &Path, q: view::LogQuery) -> Result<view::LogPage>; // 반복 0. 2b: 범위(All·Current), 끝점 해시 스냅샷(최대 201개, 약 8KB라 Windows 명령줄 한도 안), 이름표, 첫 쪽만 지금 위치·기본 브랜치·안 올림(D-088)
     pub fn diff(&self, repo: &Path, r: &view::DiffRequest) -> Result<view::FileDiffView>; // 반복 1a. 경로는 저장소 안만. 링크는 대상만(D-052)
     pub fn branches(&self, repo: &Path) -> Result<view::BranchListView>;        // 반복 1b. 맡긴 파일 수, 기본 브랜치
     pub fn check_branch_name(&self, repo: &Path, name: &str) -> Result<view::BranchNameCheck>; // 반복 1b

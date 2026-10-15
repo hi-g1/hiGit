@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { logPage } from "../../test/logPage";
 import { toHistoryRows } from "./model";
 
 const commit = (oid: string, parents: string[]) => ({
@@ -13,10 +14,11 @@ const commit = (oid: string, parents: string[]) => ({
 
 describe("toHistoryRows", () => {
   it("저장을 화면 모델로 옮긴다", () => {
-    const rows = toHistoryRows({
-      commits: [commit("ccc", ["aaa", "bbb"]), commit("aaa", [])],
-      hasMore: false,
-    });
+    const rows = toHistoryRows(
+      logPage({
+        commits: [commit("ccc", ["aaa", "bbb"]), commit("aaa", [])],
+      }),
+    );
     expect(rows).toEqual([
       {
         oid: "ccc",

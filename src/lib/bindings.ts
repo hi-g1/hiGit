@@ -367,15 +367,43 @@ export type HunkView = {
 export type LineKindView = "context" | "added" | "removed";
 
 export type LogPage = {
+	/**  위상 순서(자식이 부모보다 먼저). */
 	commits: CommitRow[],
 	/**  이 쪽 뒤에 저장이 더 있는지. */
 	hasMore: boolean,
+	/**  이 쪽 버전에 붙은 로컬 브랜치와 태그 이름. */
+	labels: RefLabelView[],
+	/**  이 기록의 끝점(해시). 다음 쪽 요청에 그대로 되돌려 보낸다. */
+	tips: string[],
+	/**
+	 *  아래는 첫 쪽에만 채운다(다음 쪽은 비어 있다).
+	 *  끝점이 200개를 넘어 그리지 않은 브랜치 수.
+	 */
+	tipsCut: number,
+	/**  지금 위치(HEAD)의 해시. */
+	head: string | null,
+	currentBranch: string | null,
+	defaultBranch: string | null,
+	/**  기본 브랜치 끝의 해시(노선도 0번 레인). */
+	defaultTip: string | null,
+	/**  지금 브랜치의 안 올린 버전(최대 500개). upstream이 없으면 비어 있다. */
+	unpushed: string[],
 };
 
 export type LogQuery = {
 	skip: number,
 	limit: number,
+	scope?: LogScope,
+	/**  다음 쪽이면 첫 쪽이 준 `tips`를 그대로. 없으면 첫 쪽(끝점을 새로 정한다). */
+	tips?: string[] | null,
 };
+
+/**  버전 기록 범위(D-088). */
+export type LogScope = 
+/**  지금 위치와 로컬 브랜치 끝 모두. */
+"all" | 
+/**  지금 위치의 조상만. */
+"current";
 
 export type MapCommit = {
 	oid: string,
@@ -524,6 +552,14 @@ export type RecoverySource =
 
 export type RecoveryView = {
 	items: RecoveryItem[],
+};
+
+export type RefLabelKind = "branch" | "tag";
+
+export type RefLabelView = {
+	oid: string,
+	kind: RefLabelKind,
+	name: string,
 };
 
 /**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */

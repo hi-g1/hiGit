@@ -196,19 +196,66 @@ impl From<git::StatusEntry> for ChangedFile {
 
 // ---- 조회: 저장 기록 ----
 
-#[derive(Debug, Clone, Copy, Deserialize, Type)]
+/// 버전 기록 범위(D-088).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LogScope {
+    /// 지금 위치와 로컬 브랜치 끝 모두.
+    #[default]
+    All,
+    /// 지금 위치의 조상만.
+    Current,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LogQuery {
     pub skip: u32,
     pub limit: u32,
+    #[serde(default)]
+    pub scope: LogScope,
+    /// 다음 쪽이면 첫 쪽이 준 `tips`를 그대로. 없으면 첫 쪽(끝점을 새로 정한다).
+    #[serde(default)]
+    pub tips: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LogPage {
+    /// 위상 순서(자식이 부모보다 먼저).
     pub commits: Vec<CommitRow>,
     /// 이 쪽 뒤에 저장이 더 있는지.
     pub has_more: bool,
+    /// 이 쪽 버전에 붙은 로컬 브랜치와 태그 이름.
+    pub labels: Vec<RefLabelView>,
+    /// 이 기록의 끝점(해시). 다음 쪽 요청에 그대로 되돌려 보낸다.
+    pub tips: Vec<String>,
+    /// 아래는 첫 쪽에만 채운다(다음 쪽은 비어 있다).
+    /// 끝점이 200개를 넘어 그리지 않은 브랜치 수.
+    pub tips_cut: u32,
+    /// 지금 위치(HEAD)의 해시.
+    pub head: Option<String>,
+    pub current_branch: Option<String>,
+    pub default_branch: Option<String>,
+    /// 기본 브랜치 끝의 해시(노선도 0번 레인).
+    pub default_tip: Option<String>,
+    /// 지금 브랜치의 안 올린 버전(최대 500개). upstream이 없으면 비어 있다.
+    pub unpushed: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RefLabelView {
+    pub oid: String,
+    pub kind: RefLabelKind,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum RefLabelKind {
+    Branch,
+    Tag,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

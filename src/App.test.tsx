@@ -29,6 +29,7 @@ vi.mock("./lib/events", () => ({
 
 import { App } from "./App";
 import { ApiError, api, type LogPage, type StatusView } from "./lib/api";
+import { logPage } from "./test/logPage";
 import { pickFolder } from "./lib/dialog";
 import { useRepoStore } from "./state/repoStore";
 
@@ -37,7 +38,7 @@ const emptyStatus: StatusView = {
   branch: { name: "main", hasCommits: false, upstream: null, ahead: 0, behind: 0 },
   files: [],
 };
-const emptyLog: LogPage = { commits: [], hasMore: false };
+const emptyLog: LogPage = logPage();
 
 beforeEach(() => {
   vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null });
@@ -84,7 +85,7 @@ describe("홈에서 폴더 열기", () => {
         { path: "새 이름.md", origPath: "옛 이름.md", change: "renamed", staged: true },
       ],
     });
-    vi.mocked(api.log).mockResolvedValue({
+    vi.mocked(api.log).mockResolvedValue(logPage({
       commits: [
         {
           oid: "a".repeat(40),
@@ -97,7 +98,7 @@ describe("홈에서 폴더 열기", () => {
         },
       ],
       hasMore: false,
-    });
+    }));
 
     await openFolder();
 

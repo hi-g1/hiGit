@@ -123,12 +123,20 @@ fn status_is_mapped_for_screen() {
 fn log_pages_know_if_more_exist() {
     let (core, git) = core_with(FakeGit::new());
     *git.commits.lock().unwrap() = (1..=5).rev().map(commit).collect();
+    git.status.lock().unwrap().branch.oid = Some(commit(5).oid);
     let dir = tempfile::tempdir().unwrap();
     core.open_project(dir.path(), OpenHow::Picked).unwrap();
 
     let first = core
         .queries()
-        .log(dir.path(), LogQuery { skip: 0, limit: 2 })
+        .log(
+            dir.path(),
+            LogQuery {
+                skip: 0,
+                limit: 2,
+                ..Default::default()
+            },
+        )
         .unwrap();
     let summaries: Vec<_> = first.commits.iter().map(|c| c.summary.as_str()).collect();
     assert_eq!(summaries, ["저장 5", "저장 4"]);
@@ -136,14 +144,28 @@ fn log_pages_know_if_more_exist() {
 
     let last = core
         .queries()
-        .log(dir.path(), LogQuery { skip: 4, limit: 2 })
+        .log(
+            dir.path(),
+            LogQuery {
+                skip: 4,
+                limit: 2,
+                ..Default::default()
+            },
+        )
         .unwrap();
     assert_eq!(last.commits.len(), 1);
     assert!(!last.has_more);
 
     let exact = core
         .queries()
-        .log(dir.path(), LogQuery { skip: 0, limit: 5 })
+        .log(
+            dir.path(),
+            LogQuery {
+                skip: 0,
+                limit: 5,
+                ..Default::default()
+            },
+        )
         .unwrap();
     assert!(!exact.has_more);
 }
@@ -582,7 +604,14 @@ fn unopened_paths_are_rejected() {
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
     let err = core
         .queries()
-        .log(dir.path(), LogQuery { skip: 0, limit: 1 })
+        .log(
+            dir.path(),
+            LogQuery {
+                skip: 0,
+                limit: 1,
+                ..Default::default()
+            },
+        )
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
     let err = core
@@ -619,6 +648,7 @@ fn unopened_paths_are_rejected() {
 fn log_page_size_is_capped() {
     let (core, git) = core_with(FakeGit::new());
     *git.commits.lock().unwrap() = (1..=600).rev().map(commit).collect();
+    git.status.lock().unwrap().branch.oid = Some(commit(600).oid);
     let dir = tempfile::tempdir().unwrap();
     core.open_project(dir.path(), OpenHow::Picked).unwrap();
     let page = core
@@ -628,6 +658,7 @@ fn log_page_size_is_capped() {
             LogQuery {
                 skip: 0,
                 limit: u32::MAX,
+                ..Default::default()
             },
         )
         .unwrap();

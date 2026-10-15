@@ -674,23 +674,135 @@ impl Queries {
             .map(str::to_string))
     }
 
+    /// 버전 기록 한 쪽(D-088). 첫 쪽(`tips` 없음)은 끝점을 정하고 지금 위치·기본 브랜치·안
+    /// 올린 버전을 함께 준다. 다음 쪽은 첫 쪽의 `tips`를 되돌려 받아 같은 모양으로 이어 읽는다.
     pub fn log(&self, repo: &Path, query: LogQuery) -> Result<LogPage> {
+        use crate::history::{MAX_TIPS_IN, pick_tips};
+        let root = self.opened_repo(repo)?;
         let limit = query.limit.min(MAX_LOG_PAGE);
+        let branches = self.git.branches(&root)?;
+        let mut page = LogPage {
+            commits: Vec::new(),
+            has_more: false,
+            labels: Vec::new(),
+            tips: Vec::new(),
+            tips_cut: 0,
+            head: None,
+            current_branch: None,
+            default_branch: None,
+            default_tip: None,
+            unpushed: Vec::new(),
+        };
+        let tips: Vec<git::Oid> = match &query.tips {
+            Some(tips) => {
+                if tips.len() > MAX_TIPS_IN {
+                    return Err(CoreError::InvalidInput("끝점이 너무 많아요"));
+                }
+                tips.iter()
+                    .map(|t| {
+                        git::Oid::parse(t).ok_or(CoreError::InvalidInput("끝점이 해시가 아니에요"))
+                    })
+                    .collect::<Result<_>>()?
+            }
+            None => {
+                let head = self.git.resolve_ref(&root, "HEAD")?;
+                let remotes = self.git.remotes(&root)?;
+                page.default_branch = self.default_branch(&root, &branches, &remotes)?;
+                page.default_tip = page.default_branch.as_deref().and_then(|name| {
+                    branches
+                        .iter()
+                        .find(|b| b.kind == git::BranchKind::Local && b.name == name)
+                        .map(|b| b.oid.clone())
+                });
+                page.current_branch = self.git.current_branch(&root)?;
+                page.head = head.as_ref().map(ToString::to_string);
+                page.unpushed = self.unpushed(&root, head.as_ref(), &branches)?;
+                match query.scope {
+                    crate::view::LogScope::Current => head.into_iter().collect(),
+                    crate::view::LogScope::All => {
+                        let (tips, cut) =
+                            pick_tips(head.as_ref(), page.default_branch.as_deref(), &branches);
+                        page.tips_cut = cut;
+                        tips
+                    }
+                }
+            }
+        };
+        page.tips = tips.iter().map(ToString::to_string).collect();
         // 하나 더 받아서 다음 쪽이 있는지 안다.
-        let mut commits = self.git.log(
-            &self.opened_repo(repo)?,
-            &git::LogQuery {
+        let mut commits = self.git.log_graph(
+            &root,
+            &git::GraphLogQuery {
+                tips,
+                exclude: Vec::new(),
                 skip: query.skip,
                 limit: limit + 1,
-                rev: None,
             },
         )?;
-        let has_more = commits.len() > limit as usize;
+        page.has_more = commits.len() > limit as usize;
         commits.truncate(limit as usize);
-        Ok(LogPage {
-            commits: commits.into_iter().map(CommitRow::from).collect(),
-            has_more,
-        })
+        let here: HashSet<&str> = commits.iter().map(|c| c.oid.as_str()).collect();
+        for b in branches.iter().filter(|b| b.kind == git::BranchKind::Local) {
+            if here.contains(b.oid.as_str()) {
+                page.labels.push(crate::view::RefLabelView {
+                    oid: b.oid.clone(),
+                    kind: crate::view::RefLabelKind::Branch,
+                    name: b.name.clone(),
+                });
+            }
+        }
+        if !commits.is_empty() {
+            for t in self.git.tags(&root)? {
+                if here.contains(t.commit.as_str()) {
+                    page.labels.push(crate::view::RefLabelView {
+                        oid: t.commit.to_string(),
+                        kind: crate::view::RefLabelKind::Tag,
+                        name: t.name,
+                    });
+                }
+            }
+        }
+        page.commits = commits.into_iter().map(CommitRow::from).collect();
+        Ok(page)
+    }
+
+    /// 지금 브랜치에서 upstream에 아직 없는 버전(최대 500개). upstream이 없으면 빈 목록.
+    fn unpushed(
+        &self,
+        root: &RepoPath,
+        head: Option<&git::Oid>,
+        branches: &[git::Branch],
+    ) -> Result<Vec<String>> {
+        let Some(head) = head else {
+            return Ok(Vec::new());
+        };
+        let upstream = branches
+            .iter()
+            .find(|b| b.is_head)
+            .and_then(|b| b.upstream.as_deref())
+            .and_then(|u| {
+                branches
+                    .iter()
+                    .find(|b| matches!(b.kind, git::BranchKind::Remote { .. }) && b.name == u)
+            })
+            .and_then(|b| git::Oid::parse(&b.oid));
+        let Some(upstream) = upstream else {
+            return Ok(Vec::new());
+        };
+        Ok(self
+            .git
+            .log_graph(
+                root,
+                &git::GraphLogQuery {
+                    tips: vec![head.clone()],
+                    exclude: vec![upstream],
+                    skip: 0,
+                    limit: MAX_LOG_PAGE,
+                },
+            )?
+            .into_iter()
+            .map(|c| c.oid)
+            .collect())
     }
 }
 
