@@ -43,6 +43,8 @@ pub enum FailureKind {
     Cancelled,
     /// 원격 작업이 출력 없이 오래 멈춰 있어 끝냈다(D-080).
     Stalled,
+    /// 다른 git 작업의 잠금 파일(`index.lock` 등)이 있어 시작하지 못했다(D-081).
+    Locked,
     /// 맡겨 둔 파일이 지금 버전과 겹쳐 꺼내지 않았다(D-054).
     UnparkConflict,
     /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).
@@ -58,6 +60,13 @@ const RULES: &[(FailureKind, &[&str])] = &[
         &["detected dubious ownership"],
     ),
     (FailureKind::NotARepository, &["not a git repository"]),
+    (
+        FailureKind::Locked,
+        &[
+            ".lock': File exists",
+            "Another git process seems to be running",
+        ],
+    ),
     (
         FailureKind::ProtocolNotAllowed,
         &[
@@ -215,6 +224,10 @@ mod tests {
             (
                 "fatal: transport 'ext' not allowed\n",
                 FailureKind::ProtocolNotAllowed,
+            ),
+            (
+                "fatal: Unable to create '/r/.git/index.lock': File exists.\n\nAnother git process seems to be running in this repository\n",
+                FailureKind::Locked,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];

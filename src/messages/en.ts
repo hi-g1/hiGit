@@ -238,6 +238,7 @@ export const en: Messages = {
     mergeConflict: "The same lines were changed differently, so they couldn't be merged.",
     cancelled: "Cancelled.",
     stalled: "It stopped responding, so it was stopped.",
+    indexLocked: "Another Git task is running.",
     gitFailed: "The Git operation failed.",
     internal: "Something unexpected happened.",
   },

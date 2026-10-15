@@ -170,6 +170,23 @@ fn commit_without_staged_changes() {
 }
 
 #[test]
+fn leftover_index_lock_is_locked() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    fs::write(p.join("a.txt"), "a\n").unwrap();
+    fs::write(p.join(".git/index.lock"), "").unwrap();
+    let err = testutil::backend()
+        .run(
+            &repo_path(p),
+            &GitOp::Stage {
+                paths: vec!["a.txt".into()],
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), FailureKind::Locked, "{}", err.detail());
+}
+
+#[test]
 fn commit_without_identity() {
     let repo = testutil::init_repo();
     let p = repo.path();

@@ -13,6 +13,7 @@ mod conflict;
 mod error;
 mod executor;
 pub mod git_security;
+mod locks;
 pub mod log;
 pub(crate) mod parked;
 mod query;

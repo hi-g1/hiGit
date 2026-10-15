@@ -71,6 +71,71 @@ pub fn kill_tree(child: &mut std::process::Child) {
     let _ = child.kill();
 }
 
+/// 시스템에 도는 git 프로세스의 pid(다른 사용자 것은 OS가 보여 주는 만큼). 알아내지 못하면
+/// `None`. 잠금 파일이 정말 버려진 것인지 가를 때 쓴다(D-081).
+/// Linux: `/proc/*/comm`이 `git`이거나 `git-`로 시작. Windows: `tasklist`의 `git.exe`, `git-*.exe`.
+pub fn running_git_pids() -> Option<Vec<u32>> {
+    #[cfg(target_os = "linux")]
+    {
+        let mut pids = Vec::new();
+        for entry in std::fs::read_dir("/proc").ok()?.flatten() {
+            let Some(pid) = entry
+                .file_name()
+                .to_str()
+                .and_then(|s| s.parse::<u32>().ok())
+            else {
+                continue;
+            };
+            // 그 사이 끝난 프로세스는 읽히지 않는다.
+            let Ok(comm) = std::fs::read_to_string(entry.path().join("comm")) else {
+                continue;
+            };
+            if is_git_name(comm.trim_end()) {
+                pids.push(pid);
+            }
+        }
+        Some(pids)
+    }
+    #[cfg(windows)]
+    {
+        let mut tasklist = Command::new("tasklist");
+        configure_child(&mut tasklist);
+        let out = tasklist
+            .args(["/FI", "IMAGENAME eq git*", "/FO", "CSV", "/NH"])
+            .output()
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
+        Some(parse_tasklist(&String::from_utf8_lossy(&out.stdout)))
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        None
+    }
+}
+
+/// git 본체나 git이 띄우는 도우미(`git-remote-https`, comm은 15자로 잘림)인지.
+#[cfg(any(target_os = "linux", windows, test))]
+fn is_git_name(name: &str) -> bool {
+    let name = name.to_ascii_lowercase();
+    let name = name.strip_suffix(".exe").unwrap_or(&name);
+    name == "git" || name.starts_with("git-")
+}
+
+/// `"git.exe","1234","Console","1","10,000 K"` 줄들. 맞는 것이 없다는 안내 줄(번역됨)은 건너뛴다.
+#[cfg(any(windows, test))]
+fn parse_tasklist(out: &str) -> Vec<u32> {
+    out.lines()
+        .filter_map(|line| {
+            let mut fields = line.split("\",\"");
+            let name = fields.next()?.strip_prefix('"')?;
+            let pid = fields.next()?.parse().ok()?;
+            is_git_name(name).then_some(pid)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +170,36 @@ mod tests {
         let mut buf = Vec::new();
         std::io::Read::read_to_end(&mut out, &mut buf).unwrap();
         assert!(start.elapsed() < std::time::Duration::from_secs(10));
+    }
+
+    #[test]
+    fn git_names_and_tasklist_lines() {
+        assert!(is_git_name("git"));
+        assert!(is_git_name("git-remote-http"));
+        assert!(is_git_name("Git.exe"));
+        assert!(!is_git_name("gitk"));
+        assert!(!is_git_name("GitHubDesktop.exe"));
+        let out = "\"git.exe\",\"1234\",\"Console\",\"1\",\"10,000 K\"\r\n\
+                   \"GitHubDesktop.exe\",\"77\",\"Console\",\"1\",\"9 K\"\r\n\
+                   \"git-remote-https.exe\",\"88\",\"Console\",\"1\",\"9 K\"\r\n";
+        assert_eq!(parse_tasklist(out), vec![1234, 88]);
+        assert!(parse_tasklist("정보: 지정된 조건에 맞는 작업이 없습니다.\r\n").is_empty());
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    #[test]
+    fn running_git_is_seen() {
+        let git = crate::find_git().unwrap();
+        let mut cmd = Command::new(git);
+        cmd.args(["-c", "alias.slow=!sleep 30", "slow"]);
+        configure_child(&mut cmd);
+        prepare_killable(&mut cmd);
+        let mut child = cmd.spawn().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let pids = running_git_pids().unwrap();
+        kill_tree(&mut child);
+        let _ = child.wait();
+        assert!(pids.contains(&child.id()), "{pids:?}");
     }
 
     #[cfg(unix)]

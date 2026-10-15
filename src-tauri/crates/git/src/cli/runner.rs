@@ -19,6 +19,8 @@ pub struct ProcessControl {
     pub kill: Arc<dyn Fn(&mut Child) + Send + Sync>,
     /// 끝내 달라고 알린다(취소·멈춤). 2초 안에 끝나지 않으면 `kill`을 부른다.
     pub terminate: Arc<dyn Fn(&mut Child) + Send + Sync>,
+    /// 시스템에 도는 git 프로세스가 있는지(앱 것 포함). 알 수 없으면 true(D-081).
+    pub git_running: Arc<dyn Fn() -> bool + Send + Sync>,
 }
 
 impl Default for ProcessControl {
@@ -32,6 +34,7 @@ impl Default for ProcessControl {
             terminate: Arc::new(|child: &mut Child| {
                 let _ = child.kill();
             }),
+            git_running: Arc::new(|| false),
         }
     }
 }

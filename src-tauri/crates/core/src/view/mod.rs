@@ -9,6 +9,7 @@ mod diff;
 mod input;
 mod map;
 mod merge;
+mod pending;
 mod recovery;
 mod secret;
 mod stash;
@@ -26,6 +27,7 @@ pub use input::{
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
+pub use pending::{OtherOperation, PendingWorkView};
 pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use stash::{StashItem, StashListView};
@@ -503,9 +505,11 @@ pub enum ErrorCode {
     TimedOut,
     MergeConflict,
     DubiousOwnership,
-    /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     Cancelled,
     Stalled,
+    /// 다른 git 작업의 잠금 파일이 있다(D-081).
+    IndexLocked,
+    /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
 }
@@ -533,6 +537,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::TimedOut => ErrorCode::TimedOut,
             F::Cancelled => ErrorCode::Cancelled,
             F::Stalled => ErrorCode::Stalled,
+            F::Locked => ErrorCode::IndexLocked,
             F::MergeConflict => ErrorCode::MergeConflict,
             F::Other => ErrorCode::GitFailed,
         }

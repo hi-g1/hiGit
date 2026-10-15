@@ -603,6 +603,10 @@ impl GitBackend for CliBackend {
             .unwrap_or_else(std::sync::PoisonError::into_inner) = observer;
     }
 
+    fn git_running(&self) -> bool {
+        (self.runner.process.git_running)()
+    }
+
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.runner.set_overrides(repo.as_path(), pairs);
     }

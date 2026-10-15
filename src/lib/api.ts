@@ -125,6 +125,8 @@ export const api = {
   conflictFile: (repo: string, path: string) => call(commands.queryConflictFile(repo, path)),
   /** 작업 내역(D-085). */
   recovery: (repo: string) => call(commands.queryRecovery(repo)),
+  /** 끝나지 않은 작업(D-082). */
+  pendingWork: (repo: string) => call(commands.queryPendingWork(repo)),
   /** 임시 보관 목록(D-076). */
   stashes: (repo: string) => call(commands.queryStashes(repo)),
   /** 합치기 제안(D-048, D-071). */

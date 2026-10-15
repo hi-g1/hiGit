@@ -251,6 +251,7 @@ export const ko = {
     mergeConflict: "같은 곳을 서로 다르게 고쳐서 합치지 못했어요.",
     cancelled: "취소했어요.",
     stalled: "진행이 멈춰 그만뒀어요.",
+    indexLocked: "다른 Git 작업이 진행 중이에요.",
     gitFailed: "Git 작업이 실패했어요.",
     internal: "예상하지 못한 문제가 생겼어요.",
   } satisfies Record<ErrorCode, string>,

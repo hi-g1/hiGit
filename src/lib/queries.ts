@@ -20,7 +20,16 @@ export const queryKeys = {
   mergeHint: (repo: string) => ["mergeHint", repo] as const,
   recovery: (repo: string) => ["recovery", repo] as const,
   stashes: (repo: string) => ["stashes", repo] as const,
+  pendingWork: (repo: string) => ["pendingWork", repo] as const,
 };
+
+/** 끝나지 않은 작업(D-082). 오래된 잠금, 남은 맡긴 항목, 다른 도구의 작업. */
+export function usePendingWork(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.pendingWork>>, ApiError>({
+    queryKey: queryKeys.pendingWork(repo),
+    queryFn: () => api.pendingWork(repo),
+  });
+}
 
 /** 임시 보관 목록(D-076). */
 export function useStashes(repo: string) {

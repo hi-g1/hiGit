@@ -63,15 +63,7 @@ impl Queries {
         let merge_head = self.git.resolve_ref(&root, "MERGE_HEAD")?;
         let entries = self.git.index_entries(&root)?;
         let conflicts = crate::conflict::conflict_paths(entries);
-        let git_dir = self.git.git_dir(&root)?;
-        let other = [
-            "rebase-merge",
-            "rebase-apply",
-            "CHERRY_PICK_HEAD",
-            "REVERT_HEAD",
-        ]
-        .iter()
-        .any(|f| git_dir.join(f).exists());
+        let other = crate::conflict::other_operation(&self.git.git_dir(&root)?).is_some();
         let context = crate::conflict::context(self.git.as_ref(), &root)?;
         let mut view = ConflictStateView {
             active: context.is_some(),

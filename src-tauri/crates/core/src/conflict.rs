@@ -19,6 +19,20 @@ pub(crate) enum Context {
     Unpark(crate::parked::UnparkMarker),
 }
 
+/// 다른 도구가 시작한 리베이스·cherry-pick·revert. 앱이 끝내지 않는다.
+pub(crate) fn other_operation(git_dir: &std::path::Path) -> Option<crate::view::OtherOperation> {
+    use crate::view::OtherOperation as O;
+    [
+        ("rebase-merge", O::Rebase),
+        ("rebase-apply", O::Rebase),
+        ("CHERRY_PICK_HEAD", O::CherryPick),
+        ("REVERT_HEAD", O::Revert),
+    ]
+    .into_iter()
+    .find(|(f, _)| git_dir.join(f).exists())
+    .map(|(_, op)| op)
+}
+
 /// 앱이 다룰 수 있는 충돌 맥락. 합치는 중이면 `Merge`, 앱이 시작한 꺼내기가 충돌을 남겼으면
 /// `Unpark`, 아니면 `None`(다른 도구의 작업이거나 충돌 없음).
 pub(crate) fn context(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Context>> {

@@ -46,16 +46,7 @@ impl ConflictAction {
 
 /// 다른 도구가 시작한 리베이스·cherry-pick·revert 중이면 앱이 끝내지 않는다.
 fn refuse_other_operation(git: &dyn git::GitBackend, repo: &git::RepoPath) -> Result<()> {
-    let dir = git.git_dir(repo)?;
-    let other = [
-        "rebase-merge",
-        "rebase-apply",
-        "CHERRY_PICK_HEAD",
-        "REVERT_HEAD",
-    ]
-    .iter()
-    .any(|f| dir.join(f).exists());
-    if other {
+    if crate::conflict::other_operation(&git.git_dir(repo)?).is_some() {
         return Err(CoreError::OperationInProgress);
     }
     Ok(())

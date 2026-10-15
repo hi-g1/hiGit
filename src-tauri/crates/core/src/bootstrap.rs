@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::SystemTime;
 
 use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 
@@ -125,6 +126,8 @@ pub fn init() -> Result<Core> {
             prepare: Arc::new(platform::prepare_killable),
             kill: Arc::new(platform::kill_tree),
             terminate: Arc::new(platform::terminate_tree),
+            // 알아내지 못하면 도는 것으로 본다(잠금을 지우지 않는다).
+            git_running: Arc::new(|| platform::running_git_pids().is_none_or(|p| !p.is_empty())),
         });
     // 앱 데이터 폴더를 못 만들면 최근 목록은 메모리에만 둔다(앱은 계속 쓸 수 있다).
     let data_dir = platform::app_data_dir(APP_ID).ok();
@@ -480,6 +483,50 @@ impl Core {
         };
         Ok(crate::view::RecoveryView {
             items: self.executor.recovery(&ctx)?,
+        })
+    }
+
+    /// 끝나지 않은 작업(D-082): 오래된 잠금 파일, stash 목록에 남은 맡긴 항목, 다른 도구의 작업.
+    /// 조회라 잠금을 잡지 않는다. 앱의 작업이 이 저장소에서 돌면 잠금과 맡긴 항목은 비워 둔다.
+    pub fn pending_work(&self, folder: &Path) -> Result<crate::view::PendingWorkView> {
+        use crate::actions::stash::{PARKED_PREFIX, stash_message};
+        let state = self.state_of(folder)?;
+        let repo = state.repo.ok_or(CoreError::NotARepo)?;
+        let git_dir = self.git.git_dir(&repo)?;
+        let other_operation = crate::conflict::other_operation(&git_dir);
+        if self.repo_busy(repo.as_path()) {
+            return Ok(crate::view::PendingWorkView {
+                other_operation,
+                ..Default::default()
+            });
+        }
+        let common_dir = self.git.common_dir(&repo)?;
+        let stale_locks = crate::locks::stale(&git_dir, &common_dir, SystemTime::now(), || {
+            self.git.git_running()
+        })
+        .into_iter()
+        .map(|l| l.name)
+        .collect();
+        let parked = format!("{PARKED_PREFIX} ");
+        let leftover = self
+            .git
+            .stash_list(&repo)?
+            .iter()
+            .filter(|e| stash_message(&e.subject).starts_with(&parked))
+            .count();
+        Ok(crate::view::PendingWorkView {
+            stale_locks,
+            leftover_parked: u32::try_from(leftover).unwrap_or(u32::MAX),
+            other_operation,
+        })
+    }
+
+    /// 앱의 작업이 이 저장소의 작업 폴더나 원격을 쓰는 중인지.
+    pub(crate) fn repo_busy(&self, repo: &Path) -> bool {
+        [&self.busy, &self.net_busy].iter().any(|set| {
+            set.lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .contains(repo)
         })
     }
 

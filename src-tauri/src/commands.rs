@@ -7,9 +7,9 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
-    HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PreviewView, ProjectOpenResult,
-    ProjectSummaryView, RecentProject, RecoveryView, SecretCheckRequest, SecretCheckView,
-    StashListView, StatusView, TrustChoice, UndoResult,
+    HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PendingWorkView, PreviewView,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, SecretCheckRequest,
+    SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -297,6 +297,16 @@ pub async fn query_conflict_file(
 #[specta::specta]
 pub async fn query_recovery(state: State<'_, AppState>, repo: String) -> CmdResult<RecoveryView> {
     blocking(state, move |core| core.recovery(&PathBuf::from(repo))).await
+}
+
+/// 끝나지 않은 작업(D-082). 프로젝트를 열 때 알림 줄에 쓴다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pending_work(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<PendingWorkView> {
+    blocking(state, move |core| core.pending_work(&PathBuf::from(repo))).await
 }
 
 /// 임시 보관 목록(D-076).

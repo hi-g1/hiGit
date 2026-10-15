@@ -41,6 +41,8 @@ export const commands = {
 	queryStashes: (repo: string) => __TAURI_INVOKE<StashListView>("query_stashes", { repo }),
 	/**  작업 내역(D-085). */
 	queryRecovery: (repo: string) => __TAURI_INVOKE<RecoveryView>("query_recovery", { repo }),
+	/**  끝나지 않은 작업(D-082). 프로젝트를 열 때 알림 줄에 쓴다. */
+	queryPendingWork: (repo: string) => __TAURI_INVOKE<PendingWorkView>("query_pending_work", { repo }),
 	/**  충돌 해결 화면 상태(D-069). */
 	queryConflictState: (repo: string) => __TAURI_INVOKE<ConflictStateView>("query_conflict_state", { repo }),
 	/**  충돌 파일 하나의 고를 곳(D-086). */
@@ -289,9 +291,11 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
+/**  다른 git 작업의 잠금 파일이 있다(D-081). */
+"indexLocked" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
-"cancelled" | "stalled" | "gitFailed" | "internal";
+"gitFailed" | "internal";
 
 /**  화면에 보내는 오류. 문구는 화면이 `code`로 고르고, `detail`은 "자세히 보기"의 원문이다. */
 export type ErrorView = {
@@ -430,9 +434,20 @@ export type OpProgress = {
  */
 export type OpenHow = "picked" | "recent";
 
+export type OtherOperation = "rebase" | "cherryPick" | "revert";
+
 /**  파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다. */
 export type PathsInput = {
 	paths: string[],
+};
+
+export type PendingWorkView = {
+	/**  오래된 잠금 파일(git 폴더 기준 이름, D-081). 비면 정리할 것이 없다. */
+	staleLocks: string[],
+	/**  stash 목록에 남은 맡긴 항목 수. 브랜치를 갈아타다 끊기면 남는다. */
+	leftoverParked: number,
+	/**  다른 도구가 시작해 앱이 끝낼 수 없는 작업. */
+	otherOperation: OtherOperation | null,
 };
 
 /**  미리보기와 실행 때 돌려줄 증표. */

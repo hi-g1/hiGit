@@ -41,6 +41,8 @@ pub struct FakeGit {
     pub observer: Mutex<Option<git::ProgressObserver>>,
     /// `clear_cancel`을 부른 횟수.
     pub cancel_cleared: AtomicUsize,
+    /// `git_running`이 돌려줄 값.
+    pub git_running: AtomicBool,
 }
 
 impl FakeGit {
@@ -68,6 +70,7 @@ impl FakeGit {
             fail_update_ref: AtomicBool::new(false),
             observer: Mutex::new(None),
             cancel_cleared: AtomicUsize::new(0),
+            git_running: AtomicBool::new(false),
         }
     }
 
@@ -311,6 +314,10 @@ impl GitBackend for FakeGit {
 
     fn set_observer(&self, observer: Option<git::ProgressObserver>) {
         *self.observer.lock().unwrap() = observer;
+    }
+
+    fn git_running(&self) -> bool {
+        self.git_running.load(Ordering::SeqCst)
     }
 
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {

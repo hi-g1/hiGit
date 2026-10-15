@@ -120,6 +120,10 @@ pub trait GitBackend: Send + Sync {
     /// 오래 걸리는 작업의 진행 알림을 받는다(1초마다 저장소, 경과, 마지막 출력 뒤 시간).
     fn set_observer(&self, observer: Option<crate::ProgressObserver>);
 
+    /// 시스템에 도는 git 프로세스가 있는지(앱 것, 다른 도구 것 모두). 알 수 없으면 true.
+    /// 잠금 파일을 지워도 되는지 가를 때 쓴다(D-081).
+    fn git_running(&self) -> bool;
+
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);
 

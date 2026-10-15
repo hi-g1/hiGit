@@ -26,6 +26,7 @@ const COMMANDS: &[&str] = &[
     "query_merge_hint",
     "query_stashes",
     "query_recovery",
+    "query_pending_work",
     "query_conflict_state",
     "query_conflict_file",
     "query_project_summary",
