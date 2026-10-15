@@ -50,6 +50,15 @@ pub(crate) fn read_file(
     repo: &RepoPath,
     c: &ConflictPath,
 ) -> Result<ConflictFileView> {
+    load_file(git, repo, c).map(|(view, _)| view)
+}
+
+/// `read_file`과 같고, 텍스트로 다루면 조립에 쓸 구간도 돌려준다.
+pub(crate) fn load_file(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    c: &ConflictPath,
+) -> Result<(ConflictFileView, Option<Vec<MergeSegment>>)> {
     let oids: Vec<git::Oid> = [&c.base, &c.ours, &c.theirs]
         .iter()
         .filter_map(|e| e.as_ref().map(|e| e.oid.clone()))
@@ -94,6 +103,7 @@ pub(crate) fn read_file(
     // 모드가 다르거나 이름이 UTF-8이 아니면 파일 단위로만 고른다.
     let same_mode = matches!((&c.ours, &c.theirs), (Some(o), Some(t)) if o.mode == t.mode);
     let odd_name = c.path.contains('\u{FFFD}');
+    let mut kept = None;
     if let (Some(ours), Some(theirs)) = (&ours, &theirs)
         && same_mode
         && !odd_name
@@ -106,10 +116,11 @@ pub(crate) fn read_file(
                 view.hunks = hunks;
                 view.ours_preview.clear();
                 view.theirs_preview.clear();
+                kept = Some(segments);
             }
         }
     }
-    Ok(view)
+    Ok((view, kept))
 }
 
 /// 앞에서 `max`줄, 줄 끝 없이.
@@ -161,9 +172,107 @@ pub(crate) fn hunks(segments: &[MergeSegment]) -> Vec<ConflictHunkView> {
     out
 }
 
+/// 고를 곳 하나의 선택(조립용). 화면 입력에서 옮긴다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Pick<'a> {
+    Ours,
+    Theirs,
+    /// 내 쪽 다음 합칠 쪽.
+    Both,
+    /// 직접 고친 글(줄 끝은 `\n`).
+    Custom(&'a str),
+}
+
+/// 구간과 선택으로 해결한 파일 내용을 만든다. 선택 수가 고를 곳 수와 다르면 `None`.
+/// 직접 고친 글은 내 쪽이 CRLF면 CRLF로 바꾸고, 그 곳의 원래 내용이 줄바꿈으로 끝났으면
+/// 줄바꿈으로 끝나게 맞춘다.
+pub(crate) fn assemble(segments: &[MergeSegment], picks: &[Pick<'_>]) -> Option<Vec<u8>> {
+    let conflicts = segments
+        .iter()
+        .filter(|s| matches!(s, MergeSegment::Conflict { .. }))
+        .count();
+    if conflicts != picks.len() {
+        return None;
+    }
+    let mut out = Vec::new();
+    let mut picks = picks.iter();
+    for seg in segments {
+        match seg {
+            MergeSegment::Same(bytes) => out.extend_from_slice(bytes),
+            MergeSegment::Conflict { ours, theirs, .. } => match picks.next()? {
+                Pick::Ours => out.extend_from_slice(ours),
+                Pick::Theirs => out.extend_from_slice(theirs),
+                Pick::Both => {
+                    out.extend_from_slice(ours);
+                    out.extend_from_slice(theirs);
+                }
+                Pick::Custom(text) => {
+                    let crlf = ours.windows(2).any(|w| w == b"\r\n")
+                        || (ours.is_empty() && theirs.windows(2).any(|w| w == b"\r\n"));
+                    let ends_with_newline = ours.ends_with(b"\n") || theirs.ends_with(b"\n");
+                    let mut text = text.replace("\r\n", "\n");
+                    if ends_with_newline && !text.is_empty() && !text.ends_with('\n') {
+                        text.push('\n');
+                    }
+                    if crlf {
+                        text = text.replace('\n', "\r\n");
+                    }
+                    out.extend_from_slice(text.as_bytes());
+                }
+            },
+        }
+    }
+    Some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn conflict(ours: &str, theirs: &str) -> MergeSegment {
+        MergeSegment::Conflict {
+            ours: ours.as_bytes().to_vec(),
+            base: Vec::new(),
+            theirs: theirs.as_bytes().to_vec(),
+        }
+    }
+
+    #[test]
+    fn assemble_each_pick() {
+        let segs = [
+            same("앞\n"),
+            conflict("내1\n", "남1\n"),
+            same("가운데\n"),
+            conflict("내2\n", "남2\n"),
+            conflict("내3\n", "남3\n"),
+            conflict("내4\n", "남4\n"),
+        ];
+        let out = assemble(
+            &segs,
+            &[
+                Pick::Ours,
+                Pick::Theirs,
+                Pick::Both,
+                Pick::Custom("직접\n고침"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            String::from_utf8(out).unwrap(),
+            "앞\n내1\n가운데\n남2\n내3\n남3\n직접\n고침\n"
+        );
+        assert!(assemble(&segs, &[Pick::Ours]).is_none());
+    }
+
+    #[test]
+    fn custom_text_follows_crlf_and_can_be_empty() {
+        let segs = [same("a\r\n"), conflict("x\r\n", "y\r\n"), same("b\r\n")];
+        let out = assemble(&segs, &[Pick::Custom("하나\n둘")]).unwrap();
+        assert_eq!(out, "a\r\n하나\r\n둘\r\nb\r\n".as_bytes());
+        // 비우면 그 곳을 지운다.
+        let out = assemble(&segs, &[Pick::Custom("")]).unwrap();
+        assert_eq!(out, b"a\r\nb\r\n");
+    }
 
     fn same(s: &str) -> MergeSegment {
         MergeSegment::Same(s.as_bytes().to_vec())

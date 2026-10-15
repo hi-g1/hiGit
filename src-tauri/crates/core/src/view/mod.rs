@@ -18,8 +18,8 @@ pub use conflict::{
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
-    ActionInput, BranchCreateInput, CommitInput, FetchInput, MergeInput, MergeIntoInput,
-    PathsInput, SwitchInput, SyncInput,
+    ActionInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput, FileChoice,
+    FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, SwitchInput, SyncInput,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -370,6 +370,10 @@ pub enum ActionResult {
     MergeConflicts {
         paths: Vec<String>,
     },
+    /// 합치기를 마쳤다(합친 버전을 만들었다).
+    ConflictFinished,
+    /// 합치기를 그만뒀다.
+    ConflictAborted,
 }
 
 impl From<Outcome> for ActionResult {
@@ -406,6 +410,8 @@ impl From<Outcome> for ActionResult {
                 fast_forward,
             },
             Outcome::MergeConflicts { paths } => ActionResult::MergeConflicts { paths },
+            Outcome::ConflictFinished => ActionResult::ConflictFinished,
+            Outcome::ConflictAborted => ActionResult::ConflictAborted,
         }
     }
 }
@@ -438,6 +444,7 @@ pub enum ErrorCode {
     UndoStale,
     UndoPushed,
     StagedChanges,
+    ConflictChanged,
     OperationInProgress,
     ParkBlocked,
     NeedsTrust,
@@ -513,6 +520,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::UndoStale => ErrorCode::UndoStale,
             CoreError::UndoPushed => ErrorCode::UndoPushed,
             CoreError::StagedChanges => ErrorCode::StagedChanges,
+            CoreError::ConflictChanged => ErrorCode::ConflictChanged,
             CoreError::OperationInProgress => ErrorCode::OperationInProgress,
             CoreError::NeedsTrust => ErrorCode::NeedsTrust,
             CoreError::NoRemote => ErrorCode::NoRemote,

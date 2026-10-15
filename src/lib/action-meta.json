@@ -42,6 +42,18 @@
     "undo": "restoreRef"
   },
   {
+    "id": "conflict-finish",
+    "glossaryId": "conflict",
+    "risk": "normal",
+    "undo": "restoreTree"
+  },
+  {
+    "id": "conflict-abort",
+    "glossaryId": "merge",
+    "risk": "normal",
+    "undo": "nothing"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",

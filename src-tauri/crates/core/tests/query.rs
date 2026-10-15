@@ -230,6 +230,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Ignore(_)
             | ActionInput::Merge(_)
             | ActionInput::MergeInto(_)
+            | ActionInput::ConflictFinish(_)
+            | ActionInput::ConflictAbort
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -253,6 +255,11 @@ fn action_input_tags_match_registry() {
         ActionInput::MergeInto(higit_core::view::MergeIntoInput {
             branch: "main".into(),
         }),
+        ActionInput::ConflictFinish(higit_core::view::ConflictFinishInput {
+            resolutions: vec![],
+            locale: "ko".into(),
+        }),
+        ActionInput::ConflictAbort,
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
             stage_all: false,

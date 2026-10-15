@@ -104,6 +104,10 @@ pub enum Outcome {
     MergeConflicts {
         paths: Vec<String>,
     },
+    /// 합치기를 마쳤다.
+    ConflictFinished,
+    /// 합치기를 그만뒀다.
+    ConflictAborted,
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.

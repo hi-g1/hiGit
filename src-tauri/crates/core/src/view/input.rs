@@ -20,6 +20,10 @@ pub enum ActionInput {
     Merge(MergeInput),
     /// 지금 버전으로 기본 브랜치를 앞으로 감는다("main에 합치기", D-071).
     MergeInto(MergeIntoInput),
+    /// 충돌 해결 화면에서 고른 것으로 합치기를 마친다(D-069, D-070).
+    ConflictFinish(ConflictFinishInput),
+    /// 합치기를 그만둔다(D-070).
+    ConflictAbort,
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -39,6 +43,8 @@ impl ActionInput {
             ActionInput::Ignore(_) => "ignore",
             ActionInput::Merge(_) => "merge",
             ActionInput::MergeInto(_) => "merge-into",
+            ActionInput::ConflictFinish(_) => "conflict-finish",
+            ActionInput::ConflictAbort => "conflict-abort",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
@@ -58,6 +64,32 @@ impl ActionInput {
         match self {
             ActionInput::Stage(p) => ActionInput::Stage(cut(p)),
             ActionInput::Unstage(p) => ActionInput::Unstage(cut(p)),
+            // 직접 고친 글은 남기지 않고 선택 종류만 남긴다.
+            ActionInput::ConflictFinish(i) => ActionInput::ConflictFinish(ConflictFinishInput {
+                resolutions: i
+                    .resolutions
+                    .iter()
+                    .take(MAX_PATHS)
+                    .map(|r| FileResolution {
+                        path: r.path.clone(),
+                        choice: match &r.choice {
+                            FileChoice::Hunks { choices } => FileChoice::Hunks {
+                                choices: choices
+                                    .iter()
+                                    .map(|c| match c {
+                                        HunkChoice::Custom { .. } => HunkChoice::Custom {
+                                            text: String::new(),
+                                        },
+                                        other => other.clone(),
+                                    })
+                                    .collect(),
+                            },
+                            other => other.clone(),
+                        },
+                    })
+                    .collect(),
+                locale: i.locale.clone(),
+            }),
             other => other.clone(),
         }
     }
@@ -114,6 +146,44 @@ pub struct MergeInput {
 pub struct MergeIntoInput {
     /// 앞으로 감을 브랜치(기본 브랜치).
     pub branch: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictFinishInput {
+    /// 남은 충돌 파일마다 하나씩.
+    pub resolutions: Vec<FileResolution>,
+    /// 합친 버전 메시지에 쓸 앱 언어("ko", "en").
+    pub locale: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FileResolution {
+    pub path: String,
+    pub choice: FileChoice,
+}
+
+/// 파일 하나의 선택. 텍스트 파일은 곳마다(`hunks`), 그 밖은 한쪽 그대로.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum FileChoice {
+    Hunks { choices: Vec<HunkChoice> },
+    Ours,
+    Theirs,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum HunkChoice {
+    Ours,
+    Theirs,
+    /// 내 쪽 다음 합칠 쪽.
+    Both,
+    /// 직접 고친 글. 표시 문자 없는 글상자의 내용.
+    Custom {
+        text: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

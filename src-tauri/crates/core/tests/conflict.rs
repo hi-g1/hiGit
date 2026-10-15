@@ -170,3 +170,159 @@ fn not_merging_and_other_operations() {
     assert!(!state.active);
     assert!(state.other_operation);
 }
+
+mod finish {
+    use super::*;
+    use higit_core::view::{
+        ActionInput, ActionResult, ConflictFinishInput, FileChoice, FileResolution, HunkChoice,
+    };
+
+    fn finish(
+        core: &Core,
+        dir: &Path,
+        resolutions: Vec<FileResolution>,
+    ) -> Result<ActionResult, higit_core::CoreError> {
+        core.execute(
+            dir,
+            &ActionInput::ConflictFinish(ConflictFinishInput {
+                resolutions,
+                locale: "ko".into(),
+            }),
+            None,
+        )
+    }
+
+    fn all_choices(a: Vec<HunkChoice>) -> Vec<FileResolution> {
+        vec![
+            FileResolution {
+                path: "a.txt".into(),
+                choice: FileChoice::Hunks { choices: a },
+            },
+            FileResolution {
+                path: "b.bin".into(),
+                choice: FileChoice::Theirs,
+            },
+            FileResolution {
+                path: "d.txt".into(),
+                choice: FileChoice::Theirs,
+            },
+        ]
+    }
+
+    fn backups(dir: &Path) -> String {
+        git(
+            dir,
+            &["for-each-ref", "--format=%(refname)", "refs/higit/backup/"],
+        )
+    }
+
+    #[test]
+    fn finishing_writes_choices_and_makes_a_merge_version() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let before = git(dir, &["rev-parse", "HEAD"]);
+        let r = finish(
+            &core,
+            dir,
+            all_choices(vec![
+                HunkChoice::Ours,
+                HunkChoice::Both,
+                HunkChoice::Custom {
+                    text: "직접 고침".into(),
+                },
+            ]),
+        )
+        .unwrap();
+        assert_eq!(r, ActionResult::ConflictFinished);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            // 11·12번째 줄(양쪽 모두 고침)은 한 곳으로 묶여 직접 고친 글로 바뀐다.
+            "1\n내2\n3\n4\n5\n내6\n기능6\n7\n8\n9\n10\n직접 고침\n"
+        );
+        assert_eq!(std::fs::read(dir.join("b.bin")).unwrap(), b"\0theirs");
+        assert!(!dir.join("d.txt").exists());
+        assert_eq!(git(dir, &["status", "--porcelain"]), "");
+        assert!(!dir.join(".git/MERGE_HEAD").exists());
+        let parents = git(dir, &["rev-list", "--parents", "-n", "1", "HEAD"]);
+        assert_eq!(parents.split_whitespace().count(), 3);
+        assert_eq!(git(dir, &["log", "-1", "--format=%s"]), "기능 가져와 합침");
+        assert!(
+            backups(dir).contains("conflict-files-main"),
+            "{}",
+            backups(dir)
+        );
+        // Ctrl+Z로 합치기 전으로.
+        core.undo(dir).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), before);
+    }
+
+    #[test]
+    fn missing_or_mismatched_choices_change_nothing() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let mut partial = all_choices(vec![HunkChoice::Ours; 3]);
+        partial.pop();
+        let err = finish(&core, dir, partial).unwrap_err();
+        assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+        let err = finish(&core, dir, all_choices(vec![HunkChoice::Ours; 2])).unwrap_err();
+        assert_eq!(ErrorView::from(&err).code, ErrorCode::ConflictChanged);
+        // 이진 파일을 곳마다 고를 수는 없다.
+        let mut wrong = all_choices(vec![HunkChoice::Ours; 3]);
+        wrong[1].choice = FileChoice::Hunks { choices: vec![] };
+        let err = finish(&core, dir, wrong).unwrap_err();
+        assert_eq!(ErrorView::from(&err).code, ErrorCode::ConflictChanged);
+        assert!(dir.join(".git/MERGE_HEAD").exists());
+        assert_eq!(core.queries().conflict_state(dir).unwrap().files.len(), 3);
+        assert_eq!(backups(dir), "", "쓰지 않았으면 백업도 없다");
+    }
+
+    #[test]
+    fn a_hook_refusing_the_save_leaves_resolved_files_and_finish_again_saves() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let hook = dir.join(".git/hooks/commit-msg");
+        std::fs::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
+        let _ = std::process::Command::new("chmod")
+            .arg("+x")
+            .arg(&hook)
+            .status();
+        let choices = all_choices(vec![HunkChoice::Theirs; 3]);
+        assert!(finish(&core, dir, choices.clone()).is_err());
+        assert!(dir.join(".git/MERGE_HEAD").exists());
+        assert!(core.queries().conflict_state(dir).unwrap().files.is_empty());
+        std::fs::remove_file(&hook).unwrap();
+        // 이미 해결된 경로는 건너뛰고 저장만 한다.
+        finish(&core, dir, choices).unwrap();
+        assert!(!dir.join(".git/MERGE_HEAD").exists());
+    }
+
+    #[test]
+    fn abort_backs_up_outside_edits_and_goes_back() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let before = git(dir, &["rev-parse", "HEAD"]);
+        // 외부 편집기로 충돌 파일을 고쳐 두었다.
+        std::fs::write(dir.join("a.txt"), "밖에서 고침\n").unwrap();
+        let r = core
+            .execute(dir, &ActionInput::ConflictAbort, None)
+            .unwrap();
+        assert_eq!(r, ActionResult::ConflictAborted);
+        assert!(!dir.join(".git/MERGE_HEAD").exists());
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), before);
+        let backup = backups(dir);
+        assert!(backup.contains("conflict-files-main"), "{backup}");
+        assert_eq!(
+            git(dir, &["show", &format!("{backup}:a.txt")]),
+            "밖에서 고침"
+        );
+        // 합치는 중이 아니면 그만둘 것이 없다.
+        let err = core
+            .execute(dir, &ActionInput::ConflictAbort, None)
+            .unwrap_err();
+        assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+    }
+}

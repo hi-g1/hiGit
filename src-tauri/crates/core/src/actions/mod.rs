@@ -2,6 +2,7 @@
 
 mod branch_create;
 mod commit;
+pub(crate) mod conflict;
 pub(crate) mod ignore;
 mod init;
 pub(crate) mod merge;
@@ -13,6 +14,7 @@ pub(crate) mod switch;
 
 pub use branch_create::BranchCreateAction;
 pub use commit::CommitAction;
+pub use conflict::ConflictAction;
 pub use ignore::IgnoreAction;
 pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
@@ -61,6 +63,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(IgnoreAction::new()))?;
     registry.register(Box::new(MergeAction::merge()))?;
     registry.register(Box::new(MergeIntoAction::new()))?;
+    registry.register(Box::new(ConflictAction::finish()))?;
+    registry.register(Box::new(ConflictAction::abort()))?;
     registry.register(Box::new(SwitchAction::new()))?;
     registry.register(Box::new(BranchCreateAction::new()))?;
     registry.register(Box::new(RemoteAction::fetch()))?;

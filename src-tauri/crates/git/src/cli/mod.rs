@@ -592,6 +592,7 @@ impl GitBackend for CliBackend {
                 self.resolve_file(repo, path, mode, bytes)?
             }
             GitOp::ResolveDelete { path } => self.resolve_delete(repo, path)?,
+            GitOp::ResolveSide { path, ours } => self.resolve_side(repo, path, *ours)?,
             GitOp::SnapshotFiles { paths, message } => {
                 return self.snapshot_files(repo, paths, message);
             }

@@ -68,6 +68,42 @@ impl CliBackend {
         )
     }
 
+    /// 한쪽 그대로 해결한다. 그쪽 파일을 작업 폴더에 쓰고 index에 넣는다.
+    pub(super) fn resolve_side(
+        &self,
+        repo: &RepoPath,
+        path: &str,
+        ours: bool,
+    ) -> Result<GitOutput> {
+        if !safe_relative(path) {
+            return Err(refuse_path(path));
+        }
+        let dir = Some(repo.as_path());
+        let list = nul_separated(&[path.to_string()]);
+        let side = if ours { "--ours" } else { "--theirs" };
+        self.runner.run_with_stdin(
+            dir,
+            &[
+                "--literal-pathspecs",
+                "checkout",
+                side,
+                "--pathspec-from-file=-",
+                "--pathspec-file-nul",
+            ],
+            &list,
+        )?;
+        self.runner.run_with_stdin(
+            dir,
+            &[
+                "--literal-pathspecs",
+                "add",
+                "--pathspec-from-file=-",
+                "--pathspec-file-nul",
+            ],
+            &list,
+        )
+    }
+
     /// 작업 폴더의 `paths` 내용을 stash 모양 커밋으로 만든다. 임시 index를 써서 사용자의 index는
     /// 건드리지 않는다. 백업 커밋은 원격에 올라가지 않으므로 사용자 이름이 없어도 만들 수 있게
     /// 앱 이름으로 적고 서명하지 않는다.

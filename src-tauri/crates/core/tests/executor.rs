@@ -311,6 +311,8 @@ fn registered_actions_match_spec_risk() {
             ("ignore", "ignore", Risk::Safe),
             ("merge", "merge", Risk::Normal),
             ("merge-into", "merge", Risk::Normal),
+            ("conflict-finish", "conflict", Risk::Normal),
+            ("conflict-abort", "merge", Risk::Normal),
             ("switch", "switch", Risk::Normal),
             ("branch-create", "branch", Risk::Safe),
             ("fetch", "fetch", Risk::Safe),

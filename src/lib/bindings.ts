@@ -59,7 +59,11 @@ export type ActionInput =
 /**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
 { id: "merge"; input: MergeInput } | 
 /**  지금 버전으로 기본 브랜치를 앞으로 감는다("main에 합치기", D-071). */
-{ id: "merge-into"; input: MergeIntoInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "merge-into"; input: MergeIntoInput } | 
+/**  충돌 해결 화면에서 고른 것으로 합치기를 마친다(D-069, D-070). */
+{ id: "conflict-finish"; input: ConflictFinishInput } | 
+/**  합치기를 그만둔다(D-070). */
+{ id: "conflict-abort" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -77,7 +81,11 @@ overlap: string[] } | { kind: "ignored"; count: number } |
 /**  합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다. */
 { kind: "merged"; branch: string; fast_forward: boolean } | 
 /**  겹쳐서 합치는 중으로 멈췄다. 충돌 해결 화면으로 간다(D-069). */
-{ kind: "mergeConflicts"; paths: string[] };
+{ kind: "mergeConflicts"; paths: string[] } | 
+/**  합치기를 마쳤다(합친 버전을 만들었다). */
+{ kind: "conflictFinished" } | 
+/**  합치기를 그만뒀다. */
+{ kind: "conflictAborted" };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -196,6 +204,13 @@ export type ConflictFileView = {
 	theirsPreview: string[],
 };
 
+export type ConflictFinishInput = {
+	/**  남은 충돌 파일마다 하나씩. */
+	resolutions: FileResolution[],
+	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
+	locale: string,
+};
+
 /**  고를 곳 하나. 각 쪽 내용과 앞뒤 3줄. 줄 끝은 뺐다. */
 export type ConflictHunkView = {
 	index: number,
@@ -254,7 +269,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -269,12 +284,20 @@ export type FetchInput = {
 	background: boolean,
 };
 
+/**  파일 하나의 선택. 텍스트 파일은 곳마다(`hunks`), 그 밖은 한쪽 그대로. */
+export type FileChoice = { kind: "hunks"; choices: HunkChoice[] } | { kind: "ours" } | { kind: "theirs" };
+
 export type FileDiffView = {
 	binary: boolean,
 	truncated: boolean,
 	hunks: HunkView[],
 	/**  심볼릭 링크면 가리키는 곳. 이때는 내용을 읽지 않고 줄도 없다(D-052). */
 	link: string | null,
+};
+
+export type FileResolution = {
+	path: string,
+	choice: FileChoice,
 };
 
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
@@ -301,6 +324,12 @@ export type HomeMapView = {
 	upstreamLabel: string | null,
 	changedFiles: number,
 };
+
+export type HunkChoice = { kind: "ours" } | { kind: "theirs" } | 
+/**  내 쪽 다음 합칠 쪽. */
+{ kind: "both" } | 
+/**  직접 고친 글. 표시 문자 없는 글상자의 내용. */
+{ kind: "custom"; text: string };
 
 export type HunkView = {
 	section: string,

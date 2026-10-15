@@ -301,6 +301,8 @@ pub enum GitOp {
     },
     /// 충돌한 파일을 지우는 쪽으로 해결한다(`rm -f`).
     ResolveDelete { path: String },
+    /// 충돌한 파일을 한쪽 그대로 해결한다(`checkout --ours`/`--theirs` 뒤 `add`). 이진·링크·큰 파일용.
+    ResolveSide { path: String, ours: bool },
     /// 작업 폴더의 `paths` 파일 내용을 stash 모양 커밋(부모: HEAD, index 커밋)으로 만든다.
     /// index·작업 폴더·stash 목록은 그대로다. 만든 해시는 [`OpOutput::oid`]. 덮어쓰기 전 백업용.
     SnapshotFiles { paths: Vec<String>, message: String },
