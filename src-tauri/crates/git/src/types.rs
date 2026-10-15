@@ -143,6 +143,12 @@ impl Default for LogQuery {
 pub enum GitOp {
     /// 아직 저장소가 아닌 폴더를 저장소로 만든다. 기본 갈래 이름은 사용자 git 설정을 따른다.
     Init,
+    /// 파일을 다음 저장에 넣는다. 지운 파일도 넣는다.
+    Stage { paths: Vec<String> },
+    /// 넣었던 파일을 다음 저장에서 뺀다. 작업 폴더 파일은 그대로다.
+    Unstage { paths: Vec<String> },
+    /// 넣은 내용을 메시지와 함께 저장한다. 사용자의 commit hook과 서명 설정을 따른다.
+    Commit { message: String },
 }
 
 /// 쓰기 작업의 출력 원문.

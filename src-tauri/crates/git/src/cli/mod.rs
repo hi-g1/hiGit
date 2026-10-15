@@ -1,5 +1,7 @@
 mod diff;
 mod log;
+#[cfg(test)]
+mod run_tests;
 mod runner;
 mod status;
 
@@ -23,6 +25,20 @@ impl CliBackend {
     pub fn new(git: impl Into<PathBuf>, configure: ConfigureCommand) -> Self {
         Self {
             runner: Runner::new(git.into(), configure),
+        }
+    }
+}
+
+impl CliBackend {
+    /// 저장이 하나라도 있는지. 오류 문구를 읽지 않고 종료 코드로 판단한다.
+    fn has_commit(&self, repo: &RepoPath) -> Result<bool> {
+        match self.runner.run(
+            Some(repo.as_path()),
+            &["rev-parse", "--verify", "-q", "HEAD^{commit}"],
+        ) {
+            Ok(_) => Ok(true),
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(false),
+            Err(e) => Err(e),
         }
     }
 }
@@ -136,10 +152,53 @@ impl GitBackend for CliBackend {
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {
-        let args: &[&str] = match op {
-            GitOp::Init => &["init"],
+        let dir = Some(repo.as_path());
+        // 경로 목록은 명령줄 대신 stdin으로 넘긴다(Windows 명령줄 길이 제한, 파일 수천 개).
+        const FROM_STDIN: [&str; 2] = ["--pathspec-from-file=-", "--pathspec-file-nul"];
+        let out = match op {
+            GitOp::Init => self.runner.run(dir, &["init"])?,
+            GitOp::Stage { paths } => self.runner.run_with_stdin(
+                dir,
+                &[
+                    "--literal-pathspecs",
+                    "add",
+                    "-A",
+                    FROM_STDIN[0],
+                    FROM_STDIN[1],
+                ],
+                &runner::nul_separated(paths),
+            )?,
+            GitOp::Unstage { paths } => {
+                let has_commit = self.has_commit(repo)?;
+                // 저장이 없으면 되돌릴 HEAD가 없어 restore --staged가 실패한다. 이때는 index에서만 지운다.
+                let args: &[&str] = if has_commit {
+                    &[
+                        "--literal-pathspecs",
+                        "restore",
+                        "--staged",
+                        FROM_STDIN[0],
+                        FROM_STDIN[1],
+                    ]
+                } else {
+                    &[
+                        "--literal-pathspecs",
+                        "rm",
+                        "--cached",
+                        "-r",
+                        "-q",
+                        FROM_STDIN[0],
+                        FROM_STDIN[1],
+                    ]
+                };
+                self.runner
+                    .run_with_stdin(dir, args, &runner::nul_separated(paths))?
+            }
+            // 메시지는 stdin으로 넘겨 한글·여러 줄·따옴표를 그대로 저장한다.
+            GitOp::Commit { message } => {
+                self.runner
+                    .run_with_stdin(dir, &["commit", "-F", "-"], message.as_bytes())?
+            }
         };
-        let out = self.runner.run(Some(repo.as_path()), args)?;
         Ok(OpOutput {
             stdout: out.stdout_lossy(),
             stderr: out.stderr_lossy(),

@@ -109,7 +109,6 @@ fn finish(args: &[&str], out: Output) -> Result<GitOutput> {
 
 /// 경로 목록을 `--pathspec-from-file=- --pathspec-file-nul`용 stdin 바이트로 만든다.
 /// 명령줄로 넘기지 않으므로 Windows 명령줄 길이 제한(32K)에 걸리지 않는다.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn nul_separated(paths: &[String]) -> Vec<u8> {
     let mut bytes = Vec::new();
     for path in paths {
