@@ -247,12 +247,44 @@ fn background_fetch_does_not_block_saving() {
     let _ = s.url;
 }
 
+fn save_in_app(core: &Core, dir: &Path, file: &str, text: &str) {
+    std::fs::write(dir.join(file), text).unwrap();
+    core.execute(
+        dir,
+        &ActionInput::Commit(CommitInput {
+            message: file.into(),
+            stage_all: true,
+        }),
+        None,
+    )
+    .unwrap();
+}
+
 #[test]
-fn undoing_a_sync_says_it_was_uploaded() {
+fn undoing_after_a_sync_says_it_was_uploaded() {
     let s = setup();
-    commit_file(s.mine.path(), "c.txt", "내 것\n");
     let core = core(s.mine.path());
+    save_in_app(&core, s.mine.path(), "c.txt", "내 것\n");
     sync(&core, s.mine.path()).unwrap();
     let err = core.undo(s.mine.path()).unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::UndoPushed);
+}
+
+#[test]
+fn a_sync_that_stopped_does_not_block_undoing_the_save() {
+    let s = setup();
+    others_push(&s, "a.txt", "줄 1\n남이 고침\n줄 3\n줄 4\n줄 5\n");
+    let core = core(s.mine.path());
+    let before = git(s.mine.path(), &["rev-parse", "HEAD"]);
+    save_in_app(
+        &core,
+        s.mine.path(),
+        "a.txt",
+        "줄 1\n내가 고침\n줄 3\n줄 4\n줄 5\n",
+    );
+    let r = sync(&core, s.mine.path()).unwrap();
+    assert!(matches!(r, ActionResult::Synced { ref overlap, .. } if !overlap.is_empty()));
+    // 겹쳐서 멈춘 동기화는 아무것도 바꾸지 않았으니, 되돌리기는 그 앞의 버전 저장을 되돌린다.
+    core.undo(s.mine.path()).unwrap();
+    assert_eq!(git(s.mine.path(), &["rev-parse", "HEAD"]), before);
 }

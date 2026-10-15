@@ -148,15 +148,23 @@ impl Executor {
     ) -> Result<()> {
         let at = journal::now();
         let body = match before {
-            Some(before) => Body::Action {
-                id: journal::new_id(at),
-                at,
-                action: action.to_string(),
-                input: input.clone(),
-                before,
-                after: UndoState::capture(ctx.git, repo)?,
-                kind,
-            },
+            Some(before) => {
+                let after = UndoState::capture(ctx.git, repo)?;
+                // 아무것도 바뀌지 않았으면(주고받을 것이 없거나 겹쳐서 멈춘 동기화, 올리기만 한 경우)
+                // 되돌릴 것도 없다. 줄을 남기면 그 앞의 작업을 되돌리지 못하게 막는다.
+                if after == before {
+                    return Ok(());
+                }
+                Body::Action {
+                    id: journal::new_id(at),
+                    at,
+                    action: action.to_string(),
+                    input: input.clone(),
+                    before,
+                    after,
+                    kind,
+                }
+            }
             None if kind.is_barrier() => Body::Barrier {
                 at,
                 action: action.to_string(),
