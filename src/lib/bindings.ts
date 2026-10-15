@@ -35,6 +35,10 @@ export const commands = {
 	querySecretCheck: (repo: string, request: SecretCheckRequest) => __TAURI_INVOKE<SecretCheckView>("query_secret_check", { repo, request }),
 	/**  합치기 제안(D-048, D-071). */
 	queryMergeHint: (repo: string) => __TAURI_INVOKE<MergeHintView>("query_merge_hint", { repo }),
+	/**  충돌 해결 화면 상태(D-069). */
+	queryConflictState: (repo: string) => __TAURI_INVOKE<ConflictStateView>("query_conflict_state", { repo }),
+	/**  충돌 파일 하나의 고를 곳(D-086). */
+	queryConflictFile: (repo: string, path: string) => __TAURI_INVOKE<ConflictFileView>("query_conflict_file", { repo, path }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
@@ -164,6 +168,71 @@ export type CommitRow = {
 	 *  내보내므로 TS 타입만 u32(number)로 지정한다. 값은 serde가 숫자 그대로 보낸다.
 	 */
 	authorTime: number,
+};
+
+/**  어떤 작업이 충돌을 남겼는지. */
+export type ConflictContext = 
+/**  합치기(`MERGE_HEAD`). */
+"merge";
+
+/**  `Text`는 곳마다 고르고, `Whole`은 파일 단위로 한쪽을 고른다. */
+export type ConflictFileKind = "text" | "whole";
+
+export type ConflictFileSummary = {
+	path: string,
+	kind: ConflictFileKind,
+	/**  고를 곳 수(`Whole`이면 1). */
+	hunks: number,
+};
+
+export type ConflictFileView = {
+	path: string,
+	kind: ConflictFileKind,
+	hunks: ConflictHunkView[],
+	oursSide: SideState,
+	theirsSide: SideState,
+	/**  `Whole`일 때 각 쪽 앞 40줄. */
+	oursPreview: string[],
+	theirsPreview: string[],
+};
+
+/**  고를 곳 하나. 각 쪽 내용과 앞뒤 3줄. 줄 끝은 뺐다. */
+export type ConflictHunkView = {
+	index: number,
+	/**  내 쪽 파일에서 시작하는 줄(1부터). */
+	line: number,
+	ours: string[],
+	base: string[],
+	theirs: string[],
+	before: string[],
+	after: string[],
+};
+
+/**  카드 이름표: "내 브랜치 · 사람 · 날짜 · 이름". */
+export type ConflictSide = {
+	/**  브랜치 이름. 브랜치가 없으면 짧은 해시. */
+	label: string,
+	author: string,
+	/**  작성 시각(unix 초). TS에서는 number(`CommitRow.author_time`과 같은 방식). */
+	at: number,
+	summary: string,
+	shortOid: string,
+};
+
+export type ConflictStateView = {
+	/**  합치는 중인지. */
+	active: boolean,
+	context: ConflictContext,
+	ours: ConflictSide | null,
+	theirs: ConflictSide | null,
+	/**  아직 고르지 않은 충돌 파일(200개까지). */
+	files: ConflictFileSummary[],
+	/**  200개를 넘어 보내지 않은 파일 수. */
+	moreFiles: number,
+	/**  문제없이 합쳐진 파일 수. */
+	cleanFiles: number,
+	/**  앱이 끝낼 수 없는 다른 작업(리베이스·cherry-pick·revert)이 충돌을 남겼다. */
+	otherOperation: boolean,
 };
 
 /**  줄 하나. 줄 번호는 화면에 바로 쓰도록 core가 계산한다. */
@@ -390,6 +459,13 @@ export type SecretRule =
 "privateKey" | "githubToken" | "awsKey" | "slackToken" | "apiKey" | 
 /**  50MB 이상 */
 "largeFile";
+
+/**  한쪽 파일의 모양. */
+export type SideState = { kind: "text" } | { kind: "binary" } | 
+/**  이 쪽에서는 지웠다. */
+{ kind: "deleted" } | { kind: "link"; target: string } | 
+/**  1MB가 넘는다. */
+{ kind: "large" } | { kind: "submodule" };
 
 export type StatusView = {
 	branch: BranchView,

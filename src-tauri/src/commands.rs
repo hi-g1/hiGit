@@ -6,9 +6,10 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    DiffRequest, ErrorCode, ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView,
-    OpenHow, PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, SecretCheckRequest,
-    SecretCheckView, StatusView, TrustChoice, UndoResult,
+    ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
+    HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PreviewView, ProjectOpenResult,
+    ProjectSummaryView, RecentProject, SecretCheckRequest, SecretCheckView, StatusView,
+    TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -253,6 +254,33 @@ pub async fn redo_last(state: State<'_, AppState>, folder: String) -> CmdResult<
 pub async fn query_home_map(state: State<'_, AppState>, repo: String) -> CmdResult<HomeMapView> {
     blocking(state, move |core| {
         core.queries().home_map(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 충돌 해결 화면 상태(D-069).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_conflict_state(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<ConflictStateView> {
+    blocking(state, move |core| {
+        core.queries().conflict_state(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 충돌 파일 하나의 고를 곳(D-086).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_conflict_file(
+    state: State<'_, AppState>,
+    repo: String,
+    path: String,
+) -> CmdResult<ConflictFileView> {
+    blocking(state, move |core| {
+        core.queries().conflict_file(&PathBuf::from(repo), &path)
     })
     .await
 }

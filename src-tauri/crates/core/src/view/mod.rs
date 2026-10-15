@@ -4,6 +4,7 @@
 use std::path::Path;
 
 mod branch;
+mod conflict;
 mod diff;
 mod input;
 mod map;
@@ -11,6 +12,10 @@ mod merge;
 mod secret;
 
 pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
+pub use conflict::{
+    ConflictContext, ConflictFileKind, ConflictFileSummary, ConflictFileView, ConflictHunkView,
+    ConflictSide, ConflictStateView, SideState,
+};
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
     ActionInput, BranchCreateInput, CommitInput, FetchInput, MergeInput, MergeIntoInput,

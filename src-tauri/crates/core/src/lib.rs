@@ -9,6 +9,7 @@ mod access;
 mod action;
 pub mod actions;
 mod bootstrap;
+mod conflict;
 mod error;
 mod executor;
 pub mod git_security;

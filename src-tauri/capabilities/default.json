@@ -28,6 +28,8 @@
     "allow-query-home-map",
     "allow-query-secret-check",
     "allow-query-merge-hint",
+    "allow-query-conflict-state",
+    "allow-query-conflict-file",
     "allow-query-project-summary",
     "allow-repo-watch",
     "allow-repo-unwatch"

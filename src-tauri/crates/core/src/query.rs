@@ -15,6 +15,10 @@ use crate::view::{
     LogPage, LogQuery, MapCommit, MergeHintKind, MergeHintView, NameProblem, ProjectSummaryView,
     SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule, StatusView,
 };
+use crate::view::{
+    ConflictContext, ConflictFileKind, ConflictFileSummary, ConflictFileView, ConflictSide,
+    ConflictStateView,
+};
 use crate::{CoreError, Result};
 
 /// 조회(D-010). 미리보기·위험도·백업이 없으므로 실행기와 레지스트리를 거치지 않는다.
@@ -50,6 +54,103 @@ impl Queries {
             hint_cache: Mutex::new(HashMap::new()),
             slow_overlap: Mutex::new(HashSet::new()),
         }
+    }
+
+    /// 충돌 해결 화면의 상태(D-069). 합치는 중이 아니면 `active: false`.
+    pub fn conflict_state(&self, repo: &Path) -> Result<ConflictStateView> {
+        const MAX_FILES: usize = 200;
+        let root = self.opened_repo(repo)?;
+        let merge_head = self.git.resolve_ref(&root, "MERGE_HEAD")?;
+        let entries = self.git.index_entries(&root)?;
+        let conflicts = crate::conflict::conflict_paths(entries);
+        let git_dir = self.git.git_dir(&root)?;
+        let other = [
+            "rebase-merge",
+            "rebase-apply",
+            "CHERRY_PICK_HEAD",
+            "REVERT_HEAD",
+        ]
+        .iter()
+        .any(|f| git_dir.join(f).exists());
+        let mut view = ConflictStateView {
+            active: merge_head.is_some(),
+            context: ConflictContext::Merge,
+            ours: None,
+            theirs: None,
+            files: Vec::new(),
+            more_files: 0,
+            clean_files: 0,
+            other_operation: merge_head.is_none() && (other || !conflicts.is_empty()),
+        };
+        let Some(merge_head) = merge_head else {
+            return Ok(view);
+        };
+        let branches = self.git.branches(&root)?;
+        let side = |rev: &str, label: Option<String>| -> Result<Option<ConflictSide>> {
+            let commit = self
+                .git
+                .log(
+                    &root,
+                    &git::LogQuery {
+                        skip: 0,
+                        limit: 1,
+                        rev: Some(rev.to_string()),
+                    },
+                )?
+                .into_iter()
+                .next();
+            Ok(commit.map(|c| ConflictSide {
+                label: label.unwrap_or_else(|| c.short_oid.clone()),
+                author: c.author_name,
+                at: c.author_time,
+                summary: c.summary,
+                short_oid: c.short_oid,
+            }))
+        };
+        let current = self.git.current_branch(&root)?;
+        let theirs_name = branches
+            .iter()
+            .filter(|b| b.oid == merge_head.as_str() && !b.is_head)
+            .min_by_key(|b| b.kind != git::BranchKind::Local)
+            .map(|b| b.name.clone());
+        view.ours = side("HEAD", current)?;
+        view.theirs = side(merge_head.as_str(), theirs_name)?;
+        view.more_files = u32::try_from(conflicts.len().saturating_sub(MAX_FILES)).unwrap_or(0);
+        for c in conflicts.iter().take(MAX_FILES) {
+            let file = crate::conflict::read_file(self.git.as_ref(), &root, c)?;
+            let hunks = match file.kind {
+                ConflictFileKind::Text => u32::try_from(file.hunks.len()).unwrap_or(u32::MAX),
+                ConflictFileKind::Whole => 1,
+            };
+            view.files.push(ConflictFileSummary {
+                path: c.path.clone(),
+                kind: file.kind,
+                hunks,
+            });
+        }
+        let status = self.git.status(&root)?;
+        view.clean_files = u32::try_from(
+            status
+                .entries
+                .iter()
+                .filter(|e| e.kind != git::EntryKind::Unmerged)
+                .filter(|e| !matches!(e.index, git::Change::Unmodified | git::Change::Untracked))
+                .count(),
+        )
+        .unwrap_or(u32::MAX);
+        Ok(view)
+    }
+
+    /// 충돌 파일 하나의 고를 곳(D-086). 충돌 중인 경로만 받는다.
+    pub fn conflict_file(&self, repo: &Path, path: &str) -> Result<ConflictFileView> {
+        let root = self.opened_repo(repo)?;
+        paths::validate_one(path)?;
+        let conflicts = crate::conflict::conflict_paths(self.git.index_entries(&root)?);
+        let c = conflicts
+            .iter()
+            .find(|c| c.path == path)
+            .ok_or(CoreError::InvalidInput("충돌한 파일이 아니에요"))?;
+        crate::conflict::read_file(self.git.as_ref(), &root, c)
     }
 
     /// 합치기 제안(D-048, D-071). 기본 브랜치에 새 버전이 있으면 "가져와 합치기", 내 브랜치만

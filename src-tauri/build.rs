@@ -23,6 +23,8 @@ const COMMANDS: &[&str] = &[
     "query_home_map",
     "query_secret_check",
     "query_merge_hint",
+    "query_conflict_state",
+    "query_conflict_file",
     "query_project_summary",
     "repo_watch",
     "repo_unwatch",
