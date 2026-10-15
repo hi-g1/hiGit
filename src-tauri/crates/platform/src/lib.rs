@@ -4,9 +4,11 @@
 //! core가 여기서 git 경로와 [`configure_child`]를 받아 `CliBackend`에 넘긴다.
 
 mod git_exe;
+mod link;
 mod path;
 mod process;
 
 pub use git_exe::find_git;
+pub use link::symlink_file;
 pub use path::normalize_repo_path;
 pub use process::configure_child;

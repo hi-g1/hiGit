@@ -371,3 +371,65 @@ fn diff_rejects_paths_outside_repo() {
         );
     }
 }
+
+#[test]
+fn diff_rejects_symlink_pointing_outside_repo() {
+    use higit_core::view::DiffRequest;
+    let base = tempfile::tempdir().unwrap();
+    let repo = base.path().join("repo");
+    std::fs::create_dir(&repo).unwrap();
+    let secret = base.path().join("비밀.txt");
+    std::fs::write(&secret, "저장소 밖 내용\n").unwrap();
+    std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(&repo)
+        .status()
+        .unwrap();
+    // 저장소 안의 링크가 밖의 파일을 가리킨다. 경로 글자만 보면 "링크.txt"라 문제가 없어 보인다.
+    if let Err(e) = platform::symlink_file(&secret, &repo.join("링크.txt")) {
+        eprintln!("이 환경에서는 심볼릭 링크를 만들 수 없어 시험을 건너뜁니다: {e}");
+        return;
+    }
+    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    for untracked in [true, false] {
+        let result = core.queries().diff(
+            &repo,
+            &DiffRequest {
+                path: "링크.txt".into(),
+                orig_path: None,
+                untracked,
+            },
+        );
+        match result {
+            Err(err) => assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput),
+            Ok(view) => {
+                panic!("밖을 가리키는 링크가 막히지 않았다(untracked={untracked}): {view:?}")
+            }
+        }
+    }
+}
+
+#[test]
+fn diff_allows_symlink_inside_repo() {
+    use higit_core::view::DiffRequest;
+    let base = tempfile::tempdir().unwrap();
+    let repo = base.path().join("repo");
+    std::fs::create_dir(&repo).unwrap();
+    std::fs::write(repo.join("원본.txt"), "안쪽 내용\n").unwrap();
+    std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(&repo)
+        .status()
+        .unwrap();
+    if let Err(e) = platform::symlink_file(&repo.join("원본.txt"), &repo.join("링크.txt")) {
+        eprintln!("이 환경에서는 심볼릭 링크를 만들 수 없어 시험을 건너뜁니다: {e}");
+        return;
+    }
+    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    let request = DiffRequest {
+        path: "링크.txt".into(),
+        orig_path: None,
+        untracked: true,
+    };
+    assert!(core.queries().diff(&repo, &request).is_ok());
+}
