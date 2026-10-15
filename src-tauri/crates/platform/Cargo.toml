@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 which = { workspace = true }
 dunce = { workspace = true }
+dirs = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

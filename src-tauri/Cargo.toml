@@ -46,6 +46,7 @@ tauri = { version = "2.12", features = [] }
 tauri-build = { version = "2.7", features = [] }
 tauri-plugin-dialog = "2.8"
 which = "8.0"
+dirs = "7.0"
 dunce = "1.0"
 thiserror = "2.0"
 tempfile = "3.27"

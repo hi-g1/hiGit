@@ -9,6 +9,18 @@ pub fn normalize_repo_path(path: &Path) -> io::Result<PathBuf> {
     dunce::canonicalize(path)
 }
 
+/// 정규화된 두 경로가 같은 곳인지. Windows는 대소문자를 구분하지 않는다.
+pub fn same_path(a: &Path, b: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+    }
+    #[cfg(not(windows))]
+    {
+        a == b
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,6 +55,15 @@ mod tests {
             !normalized.to_string_lossy().starts_with(r"\\?\"),
             "{normalized:?}"
         );
+    }
+
+    #[test]
+    fn same_path_follows_os_rules() {
+        assert!(same_path(Path::new("/a/b"), Path::new("/a/b")));
+        #[cfg(windows)]
+        assert!(same_path(Path::new(r"C:\A\b"), Path::new(r"c:\a\B")));
+        #[cfg(not(windows))]
+        assert!(!same_path(Path::new("/a/B"), Path::new("/a/b")));
     }
 
     #[test]
