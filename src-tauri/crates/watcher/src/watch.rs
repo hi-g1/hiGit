@@ -31,9 +31,30 @@ pub enum WatchEvent {
 #[error("파일 변경을 감시할 수 없습니다: {0}")]
 pub struct WatchError(String);
 
+/// 저장소 폴더가 아직 있는지 확인하는 간격. 감시 중인 폴더를 지워도 알림을 주지 않는 OS가 있다.
+const ROOT_CHECK: Duration = Duration::from_millis(500);
+
+const ROOT_GONE: &str = "저장소 폴더가 사라졌습니다";
+
 /// 살아 있는 동안 감시한다. 버리면(drop) 멈춘다.
 pub struct RepoWatcher {
     _debouncer: Debouncer<notify::RecommendedWatcher, RecommendedCache>,
+    alive: Arc<AtomicBool>,
+}
+
+impl Drop for RepoWatcher {
+    fn drop(&mut self) {
+        self.alive.store(false, Ordering::SeqCst);
+    }
+}
+
+type Sink = Arc<dyn Fn(WatchEvent) + Send + Sync>;
+
+/// 처음 한 번만 `Stopped`를 알린다.
+fn stop(stopped: &AtomicBool, on_event: &Sink, reason: String) {
+    if !stopped.swap(true, Ordering::SeqCst) {
+        on_event(WatchEvent::Stopped(reason));
+    }
 }
 
 impl RepoWatcher {
@@ -41,33 +62,34 @@ impl RepoWatcher {
     pub fn start(
         root: &Path,
         extra_excludes: Vec<PathBuf>,
-        on_event: impl Fn(WatchEvent) + Send + 'static,
+        on_event: impl Fn(WatchEvent) + Send + Sync + 'static,
     ) -> Result<Self, WatchError> {
+        let on_event: Sink = Arc::new(on_event);
         let root = root.to_path_buf();
         let rules = Mutex::new(IgnoreRules::load(&root, &extra_excludes));
         let stopped = Arc::new(AtomicBool::new(false));
         let handler_root = root.clone();
+        let handler_stopped = stopped.clone();
+        let handler_sink = on_event.clone();
 
         let handler = move |result: DebounceEventResult| {
-            if stopped.load(Ordering::SeqCst) {
+            if handler_stopped.load(Ordering::SeqCst) {
                 return;
             }
             let events = match result {
                 Ok(events) => events,
                 Err(errors) => {
-                    stopped.store(true, Ordering::SeqCst);
                     let msg = errors
                         .iter()
                         .map(|e| e.to_string())
                         .collect::<Vec<_>>()
                         .join("; ");
-                    on_event(WatchEvent::Stopped(msg));
+                    stop(&handler_stopped, &handler_sink, msg);
                     return;
                 }
             };
             if !handler_root.exists() {
-                stopped.store(true, Ordering::SeqCst);
-                on_event(WatchEvent::Stopped("저장소 폴더가 사라졌습니다".into()));
+                stop(&handler_stopped, &handler_sink, ROOT_GONE.into());
                 return;
             }
 
@@ -81,7 +103,7 @@ impl RepoWatcher {
                         continue;
                     }
                     for path in &event.event.paths {
-                        match classify(&handler_root, &rules, path) {
+                        match classify(&handler_root, &rules, path, path.is_dir()) {
                             Kind::Worktree => changes.worktree = true,
                             Kind::GitignoreChanged => {
                                 changes.worktree = true;
@@ -97,7 +119,7 @@ impl RepoWatcher {
                 *rules.lock().unwrap() = IgnoreRules::load(&handler_root, &extra_excludes);
             }
             if changes != ChangeSet::default() {
-                on_event(WatchEvent::Changed(changes));
+                handler_sink(WatchEvent::Changed(changes));
             }
         };
 
@@ -106,8 +128,23 @@ impl RepoWatcher {
         debouncer
             .watch(&root, RecursiveMode::Recursive)
             .map_err(|e| WatchError(e.to_string()))?;
+
+        // 저장소 폴더가 지워졌는지 따로 확인한다.
+        let alive = Arc::new(AtomicBool::new(true));
+        {
+            let alive = alive.clone();
+            std::thread::spawn(move || {
+                while alive.load(Ordering::SeqCst) && !stopped.load(Ordering::SeqCst) {
+                    std::thread::sleep(ROOT_CHECK);
+                    if alive.load(Ordering::SeqCst) && !root.exists() {
+                        stop(&stopped, &on_event, ROOT_GONE.into());
+                    }
+                }
+            });
+        }
         Ok(Self {
             _debouncer: debouncer,
+            alive,
         })
     }
 }

@@ -91,7 +91,12 @@ impl IgnoreRules {
     }
 }
 
-pub(crate) fn classify(root: &Path, rules: &IgnoreRules, path: &Path) -> Kind {
+/// `is_dir`: 지금 그 경로가 폴더인지. 폴더 자체의 "수정" 알림은 버린다.
+/// Windows는 안의 파일이 바뀌면 폴더에도 늦게 알림을 보내는데, 파일 알림이 따로 오므로 필요 없다.
+pub(crate) fn classify(root: &Path, rules: &IgnoreRules, path: &Path, is_dir: bool) -> Kind {
+    if is_dir {
+        return Kind::Skip;
+    }
     let Ok(rel) = path.strip_prefix(root) else {
         return Kind::Skip;
     };
@@ -108,7 +113,7 @@ pub(crate) fn classify(root: &Path, rules: &IgnoreRules, path: &Path) -> Kind {
     if path.file_name().is_some_and(|n| n == ".gitignore") {
         return Kind::GitignoreChanged;
     }
-    if rules.is_ignored(path, path.is_dir()) {
+    if rules.is_ignored(path, false) {
         Kind::Skip
     } else {
         Kind::Worktree
@@ -136,7 +141,7 @@ mod tests {
         let dir = setup();
         let root = dir.path();
         let rules = IgnoreRules::load(root, &[]);
-        let k = |p: &str| classify(root, &rules, &root.join(p));
+        let k = |p: &str| classify(root, &rules, &root.join(p), false);
         assert_eq!(k(".git/HEAD"), Kind::Git);
         assert_eq!(k(".git/index"), Kind::Git);
         assert_eq!(k(".git/refs/heads/main"), Kind::Git);
@@ -154,7 +159,7 @@ mod tests {
         let extra = root.join("global-ignore");
         fs::write(&extra, "*.tmp\n").unwrap();
         let rules = IgnoreRules::load(root, &[extra]);
-        let k = |p: &str| classify(root, &rules, &root.join(p));
+        let k = |p: &str| classify(root, &rules, &root.join(p), false);
         assert_eq!(k("src/한글 파일.txt"), Kind::Worktree);
         assert_eq!(k("node_modules/react/index.js"), Kind::Skip);
         assert_eq!(k("debug.log"), Kind::Skip);
@@ -176,9 +181,22 @@ mod tests {
         let dir = setup();
         let rules = IgnoreRules::load(dir.path(), &[]);
         assert_eq!(
-            classify(dir.path(), &rules, Path::new("/다른/곳")),
+            classify(dir.path(), &rules, Path::new("/다른/곳"), false),
             Kind::Skip
         );
-        assert_eq!(classify(dir.path(), &rules, dir.path()), Kind::Skip);
+        assert_eq!(classify(dir.path(), &rules, dir.path(), false), Kind::Skip);
+    }
+
+    #[test]
+    fn directory_notifications_are_skipped() {
+        let dir = setup();
+        let root = dir.path();
+        let rules = IgnoreRules::load(root, &[]);
+        // .git/refs/heads 폴더 자체의 수정 알림이 "브랜치 바뀜"으로 잘못 읽히면 안 된다.
+        assert_eq!(
+            classify(root, &rules, &root.join(".git/refs/heads"), true),
+            Kind::Skip
+        );
+        assert_eq!(classify(root, &rules, &root.join("sub"), true), Kind::Skip);
     }
 }
