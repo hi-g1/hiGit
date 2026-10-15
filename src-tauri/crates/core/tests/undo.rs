@@ -392,16 +392,17 @@ fn ignoring_new_files_and_undoing_it() {
     std::fs::write(dir.join("a.txt"), "a\n").unwrap();
     commit(&core, dir, "첫 버전", true);
     std::fs::write(dir.join(".env"), "x\n").unwrap();
-    std::fs::write(dir.join("#메모 *.txt"), "y\n").unwrap();
+    // `*`는 Windows 파일 이름에 쓸 수 없어 `[`로 이스케이프를 확인한다.
+    std::fs::write(dir.join("#메모 [1].txt"), "y\n").unwrap();
     std::fs::write(dir.join("넣은 새 파일.key"), "z\n").unwrap();
     stage(&core, dir, "넣은 새 파일.key");
-    let r = ignore(&core, dir, &[".env", "#메모 *.txt", "넣은 새 파일.key"]).unwrap();
+    let r = ignore(&core, dir, &[".env", "#메모 [1].txt", "넣은 새 파일.key"]).unwrap();
     assert_eq!(r, ActionResult::Ignored { count: 3 });
     // 세 파일 모두 바뀐 내용 목록에서 사라지고, 넣었던 것은 빠진다.
     assert_eq!(git(dir, &["status", "--porcelain"]), "?? .gitignore\n");
     assert_eq!(
         std::fs::read_to_string(dir.join(".gitignore")).unwrap(),
-        "/.env\n/\\#메모 \\*.txt\n/넣은 새 파일.key\n"
+        "/.env\n/\\#메모 \\[1].txt\n/넣은 새 파일.key\n"
     );
     core.undo(dir).unwrap();
     assert!(
