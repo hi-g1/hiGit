@@ -59,21 +59,21 @@ fn stage_and_unstage_special_names() {
     let names = [
         "한글 파일.txt",
         "공백 있는 이름.md",
-        "별*표.txt",
+        "괄호[1].txt",
         "기존.txt",
     ];
     for name in names {
         fs::write(p.join(name), "바뀜\n").unwrap();
     }
-    fs::write(p.join("별다른.txt"), "넣으면 안 됨\n").unwrap();
+    fs::write(p.join("괄호1.txt"), "넣으면 안 됨\n").unwrap();
     stage(p, &names);
 
     let s = status(p);
     assert_eq!(index_of(&s, "한글 파일.txt"), Change::Added);
-    assert_eq!(index_of(&s, "별*표.txt"), Change::Added);
+    assert_eq!(index_of(&s, "괄호[1].txt"), Change::Added);
     assert_eq!(index_of(&s, "기존.txt"), Change::Modified);
-    // `*`가 패턴으로 해석되지 않았다.
-    let other = s.entries.iter().find(|e| e.path == "별다른.txt").unwrap();
+    // `[1]`이 패턴으로 해석되지 않았다(그랬다면 괄호1.txt도 들어갔다).
+    let other = s.entries.iter().find(|e| e.path == "괄호1.txt").unwrap();
     assert_eq!(other.kind, EntryKind::Untracked);
 
     unstage(p, &["한글 파일.txt", "기존.txt"]);

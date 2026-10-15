@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn paths_go_through_stdin() {
         let repo = testutil::init_repo();
-        let names = ["한글 파일.txt", "공백 있는 이름.md", "별*표[1].txt"];
+        let names = ["한글 파일.txt", "공백 있는 이름.md", "괄호[1].txt"];
         for name in names {
             std::fs::write(repo.path().join(name), "내용").unwrap();
         }

@@ -291,13 +291,13 @@ mod tests {
     fn special_characters_are_literal() {
         let repo = testutil::init_repo();
         let p = repo.path();
-        fs::write(p.join("별*표.txt"), "a\n").unwrap();
-        fs::write(p.join("별다른.txt"), "x\n").unwrap();
+        fs::write(p.join("괄호[1].txt"), "a\n").unwrap();
+        fs::write(p.join("괄호1.txt"), "x\n").unwrap();
         commit_all(p, "처음");
-        fs::write(p.join("별*표.txt"), "b\n").unwrap();
-        fs::write(p.join("별다른.txt"), "y\n").unwrap();
-        // `*`가 패턴으로 해석되면 별다른.txt까지 섞인다.
-        let d = diff(p, "별*표.txt", DiffKind::Tracked);
+        fs::write(p.join("괄호[1].txt"), "b\n").unwrap();
+        fs::write(p.join("괄호1.txt"), "y\n").unwrap();
+        // `[1]`이 패턴으로 해석되면 괄호1.txt까지 섞인다. (`*`·`?`는 Windows 파일 이름에 쓸 수 없다)
+        let d = diff(p, "괄호[1].txt", DiffKind::Tracked);
         assert_eq!(texts(&d, LineKind::Added), ["b"]);
     }
 }
