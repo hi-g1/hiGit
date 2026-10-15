@@ -346,22 +346,32 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 
 ## 버전 기록 그리기 계층 (D-017, 반복 2b)
 
-버전 기록·홈·시작 화면 노선도는 반복 2b에서 같은 배치와 그리기로 만든다(D-017, D-090). 데이터와 그리기가 섞이지 않게 아래 네 층으로 나눈다. 단계별 세부는 반복 2b 마무리(계획 007 M16)에서 구현에 맞춘다.
+버전 기록·홈·시작 화면 노선도는 같은 배치와 그리기로 만든다(D-017, D-090). 데이터와 그리기가 섞이지 않게 층을 나눈다.
 
 ```
-query_log (core::view::LogPage)          데이터: 버전, 부모, 브랜치·태그 이름표
+query_log (LogPage, 쪽마다)                데이터: 버전·부모(위상 순서), 브랜치·태그 이름표, 첫 쪽의 끝점·지금 위치·안 올림
+query_home_map / query_route_preview      홈·시작 화면: 요약(HomeMapView)
    ↓
-features/history/model.ts                화면 모델: HistoryRow[] (반복 0의 목록도 이것만 쓴다)
+features/history/model.ts                 화면 모델: toRouteNodes(쪽들) → RouteNode[]
+features/history/layout/horizontal.ts     homeToRouteNodes(요약) → RouteNode[] (갈라진 곳·main 끝·접힌 구간·고친 파일)
    ↓
-features/history/layout/                 배치 계산: 순수 함수 (rows, 단계) → 역·노선 좌표. DOM 없음, 단위 테스트
+layout/simplify.ts                        확대·축소 접기(모든 버전 / 주요 버전 / 태그만, D-087)
    ↓
-features/history/render/                 그리기: Renderer 인터페이스 하나에 SvgRenderer(먼저), CanvasRenderer(나중)
+layout/lanes.ts                           레인 배치 assignLanes: 0번 레인은 기본 브랜치, 색 키(D-091)
+   ↓
+layout/route.ts  verticalScene           세로 장면(버전 기록): 행 48·레인 24·굵기(D-089)
+layout/horizontal.ts layoutHorizontal     가로 장면(홈 home, 시작 화면 preview·mini)
+   ↓
+layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키는 palette(branch·mono)가 CSS 색으로
 ```
 
-- `Renderer`는 배치 결과와 보이는 영역만 받는다. 색은 tokens.css의 `--graph-1`~`--graph-6`을 읽어 쓴다.
+- `Renderer`는 장면과 `palette`, 보이는 영역(`viewport`)만 받는다. 색은 tokens.css의 `--graph-1`~`--graph-6`을 읽어 쓴다. 비싼 레인 배치(`buildRoute`)는 쪽·단계가 바뀔 때만, 장면은 줄 수가 올 때 다시 만든다.
+- 버전 기록 목록(`RouteList`)은 행 높이가 고정된 가상 스크롤이다. DOM 행은 보이는 것 ± 10행과 고른 행뿐이고 SVG도 보이는 구간만 그린다. 포커스는 목록 하나(`listbox`, `aria-activedescendant`)가 받는다.
+- 줄 수(선 굵기)는 보이는 버전만 `query_log_stats`로 150ms 뒤 100개씩 묻는다(`stats.ts`). 기록 무효화는 `invalidateLog`로 첫 쪽만 다시 받는다(useInfiniteQuery는 모든 쪽을 다시 받으므로).
 - 클릭·호버 판정은 DOM이 아니라 배치 결과 좌표로 한다. 그래야 Canvas로 바꿔도 상호작용 코드가 그대로다.
 - 확대·축소 단계(모든 버전 / 주요 버전 / 태그만)는 백엔드가 걸러 주지 않는다. 받은 버전을 화면의 순수 함수가 접는다(D-087). `LogQuery`는 단계를 받지 않는다.
-- 홈 두 줄 노선도와 시작 화면의 큰·작은 노선도도 같은 배치 함수와 Renderer로 그린다. 홈 요약(`HomeMapView`)은 어댑터가 노선도 노드로 바꾼다(D-090, D-093).
+- 홈 두 줄 노선도와 시작 화면의 큰·작은 노선도도 같은 배치 함수와 Renderer로 그린다. 홈 요약(`HomeMapView`)은 어댑터가 노선도 노드로 바꾼다(D-090, D-093). 시작 화면 노선도는 상태 요약이 성공한 프로젝트만, 줄이 보일 때, 동시에 3개까지 부른다.
+- 역 메뉴(D-092): 항목은 `features/history/menu/items.ts`의 표 하나(id, 이름표, 묶음, `availability(역 정보, 화면 상태)`, `run(역 정보, ctx)`)이고 고른 역은 `StationInfo` 하나로 넘긴다. 반복 2b의 항목은 "버전 번호 복사"뿐이다. 반복 3은 이 표에 항목을 더하고 `run`에서 `api.executeAction`으로 core 액션을 부른다. 액션 입력에 담긴 해시는 core가 다시 확인한다(D-085와 같은 방식). 액션 항목의 `actionId`는 `action-meta.json`에 있어야 한다(테스트).
 
 ## OS별 처리 (crates/platform)
 | 항목 | Windows | Ubuntu |
@@ -395,5 +405,5 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 - 끝단 테스트는 기능이 안정된 뒤 `tauri-driver`로 추가.
 
 ## 성능 기준(초기 목표)
-- 버전 1만 개 저장소에서 버전 기록 첫 화면 300ms 이내(가상 스크롤, 200개씩 불러오기).
+- 버전 1만 개 저장소에서 버전 기록 첫 화면 300ms 이내(가상 스크롤, 200개씩 불러오기). 반복 2b 측정(Ubuntu, 릴리스, `perf_ten_thousand_versions`): 첫 쪽 40ms, 깊은 쪽(9800번째부터) 36ms, 25쪽 이어 받기 906ms, 줄 수 100개 10ms. 화면 배치(1만 행, 모든 버전): `buildRoute` 23ms, 장면 10ms.
 - 파일 변경 감시는 300ms 디바운스, `.git/` 내부 변경은 별도 처리.
