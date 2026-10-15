@@ -1,0 +1,7 @@
+[package]
+name = "git"
+description = "GitBackend 트레이트와 CliBackend 구현, 출력 파서"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false

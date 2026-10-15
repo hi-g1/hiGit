@@ -1,0 +1,7 @@
+[package]
+name = "platform"
+description = "OS별 코드: git 찾기, 경로 정규화, 우클릭 메뉴, 키체인"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false

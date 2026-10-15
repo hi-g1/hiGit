@@ -17,9 +17,11 @@ path = "src/main.rs"
 tauri-build = { workspace = true }
 
 [dependencies]
+higit-core = { path = "crates/core" }
 tauri = { workspace = true }
 
 [workspace]
+members = ["crates/*"]
 resolver = "3"
 
 [workspace.package]
