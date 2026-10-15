@@ -5,7 +5,7 @@ use git::{GitOp, Oid};
 
 use super::repo_of;
 use crate::actions::switch::refuse_during_operation;
-use crate::view::{ActionInput, RestoreKind};
+use crate::view::ActionInput;
 use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
 };
@@ -34,21 +34,6 @@ impl Default for RestoreAction {
     }
 }
 
-/// 작업 내역에 "버전"으로 나오는 해시인지(reflog 또는 버전 모양 백업 ref). 화면이 아무 해시나 줄 수 없다.
-fn listed_version(git: &dyn git::GitBackend, repo: &git::RepoPath, oid: &Oid) -> Result<bool> {
-    if git.reflog(repo, 200)?.iter().any(|r| &r.oid == oid) {
-        return Ok(true);
-    }
-    for r in git.list_refs(repo, crate::undo::backup::BACKUP_PREFIX)? {
-        if r.oid == oid.as_str()
-            && crate::recovery::kind_of(git, repo, &r.oid) == RestoreKind::Version
-        {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
 impl Action for RestoreAction {
     fn meta(&self) -> &ActionMeta {
         &self.meta
@@ -65,11 +50,10 @@ impl Action for RestoreAction {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
         let oid = Oid::parse(&input.oid).ok_or(CoreError::InvalidInput("없는 버전이에요"))?;
-        let branch = git.current_branch(repo)?.ok_or(CoreError::InvalidInput(
-            "특정 버전을 보는 중에는 할 수 없어요",
-        ))?;
+        let branch = crate::guard::require_branch(git, repo)?;
         refuse_during_operation(git, repo)?;
-        if !listed_version(git, repo, &oid)? {
+        // 작업 내역에 버전으로 나오는 해시만 받는다. 화면이 아무 해시나 줄 수 없다.
+        if !crate::guard::in_activity(git, repo, &oid)? {
             return Err(CoreError::InvalidInput("없는 버전이에요"));
         }
         // 버전(커밋)이어야 한다.

@@ -152,6 +152,9 @@ pub(crate) fn undo(
     Ok(result)
 }
 
+/// 다시 하면 지금 버전들이 기록에서 빠지는 액션(D-097).
+const REWRITES_HISTORY: &[&str] = &["amend", "reset", "rebase-i"];
+
 pub(crate) fn redo(
     git: &dyn GitBackend,
     repo: &RepoPath,
@@ -163,6 +166,12 @@ pub(crate) fn redo(
     let now = UndoState::capture(git, repo)?;
     if now.head != entry.before.head || now.branch != entry.before.branch {
         return Err(CoreError::UndoStale);
+    }
+    // 기록을 바꾸는 작업을 다시 하면 그사이 올린 버전이 기록에서 빠질 수 있다(D-097).
+    if REWRITES_HISTORY.contains(&entry.action.as_str())
+        && let (Some(before), Some(after)) = (entry.before.head_oid(), entry.after.head_oid())
+    {
+        crate::guard::refuse_published(git, repo, &before, &after)?;
     }
     match entry.kind {
         UndoKind::RestoreRef if entry.before.head == entry.after.head => {}
@@ -248,15 +257,10 @@ fn restore_refs(
     Ok(())
 }
 
-/// 올린 버전이면 참. 올린 버전은 기록을 바꾸는 방법으로 되돌리지 않는다(D-042).
+/// 올린 버전이면 참. 올린 버전은 기록을 바꾸는 방법으로 되돌리지 않는다(D-042). upstream만이
+/// 아니라 모든 원격 추적 브랜치를 보고, 판정하지 못하면 올린 것으로 본다(D-097).
 fn is_pushed(git: &dyn GitBackend, repo: &RepoPath, oid: &Oid) -> Result<bool> {
-    // upstream이 없으면 `@{upstream}`이 오류를 내므로 status의 upstream 이름으로 찾는다.
-    if let Some(upstream) = git.status(repo)?.branch.upstream
-        && let Some(remote) = git.resolve_ref(repo, &format!("refs/remotes/{upstream}"))?
-    {
-        return Ok(git.is_ancestor(repo, oid.as_str(), remote.as_str())?);
-    }
-    Ok(false)
+    crate::guard::is_published(git, repo, oid)
 }
 
 /// 합치기·되살리기 되돌리기: 지금 버전을 백업한 뒤 브랜치와 파일을 이전 버전으로(고친 파일은 둔다).
@@ -287,14 +291,7 @@ fn revert_pushed(
     if first_parent.as_ref() != Some(before) {
         return Err(CoreError::UndoPushed);
     }
-    let staged = git
-        .status(repo)?
-        .entries
-        .iter()
-        .any(|e| !matches!(e.index, git::Change::Unmodified | git::Change::Untracked));
-    if staged {
-        return Err(CoreError::StagedChanges);
-    }
+    crate::guard::refuse_staged(git, repo)?;
     let merge = git.resolve_ref(repo, &format!("{after}^2"))?.is_some();
     git.run(
         repo,
@@ -669,6 +666,52 @@ mod tests {
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), second, "HEAD는 그대로");
         redo(&backend, &repo, &journal).unwrap();
         assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), second);
+    }
+
+    #[test]
+    fn redo_of_a_rewrite_refuses_when_dropped_versions_were_pushed() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let (backend, repo, journal) = setup(dir);
+        // "돌아가기"(second → first)를 되돌린 뒤라 지금은 second다.
+        let reset = Body::Action {
+            id: "1".into(),
+            at: 1,
+            action: "reset".into(),
+            input: ActionInput::Init,
+            before: state(&second),
+            after: state(&first),
+            kind: UndoKind::RestoreTree,
+        };
+        journal.append(&reset).unwrap();
+        journal
+            .append(&Body::Undo {
+                target: "1".into(),
+                at: 2,
+            })
+            .unwrap();
+        // upstream이 아닌 원격 추적 브랜치여도 올린 것이다.
+        git(dir, &["update-ref", "refs/remotes/origin/다른", &second]);
+        let err = redo(&backend, &repo, &journal).unwrap_err();
+        assert!(matches!(err, CoreError::PublishedHistory), "{err:?}");
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
+        git(dir, &["update-ref", "-d", "refs/remotes/origin/다른"]);
+        redo(&backend, &repo, &journal).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), first);
+    }
+
+    #[test]
+    fn undo_treats_any_remote_branch_as_pushed() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let (backend, repo, journal) = setup(dir);
+        git(dir, &["update-ref", "refs/remotes/origin/다른", &second]);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&first), state(&second)))
+            .unwrap();
+        let result = undo(&backend, &repo, &journal).unwrap();
+        assert!(result.reverted, "되돌리는 새 버전을 만든다");
+        assert_eq!(git(dir, &["rev-parse", "HEAD~1"]), second);
     }
 
     /// 원격에 올리고 upstream을 건다.

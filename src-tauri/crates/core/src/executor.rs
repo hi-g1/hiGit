@@ -154,7 +154,8 @@ impl Executor {
         let tracked = action.tracked_refs(input);
         let before = match repo {
             Some(r) if meta.undo.is_recorded() => {
-                Some(UndoState::capture_with(ctx.git, r, &tracked)?)
+                let captured = UndoState::capture_with(ctx.git, r, &tracked)?;
+                Some(action.journal_before(ctx, input, captured))
             }
             _ => None,
         };

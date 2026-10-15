@@ -552,6 +552,11 @@ pub enum ErrorCode {
     NeedsTrust,
     NoRemote,
     WatchUnavailable,
+    PublishedHistory,
+    HasChanges,
+    TagExists,
+    BranchProtected,
+    NoChange,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -637,6 +642,11 @@ impl From<&CoreError> for ErrorView {
             CoreError::ParkBlocked(_) => ErrorCode::ParkBlocked,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
+            CoreError::PublishedHistory => ErrorCode::PublishedHistory,
+            CoreError::HasChanges => ErrorCode::HasChanges,
+            CoreError::TagExists => ErrorCode::TagExists,
+            CoreError::BranchProtected => ErrorCode::BranchProtected,
+            CoreError::NoChange => ErrorCode::NoChange,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {
                 ErrorCode::Internal

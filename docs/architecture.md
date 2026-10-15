@@ -180,8 +180,8 @@ execute(action, input):
   잠금: 작업 폴더 잠금, 원격 잠금, 또는 둘 다 (아래 "잠금")
   if undo == Irreversible: 프론트가 확인을 받았는지 확인 (확인 토큰)
   if risk >= Caution && action.moves_head(): HEAD를 백업 ref로  refs/higit/backup/<UTC 시각>-<순번>/<액션 id>. 실패하면 실행하지 않음
-  tracked = action.tracked_refs(input)        (refs/heads/*, refs/stash)
-  before = UndoState::capture  (HEAD, 브랜치, index 트리, tracked의 값)   ← undo가 기록하는 종류일 때만
+  tracked = action.tracked_refs(input)        (refs/heads/*, refs/tags/*, refs/stash)
+  before = action.journal_before(UndoState::capture)  (HEAD, 브랜치, index 트리, tracked의 값)   ← undo가 기록하는 종류일 때만. 기본은 그대로, 멈췄다 이어가는 작업이 시작 때 상태로 바꾼다
   result = action.execute()
   journal: result.journal_mode()가
     Journal → is_recorded면 Action 줄(after를 캡처해 before와 같으면 남기지 않음), is_barrier면 Barrier 줄, Nothing이면 없음
@@ -271,7 +271,7 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 ```
 
 - `sig`는 앱 데이터 폴더의 키(`journal.key`)로 만든 HMAC-SHA256이다(D-063). 서명이 맞지 않거나 형식이 이상한 줄은 되돌리기에 쓰지 않는다(`Journal::read`). 작업 내역은 형식과 `is_valid`만 통과한 줄도 서명 여부와 함께 읽는다(`Journal::read_all`). 받은 zip 저장소에 남이 만든 줄이 있어도 되돌리기가 그 줄을 따르지 않는다. 4MB를 넘으면 뒤쪽만 읽는다.
-- `UndoState = { head, branch, parked: [(브랜치, stash 해시)], index_tree, refs: [(ref 이름, 해시 또는 없음)] }`. `refs`는 액션의 `tracked_refs`가 채우고 `is_valid`는 `refs/heads/*`와 `refs/stash`만 받는다.
+- `UndoState = { head, branch, parked: [(브랜치, stash 해시)], index_tree, refs: [(ref 이름, 해시 또는 없음)] }`. `refs`는 액션의 `tracked_refs`가 채우고 `is_valid`는 `refs/heads/*`·`refs/tags/*`(이름 규칙을 지킨 것)와 `refs/stash`만 받는다.
 - 반복 2의 새 필드(`refs` 등)는 비어 있으면 직렬화하지 않는다. 옛 줄을 다시 직렬화해도 같은 글자라 서명이 그대로 맞는다(`VERSION`은 1, D-072). 새 `kind`를 모르는 옛 앱은 그 줄을 버린다.
 - `input`에는 `ActionInput::journal_copy()`를 넣는다. 경로 목록은 200개까지, 합치기 마치기의 직접 고친 글은 빼고 선택 종류만 남긴다. 되돌리기·다시 하기는 입력이 아니라 `before`/`after`로 한다.
 - 넣기·빼기 한 번마다 `capture`가 두 번 돈다(git 6회 안팎). 넣기·빼기 되돌리기는 토스트 없이 Ctrl+Z로만 한다(D-072).
@@ -279,9 +279,16 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 - 합치기·리베이스·cherry-pick·revert 중이면 되돌리기·다시 하기 모두 `OperationInProgress`로 거절한다(`refuse_during_operation`).
 - 되돌리기 전에 지금 HEAD·브랜치가 줄의 `after`와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) `UndoStale`로 거절하고, 화면은 토스트의 "작업 내역" 단추로 안내한다.
 - 버전을 뒤로 옮기는 되돌리기(`RestoreRef`·`RestoreTree`)는 옮기기 전에 지금 버전을 백업 ref(`undo-<브랜치>`)로 남긴다. 백업을 못 쓰면 되돌리지 않는다.
+- "올린 버전"은 어떤 원격 추적 브랜치(`refs/remotes/*`, upstream만이 아님)에 닿는 버전이다. 원격 끝점이 1000개를 넘어 판정하지 못하면 올린 것으로 본다(`guard::is_published`, D-097).
+- 다시 하면 버전이 기록에서 빠지는 액션(`amend`·`reset`·`rebase-i`)은 다시 하기 전에 빠질 버전(`after`에 없고 지금 있는 것)이 하나라도 올라갔으면 `PublishedHistory`로 거절한다.
 - 되돌리면 이미 올린 버전이 빠지는 경우(`RestoreRef`·`RestoreTree`)에는 기록을 지우지 않고 그 변경을 취소하는 새 버전을 만든다(`GitOp::Revert`, 합치기 버전은 `-m 1`, D-073). 되돌릴 버전이 `before` 바로 위가 아니면 `UndoPushed`, 넣은 파일이 있으면 `StagedChanges`. 만든 뒤 경계 줄을 덧붙여 그 앞 줄과 다시 하기를 닫고, `UndoResult.reverted`로 화면이 "되돌리는 새 버전을 만들었어요"를 띄운다.
 - 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 브랜치 이름의 `/`는 `%2F`로 적는다(D-064). 일반 stash 목록과 섞지 않는다(만든 뒤 `StashDropIf`로 뺀다). 꺼낸 맡긴 ref는 지우기 전에 백업 ref(`parked-<브랜치>`)로 옮긴다.
 - 백업 ref는 늘 `undo::backup::backup_oid`로 만든다. `refs/higit/`를 쓰거나 지우는 코드는 core의 `undo`, `actions/switch`(맡기기), `actions/stash`·`actions/conflict`(꺼낸 맡긴 ref 지우기), `actions/recover_parked`(남은 항목을 맡긴 ref로)에만 둔다. ref 이름 규칙은 `parked`(`ref_name`)와 `undo::backup`(`ref_name`)에 있다.
+
+#### 기록을 바꾸는 액션의 검사 (`core::guard`, D-097, D-099)
+- 화면이 준 해시·이름은 낡거나 조작될 수 있어 core가 다시 확인한다. 순서는 `require_branch`(특정 버전을 보는 중이면 거절) → `refuse_during_operation` → `verified_commit(oid, Scope)`(전체 해시이고 커밋인지, `HeadAncestor`·`BranchReachable`·`BranchOrActivity`) → 상태 검사(`refuse_staged`: 넣은 파일 → `StagedChanges`, `refuse_dirty`: 추적 중인 파일을 고쳤거나 넣은 파일 → `HasChanges`, 새 파일은 둠, `refuse_published(tip, base)`: `base`에 없고 `tip`에 있는 버전이 하나라도 올라갔으면 → `PublishedHistory`).
+- 새 오류 코드: `PublishedHistory`, `HasChanges`, `TagExists`, `BranchProtected`, `NoChange`(하려는 결과가 지금과 같음. `NothingToCommit`과 따로).
+- 작업 내역 안의 버전인지(`guard::in_activity`)는 reflog 200줄과 버전 모양 백업 ref로 본다. `restore`도 같은 함수를 쓴다.
 
 #### 작업 내역 (D-085)
 - 화면(`screens/Activity`)은 `query_recovery`가 주는 `RecoveryView { items }`를 보여준다. `core::recovery::collect`가 다섯 원천을 최신 먼저 200개로 합친다: journal의 Action 줄(되돌린 줄은 `undone`, 서명이 맞지 않는 줄은 `restore: None`), HEAD reflog(같은 해시·2초 안의 journal 줄과 겹치면 뺌), 백업 ref, 맡긴 ref, 임시 보관 목록(맡겨 두기가 잠깐 만든 항목은 뺌).

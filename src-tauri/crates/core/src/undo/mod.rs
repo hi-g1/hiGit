@@ -111,10 +111,11 @@ impl UndoState {
         let oid_ok = |o: &Option<String>| o.as_deref().is_none_or(|s| Oid::parse(s).is_some());
         let name_ok =
             |n: &str| names::validate_ref_like(n).is_ok() && !n.contains("..") && !n.contains(' ');
-        // 되돌리기가 옮길 수 있는 ref는 로컬 브랜치와 stash뿐이다.
+        // 되돌리기가 옮길 수 있는 ref는 로컬 브랜치·태그와 stash뿐이다.
         let ref_ok = |n: &str| {
             n == "refs/stash"
                 || n.strip_prefix("refs/heads/")
+                    .or_else(|| n.strip_prefix("refs/tags/"))
                     .is_some_and(|b| !b.is_empty() && name_ok(b))
         };
         oid_ok(&self.head)
@@ -135,6 +136,32 @@ impl UndoState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tracked_refs_may_be_branches_tags_or_stash() {
+        let with = |name: &str| UndoState {
+            refs: vec![(name.into(), Some("c".repeat(40)))],
+            ..Default::default()
+        };
+        for good in [
+            "refs/heads/main",
+            "refs/tags/v1.0",
+            "refs/tags/한글",
+            "refs/stash",
+        ] {
+            assert!(with(good).is_valid(), "{good}");
+        }
+        for bad in [
+            "refs/tags/-x",
+            "refs/tags/a..b",
+            "refs/tags/",
+            "refs/remotes/origin/main",
+            "refs/higit/backup/x",
+            "HEAD",
+        ] {
+            assert!(!with(bad).is_valid(), "{bad}");
+        }
+    }
 
     #[test]
     fn state_validation() {

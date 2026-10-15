@@ -97,6 +97,26 @@ pub enum CoreError {
     #[error("액션에 맞지 않는 입력입니다: {0}")]
     InputMismatch(&'static str),
 
+    /// 바뀌거나 빠질 버전 중 올린 것이 있다(올린 기록은 바꾸지 않는다, D-097).
+    #[error("이미 올린 버전이 있습니다")]
+    PublishedHistory,
+
+    /// 추적 중인 파일을 고쳤거나 넣은 파일이 있다.
+    #[error("고친 파일이 있습니다")]
+    HasChanges,
+
+    /// 같은 이름의 태그가 있다.
+    #[error("같은 이름의 태그가 있습니다")]
+    TagExists,
+
+    /// 지금 브랜치나 기본 브랜치라 지우지 않는다.
+    #[error("지울 수 없는 브랜치입니다")]
+    BranchProtected,
+
+    /// 하려는 결과가 지금과 같다(빈 복사·이미 취소된 변경, 바뀐 것 없는 고치기).
+    #[error("바뀌는 것이 없습니다")]
+    NoChange,
+
     #[error("미리보기를 먼저 확인해야 합니다")]
     PreviewRequired,
 

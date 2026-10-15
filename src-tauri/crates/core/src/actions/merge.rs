@@ -4,6 +4,7 @@ use git::{GitOp, Oid, RefExpect};
 
 use super::{names, repo_of};
 use crate::actions::switch::refuse_during_operation;
+use crate::guard::refuse_staged;
 use crate::view::ActionInput;
 use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
@@ -41,20 +42,6 @@ pub(crate) fn local_branch_ref(
         .resolve_ref(repo, &full)?
         .ok_or(CoreError::InvalidInput("그 브랜치가 없어요"))?;
     Ok((full, oid))
-}
-
-/// 이번 버전에 넣은 파일이 있으면 거절한다(합친 버전에 섞이지 않게, D-069).
-pub(crate) fn refuse_staged(git: &dyn git::GitBackend, repo: &git::RepoPath) -> Result<()> {
-    use git::Change;
-    let staged = git
-        .status(repo)?
-        .entries
-        .iter()
-        .any(|e| !matches!(e.index, Change::Unmodified | Change::Untracked));
-    if staged {
-        return Err(CoreError::StagedChanges);
-    }
-    Ok(())
 }
 
 /// 합치는 중인 충돌 파일 경로.

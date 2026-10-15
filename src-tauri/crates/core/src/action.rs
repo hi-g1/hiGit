@@ -29,6 +29,17 @@ pub trait Action: Send + Sync {
     fn tracked_refs(&self, _input: &ActionInput) -> Vec<String> {
         Vec::new()
     }
+
+    /// 실행 전에 잡은 상태를 journal에 남기기 전에 고친다(멈췄다 이어가는 작업이 시작 때 상태를
+    /// 남길 때). 기본은 그대로.
+    fn journal_before(
+        &self,
+        _ctx: &ExecCtx<'_>,
+        _input: &ActionInput,
+        captured: crate::undo::UndoState,
+    ) -> crate::undo::UndoState {
+        captured
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

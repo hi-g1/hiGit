@@ -279,7 +279,7 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
                 git.run(repo, &GitOp::MergeFf { rev: rev.clone() })?;
             } else {
                 // 넣은 파일이 있으면 합친 버전에 섞이지 않게 시작하지 않는다(D-069).
-                crate::actions::merge::refuse_staged(git, repo)?;
+                crate::guard::refuse_staged(git, repo)?;
                 if !merge(git, repo, &rev, behind, &input.locale)? {
                     // 겹쳤다: 합치는 중으로 두고 충돌 해결 화면으로 간다. 올리지 않는다.
                     report.received = 0;
