@@ -16,6 +16,9 @@ pub struct FakeGit {
     pub version: GitVersion,
     pub repo: Mutex<Option<RepoPath>>,
     pub calls: Mutex<Vec<String>>,
+    pub status: Mutex<Status>,
+    /// 최근 것부터.
+    pub commits: Mutex<Vec<Commit>>,
 }
 
 impl FakeGit {
@@ -24,6 +27,18 @@ impl FakeGit {
             version: GitVersion::new(2, 45, 0),
             repo: Mutex::new(None),
             calls: Mutex::new(Vec::new()),
+            status: Mutex::new(Status {
+                branch: Default::default(),
+                entries: Vec::new(),
+            }),
+            commits: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn with_version(version: GitVersion) -> Self {
+        Self {
+            version,
+            ..Self::new()
         }
     }
 
@@ -42,14 +57,19 @@ impl GitBackend for FakeGit {
     }
 
     fn status(&self, _repo: &RepoPath) -> git::Result<Status> {
-        Ok(Status {
-            branch: Default::default(),
-            entries: Vec::new(),
-        })
+        Ok(self.status.lock().unwrap().clone())
     }
 
-    fn log(&self, _repo: &RepoPath, _query: &LogQuery) -> git::Result<Vec<Commit>> {
-        Ok(Vec::new())
+    fn log(&self, _repo: &RepoPath, query: &LogQuery) -> git::Result<Vec<Commit>> {
+        Ok(self
+            .commits
+            .lock()
+            .unwrap()
+            .iter()
+            .skip(query.skip as usize)
+            .take(query.limit as usize)
+            .cloned()
+            .collect())
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {
@@ -111,4 +131,20 @@ pub fn repo_state(folder: &str) -> RepoState {
         folder: PathBuf::from(folder),
         repo: Some(RepoPath::new(folder)),
     }
+}
+
+pub fn commit(n: u32) -> Commit {
+    Commit {
+        oid: format!("{n:040}"),
+        short_oid: format!("{n:07}"),
+        parents: Vec::new(),
+        author_name: "테스트".into(),
+        author_email: "t@example.com".into(),
+        author_time: 1_700_000_000 + i64::from(n),
+        summary: format!("저장 {n}"),
+    }
+}
+
+pub fn shared(git: FakeGit) -> std::sync::Arc<FakeGit> {
+    std::sync::Arc::new(git)
 }

@@ -5,17 +5,22 @@
 
 mod action;
 pub mod actions;
+mod bootstrap;
 mod error;
 mod executor;
+mod query;
 mod registry;
 mod state;
+pub mod view;
 
 pub use action::{
     Action, ActionMeta, Availability, ExecCtx, InputField, InputKind, Outcome, Preview, Risk,
     UnavailableReason,
 };
+pub use bootstrap::{Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, Result};
 pub use executor::{Executor, PreviewToken};
+pub use query::Queries;
 pub use registry::Registry;
 pub use state::RepoState;
 

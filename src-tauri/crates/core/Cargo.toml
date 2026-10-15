@@ -9,7 +9,9 @@ publish = false
 [dependencies]
 git = { path = "../git" }
 platform = { path = "../platform" }
+serde = { workspace = true }
 serde_json = { workspace = true }
+specta = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
