@@ -32,6 +32,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_status,
             commands::query_log,
             commands::query_log_stats,
+            commands::query_route_preview,
             commands::query_diff,
             commands::query_branches,
             commands::query_branch_name,

@@ -213,6 +213,7 @@ impl Queries {
     pub fn branches(&self, repo: &Path) -> Result<view::BranchListView>;        // 반복 1b. 맡긴 파일 수, 기본 브랜치
     pub fn check_branch_name(&self, repo: &Path, name: &str) -> Result<view::BranchNameCheck>; // 반복 1b
     pub fn home_map(&self, repo: &Path) -> Result<view::HomeMapView>;          // 반복 1b. 홈 두 줄 노선도(D-060)
+    pub fn route_preview(&self, repo: &Path, limit: u32) -> Result<view::HomeMapView>; // 2b: 시작 화면 노선도. 홈과 같은 요약, 지금 줄 limit개(최대 20). 접근은 project_summary와 같은 summary_root(D-093)
     pub fn project_summary(&self, repo: &Path) -> Result<view::ProjectSummaryView>; // 시작 화면
     pub fn secret_check(&self, repo: &Path, r: &view::SecretCheckRequest) -> Result<view::SecretCheckView>; // 반복 2. 경로·규칙·줄 번호만(D-077)
     pub fn merge_hint(&self, repo: &Path) -> Result<view::MergeHintView>;      // 반복 2. 방향 하나(D-048, D-071)
@@ -329,7 +330,7 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 
 ## 프론트와 백엔드 계약
 - 프로젝트 열기는 한 곳: 앱을 켤 때 열기, 최근 목록, 폴더 고르기, 프로젝트 메뉴는 모두 `project_open` 명령 → `Core::open_project` 하나를 거친다(D-032). 저장소 신뢰 확인은 그 함수 안에 넣는다. 화면은 `useOpenProject` 훅 하나로 연다.
-- Tauri 명령 이름은 `<영역>_<동사>`. 목록의 원본은 `src-tauri/build.rs`의 `COMMANDS`다. 반복 2까지: `app_status`, `app_open_git_download`, `app_open_log_folder`, `project_open`, `project_trust`, `project_allow_owner`, `recent_list`, `recent_remove`, `action_list`, `action_preview`, `action_execute`, `action_cancel`, `undo_last`, `redo_last`, `query_status`, `query_log`, `query_log_stats`, `query_diff`, `query_branches`, `query_branch_name`, `query_home_map`, `query_secret_check`, `query_merge_hint`, `query_stashes`, `query_recovery`, `query_pending_work`, `query_conflict_state`, `query_conflict_file`, `query_project_summary`, `repo_watch`, `repo_unwatch`.
+- Tauri 명령 이름은 `<영역>_<동사>`. 목록의 원본은 `src-tauri/build.rs`의 `COMMANDS`다. 반복 2까지: `app_status`, `app_open_git_download`, `app_open_log_folder`, `project_open`, `project_trust`, `project_allow_owner`, `recent_list`, `recent_remove`, `action_list`, `action_preview`, `action_execute`, `action_cancel`, `undo_last`, `redo_last`, `query_status`, `query_log`, `query_log_stats`, `query_route_preview`, `query_diff`, `query_branches`, `query_branch_name`, `query_home_map`, `query_secret_check`, `query_merge_hint`, `query_stashes`, `query_recovery`, `query_pending_work`, `query_conflict_state`, `query_conflict_file`, `query_project_summary`, `repo_watch`, `repo_unwatch`.
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.

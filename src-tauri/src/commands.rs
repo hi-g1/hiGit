@@ -199,6 +199,20 @@ pub async fn query_log(
     .await
 }
 
+/// 시작 화면 노선도(D-093). 홈과 같은 요약이고 지금 줄 버전 수만 `limit`.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_route_preview(
+    state: State<'_, AppState>,
+    repo: String,
+    limit: u32,
+) -> CmdResult<HomeMapView> {
+    blocking(state, move |core| {
+        core.queries().route_preview(&PathBuf::from(repo), limit)
+    })
+    .await
+}
+
 /// 버전별 바뀐 줄 수(노선도 선 굵기, D-089). 한 번에 100개까지.
 #[tauri::command]
 #[specta::specta]

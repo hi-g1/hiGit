@@ -120,6 +120,8 @@ export const api = {
   log: (repo: string, query: LogQuery) => call(commands.queryLog(repo, query)),
   /** 버전별 바뀐 줄 수(노선도 선 굵기, D-089). 100개까지. */
   logStats: (repo: string, oids: string[]) => call(commands.queryLogStats(repo, oids)),
+  /** 시작 화면 노선도(D-093). 최근 목록의 프로젝트도 열지 않고 읽는다. */
+  routePreview: (repo: string, limit: number) => call(commands.queryRoutePreview(repo, limit)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),

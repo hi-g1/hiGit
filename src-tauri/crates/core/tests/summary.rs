@@ -193,3 +193,44 @@ fn unlisted_and_unopened_paths_are_rejected() {
     let err = core.queries().project_summary(dir.path()).unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
 }
+
+#[test]
+fn route_preview_reads_listed_projects_with_a_limit() {
+    let dir = tempfile::tempdir().unwrap();
+    let (core, git) = core_for(dir.path());
+    *git.status.lock().unwrap() = Status {
+        branch: BranchInfo {
+            oid: Some(commit(30).oid),
+            head: Some("main".into()),
+            ..Default::default()
+        },
+        entries: Vec::new(),
+    };
+    *git.commits.lock().unwrap() = (1..=30).rev().map(commit).collect();
+    // 열지 않았지만 최근 목록에 있다.
+    let view = core.queries().route_preview(dir.path(), 12).unwrap();
+    assert_eq!(view.current_commits.len(), 12);
+    assert_eq!(view.current_more, 1);
+    assert_eq!(view.current_commits.last().unwrap().summary, "저장 30");
+    // 상한 20.
+    let view = core.queries().route_preview(dir.path(), 500).unwrap();
+    assert_eq!(view.current_commits.len(), 20);
+}
+
+#[test]
+fn route_preview_runs_no_git_reads_in_an_untrusted_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let (core, git) = core_for(dir.path());
+    *git.local_config.lock().unwrap() = vec![("core.fsmonitor".into(), "evil".into())];
+    *git.commits.lock().unwrap() = vec![commit(1)];
+    let err = core.queries().route_preview(dir.path(), 12).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NeedsTrust);
+    assert_eq!(git.log_calls.load(Ordering::SeqCst), 0);
+
+    let other = tempfile::tempdir().unwrap();
+    let git = Arc::new(FakeGit::new());
+    *git.repo.lock().unwrap() = Some(RepoPath::new(real(other.path())));
+    let core = core_listing(git as Arc<dyn GitBackend>, &[]);
+    let err = core.queries().route_preview(other.path(), 12).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+}

@@ -388,12 +388,12 @@ impl Queries {
         Ok(view)
     }
 
-    /// 시작 화면의 프로젝트 상태 요약(D-031). 여러 프로젝트를 한꺼번에 읽으므로 새 git 호출을
-    /// 만들지 않고 status·log만 쓴다. 둘 다 `GIT_OPTIONAL_LOCKS=0`이라 다른 작업의 index.lock과
-    /// 부딪히지 않는다. 기록한 저장소의 최상위가 아니면(바깥 저장소가 잡히면) `NotARepo`.
-    pub fn project_summary(&self, repo: &Path) -> Result<ProjectSummaryView> {
+    /// 시작 화면이 읽는 저장소: 최근 목록에 있거나 연 저장소의 최상위이고, 믿기로 했거나 실행
+    /// 설정이 없는 것. 믿기로 하지 않은 저장소는 status 같은 git을 돌리지 않는다(D-067).
+    /// 상태 요약과 노선도 미리보기가 같이 쓴다(한쪽만 느슨해지지 않게).
+    fn summary_root(&self, repo: &Path) -> Result<RepoPath> {
         let root = repo_path(repo)?;
-        // 시작 화면은 열지 않은 최근 프로젝트의 상태도 읽는다.
+        // 시작 화면은 열지 않은 최근 프로젝트도 읽는다.
         let listed = self
             .recent
             .list()
@@ -419,6 +419,14 @@ impl Queries {
             }
             TrustState::Unknown(_) => return Err(CoreError::NeedsTrust),
         }
+        Ok(root)
+    }
+
+    /// 시작 화면의 프로젝트 상태 요약(D-031). 여러 프로젝트를 한꺼번에 읽으므로 새 git 호출을
+    /// 만들지 않고 status·log만 쓴다. 둘 다 `GIT_OPTIONAL_LOCKS=0`이라 다른 작업의 index.lock과
+    /// 부딪히지 않는다. 기록한 저장소의 최상위가 아니면(바깥 저장소가 잡히면) `NotARepo`.
+    pub fn project_summary(&self, repo: &Path) -> Result<ProjectSummaryView> {
+        let root = self.summary_root(repo)?;
         let status = self.git.status(&root)?;
         let conflicted = status
             .entries
@@ -523,9 +531,20 @@ impl Queries {
 
     /// 홈 두 줄 노선도(D-046). main과 지금 브랜치만, 각 줄 최근 몇 개.
     pub fn home_map(&self, repo: &Path) -> Result<HomeMapView> {
-        const SHOWN: u32 = 3;
-        let root = self.opened_repo(repo)?;
-        let status = self.git.status(&root)?;
+        self.map_of(&self.opened_repo(repo)?, 3)
+    }
+
+    /// 시작 화면 노선도(D-093): 홈과 같은 요약이고 지금 줄 버전 수만 `limit`(1~20).
+    /// 접근은 상태 요약과 같은 규칙.
+    pub fn route_preview(&self, repo: &Path, limit: u32) -> Result<HomeMapView> {
+        const MAX_PREVIEW: u32 = 20;
+        let root = self.summary_root(repo)?;
+        self.map_of(&root, limit.clamp(1, MAX_PREVIEW))
+    }
+
+    /// main과 지금 브랜치 요약. 지금 줄에는 버전을 `shown`개까지.
+    fn map_of(&self, root: &RepoPath, shown: u32) -> Result<HomeMapView> {
+        let status = self.git.status(root)?;
         let changed_files = u32::try_from(status.entries.len()).unwrap_or(u32::MAX);
         let current = status.branch.head.clone();
         let mut view = HomeMapView {
@@ -543,15 +562,15 @@ impl Queries {
         if status.branch.oid.is_none() {
             return Ok(view);
         }
-        let branches = self.git.branches(&root)?;
-        let remotes = self.git.remotes(&root)?;
-        let default = self.default_branch(&root, &branches, &remotes)?;
+        let branches = self.git.branches(root)?;
+        let remotes = self.git.remotes(root)?;
+        let default = self.default_branch(root, &branches, &remotes)?;
         view.default_branch = default.clone();
         let log = |rev: Option<String>, limit: u32| -> Result<Vec<MapCommit>> {
             let mut commits: Vec<MapCommit> = self
                 .git
                 .log(
-                    &root,
+                    root,
                     &git::LogQuery {
                         skip: 0,
                         limit,
@@ -572,25 +591,25 @@ impl Queries {
             (Some(d), Some(c)) if d != c => {
                 let main_ref = format!("refs/heads/{d}");
                 self.git
-                    .merge_base(&root, &main_ref, "HEAD")?
+                    .merge_base(root, &main_ref, "HEAD")?
                     .map(|base| (main_ref, base))
             }
             _ => None,
         };
         match fork {
             Some((main_ref, base)) => {
-                let (main_only, mine) = self.git.count_between(&root, &main_ref, "HEAD")?;
+                let (main_only, mine) = self.git.count_between(root, &main_ref, "HEAD")?;
                 view.two_lines = true;
                 view.main_since = main_only;
-                view.current_commits = log(Some(format!("{base}..HEAD")), SHOWN)?;
-                view.current_more = mine.saturating_sub(SHOWN);
+                view.current_commits = log(Some(format!("{base}..HEAD")), shown)?;
+                view.current_more = mine.saturating_sub(shown);
                 if main_only > 0 {
                     view.main_last = log(Some(main_ref), 1)?.pop();
                 }
             }
             None => {
-                view.current_commits = log(None, SHOWN + 1)?;
-                if view.current_commits.len() > SHOWN as usize {
+                view.current_commits = log(None, shown + 1)?;
+                if view.current_commits.len() > shown as usize {
                     view.current_commits.remove(0);
                     view.current_more = 1;
                 }
@@ -599,7 +618,7 @@ impl Queries {
         if let Some(upstream) = &status.branch.upstream
             && let Some(oid) = self
                 .git
-                .resolve_ref(&root, &format!("refs/remotes/{upstream}"))?
+                .resolve_ref(root, &format!("refs/remotes/{upstream}"))?
         {
             view.upstream_oid = Some(oid.to_string());
             let remote = remotes

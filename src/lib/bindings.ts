@@ -31,6 +31,8 @@ export const commands = {
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 	/**  버전별 바뀐 줄 수(노선도 선 굵기, D-089). 한 번에 100개까지. */
 	queryLogStats: (repo: string, oids: string[]) => __TAURI_INVOKE<CommitStatView[]>("query_log_stats", { repo, oids }),
+	/**  시작 화면 노선도(D-093). 홈과 같은 요약이고 지금 줄 버전 수만 `limit`. */
+	queryRoutePreview: (repo: string, limit: number) => __TAURI_INVOKE<HomeMapView>("query_route_preview", { repo, limit }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
