@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::io;
 use std::path::PathBuf;
 
@@ -9,41 +10,58 @@ pub const DATA_DIR_ENV: &str = "HIGIT_DATA_DIR";
 /// Windows: `%LOCALAPPDATA%\<app_id>`(로밍 아님). Ubuntu: `$XDG_DATA_HOME/<app_id>`,
 /// 없거나 상대 경로면 `~/.local/share/<app_id>`. `HIGIT_DATA_DIR`이 있으면 그 폴더를 그대로 쓴다.
 pub fn app_data_dir(app_id: &str) -> io::Result<PathBuf> {
-    let dir = match std::env::var_os(DATA_DIR_ENV) {
-        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-        _ => dirs::data_local_dir()
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::NotFound, "앱 데이터 폴더를 찾지 못했어요")
-            })?
-            .join(app_id),
-    };
+    let dir = resolve_data_dir(
+        std::env::var_os(DATA_DIR_ENV),
+        dirs::data_local_dir(),
+        app_id,
+    )?;
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
+}
+
+/// 환경을 읽지 않는 위치 계산. 테스트가 환경 변수를 바꾸지 않고 부를 수 있게 나눴다.
+fn resolve_data_dir(
+    override_dir: Option<OsString>,
+    local_data: Option<PathBuf>,
+    app_id: &str,
+) -> io::Result<PathBuf> {
+    match override_dir {
+        Some(dir) if !dir.is_empty() => Ok(PathBuf::from(dir)),
+        _ => local_data.map(|base| base.join(app_id)).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "앱 데이터 폴더를 찾지 못했어요")
+        }),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // 환경 변수는 프로세스 전체에 걸리므로 한 테스트 안에서 차례로 확인한다.
     #[test]
-    fn data_dir_default_and_override() {
-        let default = {
-            // SAFETY: 이 크레이트에서 HIGIT_DATA_DIR을 읽거나 쓰는 테스트는 이것 하나뿐이다.
-            unsafe { std::env::remove_var(DATA_DIR_ENV) };
-            app_data_dir("dev.higit.test-only").unwrap()
-        };
-        assert!(default.is_absolute(), "{default:?}");
-        assert!(default.ends_with("dev.higit.test-only"));
-        assert!(default.is_dir());
-        let _ = std::fs::remove_dir(&default);
+    fn default_location_joins_app_id() {
+        let base = std::env::temp_dir().join("local");
+        let got = resolve_data_dir(None, Some(base.clone()), "dev.higit.desktop").unwrap();
+        assert_eq!(got, base.join("dev.higit.desktop"));
+        // 빈 값은 덮어쓰기로 보지 않는다.
+        let got = resolve_data_dir(Some(OsString::new()), Some(base.clone()), "a").unwrap();
+        assert_eq!(got, base.join("a"));
+    }
 
-        let tmp = tempfile::tempdir().unwrap();
-        let wanted = tmp.path().join("데이터 폴더");
-        unsafe { std::env::set_var(DATA_DIR_ENV, &wanted) };
-        let got = app_data_dir("dev.higit.desktop").unwrap();
-        unsafe { std::env::remove_var(DATA_DIR_ENV) };
+    #[test]
+    fn override_wins_and_missing_base_is_an_error() {
+        let wanted = std::env::temp_dir().join("데이터 폴더");
+        let got = resolve_data_dir(Some(wanted.clone().into()), None, "a").unwrap();
         assert_eq!(got, wanted);
-        assert!(got.is_dir());
+        let err = resolve_data_dir(None, None, "a").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::NotFound);
+    }
+
+    #[test]
+    fn real_default_is_absolute() {
+        // 폴더를 만들지 않고 위치만 확인한다.
+        if let Some(base) = dirs::data_local_dir() {
+            let got = resolve_data_dir(None, Some(base), "dev.higit.test-only").unwrap();
+            assert!(got.is_absolute(), "{got:?}");
+        }
     }
 }

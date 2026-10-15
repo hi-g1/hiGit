@@ -1,6 +1,8 @@
 //! Tauri 진입점. 명령은 얇게: 입력 검사 → core 호출 → 결과 변환.
 //! app은 `higit-core`만 부른다(git, platform을 직접 쓰지 않는다).
 
+#![forbid(unsafe_code)]
+
 pub mod bindings;
 mod commands;
 

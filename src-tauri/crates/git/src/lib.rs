@@ -2,6 +2,8 @@
 //!
 //! 다른 내부 크레이트에 의존하지 않는다. 출력은 기계용 형식만 파싱한다.
 
+#![forbid(unsafe_code)]
+
 mod backend;
 mod cli;
 mod error;

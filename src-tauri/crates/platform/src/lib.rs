@@ -3,6 +3,8 @@
 //! 다른 내부 크레이트에 의존하지 않는다. `git` 크레이트는 이 크레이트를 모르므로
 //! core가 여기서 git 경로와 [`configure_child`]를 받아 `CliBackend`에 넘긴다.
 
+#![forbid(unsafe_code)]
+
 mod app_dir;
 mod git_exe;
 mod link;
