@@ -2,18 +2,80 @@
 //!
 //! 화면에 오류를 보내는 한 곳(`ErrorView` 만들기)에서만 부른다. 로그 파일은 반복 2.
 
-/// 주소 속 아이디·토큰(`https://아이디:토큰@`, `https://ghp_…@`), GitHub 토큰, 홈 폴더 경로를 가린다.
+/// 주소 속 아이디·토큰(`https://아이디:토큰@`, `https://ghp_…@`), GitHub 토큰, 이메일, 홈 폴더 경로를 가린다.
 pub(crate) fn redact(text: &str, home: Option<&str>) -> String {
     let mut out = mask_url_credentials(text);
     out = mask_tokens(&out);
+    out = mask_emails(&out);
     if let Some(home) = home.filter(|h| h.len() > 3) {
-        out = out.replace(home, "~");
-        // git은 Windows 경로를 `C:/Users/…`로도 쓴다.
-        let slashed = home.replace('\\', "/");
-        if slashed != home {
-            out = out.replace(&slashed, "~");
+        // Windows는 경로 대소문자를 가리지 않고, git은 `C:/Users/…`로도 쓴다.
+        let windows = home.contains('\\') || home.as_bytes().get(1) == Some(&b':');
+        for form in [home.to_string(), home.replace('\\', "/")] {
+            out = if windows {
+                replace_ascii_ci(&out, &form, "~")
+            } else {
+                out.replace(&form, "~")
+            };
         }
     }
+    out
+}
+
+/// `이름@도메인.점` 꼴의 이메일에서 이름 쪽을 `***`로. 주소 속 자격 증명은 이미 가린 뒤라 `***@`는 건너뛴다.
+fn mask_emails(text: &str) -> String {
+    let is_local = |c: char| c.is_ascii_alphanumeric() || "._%+-".contains(c);
+    let is_domain = |c: char| c.is_ascii_alphanumeric() || ".-".contains(c);
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '@' {
+            let mut start = out.len();
+            for (byte_pos, c) in out.char_indices().rev() {
+                if is_local(c) {
+                    start = byte_pos;
+                } else {
+                    break;
+                }
+            }
+            let local = &out[start..];
+            let domain: String = chars[i + 1..]
+                .iter()
+                .take_while(|c| is_domain(**c))
+                .collect();
+            let looks_like_email = !local.is_empty()
+                && local != "***"
+                && domain.contains('.')
+                && !domain.starts_with('.')
+                && !domain.ends_with('.');
+            if looks_like_email {
+                out.truncate(start);
+                out.push_str("***");
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+/// ASCII 대소문자를 가리지 않고 바꾼다(Windows 경로). 한글 등은 그대로 비교한다.
+fn replace_ascii_ci(text: &str, from: &str, to: &str) -> String {
+    if from.is_empty() {
+        return text.to_string();
+    }
+    let lower_text = text.to_ascii_lowercase();
+    let lower_from = from.to_ascii_lowercase();
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    let mut search = 0;
+    while let Some(pos) = lower_text[search..].find(&lower_from).map(|p| p + search) {
+        out.push_str(&text[last..pos]);
+        out.push_str(to);
+        last = pos + from.len();
+        search = last;
+    }
+    out.push_str(&text[last..]);
     out
 }
 
@@ -78,7 +140,15 @@ mod tests {
             ),
             ("ssh://git@host.example/x", "ssh://***@host.example/x"),
             ("https://github.com/a/b.git", "https://github.com/a/b.git"),
-            ("메일 a@b.com 그대로", "메일 a@b.com 그대로"),
+            (
+                "메일 minji.kim@example.com 보냄",
+                "메일 ***@example.com 보냄",
+            ),
+            (
+                "git@github.com: Permission denied",
+                "***@github.com: Permission denied",
+            ),
+            ("a@b 은 도메인이 아님", "a@b 은 도메인이 아님"),
         ];
         for (input, want) in cases {
             assert_eq!(redact(input, None), want, "{input}");
@@ -91,10 +161,10 @@ mod tests {
         let got = redact(text, Some("/home/minji"));
         assert_eq!(got, "token ghp_*** and github_pat_*** in ~/project");
         let win = redact(
-            r"C:\Users\민지\work and C:/Users/민지/work",
+            r"C:\Users\민지\work and C:/Users/민지/work and c:\users\민지\x",
             Some(r"C:\Users\민지"),
         );
-        assert_eq!(win, r"~\work and ~/work");
+        assert_eq!(win, r"~\work and ~/work and ~\x");
         // 짧은 것은 토큰이 아니다.
         assert_eq!(redact("ghp_short", None), "ghp_short");
     }

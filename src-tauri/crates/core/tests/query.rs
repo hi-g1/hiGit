@@ -347,7 +347,9 @@ fn git_failures_map_to_error_codes() {
     for (stderr, code) in cases {
         let view = ErrorView::from(&failed(stderr));
         assert_eq!(view.code, code, "{stderr}");
-        assert_eq!(view.detail.as_deref(), Some(stderr));
+        // 이메일 꼴(`git@github.com`)은 가려진다(D-040).
+        let want = stderr.replace("git@github.com", "***@github.com");
+        assert_eq!(view.detail.as_deref(), Some(want.as_str()));
     }
 }
 
