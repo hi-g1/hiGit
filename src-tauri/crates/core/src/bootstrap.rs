@@ -32,6 +32,9 @@ pub struct Core {
     busy: Mutex<HashSet<PathBuf>>,
     /// 지금 원격과 통신 중인 저장소. 원격 확인(fetch)은 이것만 잡아 버전 저장을 막지 않는다(H13).
     net_busy: Mutex<HashSet<PathBuf>>,
+    /// 저절로 하는 원격 확인이 `net_busy`를 잡고 있는 저장소. 사람이 누른 원격 작업은 이것이
+    /// 끝날 때까지 기다린다(D-068).
+    bg_fetch: Mutex<HashSet<PathBuf>>,
     /// 지금 감시 중인 저장소. watch.rs가 쓴다.
     pub(crate) watcher: Mutex<Option<watcher::RepoWatcher>>,
     recent: Arc<RecentStore>,
@@ -51,6 +54,10 @@ enum Ask {
     /// 폴더 주인(NotOwned).
     Owner,
 }
+
+/// 원격 확인이 끝나기를 기다리는 간격과, 그 시간 제한 위에 더 기다리는 여유.
+const WAIT_STEP: std::time::Duration = std::time::Duration::from_millis(100);
+const WAIT_SLACK: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// 작업이 잡는 잠금.
 #[derive(Clone, Copy)]
@@ -154,6 +161,7 @@ impl Core {
             git_build: platform::GitBuild::Unknown,
             busy: Mutex::new(HashSet::new()),
             net_busy: Mutex::new(HashSet::new()),
+            bg_fetch: Mutex::new(HashSet::new()),
             watcher: Mutex::new(None),
             recent,
             opened,
@@ -341,12 +349,14 @@ impl Core {
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
         let token = preview_token.map(PreviewToken);
+        // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
-            "fetch" => Locks::Network,
-            "pull" | "push" | "sync" => Locks::Both,
+            "fetch" | "push" => Locks::Network,
+            "pull" | "sync" => Locks::Both,
             _ => Locks::Worktree,
         };
-        let outcome = self.with_locks(folder, locks, |executor, ctx| {
+        let background = matches!(input, ActionInput::Fetch(i) if i.background);
+        let outcome = self.with_locks_by(folder, locks, background, |executor, ctx| {
             executor.execute(ctx, input.action_id(), input, token.as_ref())
         })?;
         if let crate::Outcome::RepoCreated(repo) = &outcome {
@@ -383,25 +393,64 @@ impl Core {
         locks: Locks,
         f: impl FnOnce(&Executor, &ExecCtx<'_>) -> Result<T>,
     ) -> Result<T> {
+        self.with_locks_by(folder, locks, false, f)
+    }
+
+    /// `background`는 저절로 하는 원격 확인. 사람이 누른 원격 작업은 그것이 잡은 원격 잠금을
+    /// 끝날 때까지(최대 원격 확인 시간 제한) 기다리고, 그 밖의 겹침은 바로 `Busy`로 거절한다.
+    fn with_locks_by<T>(
+        &self,
+        folder: &Path,
+        locks: Locks,
+        background: bool,
+        f: impl FnOnce(&Executor, &ExecCtx<'_>) -> Result<T>,
+    ) -> Result<T> {
         let state = self.state_of(folder)?;
         let key = state
             .repo
             .as_ref()
             .map(|r| r.as_path().to_path_buf())
             .unwrap_or_else(|| state.folder.clone());
+        let deadline = std::time::Instant::now() + git::BACKGROUND_TIMEOUT + WAIT_SLACK;
         let mut guards = Vec::new();
         for set in locks.sets(&self.busy, &self.net_busy) {
-            if !set
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .insert(key.clone())
-            {
-                return Err(CoreError::Busy);
+            let network = std::ptr::eq(set, &self.net_busy);
+            loop {
+                if set
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(key.clone())
+                {
+                    break;
+                }
+                let held_by_background = self
+                    .bg_fetch
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .contains(&key);
+                let wait = network
+                    && !background
+                    && held_by_background
+                    && std::time::Instant::now() < deadline;
+                if !wait {
+                    return Err(CoreError::Busy);
+                }
+                std::thread::sleep(WAIT_STEP);
             }
             guards.push(BusyGuard {
                 busy: set,
                 key: key.clone(),
             });
+            if network && background {
+                self.bg_fetch
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(key.clone());
+                guards.push(BusyGuard {
+                    busy: &self.bg_fetch,
+                    key: key.clone(),
+                });
+            }
         }
         let ctx = ExecCtx {
             git: self.git.as_ref(),
@@ -421,5 +470,71 @@ impl Core {
                 .unwrap_or(r)
         });
         Ok(RepoState { folder, repo })
+    }
+}
+
+#[cfg(test)]
+mod lock_tests {
+    use super::*;
+
+    fn opened_core() -> (tempfile::TempDir, Core, PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let ok = std::process::Command::new("git")
+            .args(["init", "-q"])
+            .current_dir(dir.path())
+            .status()
+            .unwrap()
+            .success();
+        assert!(ok);
+        let core = Core::with_backend(Arc::new(CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+        core.open_project(dir.path(), OpenHow::Picked).unwrap();
+        let key = platform::normalize_repo_path(dir.path()).unwrap();
+        (dir, core, key)
+    }
+
+    #[test]
+    fn a_user_network_action_waits_for_the_background_check() {
+        let (dir, core, key) = opened_core();
+        core.net_busy.lock().unwrap().insert(key.clone());
+        core.bg_fetch.lock().unwrap().insert(key.clone());
+        std::thread::scope(|s| {
+            s.spawn(|| {
+                std::thread::sleep(std::time::Duration::from_millis(300));
+                core.bg_fetch.lock().unwrap().remove(&key);
+                core.net_busy.lock().unwrap().remove(&key);
+            });
+            let r = core.with_locks_by(dir.path(), Locks::Both, false, |_, _| Ok(()));
+            assert!(r.is_ok(), "{r:?}");
+        });
+        // 다 끝나면 잠금이 모두 풀린다.
+        assert!(core.busy.lock().unwrap().is_empty());
+        assert!(core.net_busy.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn other_overlaps_are_refused_at_once() {
+        let (dir, core, key) = opened_core();
+        // 사람이 누른 원격 작업이 잡고 있으면 기다리지 않는다.
+        core.net_busy.lock().unwrap().insert(key.clone());
+        let r = core.with_locks_by(dir.path(), Locks::Network, false, |_, _| Ok(()));
+        assert!(matches!(r, Err(CoreError::Busy)), "{r:?}");
+        // 원격 확인끼리도 기다리지 않는다.
+        core.bg_fetch.lock().unwrap().insert(key.clone());
+        let r = core.with_locks_by(dir.path(), Locks::Network, true, |_, _| Ok(()));
+        assert!(matches!(r, Err(CoreError::Busy)), "{r:?}");
+        // 원격 확인 중에도 버전 저장(작업 폴더 잠금)은 된다.
+        let r = core.with_locks_by(dir.path(), Locks::Worktree, false, |_, _| Ok(()));
+        assert!(r.is_ok(), "{r:?}");
+    }
+
+    #[test]
+    fn a_background_check_marks_itself_while_running() {
+        let (dir, core, key) = opened_core();
+        core.with_locks_by(dir.path(), Locks::Network, true, |_, _| {
+            assert!(core.bg_fetch.lock().unwrap().contains(&key));
+            Ok(())
+        })
+        .unwrap();
+        assert!(core.bg_fetch.lock().unwrap().is_empty());
     }
 }

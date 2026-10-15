@@ -168,7 +168,8 @@ execute(action, input):
 
 #### 잠금 둘
 - `Core.busy`(작업 폴더): index·작업 폴더를 쓰는 작업. 같은 저장소에서 둘이 겹치면 index.lock이 부딪히므로 나중 것은 `Busy`로 거절한다.
-- `Core.net_busy`(원격): 원격과 통신하는 작업. 원격 확인(fetch)은 이것만 잡아 버전 저장을 막지 않는다. pull·push·sync는 둘 다 잡고, 되돌리기·다시 하기는 작업 폴더 잠금을 잡는다.
+- `Core.net_busy`(원격): 원격과 통신하는 작업. 원격 확인(fetch)과 올리기(push)는 이것만 잡아 버전 저장을 막지 않는다. pull·sync는 둘 다 잡고, 되돌리기·다시 하기는 작업 폴더 잠금을 잡는다.
+- 저절로 하는 원격 확인이 원격 잠금을 쥐고 있으면(`Core.bg_fetch`) 사람이 누른 원격 작업은 거절하지 않고 끝날 때까지 기다린다(D-068).
 - 잠금은 저장소 경로별 `HashSet`이고, `BusyGuard`가 오류여도 푼다. 프로세스 사이 잠금은 git의 index.lock에 맡긴다.
 
 ### Query (crates/core) — 조회 (D-010)
