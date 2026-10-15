@@ -4,7 +4,7 @@ use git::{GitBackend, GitOp, Oid, RefExpect, RepoPath};
 
 use super::journal::{self, Body, Journal};
 use super::{UndoKind, UndoState, backup};
-use crate::actions::switch::switch_with_parking;
+use crate::actions::switch::{refuse_during_operation, switch_with_parking};
 use crate::parked;
 use crate::view::{ActionInput, SwitchInput};
 use crate::{CoreError, Result};
@@ -84,13 +84,18 @@ pub(crate) fn undo(
 ) -> Result<UndoOutcome> {
     let (mut applied, _) = stacks(journal.read());
     let entry = applied.pop().ok_or(CoreError::NothingToUndo)?;
+    // 합치기·충돌 중에는 되돌리지 않는다(되돌리기가 그 작업을 망친다).
+    refuse_during_operation(git, repo)?;
     let now = UndoState::capture(git, repo)?;
     // 앱 밖에서 버전이나 브랜치가 바뀌었으면 되돌리지 않는다(복구 화면으로 안내).
     if now.head != entry.after.head || now.branch != entry.after.branch {
         return Err(CoreError::UndoStale);
     }
     match entry.kind {
+        // HEAD는 그대로이고 다른 ref만 옮긴 작업("main에 합치기")은 아래 ref 되돌리기만 한다.
+        UndoKind::RestoreRef if entry.before.head == entry.after.head => {}
         UndoKind::RestoreRef => undo_commit(git, repo, &entry)?,
+        UndoKind::RestoreTree => undo_tree(git, repo, &entry)?,
         UndoKind::RestoreIndex => {
             restore_index(git, repo, &now, &entry.after, &entry.before)?;
         }
@@ -101,6 +106,7 @@ pub(crate) fn undo(
         UndoKind::Inverse => return Err(CoreError::UndoPushed),
         _ => return Err(CoreError::NothingToUndo),
     }
+    restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
     journal.append(&Body::Undo {
         target: entry.id.clone(),
         at: journal::now(),
@@ -115,12 +121,15 @@ pub(crate) fn redo(
 ) -> Result<UndoOutcome> {
     let (_, mut undone) = stacks(journal.read());
     let entry = undone.pop().ok_or(CoreError::NothingToUndo)?;
+    refuse_during_operation(git, repo)?;
     let now = UndoState::capture(git, repo)?;
     if now.head != entry.before.head || now.branch != entry.before.branch {
         return Err(CoreError::UndoStale);
     }
     match entry.kind {
+        UndoKind::RestoreRef if entry.before.head == entry.after.head => {}
         UndoKind::RestoreRef => redo_commit(git, repo, &entry)?,
+        UndoKind::RestoreTree => redo_tree(git, repo, &entry)?,
         UndoKind::RestoreIndex => {
             restore_index(git, repo, &now, &entry.before, &entry.after)?;
         }
@@ -128,6 +137,7 @@ pub(crate) fn redo(
         UndoKind::DeleteCreated => redo_create(git, repo, &entry)?,
         _ => return Err(CoreError::NothingToUndo),
     }
+    restore_refs(git, repo, &entry.before.refs, &entry.after.refs)?;
     journal.append(&Body::Redo {
         target: entry.id.clone(),
         at: journal::now(),
@@ -169,6 +179,66 @@ fn restore_index(
     Ok(())
 }
 
+/// 다른 ref를 `from` 값에서 `to` 값으로 돌린다. 그사이 바뀌었으면(`from`과 다름) 실패한다.
+fn restore_refs(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    from: &[(String, Option<String>)],
+    to: &[(String, Option<String>)],
+) -> Result<()> {
+    let oid = |v: &Option<String>| v.as_deref().and_then(Oid::parse);
+    for (name, target) in to {
+        let current = from
+            .iter()
+            .find(|(n, _)| n == name)
+            .and_then(|(_, v)| oid(v));
+        let target = oid(target);
+        if current == target {
+            continue;
+        }
+        let expect = match &current {
+            Some(c) => RefExpect::Is(c.clone()),
+            None => RefExpect::Absent,
+        };
+        match (target, current) {
+            (Some(t), _) => git.update_ref(repo, name, &t, &expect)?,
+            (None, Some(c)) => git.delete_ref(repo, name, &RefExpect::Is(c))?,
+            (None, None) => {}
+        }
+    }
+    Ok(())
+}
+
+/// 올린 버전이면 참. 올린 버전은 기록을 바꾸는 방법으로 되돌리지 않는다(D-042).
+fn is_pushed(git: &dyn GitBackend, repo: &RepoPath, oid: &Oid) -> Result<bool> {
+    // upstream이 없으면 `@{upstream}`이 오류를 내므로 status의 upstream 이름으로 찾는다.
+    if let Some(upstream) = git.status(repo)?.branch.upstream
+        && let Some(remote) = git.resolve_ref(repo, &format!("refs/remotes/{upstream}"))?
+    {
+        return Ok(git.is_ancestor(repo, oid.as_str(), remote.as_str())?);
+    }
+    Ok(false)
+}
+
+/// 합치기·되살리기 되돌리기: 지금 버전을 백업한 뒤 브랜치와 파일을 이전 버전으로(고친 파일은 둔다).
+fn undo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
+    let before = entry.before.head_oid().ok_or(CoreError::NothingToUndo)?;
+    if is_pushed(git, repo, &after)? {
+        return Err(CoreError::UndoPushed);
+    }
+    let label = entry.after.branch.as_deref().unwrap_or("HEAD");
+    backup::backup_oid(git, repo, &after, &format!("undo-{label}"))?;
+    git.run(repo, &GitOp::ResetKeep { oid: before })?;
+    Ok(())
+}
+
+fn redo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
+    git.run(repo, &GitOp::ResetKeep { oid: after })?;
+    Ok(())
+}
+
 fn stage_all(entry: &Entry) -> bool {
     matches!(&entry.input, ActionInput::Commit(c) if c.stage_all)
 }
@@ -181,11 +251,7 @@ fn undo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
         .branch
         .as_deref()
         .ok_or(CoreError::NothingToUndo)?;
-    // upstream이 없으면 `@{upstream}`이 오류를 내므로 status의 upstream 이름으로 찾는다.
-    if let Some(upstream) = git.status(repo)?.branch.upstream
-        && let Some(oid) = git.resolve_ref(repo, &format!("refs/remotes/{upstream}"))?
-        && git.is_ancestor(repo, after.as_str(), oid.as_str())?
-    {
+    if is_pushed(git, repo, &after)? {
         return Err(CoreError::UndoPushed);
     }
     // 되돌리기 전에 지금 버전을 백업 ref로 살려 둔다. 못 남기면 되돌리지 않는다.
@@ -309,4 +375,166 @@ fn redo_create(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
     )
     .map(|_| ())
     .map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::undo::JournalKey;
+
+    fn git(dir: &Path, args: &[&str]) -> String {
+        let out = std::process::Command::new("git")
+            .args(["-c", "core.autocrlf=false", "-c", "commit.gpgsign=false"])
+            .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+            .args(args)
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap().trim().to_string()
+    }
+
+    /// 버전 둘(a.txt를 고친 두 번째)이 있는 저장소. (폴더, 첫 버전, 둘째 버전)
+    fn two_versions() -> (tempfile::TempDir, String, String) {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        git(dir, &["config", "core.autocrlf", "false"]);
+        std::fs::write(dir.join("a.txt"), "1\n").unwrap();
+        std::fs::write(dir.join("b.txt"), "b\n").unwrap();
+        git(dir, &["add", "-A"]);
+        git(dir, &["commit", "-q", "-m", "1"]);
+        let first = git(dir, &["rev-parse", "HEAD"]);
+        std::fs::write(dir.join("a.txt"), "2\n").unwrap();
+        git(dir, &["commit", "-q", "-am", "2"]);
+        let second = git(dir, &["rev-parse", "HEAD"]);
+        (repo, first, second)
+    }
+
+    fn line(kind: UndoKind, before: UndoState, after: UndoState) -> Body {
+        Body::Action {
+            id: "1".into(),
+            at: 1,
+            action: "merge".into(),
+            input: ActionInput::Init,
+            before,
+            after,
+            kind,
+        }
+    }
+
+    fn state(head: &str) -> UndoState {
+        UndoState {
+            head: Some(head.into()),
+            branch: Some("main".into()),
+            ..Default::default()
+        }
+    }
+
+    fn setup(dir: &Path) -> (git::CliBackend, RepoPath, Journal) {
+        let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+        let repo = RepoPath::new(dir);
+        let journal = Journal::at(&dir.join(".git"), JournalKey::ephemeral());
+        (backend, repo, journal)
+    }
+
+    #[test]
+    fn tree_undo_keeps_unrelated_edits_and_redo_comes_back() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let (backend, repo, journal) = setup(dir);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&first), state(&second)))
+            .unwrap();
+        std::fs::write(dir.join("b.txt"), "b 고침\n").unwrap();
+        undo(&backend, &repo, &journal).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), first);
+        assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "1\n");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("b.txt")).unwrap(),
+            "b 고침\n"
+        );
+        // 되돌리기 전 버전은 백업 ref로 남는다.
+        let backups = git(
+            dir,
+            &[
+                "for-each-ref",
+                "--format=%(objectname)",
+                "refs/higit/backup/",
+            ],
+        );
+        assert_eq!(backups, second);
+        redo(&backend, &repo, &journal).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("b.txt")).unwrap(),
+            "b 고침\n"
+        );
+    }
+
+    #[test]
+    fn tree_undo_refuses_when_edits_overlap() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let (backend, repo, journal) = setup(dir);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&first), state(&second)))
+            .unwrap();
+        std::fs::write(dir.join("a.txt"), "내 고침\n").unwrap();
+        let err = undo(&backend, &repo, &journal).unwrap_err();
+        assert_eq!(
+            crate::view::ErrorView::from(&err).code,
+            crate::view::ErrorCode::WouldOverwrite
+        );
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "내 고침\n"
+        );
+    }
+
+    #[test]
+    fn ref_only_undo_moves_the_other_branch_back() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        git(dir, &["branch", "기능", &first]);
+        git(dir, &["update-ref", "refs/heads/기능", &second]);
+        let (backend, repo, journal) = setup(dir);
+        let with_ref = |head: &str, value: &str| UndoState {
+            refs: vec![("refs/heads/기능".into(), Some(value.into()))],
+            ..state(head)
+        };
+        journal
+            .append(&line(
+                UndoKind::RestoreRef,
+                with_ref(&second, &first),
+                with_ref(&second, &second),
+            ))
+            .unwrap();
+        undo(&backend, &repo, &journal).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), first);
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), second, "HEAD는 그대로");
+        redo(&backend, &repo, &journal).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), second);
+    }
+
+    #[test]
+    fn no_undo_while_merging() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let (backend, repo, journal) = setup(dir);
+        journal
+            .append(&line(UndoKind::RestoreTree, state(&first), state(&second)))
+            .unwrap();
+        std::fs::write(dir.join(".git/MERGE_HEAD"), format!("{first}\n")).unwrap();
+        let err = undo(&backend, &repo, &journal).unwrap_err();
+        assert!(matches!(err, CoreError::OperationInProgress), "{err:?}");
+    }
 }

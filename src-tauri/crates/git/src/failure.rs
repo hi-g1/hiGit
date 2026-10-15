@@ -109,7 +109,10 @@ const RULES: &[(FailureKind, &[&str])] = &[
         FailureKind::NoUpstream,
         &["has no upstream branch", "There is no tracking information"],
     ),
-    (FailureKind::WouldOverwrite, &["would be overwritten by"]),
+    (
+        FailureKind::WouldOverwrite,
+        &["would be overwritten by", "not uptodate. Cannot merge"],
+    ),
     (
         FailureKind::MergeConflict,
         &["Automatic merge failed", "CONFLICT ("],
@@ -187,6 +190,10 @@ mod tests {
             ),
             (
                 "error: Your local changes to the following files would be overwritten by checkout:\n\ta.txt\n",
+                FailureKind::WouldOverwrite,
+            ),
+            (
+                "error: Entry 'a' not uptodate. Cannot merge.\nfatal: Could not reset index file to revision 'HEAD~1'.\n",
                 FailureKind::WouldOverwrite,
             ),
             (

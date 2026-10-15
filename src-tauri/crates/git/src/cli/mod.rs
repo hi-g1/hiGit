@@ -562,6 +562,10 @@ impl GitBackend for CliBackend {
             GitOp::ResetSoft { oid } => self
                 .runner
                 .run(dir, &["reset", "--soft", "-q", oid.as_str()])?,
+            // `reset`에는 `--end-of-options`를 넣지 않는다(args.rs). `Oid`는 16진수만이라 옵션으로 읽히지 않는다.
+            GitOp::ResetKeep { oid } => self
+                .runner
+                .run(dir, &["reset", "--keep", "-q", oid.as_str()])?,
             GitOp::ReadTree { tree } => {
                 let mut args = vec!["read-tree"];
                 push_revs(

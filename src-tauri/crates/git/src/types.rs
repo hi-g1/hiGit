@@ -260,6 +260,9 @@ pub enum GitOp {
     StageAll,
     /// 브랜치를 `oid`로 되돌린다. index와 작업 폴더는 그대로(`reset --soft`, 버전 저장 되돌리기).
     ResetSoft { oid: Oid },
+    /// 브랜치와 파일을 `oid`로 옮기되 고친 파일은 둔다(`reset --keep`, 합치기·되살리기 되돌리기).
+    /// 고친 파일이 옮길 파일과 겹치면 아무것도 바꾸지 않고 `WouldOverwrite`.
+    ResetKeep { oid: Oid },
     /// index를 `tree`로 바꾼다. 작업 폴더는 그대로(`read-tree`).
     ReadTree { tree: Oid },
     /// 사용자 전역 설정의 `safe.directory`에 이 폴더 하나를 더한다(사용자가 고를 때만, D-039).

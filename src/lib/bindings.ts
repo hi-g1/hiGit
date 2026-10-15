@@ -333,7 +333,7 @@ export type TrustChoice =
 "disable";
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
-export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible" | "barrier";
+export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "restoreTree" | "deleteCreated" | "inverse" | "irreversible" | "barrier";
 
 /**  되돌리기·다시 하기 결과. */
 export type UndoResult = {

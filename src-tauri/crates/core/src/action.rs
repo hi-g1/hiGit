@@ -23,6 +23,12 @@ pub trait Action: Send + Sync {
     fn moves_head(&self) -> bool {
         true
     }
+
+    /// 실행 전후 값을 journal에 남길 다른 ref(`refs/heads/…`, `refs/stash`). 되돌리기가 이 ref들을
+    /// 이전 값으로 돌린다(D-072).
+    fn tracked_refs(&self, _input: &ActionInput) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -131,8 +131,11 @@ impl Executor {
             crate::undo::backup::backup_oid(ctx.git, repo, &head, meta.id)?;
         }
 
+        let tracked = action.tracked_refs(input);
         let before = match repo {
-            Some(r) if meta.undo.is_recorded() => Some(UndoState::capture(ctx.git, r)?),
+            Some(r) if meta.undo.is_recorded() => {
+                Some(UndoState::capture_with(ctx.git, r, &tracked)?)
+            }
             _ => None,
         };
         let outcome = action.execute(ctx, input)?;
@@ -143,7 +146,14 @@ impl Executor {
                 JournalMode::Barrier => {
                     self.record(ctx, repo, meta.id, UndoKind::Barrier, input, None)
                 }
-                JournalMode::Journal => self.record(ctx, repo, meta.id, meta.undo, input, before),
+                JournalMode::Journal => self.record(
+                    ctx,
+                    repo,
+                    meta.id,
+                    meta.undo,
+                    input,
+                    before.map(|b| (b, tracked.as_slice())),
+                ),
             };
         }
         Ok(outcome)
@@ -156,12 +166,13 @@ impl Executor {
         action: &str,
         kind: UndoKind,
         input: &ActionInput,
-        before: Option<UndoState>,
+        // 실행 전 상태와 함께 값을 남길 다른 ref 이름.
+        before: Option<(UndoState, &[String])>,
     ) -> Result<()> {
         let at = journal::now();
         let body = match before {
-            Some(before) => {
-                let after = UndoState::capture(ctx.git, repo)?;
+            Some((before, tracked)) => {
+                let after = UndoState::capture_with(ctx.git, repo, tracked)?;
                 // 아무것도 바뀌지 않았으면(주고받을 것이 없거나 겹쳐서 멈춘 동기화, 올리기만 한 경우)
                 // 되돌릴 것도 없다. 줄을 남기면 그 앞의 작업을 되돌리지 못하게 막는다.
                 if after == before {

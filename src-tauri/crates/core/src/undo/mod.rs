@@ -28,6 +28,8 @@ pub enum UndoKind {
     RestoreIndex,
     /// 이전 브랜치로 갈아타고 맡겨 둔 파일을 꺼낸다(브랜치 갈아타기).
     SwitchBack,
+    /// 브랜치와 파일을 이전 버전으로 옮기되 고친 파일은 둔다(합치기·되살리기, `reset --keep`, D-072).
+    RestoreTree,
     /// 만든 ref를 지운다(새 브랜치).
     DeleteCreated,
     /// 기록을 바꾸지 않는 반대 동작(원격에 올린 뒤, revert). 1b에는 없다.
@@ -45,6 +47,7 @@ impl UndoKind {
             self,
             UndoKind::RestoreRef
                 | UndoKind::RestoreIndex
+                | UndoKind::RestoreTree
                 | UndoKind::SwitchBack
                 | UndoKind::DeleteCreated
                 | UndoKind::Inverse
@@ -69,15 +72,36 @@ pub struct UndoState {
     /// index 트리. "모두 넣고 저장"을 되돌릴 때 index도 돌린다(D-062).
     #[serde(default)]
     pub index_tree: Option<String>,
+    /// 액션이 옮기는 다른 ref의 값(이름, 해시. 없으면 `None`). "main에 합치기" 등이 채운다.
+    /// 비어 있으면 쓰지 않는다: 옛 줄을 다시 직렬화해도 같은 글자여야 서명이 맞는다(D-072).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub refs: Vec<(String, Option<String>)>,
 }
 
 impl UndoState {
     pub(crate) fn capture(git: &dyn GitBackend, repo: &RepoPath) -> Result<Self> {
+        Self::capture_with(git, repo, &[])
+    }
+
+    /// `tracked`의 ref 값도 함께 담는다.
+    pub(crate) fn capture_with(
+        git: &dyn GitBackend,
+        repo: &RepoPath,
+        tracked: &[String],
+    ) -> Result<Self> {
+        let mut refs = Vec::new();
+        for name in tracked {
+            refs.push((
+                name.clone(),
+                git.resolve_ref(repo, name)?.map(|o| o.to_string()),
+            ));
+        }
         Ok(Self {
             head: git.resolve_ref(repo, "HEAD")?.map(|o| o.to_string()),
             branch: git.current_branch(repo)?,
             parked: Vec::new(),
             index_tree: git.write_tree(repo)?.map(|o| o.to_string()),
+            refs,
         })
     }
 
@@ -86,8 +110,15 @@ impl UndoState {
         let oid_ok = |o: &Option<String>| o.as_deref().is_none_or(|s| Oid::parse(s).is_some());
         let name_ok =
             |n: &str| names::validate_ref_like(n).is_ok() && !n.contains("..") && !n.contains(' ');
+        // 되돌리기가 옮길 수 있는 ref는 로컬 브랜치와 stash뿐이다.
+        let ref_ok = |n: &str| {
+            n == "refs/stash"
+                || n.strip_prefix("refs/heads/")
+                    .is_some_and(|b| !b.is_empty() && name_ok(b))
+        };
         oid_ok(&self.head)
             && oid_ok(&self.index_tree)
+            && self.refs.iter().all(|(n, o)| ref_ok(n) && oid_ok(o))
             && self.branch.as_deref().is_none_or(name_ok)
             && self
                 .parked
@@ -111,6 +142,7 @@ mod tests {
             branch: Some("기능/한글".into()),
             parked: vec![("main".into(), "b".repeat(40))],
             index_tree: None,
+            refs: vec![("refs/heads/main".into(), Some("c".repeat(40)))],
         };
         assert!(good.is_valid());
         for bad in [
@@ -124,6 +156,18 @@ mod tests {
             },
             UndoState {
                 parked: vec![("main".into(), "nope".into())],
+                ..good.clone()
+            },
+            UndoState {
+                refs: vec![("refs/remotes/origin/main".into(), None)],
+                ..good.clone()
+            },
+            UndoState {
+                refs: vec![("refs/heads/-x".into(), None)],
+                ..good.clone()
+            },
+            UndoState {
+                refs: vec![("refs/heads/main".into(), Some("zz".into()))],
                 ..good.clone()
             },
         ] {
