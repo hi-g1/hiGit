@@ -32,3 +32,7 @@ rust-version = "1.99"
 [workspace.dependencies]
 tauri = { version = "2.12", features = [] }
 tauri-build = { version = "2.7", features = [] }
+which = "8.0"
+dunce = "1.0"
+thiserror = "2.0"
+tempfile = "3.27"

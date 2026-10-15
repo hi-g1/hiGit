@@ -1,3 +1,12 @@
 //! OS별 코드는 이 크레이트에만 둔다(D-002).
 //!
-//! 다른 내부 크레이트에 의존하지 않는다.
+//! 다른 내부 크레이트에 의존하지 않는다. `git` 크레이트는 이 크레이트를 모르므로
+//! core가 여기서 git 경로와 [`configure_child`]를 받아 `CliBackend`에 넘긴다.
+
+mod git_exe;
+mod path;
+mod process;
+
+pub use git_exe::find_git;
+pub use path::normalize_repo_path;
+pub use process::configure_child;
