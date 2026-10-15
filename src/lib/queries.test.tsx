@@ -28,13 +28,13 @@ describe("버전 기록 쪽", () => {
     const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
     const { result } = renderHook(() => useLogPages("/repo", "all"), { wrapper });
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
-    await act(async () => {
-      await result.current.fetchNextPage();
-    });
-    await act(async () => {
-      await result.current.fetchNextPage();
-    });
-    expect(result.current.data?.pages).toHaveLength(3);
+    for (const expected of [2, 3]) {
+      await waitFor(() => expect(result.current.hasNextPage && !result.current.isFetching).toBe(true));
+      await act(async () => {
+        await result.current.fetchNextPage();
+      });
+      await waitFor(() => expect(result.current.data?.pages).toHaveLength(expected));
+    }
     const second = vi.mocked(api.log).mock.calls[1]![1];
     expect(second).toMatchObject({ skip: 1, tips: ["t1"], scope: "all" });
     const before = vi.mocked(api.log).mock.calls.length;
