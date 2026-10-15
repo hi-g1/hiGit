@@ -2,11 +2,18 @@
 
 use crate::{CoreError, Result};
 
+/// 한 번에 받는 경로 수와 경로 하나의 길이(D-037 IPC 입력 상한).
+pub(crate) const MAX_PATHS: usize = 100_000;
+pub(crate) const MAX_PATH_BYTES: usize = 4096;
+
 /// 경로가 하나 이상이고, 모두 저장소 안의 상대 경로(구분자 `/`)인지 확인한다.
 /// OS와 상관없이 같은 규칙: 절대 경로, 드라이브(`C:`), `\`, `..`, 빈 경로를 거부한다.
 pub(crate) fn validate(paths: &[String]) -> Result<()> {
     if paths.is_empty() {
         return Err(CoreError::InvalidInput("파일을 고르지 않았어요"));
+    }
+    if paths.len() > MAX_PATHS {
+        return Err(CoreError::InvalidInput("한 번에 고른 파일이 너무 많아요"));
     }
     paths.iter().try_for_each(|p| validate_one(p))
 }
@@ -17,6 +24,7 @@ pub(crate) fn validate_one(path: &str) -> Result<()> {
     // Windows 드라이브(`C:`)만 거른다. Linux에서는 `a:b.txt`도 쓸 수 있는 이름이다.
     let drive = bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
     let bad = path.is_empty()
+        || path.len() > MAX_PATH_BYTES
         || path.contains('\0')
         || path.contains('\\')
         || path.starts_with('/')
@@ -34,6 +42,13 @@ mod tests {
 
     fn ok(paths: &[&str]) -> bool {
         validate(&paths.iter().map(|p| p.to_string()).collect::<Vec<_>>()).is_ok()
+    }
+
+    #[test]
+    fn rejects_too_many_or_too_long() {
+        let many: Vec<String> = (0..=MAX_PATHS).map(|i| format!("f{i}")).collect();
+        assert!(validate(&many).is_err());
+        assert!(validate_one(&"a".repeat(MAX_PATH_BYTES + 1)).is_err());
     }
 
     #[test]

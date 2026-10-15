@@ -24,6 +24,7 @@ impl Core {
     pub fn watch(&self, repo: &Path, sink: WatchSink) -> Result<()> {
         self.unwatch();
         let root = platform::normalize_repo_path(repo).map_err(CoreError::FolderNotFound)?;
+        self.opened.require(&root)?;
         let excludes = self
             .git
             .excludes_file(&RepoPath::new(&root))?

@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 
+use crate::access::{OpenedRepos, check_path_len};
 use crate::query::Queries;
 use crate::recent::RecentStore;
 use crate::view::{
@@ -28,7 +29,9 @@ pub struct Core {
     busy: Mutex<HashSet<PathBuf>>,
     /// 지금 감시 중인 저장소. watch.rs가 쓴다.
     pub(crate) watcher: Mutex<Option<watcher::RepoWatcher>>,
-    recent: RecentStore,
+    recent: Arc<RecentStore>,
+    /// 프로젝트 열기를 거친 경로. 조회·액션·감시는 여기 있는 것만 받는다(D-037).
+    pub(crate) opened: Arc<OpenedRepos>,
 }
 
 /// 실행이 끝나면(오류여도) 잠금을 푼다.
@@ -75,14 +78,17 @@ impl Core {
 
         let mut registry = Registry::new();
         actions::register_all(&mut registry)?;
+        let recent = Arc::new(recent);
+        let opened = Arc::new(OpenedRepos::default());
         Ok(Self {
             executor: Executor::new(registry),
-            queries: Queries::new(git.clone()),
+            queries: Queries::new(git.clone(), opened.clone(), recent.clone()),
             git,
             git_version,
             busy: Mutex::new(HashSet::new()),
             watcher: Mutex::new(None),
             recent,
+            opened,
         })
     }
 
@@ -97,11 +103,14 @@ impl Core {
     /// 프로젝트 열기의 유일한 입구(D-032). 앱을 켤 때 열기, 최근 목록, 폴더 고르기,
     /// 프로젝트 메뉴가 모두 여기를 거친다.
     pub fn open_project(&self, path: &Path, how: OpenHow) -> Result<ProjectOpenResult> {
+        check_path_len(path)?;
         let Ok(folder) = platform::normalize_repo_path(path) else {
             return Ok(ProjectOpenResult::Missing);
         };
         let folder_text = folder.to_string_lossy().into_owned();
         let Some(repo) = self.git.discover(&folder)? else {
+            // 저장소가 아닌 폴더도 열린 것으로 기록한다. 이 폴더에서 "버전 관리 시작"을 할 수 있다.
+            self.opened.insert(&folder);
             return Ok(ProjectOpenResult::NotARepo {
                 folder: folder_text,
             });
@@ -115,6 +124,7 @@ impl Core {
             });
         }
         trust_check(&repo)?;
+        self.opened.insert(&repo);
         self.recent.touch(&repo);
         Ok(ProjectOpenResult::Opened {
             repo: RepoInfo::from_path(&repo),
@@ -184,6 +194,7 @@ impl Core {
             .executor
             .execute(&ctx, input.action_id(), input, token.as_ref())?;
         if let crate::Outcome::RepoCreated(repo) = &outcome {
+            self.opened.insert(repo.as_path());
             self.recent.touch(repo.as_path());
         }
         Ok(outcome.into())
@@ -191,7 +202,9 @@ impl Core {
 
     /// 폴더를 정규화하고 저장소인지 확인한다. 저장소 경로도 같은 형식으로 정규화한다.
     fn state_of(&self, path: &Path) -> Result<RepoState> {
+        check_path_len(path)?;
         let folder = platform::normalize_repo_path(path).map_err(CoreError::FolderNotFound)?;
+        self.opened.require(&folder)?;
         let repo = self.git.discover(&folder)?.map(|r| {
             platform::normalize_repo_path(r.as_path())
                 .map(RepoPath::new)

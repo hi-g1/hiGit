@@ -282,6 +282,7 @@ pub enum ErrorCode {
     NotYetSupported,
     InvalidInput,
     Busy,
+    NotOpened,
     WatchUnavailable,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
@@ -342,6 +343,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NotYetSupported => ErrorCode::NotYetSupported,
             CoreError::InvalidInput(_) => ErrorCode::InvalidInput,
             CoreError::Busy => ErrorCode::Busy,
+            CoreError::NotOpened => ErrorCode::NotOpened,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,

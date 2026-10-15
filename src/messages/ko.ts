@@ -96,6 +96,7 @@ export const ko = {
     notYetSupported: "아직 지원하지 않는 작업이에요.",
     invalidInput: "입력한 내용을 확인해 주세요.",
     busy: "다른 작업이 끝날 때까지 기다려 주세요.",
+    notOpened: "열지 않은 프로젝트예요. 프로젝트를 다시 열어 주세요.",
     watchUnavailable: "파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요.",
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",

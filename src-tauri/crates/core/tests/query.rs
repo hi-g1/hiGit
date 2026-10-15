@@ -96,6 +96,7 @@ fn status_is_mapped_for_screen() {
     };
 
     let dir = tempfile::tempdir().unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
     let view = core.queries().status(dir.path()).unwrap();
     assert_eq!(view.branch.name.as_deref(), Some("main"));
     assert!(view.branch.has_commits);
@@ -123,6 +124,7 @@ fn log_pages_know_if_more_exist() {
     let (core, git) = core_with(FakeGit::new());
     *git.commits.lock().unwrap() = (1..=5).rev().map(commit).collect();
     let dir = tempfile::tempdir().unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
 
     let first = core
         .queries()
@@ -200,6 +202,7 @@ fn init_through_core() {
     let ids: Vec<_> = metas.iter().map(|m| m.id.as_str()).collect();
     assert_eq!(ids, ["init", "stage", "unstage", "commit"]);
 
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
     let result = core.execute(dir.path(), &ActionInput::Init, None).unwrap();
     let ActionResult::RepoCreated { repo } = result else {
         panic!("{result:?}")
@@ -287,6 +290,7 @@ fn diff_lines_get_line_numbers() {
         }],
     };
     let dir = tempfile::tempdir().unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
     let view = core
         .queries()
         .diff(
@@ -359,6 +363,7 @@ fn diff_rejects_paths_outside_repo() {
         .status()
         .unwrap();
     let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    core.open_project(&repo, OpenHow::Picked).unwrap();
 
     for (path, orig) in [("../비밀.txt", None), ("a.txt", Some("../비밀.txt"))] {
         let err = core
@@ -399,6 +404,7 @@ fn diff_rejects_symlink_pointing_outside_repo() {
         return;
     }
     let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    core.open_project(&repo, OpenHow::Picked).unwrap();
     for untracked in [true, false] {
         let result = core.queries().diff(
             &repo,
@@ -434,10 +440,50 @@ fn diff_allows_symlink_inside_repo() {
         return;
     }
     let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    core.open_project(&repo, OpenHow::Picked).unwrap();
     let request = DiffRequest {
         path: "링크.txt".into(),
         orig_path: None,
         untracked: true,
     };
     assert!(core.queries().diff(&repo, &request).is_ok());
+}
+
+#[test]
+fn unopened_paths_are_rejected() {
+    let (core, _git) = core_with(FakeGit::new());
+    let dir = tempfile::tempdir().unwrap();
+    let err = core.queries().status(dir.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    let err = core
+        .queries()
+        .log(dir.path(), LogQuery { skip: 0, limit: 1 })
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    let err = core
+        .execute(dir.path(), &ActionInput::Init, None)
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
+    assert!(core.queries().status(dir.path()).is_ok());
+}
+
+#[test]
+fn log_page_size_is_capped() {
+    let (core, git) = core_with(FakeGit::new());
+    *git.commits.lock().unwrap() = (1..=600).rev().map(commit).collect();
+    let dir = tempfile::tempdir().unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
+    let page = core
+        .queries()
+        .log(
+            dir.path(),
+            LogQuery {
+                skip: 0,
+                limit: u32::MAX,
+            },
+        )
+        .unwrap();
+    assert_eq!(page.commits.len(), higit_core::MAX_LOG_PAGE as usize);
+    assert!(page.has_more);
 }

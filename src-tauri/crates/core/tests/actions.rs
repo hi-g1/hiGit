@@ -156,6 +156,8 @@ fn same_repo_runs_one_action_at_a_time() {
     let git = Arc::new(FakeGit::new());
     *git.repo.lock().unwrap() = Some(higit_core::RepoPath::new(dir.path()));
     let core = Arc::new(Core::with_backend(git.clone() as Arc<dyn GitBackend>).unwrap());
+    core.open_project(dir.path(), higit_core::view::OpenHow::Picked)
+        .unwrap();
 
     git.hold.store(true, Ordering::SeqCst);
     let first = {

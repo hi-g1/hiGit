@@ -33,6 +33,10 @@ pub enum CoreError {
     #[error("입력이 올바르지 않습니다: {0}")]
     InvalidInput(&'static str),
 
+    /// 프로젝트 열기를 거치지 않은 경로다(D-037).
+    #[error("열지 않은 프로젝트입니다")]
+    NotOpened,
+
     /// 같은 저장소에서 다른 작업이 실행 중이다.
     #[error("다른 작업이 실행 중입니다")]
     Busy,

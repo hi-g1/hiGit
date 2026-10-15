@@ -6,6 +6,9 @@ use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
 };
 
+/// 버전 메시지의 최대 길이(D-037 IPC 입력 상한).
+pub(crate) const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
+
 /// 저장하기: 넣은 내용을 메시지와 함께 저장한다.
 pub struct CommitAction {
     meta: ActionMeta,
@@ -42,6 +45,9 @@ impl Action for CommitAction {
         let ActionInput::Commit(input) = input else {
             return Err(CoreError::InputMismatch("commit"));
         };
+        if input.message.len() > MAX_MESSAGE_BYTES {
+            return Err(CoreError::InvalidInput("버전 메시지가 너무 길어요"));
+        }
         if input.message.trim().is_empty() {
             return Err(CoreError::InvalidInput("버전 메시지가 비어 있어요"));
         }

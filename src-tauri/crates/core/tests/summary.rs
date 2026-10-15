@@ -9,6 +9,7 @@ use std::sync::atomic::Ordering;
 
 use common::{FakeGit, commit};
 use git::{BranchInfo, Change, EntryKind, RepoPath, Status, StatusEntry};
+use higit_core::recent::RecentStore;
 use higit_core::view::{ErrorCode, ErrorView};
 use higit_core::{Core, GitBackend};
 
@@ -26,12 +27,30 @@ fn entry(path: &str, kind: EntryKind) -> StatusEntry {
     }
 }
 
+/// 최근 목록에 `listed` 경로들이 있는 Core. 상태 요약은 최근 목록에 있는 경로를 받는다.
+fn core_listing(git: Arc<dyn GitBackend>, listed: &[&Path]) -> Core {
+    let recent = RecentStore::in_memory();
+    for p in listed {
+        recent.touch(&real(p));
+    }
+    Core::with_backend_and_recent(git, recent).unwrap()
+}
+
 fn core_for(repo: &Path) -> (Core, Arc<FakeGit>) {
     let git = Arc::new(FakeGit::new());
     *git.repo.lock().unwrap() = Some(RepoPath::new(real(repo)));
+    let inner = repo.join("안쪽");
+    let _ = std::fs::create_dir(&inner);
     (
-        Core::with_backend(git.clone() as Arc<dyn GitBackend>).unwrap(),
+        core_listing(git.clone() as Arc<dyn GitBackend>, &[repo, &inner]),
         git,
+    )
+}
+
+fn real_git_core(listed: &Path) -> Core {
+    core_listing(
+        Arc::new(git::CliBackend::new("git", Arc::new(|_| {}))),
+        &[listed],
     )
 }
 
@@ -81,7 +100,6 @@ fn missing_folder_and_outer_repo() {
     assert_eq!(ErrorView::from(&err).code, ErrorCode::FolderNotFound);
 
     let inner = dir.path().join("안쪽");
-    std::fs::create_dir(&inner).unwrap();
     let err = core.queries().project_summary(&inner).unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotARepo);
 }
@@ -124,7 +142,7 @@ fn real_git_summary_while_another_task_holds_index_lock() {
         .modified()
         .unwrap();
 
-    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    let core = real_git_core(p);
     let s = core.queries().project_summary(p).unwrap();
     assert_eq!(s.changed_files, 2);
     assert_eq!(s.last_commit.unwrap().summary, "첫 버전");
@@ -156,7 +174,7 @@ fn real_git_summary_does_not_rewrite_index() {
         .modified()
         .unwrap();
 
-    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    let core = real_git_core(p);
     core.queries().project_summary(p).unwrap();
 
     let after = std::fs::metadata(p.join(".git/index"))
@@ -164,4 +182,14 @@ fn real_git_summary_does_not_rewrite_index() {
         .modified()
         .unwrap();
     assert_eq!(before, after, "상태 요약이 index를 다시 썼다");
+}
+
+#[test]
+fn unlisted_and_unopened_paths_are_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let git = Arc::new(FakeGit::new());
+    *git.repo.lock().unwrap() = Some(RepoPath::new(real(dir.path())));
+    let core = core_listing(git as Arc<dyn GitBackend>, &[]);
+    let err = core.queries().project_summary(dir.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
 }

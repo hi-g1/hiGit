@@ -88,6 +88,7 @@ export const en: Messages = {
     notYetSupported: "This action is not supported yet.",
     invalidInput: "Please check what you entered.",
     busy: "Please wait until the other task finishes.",
+    notOpened: "This project isn't open. Please open it again.",
     watchUnavailable: "File changes are not detected automatically. The view reloads when you return to the window.",
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",

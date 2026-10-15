@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+mod access;
 mod action;
 pub mod actions;
 mod bootstrap;
@@ -23,7 +24,7 @@ pub use action::{
 pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, Result};
 pub use executor::{Executor, PreviewToken};
-pub use query::Queries;
+pub use query::{MAX_LOG_PAGE, Queries};
 pub use registry::Registry;
 pub use state::RepoState;
 pub use watch::{WatchSignal, WatchSink};

@@ -31,6 +31,8 @@ fn core() -> Core {
 fn watch(core: &Core, repo: &Path) -> mpsc::Receiver<WatchSignal> {
     let (tx, rx) = mpsc::channel();
     let tx = Mutex::new(tx);
+    core.open_project(repo, higit_core::view::OpenHow::Picked)
+        .unwrap();
     core.watch(
         repo,
         Arc::new(move |s| {

@@ -117,6 +117,7 @@ fn init_records_the_new_repo() {
     let data = tempfile::tempdir().unwrap();
     let folder = tempfile::tempdir().unwrap();
     let (core, _) = core(None, data.path());
+    core.open_project(folder.path(), OpenHow::Picked).unwrap();
     core.execute(folder.path(), &ActionInput::Init, None)
         .unwrap();
     assert_eq!(core.recent_projects().len(), 1);

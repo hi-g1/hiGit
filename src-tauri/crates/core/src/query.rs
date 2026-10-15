@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use git::{GitBackend, RepoPath};
 
+use crate::access::{OpenedRepos, check_path_len};
 use crate::actions::paths;
+use crate::recent::RecentStore;
 use crate::view::{
     CommitRow, DiffRequest, FileDiffView, LogPage, LogQuery, ProjectSummaryView, StatusView,
 };
@@ -12,21 +14,41 @@ use crate::{CoreError, Result};
 /// 조회(D-010). 미리보기·위험도·백업이 없으므로 실행기와 레지스트리를 거치지 않는다.
 pub struct Queries {
     git: Arc<dyn GitBackend>,
+    opened: Arc<OpenedRepos>,
+    recent: Arc<RecentStore>,
 }
 
+/// 한 번에 읽는 버전 기록의 최대 개수.
+pub const MAX_LOG_PAGE: u32 = 500;
+
 impl Queries {
-    pub(crate) fn new(git: Arc<dyn GitBackend>) -> Self {
-        Self { git }
+    pub(crate) fn new(
+        git: Arc<dyn GitBackend>,
+        opened: Arc<OpenedRepos>,
+        recent: Arc<RecentStore>,
+    ) -> Self {
+        Self {
+            git,
+            opened,
+            recent,
+        }
+    }
+
+    /// 화면이 보낸 저장소 경로를 정규화하고, 열린 프로젝트인지 확인한다.
+    fn opened_repo(&self, path: &Path) -> Result<RepoPath> {
+        let repo = repo_path(path)?;
+        self.opened.require(repo.as_path())?;
+        Ok(repo)
     }
 
     pub fn status(&self, repo: &Path) -> Result<StatusView> {
-        Ok(self.git.status(&repo_path(repo)?)?.into())
+        Ok(self.git.status(&self.opened_repo(repo)?)?.into())
     }
 
     /// 파일 하나를 마지막 저장과 비교한다(넣은 것과 안 넣은 것을 합쳐서).
     pub fn diff(&self, repo: &Path, request: &DiffRequest) -> Result<FileDiffView> {
         // 새 파일 비교(--no-index)는 git이 경로를 저장소로 묶지 않으므로 여기서 막는다.
-        let root = repo_path(repo)?;
+        let root = self.opened_repo(repo)?;
         for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
             paths::validate_one(path)?;
             stays_inside(root.as_path(), path)?;
@@ -39,6 +61,15 @@ impl Queries {
     /// 부딪히지 않는다. 기록한 저장소의 최상위가 아니면(바깥 저장소가 잡히면) `NotARepo`.
     pub fn project_summary(&self, repo: &Path) -> Result<ProjectSummaryView> {
         let root = repo_path(repo)?;
+        // 시작 화면은 열지 않은 최근 프로젝트의 상태도 읽는다.
+        let listed = self
+            .recent
+            .list()
+            .iter()
+            .any(|e| platform::same_path(Path::new(&e.path), root.as_path()));
+        if !listed {
+            self.opened.require(root.as_path())?;
+        }
         let top = self
             .git
             .discover(root.as_path())?
@@ -81,17 +112,18 @@ impl Queries {
     }
 
     pub fn log(&self, repo: &Path, query: LogQuery) -> Result<LogPage> {
+        let limit = query.limit.min(MAX_LOG_PAGE);
         // 하나 더 받아서 다음 쪽이 있는지 안다.
         let mut commits = self.git.log(
-            &repo_path(repo)?,
+            &self.opened_repo(repo)?,
             &git::LogQuery {
                 skip: query.skip,
-                limit: query.limit.saturating_add(1),
+                limit: limit + 1,
                 rev: None,
             },
         )?;
-        let has_more = commits.len() > query.limit as usize;
-        commits.truncate(query.limit as usize);
+        let has_more = commits.len() > limit as usize;
+        commits.truncate(limit as usize);
         Ok(LogPage {
             commits: commits.into_iter().map(CommitRow::from).collect(),
             has_more,
@@ -101,6 +133,7 @@ impl Queries {
 
 /// 화면이 보낸 경로를 폴더 열기 때와 같은 형식으로 정규화한다.
 fn repo_path(path: &Path) -> Result<RepoPath> {
+    check_path_len(path)?;
     platform::normalize_repo_path(path)
         .map(RepoPath::new)
         .map_err(CoreError::FolderNotFound)
