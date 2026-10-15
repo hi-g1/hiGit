@@ -1,0 +1,28 @@
+.term {
+  border-bottom: var(--border-width) dotted var(--text-muted);
+  cursor: help;
+}
+
+.term:focus-visible {
+  border-radius: var(--radius-control);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.heading {
+  font-weight: var(--font-weight-bold);
+}
+
+.command {
+  font-family: var(--font-mono);
+}
+
+.description {
+  color: var(--text-muted);
+}
