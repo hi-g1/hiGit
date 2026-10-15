@@ -11,21 +11,21 @@ afterEach(() => {
 describe("Term", () => {
   it("본문에 쉬운 이름을 보여준다", () => {
     render(<Term id="status" />);
-    expect(screen.getByText("바뀐 내용")).toBeInTheDocument();
+    expect(screen.getByText("변경 사항")).toBeInTheDocument();
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   it("호버하면 원래 이름, 명령, 설명이 툴팁에 뜬다", async () => {
     const user = userEvent.setup();
     render(<Term id="status" />);
-    await user.hover(screen.getByText("바뀐 내용"));
+    await user.hover(screen.getByText("변경 사항"));
 
     // 400ms 지연 전에는 뜨지 않는다
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("status");
     expect(tooltip).toHaveTextContent("git status");
-    expect(tooltip).toHaveTextContent("마지막 저장 이후 바뀐 파일 목록");
+    expect(tooltip).toHaveTextContent("마지막 버전 이후 바뀐 파일 목록");
   });
 
   it("키보드 포커스로도 툴팁이 뜬다", async () => {
@@ -33,7 +33,7 @@ describe("Term", () => {
     render(<Term id="log" />);
     await user.tab();
 
-    expect(screen.getByText("저장 기록")).toHaveFocus();
+    expect(screen.getByText("버전 기록")).toHaveFocus();
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("git log");
   });
@@ -56,17 +56,17 @@ describe("Term", () => {
 
     await user.tab();
     const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip).toHaveTextContent("저장하기");
+    expect(tooltip).toHaveTextContent("버전 저장");
   });
 
   it("버튼 안에서는 따로 포커스되지 않는다", () => {
     render(<Term id="init" focusable={false} />);
-    expect(screen.getByText("관리 시작")).not.toHaveAttribute("tabindex");
+    expect(screen.getByText("버전 관리 시작")).not.toHaveAttribute("tabindex");
   });
 
   it("영어 용어표를 쓸 수 있다", () => {
     act(() => useUiStore.setState({ locale: "en" }));
     render(<Term id="commit" />);
-    expect(screen.getByText("Save")).toBeInTheDocument();
+    expect(screen.getByText("Save version")).toBeInTheDocument();
   });
 });

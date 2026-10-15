@@ -52,7 +52,7 @@ async function openFolder() {
 }
 
 describe("홈에서 폴더 열기", () => {
-  it("저장소를 열면 바뀐 파일과 저장 기록이 보인다", async () => {
+  it("저장소를 열면 변경 사항과 버전 기록이 보인다", async () => {
     vi.mocked(pickFolder).mockResolvedValue(repo.path);
     vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
     vi.mocked(api.status).mockResolvedValue({
@@ -85,12 +85,12 @@ describe("홈에서 폴더 열기", () => {
     expect(await screen.findByText("첫 저장")).toBeInTheDocument();
     expect(screen.getByText("aaaaaaa")).toBeInTheDocument();
     // 제목은 <Term>
-    expect(screen.getByText("바뀐 내용")).toBeInTheDocument();
-    expect(screen.getByText("저장 기록")).toBeInTheDocument();
+    expect(screen.getByText("변경 사항")).toBeInTheDocument();
+    expect(screen.getByText("버전 기록")).toBeInTheDocument();
     expect(api.status).toHaveBeenCalledWith(repo.path);
   });
 
-  it("저장소가 아닌 폴더는 관리 시작으로 저장소를 만든다", async () => {
+  it("저장소가 아닌 폴더는 버전 관리 시작으로 저장소를 만든다", async () => {
     vi.mocked(pickFolder).mockResolvedValue("/home/me/새 폴더");
     vi.mocked(api.openFolder).mockResolvedValue({ folder: "/home/me/새 폴더", repo: null });
     vi.mocked(api.executeAction).mockResolvedValue({
@@ -101,7 +101,7 @@ describe("홈에서 폴더 열기", () => {
     const user = await openFolder();
 
     expect(await screen.findByText("이 폴더는 아직 Git으로 관리하지 않는 폴더예요.")).toBeInTheDocument();
-    const init = await screen.findByRole("button", { name: "관리 시작" });
+    const init = await screen.findByRole("button", { name: "버전 관리 시작" });
     await user.click(init);
 
     expect(api.executeAction).toHaveBeenCalledWith("/home/me/새 폴더", { id: "init" });
@@ -110,7 +110,7 @@ describe("홈에서 폴더 열기", () => {
     expect(await screen.findByText("아직 저장한 기록이 없어요.")).toBeInTheDocument();
   });
 
-  it("관리 시작이 실패하면 이유와 원문을 보여준다", async () => {
+  it("버전 관리 시작이 실패하면 이유와 원문을 보여준다", async () => {
     vi.mocked(pickFolder).mockResolvedValue("/잠긴 폴더");
     vi.mocked(api.openFolder).mockResolvedValue({ folder: "/잠긴 폴더", repo: null });
     vi.mocked(api.executeAction).mockRejectedValue(
@@ -118,7 +118,7 @@ describe("홈에서 폴더 열기", () => {
     );
 
     const user = await openFolder();
-    await user.click(await screen.findByRole("button", { name: "관리 시작" }));
+    await user.click(await screen.findByRole("button", { name: "버전 관리 시작" }));
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Git 작업이 실패했어요.");

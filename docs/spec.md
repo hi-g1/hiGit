@@ -37,36 +37,36 @@ Git을 모르는 사람도 프로젝트 폴더를 열고 버튼 몇 번으로 �
 
 | id | 쉬운 이름 | 원래 이름 · 명령 | 호버 설명 | 위험도 | 빈도 |
 | --- | --- | --- | --- | --- | --- |
-| status | 바뀐 내용 | status · `git status` | 마지막 저장 이후 바뀐 파일 목록 | safe | 매일 |
+| status | 변경 사항 | status · `git status` | 마지막 버전 이후 바뀐 파일 목록 | safe | 매일 |
 | diff | 비교 보기 | diff · `git diff` | 파일이 어떻게 바뀌었는지 줄 단위로 비교 | safe | 매일 |
-| stage | 저장에 넣기 | stage · `git add` | 다음 저장에 포함할 파일 고르기 | safe | 매일 |
-| unstage | 저장에서 빼기 | unstage · `git restore --staged` | 다음 저장에 넣었던 파일을 다시 빼기 | safe | 매일 |
-| commit | 저장하기 | commit · `git commit` | 지금 상태를 설명과 함께 기록으로 남기기 | safe | 매일 |
-| fetch | 새 소식 확인 | fetch · `git fetch` | 원격 저장소의 변경을 내려받되 아직 합치지 않음 | safe | 매일 |
-| pull | 최신으로 받기 | pull · `git pull` | 원격의 변경을 받아 내 갈래에 합치기 | normal | 매일 |
-| push | 올리기 | push · `git push` | 내 저장들을 원격 저장소로 보내기 | normal | 매일 |
-| branch | 작업 갈래 | branch · `git branch` | 원래 작업에 영향 없이 따로 작업하는 길 | safe | 매일 |
-| switch | 갈래 바꾸기 | switch · `git switch` | 다른 작업 갈래로 이동 | normal | 매일 |
-| log | 저장 기록 | log · `git log` | 지금까지의 저장 목록 | safe | 매일 |
-| merge | 합치기 | merge · `git merge` | 다른 갈래의 작업을 지금 갈래에 합치기 | normal | 자주 |
-| conflict | 겹친 부분 고르기 | merge conflict | 두 갈래가 같은 곳을 다르게 고쳤을 때 고르기 | normal | 자주 |
-| stash | 잠시 치워두기 | stash · `git stash` | 하던 작업을 서랍에 넣었다가 나중에 꺼내기 | safe | 자주 |
-| discard | 변경 취소 | restore · `git restore` | 저장 안 한 변경을 마지막 저장 상태로 되돌리기 | caution | 자주 |
-| pr | 검토 요청 | Pull Request | 내 갈래를 합쳐 달라고 팀에 요청 | safe | 자주 |
-| clone | 프로젝트 가져오기 | clone · `git clone` | 원격 저장소를 내 컴퓨터로 복사 | safe | 자주 |
-| init | 관리 시작 | init · `git init` | 이 폴더를 Git으로 관리하기 시작 | safe | 자주 |
-| amend | 방금 저장 고치기 | amend · `git commit --amend` | 마지막 저장의 설명이나 내용 고치기 | caution | 가끔 |
-| revert | 기록 남기고 취소 | revert · `git revert` | 취소했다는 새 저장을 만들어 안전하게 되돌리기 | normal | 가끔 |
-| reset | 기록째 되돌리기 | reset · `git reset` | 특정 시점으로 갈래를 옮기기. 이후 저장은 기록에서 사라짐 | danger | 가끔 |
-| rebase-i | 기록 정리하기 | interactive rebase · `git rebase -i` | 저장 순서 바꾸기, 묶기, 메시지 고치기 | danger | 가끔 |
-| rebase | 갈래 옮겨 심기 | rebase · `git rebase` | 내 갈래를 최신 갈래 끝으로 옮기기 | caution | 가끔 |
-| cherry-pick | 저장 하나만 가져오기 | cherry-pick · `git cherry-pick` | 다른 갈래의 저장 하나를 복사해 오기 | normal | 가끔 |
-| tag | 버전 표시 | tag · `git tag` | 저장에 "v1.0" 같은 이름표 달기 | safe | 가끔 |
-| blame | 누가 언제 바꿨나 | blame · `git blame` | 각 줄을 마지막으로 바꾼 사람과 시점 | safe | 가끔 |
-| reflog | 안전망 | reflog · `git reflog` | 최근 작업 이력. 지운 것도 여기서 복구 | safe | 가끔 |
-| force-push | 강제로 올리기 | force push · `git push --force-with-lease` | 원격 기록을 내 기록으로 덮어쓰기 | danger | 가끔 |
-| remote | 연결된 저장소 | remote · `git remote` | 이 프로젝트가 연결된 원격 저장소 목록 | normal | 드묾 |
-| ignore | 저장 안 할 파일 | .gitignore | Git이 무시할 파일 규칙 | safe | 드묾 |
+| stage | 이번 버전에 넣기 | stage · `git add` | 이번 버전에 포함할 파일 고르기 | safe | 매일 |
+| unstage | 이번 버전에서 빼기 | unstage · `git restore --staged` | 이번 버전에 넣었던 파일을 다시 빼기 | safe | 매일 |
+| commit | 버전 저장 | commit · `git commit` | 지금 상태를 설명과 함께 버전으로 남기기 | safe | 매일 |
+| fetch | 새로 고침 | fetch · `git fetch` | 다른 사람이 올린 버전을 확인하기. 내 파일은 아직 바뀌지 않아요. | safe | 매일 |
+| pull | 가져오기 | pull · `git pull` | 다른 사람이 올린 버전을 받아 지금 브랜치에 합치기 | normal | 매일 |
+| push | 올리기 | push · `git push` | 내 버전들을 원격 저장소로 보내기 | normal | 매일 |
+| branch | 브랜치 | branch · `git branch` | 원래 작업에 영향 없이 따로 작업하는 공간 | safe | 매일 |
+| switch | 브랜치 바꾸기 | switch · `git switch` | 다른 브랜치로 옮겨 가기 | normal | 매일 |
+| log | 버전 기록 | log · `git log` | 지금까지 저장한 버전 목록 | safe | 매일 |
+| merge | 합치기 | merge · `git merge` | 다른 브랜치의 작업을 지금 브랜치에 합치기. 병합이라고도 해요. | normal | 자주 |
+| conflict | 충돌 | merge conflict | 두 브랜치가 같은 곳을 다르게 고쳐서 어느 쪽을 남길지 정해야 하는 상태 | normal | 자주 |
+| stash | 임시 보관 | stash · `git stash` | 하던 작업을 잠시 보관했다가 나중에 꺼내기 | safe | 자주 |
+| discard | 변경 취소 | restore · `git restore` | 아직 버전으로 저장하지 않은 변경을 버리고 마지막 버전으로 돌아가기 | caution | 자주 |
+| pr | 검토 요청 | Pull Request | 내 브랜치를 합쳐 달라고 팀에 요청 | safe | 자주 |
+| clone | 복제 | clone · `git clone` | 원격 저장소를 내 컴퓨터로 복사 | safe | 자주 |
+| init | 버전 관리 시작 | init · `git init` | 이 폴더를 Git으로 버전 관리하기 시작 | safe | 자주 |
+| amend | 마지막 버전 고치기 | amend · `git commit --amend` | 마지막 버전의 설명이나 내용 고치기 | caution | 가끔 |
+| revert | 되돌리기 | revert · `git revert` | 고른 버전의 변경을 취소하는 새 버전 만들기. 기록은 그대로 남아요. | normal | 가끔 |
+| reset | 이 버전으로 돌아가기 | reset · `git reset` | 브랜치를 고른 버전으로 옮기기. 그 뒤의 버전은 기록에서 빠져요. | danger | 가끔 |
+| rebase-i | 기록 정리 | interactive rebase · `git rebase -i` | 버전 순서 바꾸기, 묶기, 메시지 고치기 | danger | 가끔 |
+| rebase | 리베이스 | rebase · `git rebase` | 내 브랜치의 버전들을 다른 브랜치의 최신 버전 뒤로 옮기기 | caution | 가끔 |
+| cherry-pick | 이 버전만 복사하기 | cherry-pick · `git cherry-pick` | 다른 브랜치의 버전 하나를 지금 브랜치로 복사하기 | normal | 가끔 |
+| tag | 태그 | tag · `git tag` | 이 버전에 v1.0 같은 이름 붙이기 | safe | 가끔 |
+| blame | 줄별 기록 | blame · `git blame` | 각 줄을 마지막으로 바꾼 사람과 날짜 | safe | 가끔 |
+| reflog | 복구 | reflog · `git reflog` | 최근 작업을 되짚어 지운 버전이나 브랜치를 되살리기 | safe | 가끔 |
+| force-push | 덮어쓰며 올리기 | force push · `git push --force-with-lease` | 원격 저장소의 기록을 내 기록으로 덮어쓰기. 다른 사람의 작업이 사라질 수 있어요. | danger | 가끔 |
+| remote | 원격 저장소 | remote · `git remote` | 이 프로젝트가 연결된 원격 저장소 목록 | normal | 드묾 |
+| ignore | 제외할 파일 | .gitignore | 버전에 넣지 않을 파일 규칙 | safe | 드묾 |
 
 위험도:
 - `safe`: 바로 실행.
