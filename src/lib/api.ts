@@ -66,6 +66,8 @@ async function call<T>(promise: Promise<T>): Promise<T> {
 
 export const api = {
   appStatus: () => call(commands.appStatus()),
+  /** Git 내려받기 페이지를 기본 브라우저로 연다. 주소는 백엔드가 정한다. */
+  openGitDownload: () => call(commands.appOpenGitDownload()),
   /** 프로젝트 열기. 화면에서는 features/open-project/useOpenProject만 부른다(D-032). */
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   recentProjects: () => call(commands.recentList()),

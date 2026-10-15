@@ -44,6 +44,20 @@ pub fn app_status(state: State<'_, AppState>) -> CmdResult<AppStatus> {
     Ok(core(&state)?.app_status())
 }
 
+/// Git 내려받기 페이지를 기본 브라우저로 연다(D-053). 주소는 core가 정하고 화면은 넘기지 않는다.
+#[tauri::command]
+#[specta::specta]
+pub fn app_open_git_download(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let url = core(&state)?.git_download_url();
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| ErrorView {
+            code: ErrorCode::Internal,
+            detail: Some(e.to_string()),
+        })
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn project_open(

@@ -6,6 +6,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
     appStatus: vi.fn(),
+    openGitDownload: vi.fn(),
     recentProjects: vi.fn(),
     projectSummary: vi.fn(),
     openProject: vi.fn(),
@@ -128,5 +129,22 @@ describe("시작 화면", () => {
     expect(await screen.findByText("✓ Git을 찾았어요 · 버전 2.45.0")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "이어서 하기" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^폴더 열기/ })).toHaveTextContent("Ctrl+O");
+  });
+
+  it("Git이 보안 수정 기준보다 낮으면 업데이트 안내와 내려받기", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([]);
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.40.0", gitSecurity: "outdated", gitPackageVersion: null });
+    vi.mocked(api.openGitDownload).mockResolvedValue(null);
+    renderStart();
+    await userEvent.click(await screen.findByRole("button", { name: "내려받기" }));
+    expect(api.openGitDownload).toHaveBeenCalled();
+  });
+
+  it.each(["ok", "distroManaged"] as const)("%s이면 안내가 없다", async (gitSecurity) => {
+    vi.mocked(api.recentProjects).mockResolvedValue([]);
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.34.1", gitSecurity, gitPackageVersion: null });
+    renderStart();
+    await screen.findByText("폴더 열기", { exact: false });
+    expect(screen.queryByRole("button", { name: "내려받기" })).toBeNull();
   });
 });

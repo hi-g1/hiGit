@@ -30,6 +30,7 @@ tauri-build = { workspace = true }
 higit-core = { path = "crates/core" }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
+tauri-plugin-opener = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true }
 specta-typescript = { workspace = true }
@@ -54,6 +55,8 @@ rust-version = "1.99"
 tauri = { version = "2.12", features = [] }
 tauri-build = { version = "2.7", features = [] }
 tauri-plugin-dialog = "2.8"
+# 외부 링크를 Rust에서만 연다. 웹뷰에는 opener 권한을 주지 않는다(D-037).
+tauri-plugin-opener = "2"
 which = "8.0"
 dirs = "7.0"
 dunce = "1.0"

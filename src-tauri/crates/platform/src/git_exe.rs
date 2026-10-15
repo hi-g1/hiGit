@@ -23,6 +23,17 @@ fn find_git_in(path_var: Option<&OsStr>) -> Option<PathBuf> {
     found.is_absolute().then_some(found)
 }
 
+/// Git 내려받기 페이지(D-053). 화면은 주소를 넘기지 않고 앱 명령만 부른다.
+pub fn git_download_url() -> &'static str {
+    if cfg!(windows) {
+        "https://git-scm.com/download/win"
+    } else if cfg!(target_os = "macos") {
+        "https://git-scm.com/download/mac"
+    } else {
+        "https://git-scm.com/download/linux"
+    }
+}
+
 /// git이 어떻게 설치됐는지. 배포판 패키지는 보안 수정을 버전 번호를 올리지 않고 넣으므로
 /// 버전 문자열만으로 보안 수정 여부를 판단할 수 없다(D-050).
 #[derive(Debug, Clone, PartialEq, Eq)]

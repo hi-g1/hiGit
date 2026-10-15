@@ -52,6 +52,14 @@ export function Start() {
       </header>
 
       <section className={styles.top}>
+        {appStatus.data?.gitSecurity === "outdated" && (
+          <p className={styles.notice} role="status">
+            {m.gitUpdate}{" "}
+            <button type="button" className={styles.textAction} onClick={() => void api.openGitDownload()}>
+              {m.gitDownload}
+            </button>
+          </p>
+        )}
         {startNotice && (
           <p className={styles.notice} role="status">
             {startNotice.kind === "lastMissing" ? m.lastMissing(startNotice.name) : m.lastNotRepo(startNotice.name)}

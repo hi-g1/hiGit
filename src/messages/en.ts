@@ -9,6 +9,8 @@ export const en: Messages = {
   appTagline: "Git made easy, even if you have never used it",
   openFolder: "Open folder",
   otherProjects: "Open another project",
+  gitUpdate: "Please update Git. This version is missing security fixes.",
+  gitDownload: "Download",
   startTitle: "Projects",
   lastPlace: (when: string) => `Last worked on · ${when}`,
   continueWork: "Continue",

@@ -3,6 +3,7 @@
 // tests/security_config.rs가 네 곳이 같은지 확인한다.
 const COMMANDS: &[&str] = &[
     "app_status",
+    "app_open_git_download",
     "project_open",
     "recent_list",
     "recent_remove",

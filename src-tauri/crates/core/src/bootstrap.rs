@@ -102,6 +102,11 @@ impl Core {
         self.git_version
     }
 
+    /// Git 내려받기 페이지 주소(https만). 앱이 기본 브라우저로 연다.
+    pub fn git_download_url(&self) -> &'static str {
+        platform::git_download_url()
+    }
+
     /// 화면 시작에 필요한 git 정보. 보안 수정 기준은 거부 기준과 따로 판정한다(D-050).
     pub fn app_status(&self) -> AppStatus {
         let package = match &self.git_build {

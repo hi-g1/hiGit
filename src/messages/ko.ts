@@ -15,6 +15,8 @@ export const ko = {
   openFolder: "폴더 열기",
   otherProjects: "다른 프로젝트 열기",
   // 시작 화면(D-031)
+  gitUpdate: "Git을 업데이트해 주세요. 보안 수정이 빠진 버전이에요.",
+  gitDownload: "내려받기",
   startTitle: "프로젝트",
   lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,
   continueWork: "이어서 하기",

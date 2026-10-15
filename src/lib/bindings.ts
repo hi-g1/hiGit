@@ -7,6 +7,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	/**  git을 찾았는지와 버전. 실패하면 GitMissing / GitTooOld. */
 	appStatus: () => __TAURI_INVOKE<AppStatus>("app_status"),
+	/**  Git 내려받기 페이지를 기본 브라우저로 연다(D-053). 주소는 core가 정하고 화면은 넘기지 않는다. */
+	appOpenGitDownload: () => __TAURI_INVOKE<null>("app_open_git_download"),
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
 	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
