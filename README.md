@@ -38,6 +38,16 @@ pnpm install
 pnpm tauri dev
 ```
 
+## Windows 시험판 받기
+
+main에 push할 때마다 CI가 Windows 실행 파일을 만들어 올립니다(14일 보관).
+
+1. GitHub의 Actions 탭에서 최근 성공한 CI 실행을 엽니다. 특정 커밋이 필요하면 "Run workflow"로 수동 실행합니다.
+2. 아래 Artifacts의 `higit-windows-x64-<커밋>`을 내려받아 압축을 풉니다.
+3. `higit.exe`를 실행합니다. 필요한 것(WebView2, Git for Windows)과 경고 대처는 함께 든 `README.txt`에 있습니다.
+
+`gh`가 있으면: `gh run download --name higit-windows-x64-<커밋 전체 해시>`
+
 ## 커밋 전 검사
 
 저장소에 들어 있는 git hook(`.githooks/`)이 검사를 강제합니다. `pnpm install` 때 자동으로 켜집니다.

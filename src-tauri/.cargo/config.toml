@@ -1,0 +1,4 @@
+# Windows 실행 파일이 VC++ 재배포 패키지 없이 뜨도록 C 런타임을 정적으로 링크한다.
+# Rust 코드가 아니라 빌드 설정이다. CI가 dumpbin으로 VCRUNTIME140.dll 의존이 없는지 확인한다.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

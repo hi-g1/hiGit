@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # 아무 커밋에서나 Windows 시험판을 받으려고 수동 실행을 연다.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -85,3 +87,32 @@ jobs:
 
       - name: 앱 빌드 (설치 파일 없이)
         run: pnpm tauri build --no-bundle
+
+      - name: Windows 실행 파일이 VC++ 런타임 없이 뜨는지
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          $deps = & $dumpbin.FullName /dependents src-tauri\target\release\higit.exe
+          $deps
+          if ($deps -match 'VCRUNTIME\d+\.dll|MSVCP\d+\.dll') { throw "higit.exe가 VC++ 런타임 DLL에 의존합니다 (crt-static 확인)" }
+
+      - name: Windows 결과물 모으기
+        if: runner.os == 'Windows' && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifact | Out-Null
+          Copy-Item src-tauri\target\release\higit.exe artifact\
+          # 글꼴 OFL은 배포할 때 라이선스 원문을 함께 넣어야 한다(D-014).
+          Copy-Item THIRD_PARTY_NOTICES.md artifact\
+          Copy-Item packaging\windows\README.txt artifact\
+
+      - name: Windows 결과물 올리기
+        if: runner.os == 'Windows' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: higit-windows-x64-${{ github.sha }}
+          path: artifact/
+          retention-days: 14
+          if-no-files-found: error
