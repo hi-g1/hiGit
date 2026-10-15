@@ -9,8 +9,6 @@ use crate::{CoreError, Result};
 /// 받은 저장소에 `refs/heads/-x` 같은 ref가 있으면 목록에는 보이되 다룰 때 이 오류가 난다.
 pub(crate) const UNSUPPORTED_NAME: &str = "이 이름의 브랜치는 hiGit에서 다룰 수 없어요";
 
-// 브랜치 갈아타기·동기화 단계에서 쓴다.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn validate_ref_like(name: &str) -> Result<()> {
     let bad = name.is_empty()
         || name.len() > 255

@@ -105,6 +105,8 @@ export const en: Messages = {
     nothingToUndo: "Nothing to undo.",
     undoStale: "It changed outside the app, so it wasn't undone.",
     undoPushed: `Versions already uploaded to the ${t("remote").toLowerCase()} aren't undone.`,
+    operationInProgress: `Finish or stop the ${t("merge").toLowerCase()} first.`,
+    parkBlocked: "The parked files couldn't be brought back. They are still kept safely.",
     watchUnavailable: "File changes are not detected automatically. The view reloads when you return to the window.",
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",

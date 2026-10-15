@@ -1,14 +1,18 @@
 //! 등록된 액션들. 새 액션 추가 절차는 docs/architecture.md "새 액션 추가 절차".
 
+mod branch_create;
 mod commit;
 mod init;
 pub(crate) mod names;
 pub(crate) mod paths;
 mod stage;
+pub(crate) mod switch;
 
+pub use branch_create::BranchCreateAction;
 pub use commit::CommitAction;
 pub use init::InitAction;
 pub use stage::PathsAction;
+pub use switch::{SwitchAction, SwitchReport};
 
 use git::RepoPath;
 
@@ -34,6 +38,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(PathsAction::stage()))?;
     registry.register(Box::new(PathsAction::unstage()))?;
     registry.register(Box::new(CommitAction::new()))?;
+    registry.register(Box::new(SwitchAction::new()))?;
+    registry.register(Box::new(BranchCreateAction::new()))?;
     Ok(())
 }
 

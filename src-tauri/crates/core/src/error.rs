@@ -45,6 +45,18 @@ pub enum CoreError {
     #[error("이미 올린 버전입니다")]
     UndoPushed,
 
+    /// 합치기·리베이스 중이라 하지 않았다.
+    #[error("진행 중인 작업이 있습니다")]
+    OperationInProgress,
+
+    /// 갈아타기가 실패한 뒤 맡긴 파일을 원래대로 꺼내지 못했다. 파일은 맡긴 ref에 남아 있다.
+    #[error("맡긴 파일을 원래대로 꺼내지 못했습니다")]
+    ParkBlocked(String),
+
+    /// 같은 이름(대소문자 무시)의 브랜치가 있다.
+    #[error("같은 이름의 브랜치가 있습니다")]
+    BranchExists,
+
     /// journal을 쓰지 못했다(디스크, 권한).
     #[error("작업 기록을 쓰지 못했습니다: {0}")]
     Journal(String),
@@ -87,6 +99,7 @@ impl CoreError {
             CoreError::FolderNotFound(e) => Some(e.to_string()),
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
+            CoreError::ParkBlocked(detail) => Some(detail.clone()),
             _ => None,
         }
     }

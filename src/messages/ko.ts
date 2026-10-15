@@ -113,6 +113,8 @@ export const ko = {
     nothingToUndo: "되돌릴 작업이 없어요.",
     undoStale: "앱 밖에서 바뀌어서 되돌리지 않았어요.",
     undoPushed: `이미 ${t("remote")}에 올린 버전은 되돌리지 않아요.`,
+    operationInProgress: `${josa(t("merge"), "을/를")} 마치거나 그만둔 뒤에 할 수 있어요.`,
+    parkBlocked: "맡긴 파일을 원래대로 꺼내지 못했어요. 파일은 안전하게 남아 있어요.",
     watchUnavailable: "파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요.",
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",

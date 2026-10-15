@@ -233,7 +233,7 @@ fn init_runs_only_outside_repo() {
 }
 
 #[test]
-fn registered_actions_are_safe() {
+fn registered_actions_match_spec_risk() {
     let mut registry = Registry::new();
     actions::register_all(&mut registry).unwrap();
     let metas: Vec<_> = registry
@@ -247,6 +247,8 @@ fn registered_actions_are_safe() {
             ("stage", "stage", Risk::Safe),
             ("unstage", "unstage", Risk::Safe),
             ("commit", "commit", Risk::Safe),
+            ("switch", "switch", Risk::Normal),
+            ("branch-create", "branch", Risk::Safe),
         ]
     );
 }

@@ -22,5 +22,17 @@
     "glossaryId": "commit",
     "risk": "safe",
     "undo": "restoreRef"
+  },
+  {
+    "id": "switch",
+    "glossaryId": "switch",
+    "risk": "normal",
+    "undo": "switchBack"
+  },
+  {
+    "id": "branch-create",
+    "glossaryId": "branch",
+    "risk": "safe",
+    "undo": "deleteCreated"
   }
 ]

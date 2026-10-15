@@ -14,6 +14,8 @@ pub enum ActionInput {
     Stage(PathsInput),
     Unstage(PathsInput),
     Commit(CommitInput),
+    Switch(SwitchInput),
+    BranchCreate(BranchCreateInput),
 }
 
 impl ActionInput {
@@ -24,6 +26,8 @@ impl ActionInput {
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
+            ActionInput::Switch(_) => "switch",
+            ActionInput::BranchCreate(_) => "branch-create",
         }
     }
 }
@@ -42,4 +46,18 @@ pub struct CommitInput {
     /// 넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062).
     #[serde(default)]
     pub stage_all: bool,
+}
+
+/// 브랜치 갈아타기. 원격에만 있는 브랜치면 `remote`에 원격 이름을 주고, 같은 이름의 로컬 브랜치를 만들어 연결한다.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SwitchInput {
+    pub branch: String,
+    pub remote: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchCreateInput {
+    pub name: String,
 }

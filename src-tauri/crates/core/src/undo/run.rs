@@ -4,7 +4,9 @@ use git::{GitBackend, GitOp, Oid, RefExpect, RepoPath};
 
 use super::journal::{self, Body, Journal};
 use super::{UndoKind, UndoState, backup};
-use crate::view::ActionInput;
+use crate::actions::switch::switch_with_parking;
+use crate::parked;
+use crate::view::{ActionInput, SwitchInput};
 use crate::{CoreError, Result};
 
 /// 되돌리기·다시 하기 결과. 화면은 토스트 문구와 이름 칸 채우기에 쓴다.
@@ -89,14 +91,15 @@ pub(crate) fn undo(
     }
     match entry.kind {
         UndoKind::RestoreRef => undo_commit(git, repo, &entry)?,
-        // 갈아타기·새 브랜치 되돌리기는 맡겨 두는 갈아타기 단계에서 채운다.
+        UndoKind::SwitchBack => undo_switch(git, repo, &entry)?,
+        UndoKind::DeleteCreated => undo_create(git, repo, &entry)?,
         _ => return Err(CoreError::NothingToUndo),
     }
     journal.append(&Body::Undo {
         target: entry.id.clone(),
         at: journal::now(),
     })?;
-    Ok(outcome(&entry))
+    Ok(outcome(&entry, entry.before.branch.clone()))
 }
 
 pub(crate) fn redo(
@@ -112,16 +115,18 @@ pub(crate) fn redo(
     }
     match entry.kind {
         UndoKind::RestoreRef => redo_commit(git, repo, &entry)?,
+        UndoKind::SwitchBack => redo_switch(git, repo, &entry)?,
+        UndoKind::DeleteCreated => redo_create(git, repo, &entry)?,
         _ => return Err(CoreError::NothingToUndo),
     }
     journal.append(&Body::Redo {
         target: entry.id.clone(),
         at: journal::now(),
     })?;
-    Ok(outcome(&entry))
+    Ok(outcome(&entry, entry.after.branch.clone()))
 }
 
-fn outcome(entry: &Entry) -> UndoOutcome {
+fn outcome(entry: &Entry, branch: Option<String>) -> UndoOutcome {
     let message = match &entry.input {
         ActionInput::Commit(c) => Some(c.message.clone()),
         _ => None,
@@ -129,7 +134,7 @@ fn outcome(entry: &Entry) -> UndoOutcome {
     UndoOutcome {
         action: entry.action.clone(),
         kind: entry.kind,
-        branch: entry.after.branch.clone(),
+        branch,
         message,
     }
 }
@@ -189,4 +194,89 @@ fn redo_commit(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
         git.run(repo, &GitOp::ReadTree { tree })?;
     }
     Ok(())
+}
+
+/// 갈아타기 되돌리기: 같은 맡겨 두는 흐름으로 이전 브랜치로 돌아간다. 지금 고친 파일은 도착했던
+/// 브랜치에 맡겨지고, 떠났던 브랜치의 맡긴 파일이 다시 나온다(D-047).
+fn undo_switch(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::Switch(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    let back = entry
+        .before
+        .branch
+        .clone()
+        .ok_or(CoreError::NothingToUndo)?;
+    switch_with_parking(
+        git,
+        repo,
+        &SwitchInput {
+            branch: back,
+            remote: None,
+        },
+    )?;
+    // 원격 브랜치에서 새로 만든 로컬 브랜치는 지운다. 그 위에 맡긴 파일이 생겼으면 남긴다(D-054).
+    if input.remote.is_some()
+        && let Some(after) = entry.after.head_oid()
+        && git
+            .resolve_ref(repo, &parked::ref_name(&input.branch))?
+            .is_none()
+    {
+        git.delete_ref(
+            repo,
+            &format!("refs/heads/{}", input.branch),
+            &RefExpect::Is(after),
+        )?;
+    }
+    Ok(())
+}
+
+fn redo_switch(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::Switch(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    // 되돌릴 때 로컬 브랜치를 남겼으면 원격에서 다시 만들지 않고 그 브랜치로 간다.
+    let local_exists = git
+        .resolve_ref(repo, &format!("refs/heads/{}", input.branch))?
+        .is_some();
+    let input = SwitchInput {
+        branch: input.branch.clone(),
+        remote: input.remote.clone().filter(|_| !local_exists),
+    };
+    switch_with_parking(git, repo, &input).map(|_| ())
+}
+
+/// 새 브랜치 되돌리기: 이전 브랜치로 돌아가고(고친 파일은 따라옴) 만든 브랜치를 지운다.
+fn undo_create(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::BranchCreate(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    let back = entry
+        .before
+        .branch
+        .clone()
+        .ok_or(CoreError::NothingToUndo)?;
+    // 버전이 없는 저장소의 새 브랜치는 ref가 없어 되돌릴 것이 없다.
+    let created = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
+    git.run(repo, &GitOp::Switch { branch: back })?;
+    git.delete_ref(
+        repo,
+        &format!("refs/heads/{}", input.name.trim()),
+        &RefExpect::Is(created),
+    )?;
+    Ok(())
+}
+
+fn redo_create(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::BranchCreate(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    git.run(
+        repo,
+        &GitOp::CreateAndSwitch {
+            name: input.name.trim().to_string(),
+        },
+    )
+    .map(|_| ())
+    .map_err(Into::into)
 }

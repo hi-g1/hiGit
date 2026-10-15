@@ -70,6 +70,11 @@ pub enum Outcome {
         short_oid: String,
         summary: String,
     },
+    /// 브랜치를 갈아탔다(맡겨 두기 결과 포함).
+    Switched(crate::actions::SwitchReport),
+    BranchCreated {
+        name: String,
+    },
 }
 
 /// 액션이 실행될 때 받는 것.

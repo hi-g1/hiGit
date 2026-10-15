@@ -5,8 +5,6 @@
 pub(crate) const PARKED_PREFIX: &str = "refs/higit/parked/";
 
 /// `feature/login` → `refs/higit/parked/feature%2Flogin`.
-// 맡겨 두는 갈아타기(계획 005 H9)에서 쓴다.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn ref_name(branch: &str) -> String {
     let encoded = branch.replace('%', "%25").replace('/', "%2F");
     format!("{PARKED_PREFIX}{encoded}")

@@ -38,7 +38,7 @@ export const WATCH_STATUS_EVENT = "watch-status" as const;
 /* Types */
 export type ActionInput = 
 /**  관리 시작. 입력 없음. */
-{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput };
+{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -48,7 +48,9 @@ export type ActionMetaView = {
 };
 
 /**  액션 실행 결과. */
-export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string };
+export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
+/**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
+parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -56,6 +58,10 @@ export type AppStatus = {
 	gitSecurity: GitSecurity,
 	/**  배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`). */
 	gitPackageVersion: string | null,
+};
+
+export type BranchCreateInput = {
+	name: string,
 };
 
 export type BranchListView = {
@@ -154,7 +160,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -257,6 +263,12 @@ export type RiskView = "safe" | "normal" | "caution" | "danger";
 export type StatusView = {
 	branch: BranchView,
 	files: ChangedFile[],
+};
+
+/**  브랜치 갈아타기. 원격에만 있는 브랜치면 `remote`에 원격 이름을 주고, 같은 이름의 로컬 브랜치를 만들어 연결한다. */
+export type SwitchInput = {
+	branch: string,
+	remote: string | null,
 };
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
