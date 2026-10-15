@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp, GitVersion,
-    GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
-    RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp,
+    GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput,
+    RefEntry, RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -39,6 +39,9 @@ pub trait GitBackend: Send + Sync {
 
     /// 로컬 브랜치 끝에서 닿는 버전인지(D-099).
     fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool>;
+
+    /// 버전에서 바뀐 파일(첫 부모와 비교, 첫 버전은 빈 트리와). 500개까지(D-105).
+    fn commit_files(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles>;
 
     /// 버전의 전체 메시지. 100개까지, 상한 안에서 읽은 것만.
     fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>>;

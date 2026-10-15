@@ -3,7 +3,8 @@
 use std::time::Duration;
 
 use super::CliBackend;
-use crate::{CommitMessage, GitError, Oid, RepoPath, Result};
+use super::args::{Cmd, push_revs};
+use crate::{Change, CommitFile, CommitFiles, CommitMessage, GitError, Oid, RepoPath, Result};
 
 /// 원격 추적 브랜치 끝점을 이만큼까지만 본다. 넘으면 올림 여부를 "모름"으로 돌려준다.
 const MAX_REMOTE_TIPS: usize = 1000;
@@ -100,6 +101,91 @@ impl CliBackend {
             out.truncated,
         ))
     }
+}
+
+/// 버전 목록에 담는 파일 수와 이름 목록 출력 상한.
+const MAX_FILES: usize = 500;
+const FILES_CAP: usize = 4 * 1024 * 1024;
+
+impl CliBackend {
+    /// 버전의 첫 부모. 첫 버전이면 `None`.
+    pub(super) fn first_parent(&self, repo: &RepoPath, oid: &Oid) -> Result<Option<Oid>> {
+        let rev = format!("{oid}^1");
+        let mut args = vec!["rev-parse", "--verify", "-q"];
+        push_revs(&mut args, Cmd::RevParse, self.git_version(), &[&rev]);
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => Ok(Oid::parse(out.stdout_lossy().trim())),
+            // 부모가 없으면 종료 코드 1이고 아무것도 쓰지 않는다.
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// `diff-tree`의 비교 대상: 첫 부모와 그 버전, 첫 버전이면 `--root`와 그 버전.
+    pub(super) fn commit_diff_revs(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>> {
+        Ok(match self.first_parent(repo, oid)? {
+            Some(parent) => vec![parent.to_string(), oid.to_string()],
+            None => vec![oid.to_string()],
+        })
+    }
+
+    pub(super) fn commit_files_impl(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles> {
+        let revs = self.commit_diff_revs(repo, oid)?;
+        let mut args = vec![
+            "diff-tree",
+            "-r",
+            "-z",
+            "--name-status",
+            "-M",
+            "--no-commit-id",
+        ];
+        if revs.len() == 1 {
+            args.push("--root");
+        }
+        let rev_refs: Vec<&str> = revs.iter().map(String::as_str).collect();
+        push_revs(&mut args, Cmd::DiffTree, self.git_version(), &rev_refs);
+        args.push("--");
+        let out = self
+            .runner
+            .run_capped(Some(repo.as_path()), &args, FILES_CAP)?;
+        Ok(parse_name_status(&String::from_utf8_lossy(&out.stdout)))
+    }
+}
+
+/// `--name-status -z`: `상태 NUL 경로 NUL`, 이름 바꿈·복사는 `R100 NUL 옛 경로 NUL 새 경로 NUL`.
+pub(crate) fn parse_name_status(text: &str) -> CommitFiles {
+    let mut tokens = text.split('\0').filter(|t| !t.is_empty());
+    let mut out = CommitFiles::default();
+    while let Some(status) = tokens.next() {
+        let change = match status.as_bytes().first() {
+            Some(b'A') => Change::Added,
+            Some(b'D') => Change::Deleted,
+            Some(b'T') => Change::TypeChanged,
+            Some(b'R') => Change::Renamed,
+            Some(b'C') => Change::Copied,
+            _ => Change::Modified,
+        };
+        let (path, orig_path) = if matches!(change, Change::Renamed | Change::Copied) {
+            let (Some(old), Some(new)) = (tokens.next(), tokens.next()) else {
+                break;
+            };
+            (new, Some(old.to_string()))
+        } else {
+            let Some(path) = tokens.next() else {
+                break;
+            };
+            (path, None)
+        };
+        out.total = out.total.saturating_add(1);
+        if out.files.len() < MAX_FILES {
+            out.files.push(CommitFile {
+                path: path.to_string(),
+                orig_path,
+                change,
+            });
+        }
+    }
+    out
 }
 
 /// `RS 해시 NUL 메시지` 레코드들. 잘린 출력이면 마지막(덜 받은) 레코드는 뺀다. 끝의 줄바꿈은

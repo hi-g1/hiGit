@@ -115,3 +115,131 @@ fn message_parser_drops_a_cut_record() {
     assert_eq!(cut.len(), 1);
     assert_eq!(cut[0].message, "첫");
 }
+
+fn files(p: &Path, oid: &Oid) -> crate::CommitFiles {
+    testutil::backend()
+        .commit_files(&RepoPath::new(p), oid)
+        .unwrap()
+}
+
+fn summary(f: &crate::CommitFiles) -> Vec<String> {
+    let mut v: Vec<String> = f
+        .files
+        .iter()
+        .map(|x| {
+            format!(
+                "{:?} {}{}",
+                x.change,
+                x.orig_path
+                    .as_deref()
+                    .map(|o| format!("{o} → "))
+                    .unwrap_or_default(),
+                x.path
+            )
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn commit_files_list_what_a_version_changed() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    fs::write(p.join("고칠 파일.txt"), "원래\n").unwrap();
+    fs::write(p.join("지울 파일.txt"), "지움\n").unwrap();
+    fs::write(
+        p.join("옛 이름.txt"),
+        "이름을 바꿀 파일의 내용이 충분히 길어야 이름 바꿈으로 잡힌다\n",
+    )
+    .unwrap();
+    git(p, &["add", "-A"]);
+    git(p, &["commit", "-q", "-m", "처음"]);
+    let root = oid(p, "HEAD");
+    // 첫 버전은 빈 트리와 비교한다.
+    assert_eq!(summary(&files(p, &root)).len(), 3);
+    assert!(
+        summary(&files(p, &root))
+            .iter()
+            .all(|s| s.starts_with("Added"))
+    );
+
+    fs::write(p.join("고칠 파일.txt"), "고침\n").unwrap();
+    fs::remove_file(p.join("지울 파일.txt")).unwrap();
+    fs::rename(p.join("옛 이름.txt"), p.join("새 이름.txt")).unwrap();
+    fs::write(p.join("그림.bin"), [0u8, 1, 2, 3]).unwrap();
+    git(p, &["add", "-A"]);
+    git(p, &["commit", "-q", "-m", "여러 가지"]);
+    let second = oid(p, "HEAD");
+    assert_eq!(
+        summary(&files(p, &second)),
+        [
+            "Added 그림.bin",
+            "Deleted 지울 파일.txt",
+            "Modified 고칠 파일.txt",
+            "Renamed 옛 이름.txt → 새 이름.txt",
+        ]
+    );
+    // 빈 버전은 바뀐 파일이 없다.
+    git(p, &["commit", "-q", "--allow-empty", "-m", "빈"]);
+    let empty = oid(p, "HEAD");
+    assert_eq!(files(p, &empty).total, 0);
+}
+
+#[test]
+fn a_merge_version_is_compared_with_its_first_parent() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    commit(p, "a.txt", "처음");
+    git(p, &["switch", "-q", "-c", "곁가지"]);
+    commit(p, "곁.txt", "곁");
+    git(p, &["switch", "-q", "main"]);
+    commit(p, "main.txt", "메인");
+    git(p, &["merge", "-q", "--no-edit", "곁가지"]);
+    let merge = oid(p, "HEAD");
+    assert_eq!(summary(&files(p, &merge)), ["Added 곁.txt"]);
+}
+
+#[test]
+fn commit_files_stop_listing_at_five_hundred() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    for i in 0..501 {
+        fs::write(p.join(format!("f{i:03}.txt")), "x").unwrap();
+    }
+    git(p, &["add", "-A"]);
+    git(p, &["commit", "-q", "-m", "많음"]);
+    let f = files(p, &oid(p, "HEAD"));
+    assert_eq!(f.total, 501);
+    assert_eq!(f.files.len(), 500);
+}
+
+#[test]
+fn commit_diff_shows_one_file_of_a_version() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    let root = commit(p, "a.txt", "하나\n");
+    let second = commit(p, "a.txt", "하나\n둘\n");
+    let b = testutil::backend();
+    let target = |oid: &Oid| crate::DiffTarget {
+        path: "a.txt".into(),
+        orig_path: None,
+        kind: crate::DiffKind::Commit { oid: oid.clone() },
+    };
+    let d = b.diff(&RepoPath::new(p), &target(&second)).unwrap();
+    let added: Vec<&str> = d.hunks[0]
+        .lines
+        .iter()
+        .filter(|l| l.kind == crate::LineKind::Added)
+        .map(|l| l.text.as_str())
+        .collect();
+    assert_eq!(added, ["둘"]);
+    // 첫 버전은 빈 파일과.
+    let d = b.diff(&RepoPath::new(p), &target(&root)).unwrap();
+    assert!(
+        d.hunks[0]
+            .lines
+            .iter()
+            .all(|l| l.kind == crate::LineKind::Added)
+    );
+}

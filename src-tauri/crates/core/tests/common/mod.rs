@@ -152,6 +152,10 @@ impl GitBackend for FakeGit {
         Ok(true)
     }
 
+    fn commit_files(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<git::CommitFiles> {
+        Ok(git::CommitFiles::default())
+    }
+
     fn commit_messages(
         &self,
         _repo: &RepoPath,

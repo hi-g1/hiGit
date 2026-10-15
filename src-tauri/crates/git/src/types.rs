@@ -417,12 +417,30 @@ pub struct DiffTarget {
     pub kind: DiffKind,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DiffKind {
     /// 추적 중인 파일: 마지막 저장과 지금(넣은 것 + 안 넣은 것)을 비교한다.
     Tracked,
     /// 아직 추적하지 않는 새 파일: 빈 파일과 비교한다.
     Untracked,
+    /// 그 버전에서 바뀐 것: 첫 부모(첫 버전이면 빈 트리)와 그 버전을 비교한다(D-105).
+    Commit { oid: Oid },
+}
+
+/// 버전 하나에서 바뀐 파일(D-105).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommitFile {
+    pub path: String,
+    /// 이름 바꿈·복사의 원래 경로.
+    pub orig_path: Option<String>,
+    pub change: Change,
+}
+
+/// 버전의 바뀐 파일 목록. 500개까지 담고 `total`은 전체 수.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CommitFiles {
+    pub files: Vec<CommitFile>,
+    pub total: u32,
 }
 
 /// 파일 하나의 줄 단위 비교.

@@ -50,10 +50,10 @@ use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitMessage, CommitStat, DiffKind, DiffTarget, FailureKind,
-    FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry, LogQuery,
-    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath, Result,
-    StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffKind, DiffTarget,
+    FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry,
+    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath,
+    Result, StashEntry, Status, TagRef,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -312,6 +312,10 @@ impl GitBackend for CliBackend {
         self.reachable_from_branches_impl(repo, oid)
     }
 
+    fn commit_files(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles> {
+        self.commit_files_impl(repo, oid)
+    }
+
     fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>> {
         self.commit_messages_impl(repo, oids)
     }
@@ -347,7 +351,7 @@ impl GitBackend for CliBackend {
 
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff> {
         let dir = Some(repo.as_path());
-        let out = match target.kind {
+        let out = match &target.kind {
             DiffKind::Tracked => {
                 // 저장이 없으면 HEAD 대신 빈 트리와 비교한다(해시 방식에 맞게 git이 만든다).
                 let base = if self.has_commit(repo)? {
@@ -382,6 +386,23 @@ impl GitBackend for CliBackend {
                 args.extend_from_slice(diff::COMMON_ARGS);
                 args.extend(["--", "/dev/null", &target.path]);
                 // --no-index는 차이가 있으면 종료 코드 1이다(오류가 아님). run_capped가 받는다.
+                self.runner.run_capped(dir, &args, diff::MAX_OUTPUT)?
+            }
+            DiffKind::Commit { oid } => {
+                // 그 버전에서 바뀐 것: 첫 부모(첫 버전이면 빈 트리)와 비교한다(D-105).
+                let revs = self.commit_diff_revs(repo, oid)?;
+                let mut args = vec!["--literal-pathspecs", "diff-tree", "-p", "--no-commit-id"];
+                args.extend_from_slice(diff::COMMON_ARGS);
+                if revs.len() == 1 {
+                    args.push("--root");
+                }
+                let rev_refs: Vec<&str> = revs.iter().map(String::as_str).collect();
+                push_revs(&mut args, Cmd::DiffTree, self.git_version(), &rev_refs);
+                args.push("--");
+                args.push(&target.path);
+                if let Some(orig) = &target.orig_path {
+                    args.push(orig);
+                }
                 self.runner.run_capped(dir, &args, diff::MAX_OUTPUT)?
             }
         };

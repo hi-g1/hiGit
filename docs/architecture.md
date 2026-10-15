@@ -73,6 +73,7 @@ pub trait GitBackend: Send + Sync {
     fn count_unpublished(&self, repo: &RepoPath, tip: &Oid, base: Option<&Oid>) -> Result<Option<u32>>; // 3: 어떤 refs/remotes/*에도 없는 조상 수(끝점은 stdin). 원격 끝점 1000개 넘으면 None(모름, D-097)
     fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool>; // 3: 로컬 브랜치 끝에서 닿는지(D-099)
     fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>>; // 3: 전체 메시지 100개까지(해시는 stdin, 1MB·10초)
+    fn commit_files(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles>; // 3: 그 버전에서 바뀐 파일(diff-tree -z --name-status, 첫 부모나 빈 트리와) 500개까지. diff의 DiffKind::Commit은 같은 기준으로 한 파일(D-105)
     fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 전역 무시 규칙 파일(감시용)
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 마지막 버전과 지금을 합쳐 비교
     // 반복 1b: 브랜치·원격
