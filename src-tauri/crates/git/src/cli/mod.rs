@@ -557,6 +557,9 @@ impl GitBackend for CliBackend {
             GitOp::Park { message } => return self.park_push(repo, message),
             GitOp::StashDropIf { oid } => return self.stash_drop_if(repo, oid),
             GitOp::StashDropOid { oid } => return self.stash_drop_oid(repo, oid),
+            GitOp::DiscardPaths { paths, message } => {
+                return self.discard_paths(repo, paths, message);
+            }
             GitOp::Unpark { oid } => return self.unpark(repo, oid),
             GitOp::UnparkKeep { oid } => return self.unpark_keep(repo, oid),
             GitOp::UnparkAbort { oid } => return self.unpark_abort(repo, oid),

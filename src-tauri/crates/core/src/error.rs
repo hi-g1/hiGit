@@ -53,6 +53,10 @@ pub enum CoreError {
     #[error("원격 저장소가 없습니다")]
     NoRemote,
 
+    /// 고친 것을 버렸지만 백업 ref를 남기지 못했다. 버린 내용은 임시 보관 목록에 남아 있다.
+    #[error("백업을 남기지 못했습니다")]
+    BackupFailed,
+
     /// 충돌 파일이 화면이 본 것과 달라졌다(곳 수가 다름 등). 다시 읽고 골라야 한다.
     #[error("충돌 파일이 바뀌었습니다")]
     ConflictChanged,

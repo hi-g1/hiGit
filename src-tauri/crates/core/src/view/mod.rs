@@ -384,6 +384,9 @@ pub enum ActionResult {
     Stashed,
     TookOut,
     ParkedResolved,
+    Discarded {
+        count: u32,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -426,6 +429,7 @@ impl From<Outcome> for ActionResult {
             Outcome::Stashed => ActionResult::Stashed,
             Outcome::TookOut => ActionResult::TookOut,
             Outcome::ParkedResolved => ActionResult::ParkedResolved,
+            Outcome::Discarded { count } => ActionResult::Discarded { count },
         }
     }
 }
@@ -459,6 +463,7 @@ pub enum ErrorCode {
     UndoPushed,
     StagedChanges,
     ConflictChanged,
+    BackupFailed,
     OperationInProgress,
     ParkBlocked,
     NeedsTrust,
@@ -535,6 +540,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::UndoPushed => ErrorCode::UndoPushed,
             CoreError::StagedChanges => ErrorCode::StagedChanges,
             CoreError::ConflictChanged => ErrorCode::ConflictChanged,
+            CoreError::BackupFailed => ErrorCode::BackupFailed,
             CoreError::OperationInProgress => ErrorCode::OperationInProgress,
             CoreError::NeedsTrust => ErrorCode::NeedsTrust,
             CoreError::NoRemote => ErrorCode::NoRemote,

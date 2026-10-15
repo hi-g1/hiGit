@@ -66,6 +66,12 @@
     "undo": "nothing"
   },
   {
+    "id": "discard",
+    "glossaryId": "discard",
+    "risk": "caution",
+    "undo": "irreversible"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",

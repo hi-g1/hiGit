@@ -234,6 +234,7 @@ fn action_input_tags_match_registry() {
             | ActionInput::ConflictAbort
             | ActionInput::Stash
             | ActionInput::TakeOut(_)
+            | ActionInput::Discard(_)
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -267,6 +268,9 @@ fn action_input_tags_match_registry() {
             source: higit_core::view::TakeOutSource::Stash {
                 oid: "a".repeat(40),
             },
+        }),
+        ActionInput::Discard(PathsInput {
+            paths: vec!["a.txt".into()],
         }),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),

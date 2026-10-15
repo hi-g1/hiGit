@@ -282,6 +282,9 @@ pub enum GitOp {
     /// 고친 파일을 stash로 만든다. 만든 해시는 [`OpOutput::oid`], 맡길 것이 없으면 `None`.
     /// 사용자의 stash 목록에서는 core가 ref를 쓴 뒤 [`GitOp::StashDropIf`]로 뺀다.
     Park { message: String },
+    /// 고른 파일의 고친 내용을 stash로 만들며 작업 폴더·index에서 버린다(고친 것 버리기, D-074).
+    /// 새 파일은 지워진다. 만든 해시는 [`OpOutput::oid`], 바뀐 것이 없으면 `None`.
+    DiscardPaths { paths: Vec<String>, message: String },
     /// stash 목록 맨 위가 이 해시일 때만 뺀다.
     StashDropIf { oid: Oid },
     /// stash 목록에서 이 해시인 항목을 뺀다(위치를 찾고 빼기 직전에 다시 확인한다).

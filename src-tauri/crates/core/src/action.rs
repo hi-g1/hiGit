@@ -114,6 +114,10 @@ pub enum Outcome {
     TookOut,
     /// 꺼내다 겹친 맡긴 파일을 충돌 해결 화면에서 풀었다(고친 파일로 남음, D-083).
     ParkedResolved,
+    /// 고친 것을 버렸다(버린 내용은 백업 ref에).
+    Discarded {
+        count: u32,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.

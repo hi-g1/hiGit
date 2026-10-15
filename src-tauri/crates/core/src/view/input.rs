@@ -28,6 +28,8 @@ pub enum ActionInput {
     Stash,
     /// 보관해 둔 것을 꺼낸다.
     TakeOut(TakeOutInput),
+    /// 고른 파일의 고친 내용을 버린다(확인 필요, D-074).
+    Discard(PathsInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -51,6 +53,7 @@ impl ActionInput {
             ActionInput::ConflictAbort => "conflict-abort",
             ActionInput::Stash => "stash",
             ActionInput::TakeOut(_) => "take-out",
+            ActionInput::Discard(_) => "discard",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
@@ -70,6 +73,7 @@ impl ActionInput {
         match self {
             ActionInput::Stage(p) => ActionInput::Stage(cut(p)),
             ActionInput::Unstage(p) => ActionInput::Unstage(cut(p)),
+            ActionInput::Discard(p) => ActionInput::Discard(cut(p)),
             // 직접 고친 글은 남기지 않고 선택 종류만 남긴다.
             ActionInput::ConflictFinish(i) => ActionInput::ConflictFinish(ConflictFinishInput {
                 resolutions: i

@@ -31,6 +31,44 @@ impl CliBackend {
         })
     }
 
+    /// 고른 파일만 stash로 만들어 버린다. 경로는 stdin과 `--literal-pathspecs`로.
+    pub(super) fn discard_paths(
+        &self,
+        repo: &RepoPath,
+        paths: &[String],
+        message: &str,
+    ) -> Result<OpOutput> {
+        if let Some(bad) = paths.iter().find(|p| !safe_relative(p)) {
+            return Err(GitError::Parse(format!("저장소 밖 경로: {bad}")));
+        }
+        let before = self.stash_top(repo)?;
+        let out = self.runner.run_with_stdin(
+            Some(repo.as_path()),
+            &[
+                "--literal-pathspecs",
+                "stash",
+                "push",
+                "--include-untracked",
+                "-m",
+                message,
+                "--pathspec-from-file=-",
+                "--pathspec-file-nul",
+            ],
+            &super::runner::nul_separated(paths),
+        )?;
+        let after = self.stash_top(repo)?;
+        let created = match (&before, &after) {
+            (_, None) => None,
+            (Some(b), Some(a)) if a == b => None,
+            (_, Some(a)) => Some(a.clone()),
+        };
+        Ok(OpOutput {
+            stdout: out.stdout_lossy(),
+            stderr: out.stderr_lossy(),
+            oid: created,
+        })
+    }
+
     /// 꺼내되 겹친 곳은 충돌로 남긴다. 겹치지 않으면 `unpark`와 같다.
     pub(super) fn unpark_keep(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
         let dir = repo.as_path();

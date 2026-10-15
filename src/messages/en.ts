@@ -182,6 +182,7 @@ export const en: Messages = {
     nothingToUndo: "Nothing to undo.",
     undoStale: "It changed outside the app, so it wasn't undone.",
     undoPushed: "What's uploaded can't be undone.",
+    backupFailed: "Discarded, but the backup could not be kept. The discarded changes are in the stash.",
     conflictChanged: "The conflicted files changed. Please choose again.",
     stagedChanges: "Some files are in this version. Remove them or save first.",
     operationInProgress: `Finish or stop the ${t("merge").toLowerCase()} first.`,

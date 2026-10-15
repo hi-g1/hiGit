@@ -193,6 +193,7 @@ export const ko = {
     nothingToUndo: "되돌릴 작업이 없어요.",
     undoStale: "앱 밖에서 바뀌어서 되돌리지 않았어요.",
     undoPushed: "올린 것은 되돌릴 수 없어요.",
+    backupFailed: "버렸지만 백업을 남기지 못했어요. 버린 내용은 임시 보관에 있어요.",
     conflictChanged: "충돌 파일이 바뀌었어요. 다시 골라 주세요.",
     stagedChanges: `이번 버전에 넣은 파일이 있어요. 먼저 ${josa(t("commit"), "을/를")} 하거나 파일을 빼 주세요.`,
     operationInProgress: `${josa(t("merge"), "을/를")} 마치거나 그만둔 뒤에 할 수 있어요.`,
