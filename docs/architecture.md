@@ -9,7 +9,7 @@
 
 ```
 ┌──────────────────────── 프론트엔드 (React, src/) ────────────────────────┐
-│ screens/      홈, 작업 공간, 버전 기록, 기록 정리, 충돌 해결, 검토 요청, 설정 │
+│ screens/      시작 화면, 작업 공간, 버전 기록, 기록 정리, 충돌 해결, 검토 요청, 설정 │
 │ features/     액션별 UI 조각 (미리보기 패널, 확인 대화상자)              │
 │ ui/           디자인 시스템 부품 (Button, Term, Tooltip, Dialog …)      │
 │ lib/api.ts    백엔드 명령 호출과 타입 (자동 생성 바인딩)                │
@@ -17,7 +17,7 @@
                      Tauri command / event (타입 공유)
 ┌───────────────────────────────┴── 백엔드 (Rust, src-tauri/) ────────────┐
 │ app        Tauri 진입점. 명령은 얇게: 입력 검사 → core 호출 → 결과 변환  │
-│ core       Action 레지스트리, Query, 복구(백업·되돌리기), view 타입      │
+│ core       Action 레지스트리, Query, 프로젝트 열기·최근 목록, 복구, view 타입 │
 │ git        GitBackend 트레이트 + CliBackend 구현, 출력 파서              │
 │ hosting    HostingProvider 트레이트 + GitHub 구현 (PR, 인증)            │
 │ platform   OS별 코드: 우클릭 메뉴 등록, git 실행 파일 찾기, 키체인      │
@@ -162,7 +162,8 @@ pub trait HostingProvider {
 GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자, Ubuntu Secret Service)에 저장한다.
 
 ## 프론트와 백엔드 계약
-- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`, `repo_watch`, `repo_unwatch`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `query_diff`, `undo_last`(반복 2).
+- 프로젝트 열기는 한 곳: 앱을 켤 때 열기, 최근 목록, 폴더 고르기, 프로젝트 메뉴는 모두 `project_open` 명령 → `Core::open_project` 하나를 거친다(D-032). 저장소 신뢰 확인은 그 함수 안에 넣는다. 화면은 `useOpenProject` 훅 하나로 연다.
+- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`(1b에서 `project_open`으로 바뀜), `recent_list`·`recent_remove`·`query_project_summary`(1b), `repo_watch`, `repo_unwatch`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `query_diff`, `undo_last`(반복 2).
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
@@ -193,6 +194,7 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 - `Renderer`는 배치 결과와 보이는 영역만 받는다. 색은 tokens.css의 `--graph-1`~`--graph-6`을 읽어 쓴다.
 - 클릭·호버 판정은 DOM이 아니라 배치 결과 좌표로 한다. 그래야 Canvas로 바꿔도 상호작용 코드가 그대로다.
 - 확대·축소 단계별로 필요한 저장만 백엔드에서 걸러 받는다(`LogQuery`).
+- 시작 화면의 큰·작은 노선도 미리보기도 같은 layout·render를 축소해 쓴다(D-031).
 
 ## OS별 처리 (crates/platform)
 | 항목 | Windows | Ubuntu |
@@ -201,6 +203,8 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 | 실행 인자 | `higit.exe "<경로>"` | `higit "<경로>"` |
 | 단일 인스턴스 | `tauri-plugin-single-instance` | 같음 |
 | git 찾기 | PATH → `C:\Program Files\Git\cmd\git.exe` | PATH |
+| 앱 데이터 폴더(최근 목록, D-032) | `%LOCALAPPDATA%\dev.higit.desktop` | `$XDG_DATA_HOME/dev.higit.desktop` 또는 `~/.local/share/dev.higit.desktop` |
+| 경로 같음 비교 | 대소문자 무시 | 바이트 비교 |
 | 비밀 저장 | Credential Manager (`keyring` 크레이트) | Secret Service (`keyring` 크레이트) |
 | 웹뷰 | WebView2 | WebKitGTK 4.1 |
 
