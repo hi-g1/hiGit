@@ -72,6 +72,7 @@ fn disable_opens_without_running_config_and_is_remembered() {
     let data = tempfile::tempdir().unwrap();
     let (repo, pwned) = repo_with_fsmonitor();
     let first = core(data.path());
+    first.open_project(repo.path(), OpenHow::Picked).unwrap();
     let r = first
         .trust_project(repo.path(), TrustDecision::Disable)
         .unwrap();
@@ -207,6 +208,29 @@ fn hooks_of_the_main_folder_count_in_a_linked_worktree() {
         panic!("{r:?}");
     };
     assert_eq!(keys, ["hooks/post-checkout"]);
+}
+
+#[test]
+fn trust_and_owner_answers_need_a_question_first() {
+    let data = tempfile::tempdir().unwrap();
+    let (repo, pwned) = repo_with_fsmonitor();
+    let core = core(data.path());
+    // 창을 거치지 않은 신뢰는 받지 않는다(웹뷰가 뚫려도 아무 저장소나 믿게 만들 수 없다).
+    let err = core
+        .trust_project(repo.path(), TrustDecision::Trust)
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    let err = core.allow_folder_owner(repo.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    // 물은 뒤에는 한 번 받는다.
+    core.open_project(repo.path(), OpenHow::Picked).unwrap();
+    core.trust_project(repo.path(), TrustDecision::Disable)
+        .unwrap();
+    let err = core
+        .trust_project(repo.path(), TrustDecision::Trust)
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    assert!(!pwned.exists());
 }
 
 #[test]

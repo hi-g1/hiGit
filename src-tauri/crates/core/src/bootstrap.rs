@@ -39,6 +39,17 @@ pub struct Core {
     pub(crate) opened: Arc<OpenedRepos>,
     /// 저장소 신뢰 기록(D-039).
     trust: Arc<TrustStore>,
+    /// 신뢰 확인을 물은 경로. 신뢰·주인 허용 명령은 core가 물은 경로만 받는다(D-037).
+    asked: Mutex<Vec<(PathBuf, Ask)>>,
+}
+
+/// core가 사용자에게 물은 것.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Ask {
+    /// 실행되는 설정(NeedsTrust).
+    Trust,
+    /// 폴더 주인(NotOwned).
+    Owner,
 }
 
 /// 작업이 잡는 잠금.
@@ -147,7 +158,22 @@ impl Core {
             recent,
             opened,
             trust,
+            asked: Mutex::new(Vec::new()),
         })
+    }
+
+    fn remember_ask(&self, path: &Path, ask: Ask) {
+        let mut asked = self.asked.lock().unwrap_or_else(PoisonError::into_inner);
+        asked.retain(|(p, a)| !(*a == ask && platform::same_path(p, path)));
+        asked.push((path.to_path_buf(), ask));
+    }
+
+    /// 물은 적이 있으면 지우고 참. 한 번 물음에 한 번만 답을 받는다.
+    fn take_ask(&self, path: &Path, ask: Ask) -> bool {
+        let mut asked = self.asked.lock().unwrap_or_else(PoisonError::into_inner);
+        let before = asked.len();
+        asked.retain(|(p, a)| !(*a == ask && platform::same_path(p, path)));
+        asked.len() != before
     }
 
     pub fn git_version(&self) -> GitVersion {
@@ -186,6 +212,7 @@ impl Core {
         let folder_text = folder.to_string_lossy().into_owned();
         let discovered = match self.git.discover(&folder) {
             Err(e) if e.kind() == git::FailureKind::DubiousOwnership => {
+                self.remember_ask(&folder, Ask::Owner);
                 return Ok(ProjectOpenResult::NotOwned {
                     folder: folder_text,
                 });
@@ -218,6 +245,7 @@ impl Core {
             }
             // 끌 수 없는 키가 생겼으면 "끄고 열기" 결정이 있어도 다시 묻는다.
             TrustState::Decided(TrustDecision::Disable, found) | TrustState::Unknown(found) => {
+                self.remember_ask(&repo, Ask::Trust);
                 return Ok(ProjectOpenResult::NeedsTrust {
                     folder: repo.to_string_lossy().into_owned(),
                     keys: found.keys,
@@ -239,12 +267,18 @@ impl Core {
         let repo = self.git.discover(&folder)?.ok_or(CoreError::NotARepo)?;
         let repo = platform::normalize_repo_path(repo.as_path())
             .unwrap_or_else(|_| repo.as_path().to_path_buf());
+        // 신뢰 확인 창을 거치지 않은 경로는 받지 않는다.
+        if !self.take_ask(&repo, Ask::Trust) {
+            return Err(CoreError::NotOpened);
+        }
         let found = match self.trust.check(self.git.as_ref(), &RepoPath::new(&repo))? {
             TrustState::Clean => None,
             TrustState::Decided(_, found) | TrustState::Unknown(found) => Some(found),
         };
         if let Some(found) = found {
             if decision == TrustDecision::Disable && !found.can_disable {
+                // 창은 그대로 떠 있으니 "믿고 열기"는 아직 받을 수 있다.
+                self.remember_ask(&repo, Ask::Trust);
                 return Err(CoreError::NeedsTrust);
             }
             self.trust.record(&repo, &found, decision);
@@ -257,6 +291,10 @@ impl Core {
     pub fn allow_folder_owner(&self, path: &Path) -> Result<ProjectOpenResult> {
         check_path_len(path)?;
         let folder = platform::normalize_repo_path(path).map_err(CoreError::FolderNotFound)?;
+        // 주인 확인 창을 거치지 않은 경로는 받지 않는다. 전역 설정을 영구히 바꾸는 일이다.
+        if !self.take_ask(&folder, Ask::Owner) {
+            return Err(CoreError::NotOpened);
+        }
         self.git.run(
             &RepoPath::new(&folder),
             &git::GitOp::AddSafeDirectory {
