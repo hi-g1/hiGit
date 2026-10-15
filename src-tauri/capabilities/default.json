@@ -10,6 +10,7 @@
     "allow-app-status",
     "allow-app-open-git-download",
     "allow-project-open",
+    "allow-project-trust",
     "allow-recent-list",
     "allow-recent-remove",
     "allow-action-list",

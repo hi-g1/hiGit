@@ -10,6 +10,8 @@ export const commands = {
 	/**  Git 내려받기 페이지를 기본 브라우저로 연다(D-053). 주소는 core가 정하고 화면은 넘기지 않는다. */
 	appOpenGitDownload: () => __TAURI_INVOKE<null>("app_open_git_download"),
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
+	/**  신뢰 확인에서 고른 결과로 연다(D-039). */
+	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
 	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
@@ -160,7 +162,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "watchUnavailable" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
 "gitFailed" | "internal";
 
@@ -225,7 +227,9 @@ export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } |
 /**  폴더가 없다. */
 { kind: "missing" } | 
 /**  폴더는 있지만 (그 자리의) 저장소가 아니다. */
-{ kind: "notARepo"; folder: string };
+{ kind: "notARepo"; folder: string } | 
+/**  실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`. */
+{ kind: "needsTrust"; folder: string; keys: string[] };
 
 /**  시작 화면의 프로젝트 상태 요약(D-031). 문장은 화면(messages)이 만든다. */
 export type ProjectSummaryView = {
@@ -270,6 +274,13 @@ export type SwitchInput = {
 	branch: string,
 	remote: string | null,
 };
+
+/**  신뢰 확인에서 고른 것(D-039). */
+export type TrustChoice = 
+/**  믿고 열기 */
+"trust" | 
+/**  끄고 열기 */
+"disable";
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
 export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible";

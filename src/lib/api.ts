@@ -7,6 +7,7 @@ import {
   type ErrorView,
   type LogQuery,
   type OpenHow,
+  type TrustChoice,
 } from "./bindings";
 
 export type {
@@ -35,6 +36,7 @@ export type {
   RepoInfo,
   RiskView,
   StatusView,
+  TrustChoice,
   UndoResult,
 } from "./bindings";
 
@@ -75,6 +77,8 @@ export const api = {
   openGitDownload: () => call(commands.appOpenGitDownload()),
   /** 프로젝트 열기. 화면에서는 features/open-project/useOpenProject만 부른다(D-032). */
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
+  /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */
+  trustProject: (path: string, choice: TrustChoice) => call(commands.projectTrust(path, choice)),
   recentProjects: () => call(commands.recentList()),
   removeRecent: (path: string) => call(commands.recentRemove(path)),
   projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),

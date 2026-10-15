@@ -18,6 +18,7 @@ pub mod recent;
 mod redact;
 mod registry;
 mod state;
+pub mod trust;
 pub mod undo;
 pub mod view;
 mod watch;

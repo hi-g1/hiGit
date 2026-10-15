@@ -7,6 +7,7 @@ use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 use crate::access::{OpenedRepos, check_path_len};
 use crate::query::Queries;
 use crate::recent::RecentStore;
+use crate::trust::{TrustDecision, TrustState, TrustStore};
 use crate::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, OpenHow, PreviewView, ProjectOpenResult,
     RecentProject, RepoInfo,
@@ -34,6 +35,8 @@ pub struct Core {
     recent: Arc<RecentStore>,
     /// 프로젝트 열기를 거친 경로. 조회·액션·감시는 여기 있는 것만 받는다(D-037).
     pub(crate) opened: Arc<OpenedRepos>,
+    /// 저장소 신뢰 기록(D-039).
+    trust: Arc<TrustStore>,
 }
 
 /// 실행이 끝나면(오류여도) 잠금을 푼다.
@@ -66,7 +69,11 @@ pub fn init() -> Result<Core> {
         Some(dir) => RecentStore::open(dir),
         None => RecentStore::in_memory(),
     };
-    let mut core = Core::with_backend_and_recent(Arc::new(backend), recent)?;
+    let trust = match &data_dir {
+        Some(dir) => TrustStore::open(dir),
+        None => TrustStore::in_memory(),
+    };
+    let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
     // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063).
     if let Some(dir) = &data_dir {
@@ -83,6 +90,14 @@ impl Core {
     }
 
     pub fn with_backend_and_recent(git: Arc<dyn GitBackend>, recent: RecentStore) -> Result<Self> {
+        Self::with_stores(git, recent, TrustStore::in_memory())
+    }
+
+    pub fn with_stores(
+        git: Arc<dyn GitBackend>,
+        recent: RecentStore,
+        trust: TrustStore,
+    ) -> Result<Self> {
         let git_version = git.version().map_err(|e| match e {
             git::GitError::Spawn(_) => CoreError::GitMissing,
             other => CoreError::Git(other),
@@ -95,9 +110,10 @@ impl Core {
         actions::register_all(&mut registry)?;
         let recent = Arc::new(recent);
         let opened = Arc::new(OpenedRepos::default());
+        let trust = Arc::new(trust);
         Ok(Self {
             executor: Executor::new(registry),
-            queries: Queries::new(git.clone(), opened.clone(), recent.clone()),
+            queries: Queries::new(git.clone(), opened.clone(), recent.clone(), trust.clone()),
             git,
             git_version,
             git_build: platform::GitBuild::Unknown,
@@ -105,6 +121,7 @@ impl Core {
             watcher: Mutex::new(None),
             recent,
             opened,
+            trust,
         })
     }
 
@@ -157,12 +174,44 @@ impl Core {
                 folder: folder_text,
             });
         }
-        trust_check(&repo)?;
+        // 실행되는 설정이 있으면 묻는다. 믿기로 하기 전에는 열린 것으로 기록하지 않는다(D-039).
+        let repo_path = RepoPath::new(&repo);
+        match self.trust.check(self.git.as_ref(), &repo_path)? {
+            TrustState::Clean | TrustState::Decided(TrustDecision::Trust, _) => {
+                self.git.set_repo_overrides(&repo_path, Vec::new());
+            }
+            TrustState::Decided(TrustDecision::Disable, found) => {
+                self.git.set_repo_overrides(&repo_path, found.overrides);
+            }
+            TrustState::Unknown(found) => {
+                return Ok(ProjectOpenResult::NeedsTrust {
+                    folder: repo.to_string_lossy().into_owned(),
+                    keys: found.keys,
+                });
+            }
+        }
         self.opened.insert(&repo);
         self.recent.touch(&repo);
         Ok(ProjectOpenResult::Opened {
             repo: RepoInfo::from_path(&repo),
         })
+    }
+
+    /// 신뢰 확인에서 고른 결과를 기록하고 연다(D-039). "끄고 열기"면 실행되는 설정을 끈다.
+    pub fn trust_project(&self, path: &Path, decision: TrustDecision) -> Result<ProjectOpenResult> {
+        check_path_len(path)?;
+        let folder = platform::normalize_repo_path(path).map_err(CoreError::FolderNotFound)?;
+        let repo = self.git.discover(&folder)?.ok_or(CoreError::NotARepo)?;
+        let repo = platform::normalize_repo_path(repo.as_path())
+            .unwrap_or_else(|_| repo.as_path().to_path_buf());
+        let found = match self.trust.check(self.git.as_ref(), &RepoPath::new(&repo))? {
+            TrustState::Clean => None,
+            TrustState::Decided(_, found) | TrustState::Unknown(found) => Some(found),
+        };
+        if let Some(found) = found {
+            self.trust.record(&repo, &found, decision);
+        }
+        self.open_project(&repo, OpenHow::Picked)
     }
 
     pub fn recent_projects(&self) -> Vec<RecentProject> {
@@ -267,9 +316,4 @@ impl Core {
         });
         Ok(RepoState { folder, repo })
     }
-}
-
-/// 저장소 신뢰 확인 자리(보안 계획에서 채운다). 프로젝트 열기는 모두 여기를 지난다.
-fn trust_check(_repo: &Path) -> Result<()> {
-    Ok(())
 }

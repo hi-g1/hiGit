@@ -1,0 +1,257 @@
+//! 처음 여는 저장소의 신뢰 확인(D-039, D-067).
+//!
+//! 저장소 로컬 설정에 프로그램을 실행시키는 키가 있거나 hooks 폴더에 실행 파일이 있으면 묻는다.
+//! 결정은 앱 데이터 `trust.json`에 저장소 경로와 "실행되는 설정" 내용의 해시로 남기고, 내용이
+//! 바뀌면 다시 묻는다. "끄고 열기"는 그 저장소의 모든 git 호출에 덮어쓰기 `-c`를 붙인다.
+
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
+
+use git::{GitBackend, RepoPath};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
+use crate::Result;
+
+const FILE_NAME: &str = "trust.json";
+const FORMAT_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TrustDecision {
+    /// 믿고 연다. 설정과 hook이 그대로 돈다.
+    Trust,
+    /// 실행되는 설정을 끄고 연다.
+    Disable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Entry {
+    path: String,
+    hash: String,
+    decision: TrustDecision,
+}
+
+#[derive(Serialize, Deserialize)]
+struct FileFormat {
+    version: u32,
+    entries: Vec<Entry>,
+}
+
+/// 저장소에서 찾은 "실행되는 설정".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Executing {
+    /// 화면에 보여줄 이름(설정 키, `hooks/pre-commit`).
+    pub keys: Vec<String>,
+    /// 끄고 열 때 붙일 `-c 키=값`.
+    pub overrides: Vec<String>,
+    hash: String,
+}
+
+/// 신뢰 확인 결과.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum TrustState {
+    /// 실행되는 설정이 없다. 묻지 않고 연다.
+    Clean,
+    Decided(TrustDecision, Executing),
+    /// 처음이거나 설정이 바뀌었다. 물어야 한다.
+    Unknown(Executing),
+}
+
+pub struct TrustStore {
+    file: Option<PathBuf>,
+    /// 끄고 열 때 hook 대신 쓰는 빈 폴더.
+    empty_hooks: PathBuf,
+    entries: Mutex<Vec<Entry>>,
+}
+
+impl TrustStore {
+    /// 메모리에만 두는 기록(테스트, 앱 데이터 폴더를 못 쓸 때).
+    pub fn in_memory() -> Self {
+        Self {
+            file: None,
+            empty_hooks: std::env::temp_dir().join("higit-empty-hooks"),
+            entries: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// `dir/trust.json`을 읽는다. 깨졌으면 빈 기록으로 시작한다(다시 묻게 된다).
+    pub fn open(dir: &Path) -> Self {
+        let file = dir.join(FILE_NAME);
+        let entries = std::fs::read_to_string(&file)
+            .ok()
+            .and_then(|t| serde_json::from_str::<FileFormat>(&t).ok())
+            .filter(|f| f.version == FORMAT_VERSION)
+            .map(|f| f.entries)
+            .unwrap_or_default();
+        Self {
+            file: Some(file),
+            empty_hooks: dir.join("empty-hooks"),
+            entries: Mutex::new(entries),
+        }
+    }
+
+    pub(crate) fn check(&self, git: &dyn GitBackend, repo: &RepoPath) -> Result<TrustState> {
+        let Some(found) = self.executing(git, repo)? else {
+            return Ok(TrustState::Clean);
+        };
+        let entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
+        let decided = entries
+            .iter()
+            .find(|e| {
+                platform::same_path(Path::new(&e.path), repo.as_path()) && e.hash == found.hash
+            })
+            .map(|e| e.decision);
+        Ok(match decided {
+            Some(d) => TrustState::Decided(d, found),
+            None => TrustState::Unknown(found),
+        })
+    }
+
+    pub(crate) fn record(&self, repo: &Path, found: &Executing, decision: TrustDecision) {
+        let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
+        entries.retain(|e| !platform::same_path(Path::new(&e.path), repo));
+        entries.push(Entry {
+            path: repo.to_string_lossy().into_owned(),
+            hash: found.hash.clone(),
+            decision,
+        });
+        if let Some(file) = &self.file {
+            let data = FileFormat {
+                version: FORMAT_VERSION,
+                entries: entries.clone(),
+            };
+            if let Ok(text) = serde_json::to_string_pretty(&data) {
+                // 못 쓰면 다음 실행에서 다시 묻는다(안전한 쪽).
+                let _ = platform::write_private_file(file, text.as_bytes());
+            }
+        }
+    }
+
+    /// 실행되는 설정을 찾는다. 없으면 `None`.
+    fn executing(&self, git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Executing>> {
+        let mut keys = Vec::new();
+        let mut overrides = Vec::new();
+        let mut fingerprint = Vec::new();
+        for (key, value) in git.local_config(repo)? {
+            if let Some(safe) = safe_value(&key, &value) {
+                keys.push(key.clone());
+                fingerprint.push(format!("{key}={value}"));
+                overrides.push(format!("{key}={safe}"));
+                if key.starts_with("filter.") {
+                    let driver = &key[..key.rfind('.').unwrap_or(key.len())];
+                    overrides.push(format!("{driver}.required=false"));
+                }
+            }
+        }
+        let hooks = hook_files(&git.git_dir(repo)?.join("hooks"));
+        for (name, content) in &hooks {
+            keys.push(format!("hooks/{name}"));
+            fingerprint.push(format!("hooks/{name}:{}", hex(&Sha256::digest(content))));
+        }
+        if keys.is_empty() {
+            return Ok(None);
+        }
+        // hook은 설정이 아니라 파일이라, 빈 폴더를 hooksPath로 줘서 끈다.
+        if !hooks.is_empty() || keys.iter().any(|k| k == "core.hookspath") {
+            let _ = std::fs::create_dir_all(&self.empty_hooks);
+            overrides.retain(|o| !o.starts_with("core.hookspath="));
+            overrides.push(format!("core.hookspath={}", self.empty_hooks.display()));
+        }
+        fingerprint.sort();
+        keys.sort();
+        keys.dedup();
+        Ok(Some(Executing {
+            keys,
+            overrides,
+            hash: hex(&Sha256::digest(fingerprint.join("\n").as_bytes())),
+        }))
+    }
+}
+
+/// 프로그램을 실행시키는 설정이면 끌 때 쓸 안전한 값. 아니면 `None`. 키는 git이 준 소문자 형태.
+fn safe_value(key: &str, value: &str) -> Option<&'static str> {
+    let exact = match key {
+        // git 내장 감시는 프로그램을 실행하지 않는다.
+        "core.fsmonitor" => {
+            let v = value.to_ascii_lowercase();
+            return (!matches!(
+                v.as_str(),
+                "" | "false" | "true" | "0" | "1" | "no" | "yes" | "off" | "on"
+            ))
+            .then_some("false");
+        }
+        "core.hookspath" => Some(""),
+        "core.sshcommand" => Some("ssh"),
+        "core.editor" | "sequence.editor" => Some(":"),
+        "core.pager" => Some("cat"),
+        "core.askpass" | "credential.helper" | "diff.external" | "uploadpack.packobjectshook" => {
+            Some("")
+        }
+        "gpg.program" => Some("gpg"),
+        "include.path" => Some(""),
+        _ => None,
+    };
+    if exact.is_some() {
+        return exact;
+    }
+    let ends = |prefix: &str, suffixes: &[&str]| {
+        key.starts_with(prefix) && suffixes.iter().any(|s| key.ends_with(s))
+    };
+    if ends("filter.", &[".clean", ".smudge"]) {
+        Some("cat")
+    } else if ends("filter.", &[".process"])
+        || ends("diff.", &[".command", ".textconv"])
+        || ends("merge.", &[".driver"])
+        || ends("credential.", &[".helper"])
+        || ends("gpg.", &[".program"])
+        || ends("includeif.", &[".path"])
+    {
+        Some("")
+    } else {
+        None
+    }
+}
+
+/// hooks 폴더에서 `.sample`이 아닌 파일(이름, 내용).
+fn hook_files(dir: &Path) -> Vec<(String, Vec<u8>)> {
+    let Ok(read) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut found: Vec<(String, Vec<u8>)> = read
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| !n.ends_with(".sample"))
+        .map(|n| {
+            let content = std::fs::read(dir.join(&n)).unwrap_or_default();
+            (n, content)
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn executing_keys() {
+        assert_eq!(safe_value("core.fsmonitor", "touch x"), Some("false"));
+        assert_eq!(safe_value("core.fsmonitor", "true"), None);
+        assert_eq!(safe_value("filter.lfs.clean", "git-lfs clean"), Some("cat"));
+        assert_eq!(safe_value("filter.lfs.process", "x"), Some(""));
+        assert_eq!(safe_value("diff.pdf.textconv", "x"), Some(""));
+        assert_eq!(safe_value("credential.https://a.helper", "x"), Some(""));
+        assert_eq!(safe_value("includeif.gitdir:/x.path", "x"), Some(""));
+        assert_eq!(safe_value("user.name", "x"), None);
+        assert_eq!(safe_value("core.autocrlf", "true"), None);
+        assert_eq!(safe_value("remote.origin.url", "x"), None);
+    }
+}

@@ -7,6 +7,7 @@ use crate::access::{OpenedRepos, check_path_len};
 use crate::actions::paths;
 use crate::parked;
 use crate::recent::RecentStore;
+use crate::trust::{TrustDecision, TrustState, TrustStore};
 use crate::view::{
     BranchListView, BranchNameCheck, BranchRow, CommitRow, DiffRequest, FileDiffView, LogPage,
     LogQuery, NameProblem, ProjectSummaryView, StatusView,
@@ -18,6 +19,7 @@ pub struct Queries {
     git: Arc<dyn GitBackend>,
     opened: Arc<OpenedRepos>,
     recent: Arc<RecentStore>,
+    trust: Arc<TrustStore>,
 }
 
 /// 한 번에 읽는 버전 기록의 최대 개수.
@@ -28,11 +30,13 @@ impl Queries {
         git: Arc<dyn GitBackend>,
         opened: Arc<OpenedRepos>,
         recent: Arc<RecentStore>,
+        trust: Arc<TrustStore>,
     ) -> Self {
         Self {
             git,
             opened,
             recent,
+            trust,
         }
     }
 
@@ -90,6 +94,14 @@ impl Queries {
             .unwrap_or_else(|_| top.as_path().to_path_buf());
         if !platform::same_path(&top, root.as_path()) {
             return Err(CoreError::NotARepo);
+        }
+        // 믿기로 하지 않은 저장소는 status를 돌리지 않는다(core.fsmonitor가 status에서 돈다, D-067).
+        match self.trust.check(self.git.as_ref(), &root)? {
+            TrustState::Clean | TrustState::Decided(TrustDecision::Trust, _) => {}
+            TrustState::Decided(TrustDecision::Disable, found) => {
+                self.git.set_repo_overrides(&root, found.overrides);
+            }
+            TrustState::Unknown(_) => return Err(CoreError::NeedsTrust),
         }
         let status = self.git.status(&root)?;
         let conflicted = status

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     DiffRequest, ErrorCode, ErrorView, FileDiffView, LogPage, LogQuery, OpenHow, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, UndoResult,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -68,6 +68,20 @@ pub async fn project_open(
     // 프로젝트 열기의 유일한 입구(D-032).
     blocking(state, move |core| {
         core.open_project(&PathBuf::from(path), how)
+    })
+    .await
+}
+
+/// 신뢰 확인에서 고른 결과로 연다(D-039).
+#[tauri::command]
+#[specta::specta]
+pub async fn project_trust(
+    state: State<'_, AppState>,
+    path: String,
+    choice: TrustChoice,
+) -> CmdResult<ProjectOpenResult> {
+    blocking(state, move |core| {
+        core.trust_project(&PathBuf::from(path), choice.into())
     })
     .await
 }

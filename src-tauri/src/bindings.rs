@@ -18,6 +18,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::app_status,
             commands::app_open_git_download,
             commands::project_open,
+            commands::project_trust,
             commands::recent_list,
             commands::recent_remove,
             commands::action_list,

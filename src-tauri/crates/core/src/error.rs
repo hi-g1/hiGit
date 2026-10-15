@@ -45,6 +45,10 @@ pub enum CoreError {
     #[error("이미 올린 버전입니다")]
     UndoPushed,
 
+    /// 실행되는 설정이 있는 저장소라 신뢰 확인이 먼저 필요하다(D-039).
+    #[error("신뢰 확인이 필요합니다")]
+    NeedsTrust,
+
     /// 합치기·리베이스 중이라 하지 않았다.
     #[error("진행 중인 작업이 있습니다")]
     OperationInProgress,

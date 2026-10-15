@@ -383,6 +383,7 @@ pub enum ErrorCode {
     UndoPushed,
     OperationInProgress,
     ParkBlocked,
+    NeedsTrust,
     WatchUnavailable,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
@@ -453,6 +454,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::UndoStale => ErrorCode::UndoStale,
             CoreError::UndoPushed => ErrorCode::UndoPushed,
             CoreError::OperationInProgress => ErrorCode::OperationInProgress,
+            CoreError::NeedsTrust => ErrorCode::NeedsTrust,
             CoreError::ParkBlocked(_) => ErrorCode::ParkBlocked,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
@@ -523,6 +525,30 @@ pub enum ProjectOpenResult {
     NotARepo {
         folder: String,
     },
+    /// 실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.
+    NeedsTrust {
+        folder: String,
+        keys: Vec<String>,
+    },
+}
+
+/// 신뢰 확인에서 고른 것(D-039).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TrustChoice {
+    /// 믿고 열기
+    Trust,
+    /// 끄고 열기
+    Disable,
+}
+
+impl From<TrustChoice> for crate::trust::TrustDecision {
+    fn from(c: TrustChoice) -> Self {
+        match c {
+            TrustChoice::Trust => Self::Trust,
+            TrustChoice::Disable => Self::Disable,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
