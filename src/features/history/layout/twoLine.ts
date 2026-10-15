@@ -1,6 +1,7 @@
 // 홈 두 줄 노선도 배치(D-046). 데이터(HomeMapView) → 장면(좌표). 그리기는 Renderer가 한다
 // (architecture.md "버전 기록 그리기 계층"). 화면 없이 시험할 수 있게 순수 함수로 둔다.
 import type { HomeMapView } from "../../../lib/api";
+import { emptyScene, type Scene } from "./scene";
 
 export const MAP_HEIGHT = 104;
 const LEFT = 24;
@@ -13,20 +14,13 @@ const CURVE = 48;
 /** 역 이름 글자 수 한도. 넘치면 "…"로 줄인다. */
 export const LABEL_CHARS = 14;
 
-export type Line = { kind: "main" | "current"; d: string; dashed?: boolean };
-export type Station = { x: number; y: number; line: "main" | "current"; label?: string; open?: boolean };
-export type Text = { x: number; y: number; text: string; tone: "text" | "muted"; anchor: "start" | "middle" };
-export type Tag = { x: number; y: number; text: string };
-
-export type MapScene = {
-  width: number;
-  lines: Line[];
-  stations: Station[];
-  texts: Text[];
-  tag: Tag | null;
-  /** 접어서 그리지 않은 앞쪽 버전 수. */
-  folded: number;
-};
+/** 선 색 이름: 기본 브랜치 줄과 지금 브랜치 줄. */
+const MAIN = "main";
+const CURRENT = "current";
+const MAIN_WIDTH = 3;
+const CURRENT_WIDTH = 4;
+const STATION = { r: 6, stroke: 2.5 };
+const OPEN_R = 9;
 
 export function shorten(label: string): string {
   return label.length > LABEL_CHARS ? `${label.slice(0, LABEL_CHARS - 1)}…` : label;
@@ -35,8 +29,9 @@ export function shorten(label: string): string {
 export type Labels = { here: string; changed: (n: number) => string };
 
 /** 너비에 맞게 역을 놓는다. 역이 많아 모자라면 앞쪽 역을 "…"로 접는다. */
-export function layoutTwoLine(view: HomeMapView, width: number, labels: Labels): MapScene {
-  const scene: MapScene = { width, lines: [], stations: [], texts: [], tag: null, folded: view.currentMore };
+export function layoutTwoLine(view: HomeMapView, width: number, labels: Labels): Scene {
+  const scene = emptyScene(width, MAP_HEIGHT);
+  scene.folded = view.currentMore;
   if (view.currentCommits.length === 0) return scene;
 
   const y = view.twoLines ? CURRENT_Y : SINGLE_Y;
@@ -56,14 +51,16 @@ export function layoutTwoLine(view: HomeMapView, width: number, labels: Labels):
 
   if (view.twoLines) {
     const mainEnd = Math.max(forkX + STEP, Math.min(width - 80, start + step * (commits.length - 1)));
-    scene.lines.push({ kind: "main", d: `M ${LEFT} ${MAIN_Y} H ${mainEnd}` });
-    scene.stations.push({ x: LEFT, y: MAIN_Y, line: "main" }, { x: forkX, y: MAIN_Y, line: "main" });
-    if (view.mainSince > 0) scene.stations.push({ x: mainEnd, y: MAIN_Y, line: "main" });
+    scene.lines.push({ color: MAIN, width: MAIN_WIDTH, d: `M ${LEFT} ${MAIN_Y} H ${mainEnd}` });
+    const mainStation = (x: number) => ({ x, y: MAIN_Y, color: MAIN, kind: "commit" as const, ...STATION });
+    scene.stations.push(mainStation(LEFT), mainStation(forkX));
+    if (view.mainSince > 0) scene.stations.push(mainStation(mainEnd));
     if (view.defaultBranch) {
       scene.texts.push({ x: mainEnd + 10, y: MAIN_Y + 4, text: view.defaultBranch, tone: "muted", anchor: "start" });
     }
     scene.lines.push({
-      kind: "current",
+      color: CURRENT,
+      width: CURRENT_WIDTH,
       d: `M ${forkX} ${MAIN_Y} C ${forkX + CURVE / 2} ${MAIN_Y}, ${forkX + CURVE / 2} ${y}, ${forkX + CURVE} ${y} H ${start}`,
     });
   }
@@ -71,24 +68,24 @@ export function layoutTwoLine(view: HomeMapView, width: number, labels: Labels):
   const xs = commits.map((_, i) => start + i * step);
   const lastX = xs[xs.length - 1]!;
   if (!view.twoLines) {
-    scene.lines.push({ kind: "current", d: `M ${LEFT} ${y} H ${lastX}` });
+    scene.lines.push({ color: CURRENT, width: CURRENT_WIDTH, d: `M ${LEFT} ${y} H ${lastX}` });
   }
   if (scene.folded > 0) {
     scene.texts.push({ x: start - STEP / 4, y: y + 4, text: "…", tone: "muted", anchor: "middle" });
   }
   commits.forEach((c, i) => {
     const x = xs[i]!;
-    scene.stations.push({ x, y, line: "current", label: c.summary });
+    scene.stations.push({ id: c.oid, x, y, color: CURRENT, kind: "commit", title: c.summary, ...STATION });
     scene.texts.push({ x, y: y + 22, text: shorten(c.summary), tone: "text", anchor: "middle" });
     if (view.upstreamOid === c.oid && view.upstreamLabel) {
-      scene.tag = { x, y: y - 26, text: view.upstreamLabel };
+      scene.tags = [{ x, y: y - 26, text: view.upstreamLabel }];
     }
   });
 
   if (hasNow) {
     const nowX = lastX + STEP;
-    scene.lines.push({ kind: "current", d: `M ${lastX} ${y} H ${nowX}`, dashed: true });
-    scene.stations.push({ x: nowX, y, line: "current", open: true });
+    scene.lines.push({ color: CURRENT, width: CURRENT_WIDTH, d: `M ${lastX} ${y} H ${nowX}`, dashed: true });
+    scene.stations.push({ x: nowX, y, r: OPEN_R, stroke: STATION.stroke, color: CURRENT, kind: "open" });
     scene.texts.push(
       { x: nowX, y: y - 16, text: labels.here, tone: "text", anchor: "middle" },
       { x: nowX, y: y + 22, text: labels.changed(view.changedFiles), tone: "muted", anchor: "middle" },

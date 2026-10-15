@@ -7,6 +7,22 @@
   fill: var(--surface);
 }
 
+/* 지금 위치 바깥 고리(r-log) */
+.ring {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.4;
+}
+
+/* 고대비에서도 선·점이 보이게 한다 */
+@media (forced-colors: active) {
+  .line,
+  .station,
+  .ring {
+    stroke: CanvasText;
+  }
+}
+
 .text {
   fill: var(--text);
   font-size: var(--font-size-sm);

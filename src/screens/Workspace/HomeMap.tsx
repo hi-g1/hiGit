@@ -32,7 +32,7 @@ export function HomeMap({ repo, onDone }: { repo: string; onDone: (text: string)
   return (
     <div className={styles.map} style={{ height: MAP_HEIGHT }}>
       <div ref={box} className={styles.route}>
-        <SvgRenderer scene={scene} colors={{ main, current }} label={label} />
+        <SvgRenderer scene={scene} palette={(key) => (key === "main" ? main : current)} label={label} />
       </div>
       <MergeHint repo={repo} onDone={onDone} />
     </div>
