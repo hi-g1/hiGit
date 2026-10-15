@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish = false
+# 바이너리가 둘(higit, gen-bindings)이라 tauri dev가 띄울 것을 정한다.
+default-run = "higit"
 
 [lib]
 name = "app_lib"
