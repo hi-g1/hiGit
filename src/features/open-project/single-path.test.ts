@@ -2,9 +2,10 @@
 // 프로젝트 열기는 한 곳(D-032): 화면 코드에서 api.openProject를 부르는 곳은 useOpenProject뿐이다.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const SRC = new URL("../../", import.meta.url).pathname;
+const SRC = fileURLToPath(new URL("../../", import.meta.url));
 const ALLOWED = new Set(["features/open-project/useOpenProject.ts", "lib/api.ts"]);
 
 function files(dir: string): string[] {
