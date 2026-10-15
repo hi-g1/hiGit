@@ -54,6 +54,7 @@ impl Action for CommitAction {
         }
         let repo = repo_of(ctx)?;
         // 넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062).
+        let mut index_before = None;
         if input.stage_all {
             let status = ctx.git.status(repo)?;
             let staged = status
@@ -61,15 +62,22 @@ impl Action for CommitAction {
                 .iter()
                 .any(|e| !matches!(e.index, Change::Unmodified | Change::Untracked));
             if !staged {
+                index_before = ctx.git.write_tree(repo)?;
                 ctx.git.run(repo, &GitOp::StageAll)?;
             }
         }
-        ctx.git.run(
+        if let Err(e) = ctx.git.run(
             repo,
             &GitOp::Commit {
                 message: input.message.clone(),
             },
-        )?;
+        ) {
+            // 저장이 실패하면(hook 거부, 이름 없음) 모두 넣은 것을 되돌려 저장 전 모습으로 둔다.
+            if let Some(tree) = index_before {
+                let _ = ctx.git.run(repo, &GitOp::ReadTree { tree });
+            }
+            return Err(e.into());
+        }
         // 방금 만든 저장을 화면에 알려 준다.
         let latest = ctx.git.log(
             repo,

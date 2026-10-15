@@ -64,6 +64,34 @@ fn commit(core: &Core, dir: &Path, message: &str, stage_all: bool) {
     .unwrap();
 }
 
+#[test]
+fn failed_save_puts_back_what_it_staged() {
+    let repo = repo();
+    let dir = repo.path();
+    std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+    let core = core(dir);
+    // 연 뒤에 생긴 hook이 저장을 거부한다.
+    let hook = dir.join(".git/hooks/pre-commit");
+    std::fs::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
+    let _ = std::process::Command::new("chmod")
+        .arg("+x")
+        .arg(&hook)
+        .status();
+    let err = core
+        .execute(
+            dir,
+            &ActionInput::Commit(CommitInput {
+                message: "저장".into(),
+                stage_all: true,
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_ne!(ErrorView::from(&err).code, ErrorCode::Internal);
+    assert_eq!(head(dir), None);
+    assert_eq!(git(dir, &["diff", "--cached", "--name-only"]), "");
+}
+
 fn head(dir: &Path) -> Option<String> {
     let out = std::process::Command::new("git")
         .args(["rev-parse", "--verify", "-q", "HEAD"])
