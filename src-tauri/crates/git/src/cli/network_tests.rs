@@ -24,7 +24,9 @@ fn env_in(mode: NetMode, var: &str) -> String {
 fn background_mode_disables_prompts() {
     assert_eq!(env_in(NetMode::Background, "GCM_INTERACTIVE"), "never");
     assert_eq!(env_in(NetMode::Background, "SSH_ASKPASS_REQUIRE"), "never");
-    assert_eq!(env_in(NetMode::Foreground, "GCM_INTERACTIVE"), "");
+    // 사용자가 누른 작업은 상위 환경을 그대로 둔다(CI 러너는 GCM_INTERACTIVE를 미리 둔다).
+    let inherited = std::env::var("GCM_INTERACTIVE").unwrap_or_default();
+    assert_eq!(env_in(NetMode::Foreground, "GCM_INTERACTIVE"), inherited);
 }
 
 #[test]
