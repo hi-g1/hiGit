@@ -7,6 +7,52 @@ use crate::{DiffLine, FileDiff, GitError, Hunk, LineKind, Result};
 pub(crate) const MAX_LINES: usize = 5_000;
 pub(crate) const MAX_BYTES: usize = 1024 * 1024;
 
+/// git 출력은 이만큼까지만 읽는다(머리줄과 `+`·`-` 기호 몫으로 줄 상한보다 넉넉히).
+pub(crate) const MAX_OUTPUT: usize = MAX_BYTES * 2;
+/// 이보다 큰 새 파일은 git을 부르지 않고 앞부분만 직접 읽는다.
+pub(crate) const DIRECT_READ_OVER: u64 = 2 * 1024 * 1024;
+
+/// 큰 새 파일: 앞부분 `MAX_BYTES`만 읽어 추가 줄로 만든다. 앞부분에 NUL이 있으면 이진 파일.
+pub(crate) fn untracked_prefix(path: &std::path::Path) -> Result<FileDiff> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path).map_err(GitError::Spawn)?;
+    let mut buf = Vec::with_capacity(MAX_BYTES);
+    file.by_ref()
+        .take(MAX_BYTES as u64)
+        .read_to_end(&mut buf)
+        .map_err(GitError::Spawn)?;
+    if buf.iter().take(8000).any(|b| *b == 0) {
+        return Ok(FileDiff {
+            binary: true,
+            truncated: false,
+            hunks: Vec::new(),
+        });
+    }
+    let text = String::from_utf8_lossy(&buf);
+    let lines: Vec<DiffLine> = text
+        .split('\n')
+        .take(MAX_LINES)
+        .map(|l| DiffLine {
+            kind: LineKind::Added,
+            text: l.strip_suffix('\r').unwrap_or(l).to_string(),
+            no_newline_at_end: false,
+        })
+        .collect();
+    let new_len = u32::try_from(lines.len()).unwrap_or(u32::MAX);
+    Ok(FileDiff {
+        binary: false,
+        truncated: true,
+        hunks: vec![Hunk {
+            old_start: 0,
+            old_len: 0,
+            new_start: 1,
+            new_len,
+            section: String::new(),
+            lines,
+        }],
+    })
+}
+
 /// 저장이 하나도 없는 저장소에서 비교 기준으로 쓰는 빈 트리를 만드는 입력(빈 stdin).
 pub(crate) const EMPTY_TREE_ARGS: &[&str] = &["hash-object", "-t", "tree", "--stdin"];
 

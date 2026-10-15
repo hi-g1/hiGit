@@ -1,5 +1,5 @@
 use std::ffi::OsStr;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::Arc;
@@ -37,6 +37,13 @@ pub(crate) struct Runner {
 pub(crate) struct GitOutput {
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
+}
+
+/// 상한까지만 읽은 출력.
+pub(crate) struct Capped {
+    pub stdout: Vec<u8>,
+    /// 상한에 걸려 뒤를 읽지 않았다.
+    pub truncated: bool,
 }
 
 impl GitOutput {
@@ -100,6 +107,55 @@ impl Runner {
         cmd.args(files).stdin(Stdio::null());
         let out = cmd.output().map_err(GitError::Spawn)?;
         Ok(out.status.success())
+    }
+
+    /// 출력이 `cap` 바이트를 넘으면 거기까지만 읽고 git을 끝낸다(큰 파일 비교, 001 10b).
+    /// 종료 코드 0·1을 성공으로 본다(`diff --no-index`는 차이가 있으면 1).
+    pub fn run_capped(&self, cwd: Option<&Path>, args: &[&str], cap: usize) -> Result<Capped> {
+        let mut cmd = self.command(cwd, args);
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let mut stderr = child.stderr.take();
+        let err_reader = std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            if let Some(e) = stderr.as_mut() {
+                let _ = e.read_to_end(&mut buf);
+            }
+            buf
+        });
+        let mut stdout = Vec::new();
+        let mut truncated = false;
+        if let Some(mut out) = child.stdout.take() {
+            let mut chunk = [0u8; 64 * 1024];
+            loop {
+                let n = out.read(&mut chunk).map_err(GitError::Spawn)?;
+                if n == 0 {
+                    break;
+                }
+                stdout.extend_from_slice(&chunk[..n]);
+                if stdout.len() >= cap {
+                    stdout.truncate(cap);
+                    truncated = true;
+                    break;
+                }
+            }
+        }
+        if truncated {
+            let _ = child.kill();
+        }
+        let status = child.wait().map_err(GitError::Spawn)?;
+        let stderr = err_reader.join().unwrap_or_default();
+        if !truncated && !matches!(status.code(), Some(0 | 1)) {
+            return Err(GitError::Failed {
+                args: args.iter().map(|a| a.to_string()).collect(),
+                code: status.code(),
+                stdout: String::from_utf8_lossy(&stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&stderr).into_owned(),
+            });
+        }
+        Ok(Capped { stdout, truncated })
     }
 
     /// `input`을 stdin으로 넘겨 git을 실행한다(예: `--pathspec-from-file=-`).

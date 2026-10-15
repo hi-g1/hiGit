@@ -3,6 +3,8 @@ mod args;
 mod branch_tests;
 mod branches;
 mod diff;
+#[cfg(test)]
+mod diff_tests;
 mod log;
 mod merge_check;
 #[cfg(test)]
@@ -177,25 +179,27 @@ impl GitBackend for CliBackend {
                 if let Some(orig) = &target.orig_path {
                     args.push(orig);
                 }
-                self.runner.run(dir, &args)?.stdout_lossy()
+                self.runner.run_capped(dir, &args, diff::MAX_OUTPUT)?
             }
             DiffKind::Untracked => {
+                // 아주 큰 새 파일은 git이 통째로 읽지 않게 앞부분만 직접 읽는다.
+                let full = repo.as_path().join(&target.path);
+                if let Ok(meta) = std::fs::symlink_metadata(&full)
+                    && meta.is_file()
+                    && meta.len() > diff::DIRECT_READ_OVER
+                {
+                    return diff::untracked_prefix(&full);
+                }
                 let mut args = vec!["diff", "--no-index"];
                 args.extend_from_slice(diff::COMMON_ARGS);
                 args.extend(["--", "/dev/null", &target.path]);
-                // --no-index는 차이가 있으면 종료 코드 1이다(오류가 아님).
-                match self.runner.run(dir, &args) {
-                    Ok(out) => out.stdout_lossy(),
-                    Err(GitError::Failed {
-                        code: Some(1),
-                        stdout,
-                        ..
-                    }) => stdout,
-                    Err(e) => return Err(e),
-                }
+                // --no-index는 차이가 있으면 종료 코드 1이다(오류가 아님). run_capped가 받는다.
+                self.runner.run_capped(dir, &args, diff::MAX_OUTPUT)?
             }
         };
-        diff::parse(&out)
+        let mut parsed = diff::parse(&String::from_utf8_lossy(&out.stdout))?;
+        parsed.truncated |= out.truncated;
+        Ok(parsed)
     }
 
     fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>> {
