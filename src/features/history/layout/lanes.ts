@@ -35,7 +35,7 @@ export type LaneLayout = {
   nodes: LaneNode[];
   edges: LaneEdge[];
   laneCount: number;
-  /** 지금 위치에서 부모를 따라 닿는 노드(지금 브랜치 선 굵기). */
+  /** 지금 위치에서 첫 부모를 따라 닿는 노드: 지금 브랜치의 선(굵기 +1, D-089). */
   onHeadLine: ReadonlySet<string>;
 };
 
@@ -188,18 +188,15 @@ export function assignLanes(nodes: readonly RouteNode[], opts: LaneOptions = {})
   };
 }
 
-/** 지금 위치에서 부모를 따라 닿는 노드. */
+/** 지금 위치에서 첫 부모를 따라 닿는 노드(합쳐 들어온 곁가지는 지금 브랜치 선이 아니다). */
 function headLine(nodes: readonly RouteNode[]): ReadonlySet<string> {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const out = new Set<string>();
-  const stack = nodes.filter((n) => n.isHead).map((n) => n.id);
-  while (stack.length > 0) {
-    const id = stack.pop()!;
-    if (out.has(id)) continue;
-    const node = byId.get(id);
-    if (!node) continue;
-    out.add(id);
-    stack.push(...node.parents);
+  let at = nodes.find((n) => n.isHead);
+  while (at && !out.has(at.id)) {
+    out.add(at.id);
+    const first = at.parents[0];
+    at = first === undefined ? undefined : byId.get(first);
   }
   return out;
 }

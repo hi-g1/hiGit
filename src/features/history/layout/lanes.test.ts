@@ -86,9 +86,11 @@ describe("레인 배치", () => {
     expect(l.laneCount).toBe(2);
   });
 
-  it("지금 위치의 조상", () => {
+  it("지금 브랜치 선은 지금 위치에서 첫 부모를 따라간다", () => {
     const l = assignLanes([n("f", ["b"]), n("h", ["b"], { isHead: true }), n("b", ["a"]), n("a")]);
     expect([...l.onHeadLine].sort()).toEqual(["a", "b", "h"]);
+    const merged = assignLanes([n("h", ["a", "s"], { isHead: true }), n("s", ["a"]), n("a")]);
+    expect([...merged.onHeadLine].sort()).toEqual(["a", "h"]);
   });
 
   it("1만 행도 빨리 배치한다", () => {
