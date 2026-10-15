@@ -44,6 +44,8 @@ pub struct Core {
     trust: Arc<TrustStore>,
     /// 로그 파일(D-078). 앱 데이터 폴더를 못 쓰면 남기지 않는다.
     logger: crate::log::Logger,
+    /// 지금 도는 액션(저장소 → 액션 id). 진행 알림에 쓴다(D-080).
+    running: Arc<Mutex<std::collections::HashMap<PathBuf, &'static str>>>,
     /// 신뢰 확인을 물은 경로. 신뢰·주인 허용 명령은 core가 물은 경로만 받는다(D-037).
     asked: Mutex<Vec<(PathBuf, Ask)>>,
 }
@@ -55,6 +57,22 @@ enum Ask {
     Trust,
     /// 폴더 주인(NotOwned).
     Owner,
+}
+
+/// 진행 알림 하나. 초 단위로 줄인다.
+fn progress(
+    repo: &Path,
+    action: &str,
+    elapsed: std::time::Duration,
+    idle: std::time::Duration,
+) -> crate::view::OpProgress {
+    let secs = |d: std::time::Duration| u32::try_from(d.as_secs()).unwrap_or(u32::MAX);
+    crate::view::OpProgress {
+        repo: repo.to_string_lossy().into_owned(),
+        action: action.to_string(),
+        elapsed_secs: secs(elapsed),
+        idle_secs: secs(idle),
+    }
 }
 
 /// 원격 확인이 끝나기를 기다리는 간격과, 그 시간 제한 위에 더 기다리는 여유.
@@ -174,7 +192,40 @@ impl Core {
             trust,
             asked: Mutex::new(Vec::new()),
             logger: crate::log::Logger::disabled(),
+            running: Arc::default(),
         })
+    }
+
+    /// 오래 걸리는 작업의 진행을 받을 곳(앱이 화면 이벤트로 보낸다, D-080).
+    pub fn set_progress_sink(&self, sink: Arc<dyn Fn(crate::view::OpProgress) + Send + Sync>) {
+        let running = self.running.clone();
+        self.git
+            .set_observer(Some(Arc::new(move |path, elapsed, idle| {
+                let action = running
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .get(path)
+                    .copied();
+                if let Some(action) = action {
+                    sink(progress(path, action, elapsed, idle));
+                }
+            })));
+    }
+
+    /// 이 저장소에서 도는 원격 작업이나 멈춘 로컬 쓰기를 끝낸다(취소·강제로 멈추기, D-080).
+    /// 도는 작업이 없으면 아무것도 하지 않는다.
+    pub fn cancel(&self, folder: &Path) -> Result<()> {
+        let state = self.state_of(folder)?;
+        let repo = state.repo.ok_or(CoreError::NotARepo)?;
+        let running = self
+            .running
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains_key(repo.as_path());
+        if running {
+            self.git.request_cancel(&repo);
+        }
+        Ok(())
     }
 
     fn remember_ask(&self, path: &Path, ask: Ask) {
@@ -377,7 +428,25 @@ impl Core {
         };
         let background = matches!(input, ActionInput::Fetch(i) if i.background);
         let result = self.with_locks_by(folder, locks, background, |executor, ctx| {
-            executor.execute(ctx, input.action_id(), input, token.as_ref())
+            // 원격 확인은 화면에 진행을 보이지 않고 취소도 받지 않는다.
+            let repo = match ctx.state.repo.as_ref() {
+                Some(repo) if !background => repo,
+                _ => return executor.execute(ctx, input.action_id(), input, token.as_ref()),
+            };
+            let key = repo.as_path().to_path_buf();
+            self.running
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .insert(key.clone(), input.action_id());
+            // 취소 표시는 이 작업 동안만 둔다. 끝난 뒤 남으면 다음 원격 확인이 바로 멈춘다.
+            ctx.git.clear_cancel(repo);
+            let result = executor.execute(ctx, input.action_id(), input, token.as_ref());
+            ctx.git.clear_cancel(repo);
+            self.running
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .remove(&key);
+            result
         });
         self.logger.action("execute", input.action_id(), &result);
         let outcome = result?;

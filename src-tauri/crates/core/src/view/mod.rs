@@ -35,6 +35,18 @@ use specta::Type;
 
 use crate::{ActionMeta, CoreError, Outcome, Risk, UnavailableReason};
 
+/// 오래 걸리는 작업의 진행(1초마다, D-080). 파일 이름이나 원격 주소는 담지 않는다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OpProgress {
+    pub repo: String,
+    /// 도는 액션 id.
+    pub action: String,
+    pub elapsed_secs: u32,
+    /// 마지막 출력 뒤 시간(원격 작업). 로컬 작업은 경과와 같다.
+    pub idle_secs: u32,
+}
+
 /// 앱 시작 시 확인한 환경.
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]

@@ -109,6 +109,8 @@ export const api = {
     call(commands.actionPreview(folder, input)),
   executeAction: (folder: string, input: ActionInput, previewToken: string | null = null) =>
     call(commands.actionExecute(folder, input, previewToken)),
+  /** 도는 원격 작업 취소, 멈춘 로컬 쓰기 강제로 멈추기(D-080). */
+  cancelAction: (folder: string) => call(commands.actionCancel(folder)),
   /** 마지막 작업 되돌리기(Ctrl+Z)와 다시 하기(D-042). */
   undoLast: (folder: string) => call(commands.undoLast(folder)),
   redoLast: (folder: string) => call(commands.redoLast(folder)),

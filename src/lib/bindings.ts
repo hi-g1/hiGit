@@ -21,6 +21,8 @@ export const commands = {
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
 	actionPreview: (folder: string, input: ActionInput) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
 	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
+	/**  도는 원격 작업을 취소하거나 멈춘 로컬 쓰기를 강제로 멈춘다(D-080). */
+	actionCancel: (folder: string) => __TAURI_INVOKE<null>("action_cancel", { folder }),
 	/**  마지막 작업을 되돌린다(Ctrl+Z, D-042). */
 	undoLast: (folder: string) => __TAURI_INVOKE<UndoResult>("undo_last", { folder }),
 	/**  되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y). */
@@ -50,6 +52,8 @@ export const commands = {
 };
 
 /* Constants */
+export const OP_PROGRESS_EVENT = "op-progress" as const;
+
 export const REPO_CHANGED_EVENT = "repo-changed" as const;
 
 export const WATCH_STATUS_EVENT = "watch-status" as const;
@@ -409,6 +413,16 @@ export type NameProblem = "empty" |
 "invalid" | 
 /**  같은 이름(대소문자 무시)의 로컬 브랜치가 있다. */
 "exists";
+
+/**  오래 걸리는 작업의 진행(1초마다, D-080). 파일 이름이나 원격 주소는 담지 않는다. */
+export type OpProgress = {
+	repo: string,
+	/**  도는 액션 id. */
+	action: string,
+	elapsedSecs: number,
+	/**  마지막 출력 뒤 시간(원격 작업). 로컬 작업은 경과와 같다. */
+	idleSecs: number,
+};
 
 /**
  *  어떻게 여는지. 고른 폴더는 저장소가 아니면 버전 관리 시작 안내로, 최근 목록은 기록과 같은

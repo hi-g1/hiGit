@@ -18,6 +18,7 @@
     "allow-action-list",
     "allow-action-preview",
     "allow-action-execute",
+    "allow-action-cancel",
     "allow-undo-last",
     "allow-redo-last",
     "allow-query-status",

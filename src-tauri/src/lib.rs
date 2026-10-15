@@ -19,9 +19,21 @@ pub fn run() {
     let core = higit_core::init().map(Arc::new).map_err(ErrorView::from);
     let builder = bindings::builder();
 
+    let progress_core = core.as_ref().ok().cloned();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(move |app| {
+            if let Some(core) = progress_core {
+                let handle = app.handle().clone();
+                core.set_progress_sink(Arc::new(move |payload| {
+                    use tauri::Emitter;
+                    let _ = handle.emit(bindings::OP_PROGRESS_EVENT, payload);
+                }));
+            }
+            Ok(())
+        })
         .manage(AppState(core))
         .invoke_handler(builder.invoke_handler())
         .run(tauri::generate_context!())

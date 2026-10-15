@@ -188,6 +188,67 @@ fn same_repo_runs_one_action_at_a_time() {
 }
 
 #[test]
+fn progress_names_the_running_action_and_cancel_reaches_git() {
+    let dir = tempfile::tempdir().unwrap();
+    let git = Arc::new(FakeGit::new());
+    let repo = higit_core::RepoPath::new(dir.path());
+    *git.repo.lock().unwrap() = Some(repo.clone());
+    let core = Arc::new(Core::with_backend(git.clone() as Arc<dyn GitBackend>).unwrap());
+    core.open_project(dir.path(), higit_core::view::OpenHow::Picked)
+        .unwrap();
+    let heard = Arc::new(std::sync::Mutex::new(Vec::new()));
+    {
+        let heard = heard.clone();
+        core.set_progress_sink(Arc::new(move |p| heard.lock().unwrap().push(p)));
+    }
+    let observe = git.observer.lock().unwrap().clone().unwrap();
+    let secs = std::time::Duration::from_secs;
+
+    // 도는 액션이 없으면 알리지 않고 취소도 남기지 않는다.
+    observe(repo.as_path(), secs(4), secs(4));
+    assert!(heard.lock().unwrap().is_empty());
+    core.cancel(dir.path()).unwrap();
+    assert!(!git.calls().iter().any(|c| c.starts_with("cancel")));
+
+    git.hold.store(true, Ordering::SeqCst);
+    let first = {
+        let core = core.clone();
+        let path = dir.path().to_path_buf();
+        std::thread::spawn(move || {
+            core.execute(&path, &ActionInput::Stage(paths(&["a.txt"])), None)
+        })
+    };
+    while !git.entered.load(Ordering::SeqCst) {
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert_eq!(git.cancel_cleared.load(Ordering::SeqCst), 1);
+    observe(repo.as_path(), secs(5), secs(2));
+    observe(std::path::Path::new("/다른 저장소"), secs(5), secs(2));
+    core.cancel(dir.path()).unwrap();
+    git.hold.store(false, Ordering::SeqCst);
+    first.join().unwrap().unwrap();
+    // 시작과 끝에 지운다.
+    assert_eq!(git.cancel_cleared.load(Ordering::SeqCst), 2);
+
+    assert_eq!(
+        *heard.lock().unwrap(),
+        vec![higit_core::view::OpProgress {
+            repo: repo.as_path().to_string_lossy().into_owned(),
+            action: "stage".into(),
+            elapsed_secs: 5,
+            idle_secs: 2,
+        }]
+    );
+    assert!(
+        git.calls()
+            .contains(&format!("cancel {}", repo.as_path().display()))
+    );
+    // 끝난 뒤에는 다시 알리지 않는다.
+    observe(repo.as_path(), secs(6), secs(6));
+    assert_eq!(heard.lock().unwrap().len(), 1);
+}
+
+#[test]
 fn stage_and_commit_refuse_while_files_are_in_conflict() {
     let exec = executor();
     let git = FakeGit::new();

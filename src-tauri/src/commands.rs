@@ -235,6 +235,13 @@ pub async fn query_branch_name(
     .await
 }
 
+/// 도는 원격 작업을 취소하거나 멈춘 로컬 쓰기를 강제로 멈춘다(D-080).
+#[tauri::command]
+#[specta::specta]
+pub async fn action_cancel(state: State<'_, AppState>, folder: String) -> CmdResult<()> {
+    blocking(state, move |core| core.cancel(&PathBuf::from(folder))).await
+}
+
 /// 마지막 작업을 되돌린다(Ctrl+Z, D-042).
 #[tauri::command]
 #[specta::specta]

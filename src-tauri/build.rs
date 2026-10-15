@@ -13,6 +13,7 @@ const COMMANDS: &[&str] = &[
     "action_list",
     "action_preview",
     "action_execute",
+    "action_cancel",
     "undo_last",
     "redo_last",
     "query_status",

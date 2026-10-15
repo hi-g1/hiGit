@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use higit_core::view::{ActionMetaView, RepoChanged, WatchStatus};
+use higit_core::view::{ActionMetaView, OpProgress, RepoChanged, WatchStatus};
 use specta_typescript::Typescript;
 use tauri_specta::{Builder, ErrorHandlingMode, collect_commands};
 
@@ -26,6 +26,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::action_list,
             commands::action_preview,
             commands::action_execute,
+            commands::action_cancel,
             commands::undo_last,
             commands::redo_last,
             commands::query_status,
@@ -47,14 +48,18 @@ pub fn builder() -> Builder<tauri::Wry> {
         // 이벤트는 core가 tauri를 모르도록 typed event 대신 이름 상수 + 타입으로 내보낸다(D-019).
         .typ::<RepoChanged>()
         .typ::<WatchStatus>()
+        .typ::<OpProgress>()
         .constant("REPO_CHANGED_EVENT", REPO_CHANGED_EVENT)
         .constant("WATCH_STATUS_EVENT", WATCH_STATUS_EVENT)
+        .constant("OP_PROGRESS_EVENT", OP_PROGRESS_EVENT)
 }
 
 /// 저장소 파일이 바뀌었을 때(페이로드: `RepoChanged`).
 pub const REPO_CHANGED_EVENT: &str = "repo-changed";
 /// 감시가 켜지거나 꺼졌을 때(페이로드: `WatchStatus`).
 pub const WATCH_STATUS_EVENT: &str = "watch-status";
+/// 오래 걸리는 작업이 도는 동안 1초마다(페이로드: `OpProgress`, D-080).
+pub const OP_PROGRESS_EVENT: &str = "op-progress";
 
 const HEADER: &str =
     "// 이 파일은 생성물입니다. 고치지 말고 `cargo run -p app --bin gen-bindings`로 다시 만드세요.";

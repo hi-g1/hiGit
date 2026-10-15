@@ -37,6 +37,10 @@ pub struct FakeGit {
     pub local_config: Mutex<Vec<(String, String)>>,
     /// 참이면 `update_ref`가 실패한다(사용자 hook이 ref 쓰기를 거부한 경우).
     pub fail_update_ref: AtomicBool,
+    /// `set_observer`로 받은 진행 알림.
+    pub observer: Mutex<Option<git::ProgressObserver>>,
+    /// `clear_cancel`을 부른 횟수.
+    pub cancel_cleared: AtomicUsize,
 }
 
 impl FakeGit {
@@ -62,6 +66,8 @@ impl FakeGit {
             parked_paths: Mutex::new(Vec::new()),
             local_config: Mutex::new(Vec::new()),
             fail_update_ref: AtomicBool::new(false),
+            observer: Mutex::new(None),
+            cancel_cleared: AtomicUsize::new(0),
         }
     }
 
@@ -292,11 +298,20 @@ impl GitBackend for FakeGit {
         Ok(self.local_config.lock().unwrap().clone())
     }
 
-    fn request_cancel(&self, _repo: &RepoPath) {}
+    fn request_cancel(&self, repo: &RepoPath) {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("cancel {}", repo.as_path().display()));
+    }
 
-    fn clear_cancel(&self, _repo: &RepoPath) {}
+    fn clear_cancel(&self, _repo: &RepoPath) {
+        self.cancel_cleared.fetch_add(1, Ordering::SeqCst);
+    }
 
-    fn set_observer(&self, _observer: Option<git::ProgressObserver>) {}
+    fn set_observer(&self, observer: Option<git::ProgressObserver>) {
+        *self.observer.lock().unwrap() = observer;
+    }
 
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.calls
