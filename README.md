@@ -38,6 +38,17 @@ pnpm install
 pnpm tauri dev
 ```
 
+## 커밋 전 검사
+
+저장소에 들어 있는 git hook(`.githooks/`)이 검사를 강제합니다. `pnpm install` 때 자동으로 켜집니다.
+
+- 커밋할 때: 바뀐 쪽만 빠르게 검사합니다. 프론트는 lint·타입 검사·테스트, Rust는 형식·clippy.
+- push할 때: 전체 검사(Rust 테스트, 바인딩이 최신인지 포함).
+- 켜졌는지 확인: `git config core.hooksPath` → `.githooks`. 아니면 `pnpm run prepare`.
+- 직접 실행: `pnpm check:fast`, `pnpm check:full`.
+- hook은 작업 폴더 상태를 검사하므로, 스테이지하지 않은 수정도 결과에 섞입니다.
+- Windows: hook은 Git for Windows의 sh로 실행됩니다. 그 환경의 PATH에서 `node`, `pnpm`, `cargo`를 찾을 수 있어야 합니다.
+
 ## 서드파티 고지
 
 앱에 포함된 글꼴 등의 라이선스는 `THIRD_PARTY_NOTICES.md`에 있습니다.

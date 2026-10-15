@@ -14,7 +14,10 @@
     "tauri": "tauri",
     "lint": "eslint . && stylelint \"src/**/*.css\" --allow-empty-input",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepare": "node scripts/install-hooks.mjs",
+    "check:fast": "node scripts/check.mjs fast --all",
+    "check:full": "node scripts/check.mjs full"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",

@@ -38,8 +38,12 @@ Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 앱. Tauri 2(Rust) + R
 - Rust 형식: `cargo fmt --all --check` (src-tauri에서)
 - 타입 바인딩 생성: `cargo run -p app --bin gen-bindings` (src-tauri에서). `src/lib/bindings.ts`, `src/lib/action-meta.json`을 다시 만든다. `core::view`나 Tauri 명령을 바꾸면 실행하고 결과를 함께 커밋한다(CI가 최신인지 확인).
 - 빌드 확인: `pnpm tauri build --no-bundle`
+- 커밋 전 검사: `pnpm check:fast`(프론트·Rust 빠른 검사 전부), `pnpm check:full`(전체 테스트·바인딩 최신까지). hook이 자동으로 돌린다(D-022).
 - CI: `.github/workflows/ci.yml`(ubuntu-22.04, windows-latest). 결과는 `gh run list`.
 
 ## 커밋
 - 한 커밋에 한 가지. 메시지는 `<영역>: <요약>` (예: `core: add amend action`).
 - 테스트가 실패하는 상태로 커밋하지 않는다.
+- 커밋 때 pre-commit hook이 바뀐 쪽을 빠르게(프론트: lint·typecheck·test, Rust: fmt·clippy), push 때 pre-push hook이 전체(`cargo test`, 바인딩 최신 포함)를 검사한다. `--no-verify`로 건너뛰지 않는다.
+- Rust 테스트는 pre-commit에 없으므로, Rust 코드를 고친 커밋은 커밋 전에 `pnpm check:full`을 돌린다.
+- hook이 꺼져 있으면(`git config core.hooksPath`가 `.githooks`가 아니면) `pnpm install` 또는 `pnpm run prepare`.

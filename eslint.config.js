@@ -32,7 +32,7 @@ export default defineConfig(
     rules: { "no-restricted-imports": "off" },
   },
   {
-    files: ["*.config.{js,ts}"],
+    files: ["*.config.{js,ts}", "scripts/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },
 );
