@@ -1,0 +1,54 @@
+:root{
+  --bg:#FAFAF9; --surface:#FFFFFF; --sunken:#F2F2F0; --border:#E5E5E2; --border-strong:#D6D6D2;
+  --text:#24292F; --muted:#6E7379; --accent:#3A6EA5; --btn:#4A5059; --on-btn:#FFFFFF;
+  --added:#2F7D4F; --modified:#9A6110; --deleted:#B4423A;
+  --add-bg:#EAF4EC; --add-hl:#C9E5D0; --del-bg:#FBECEA; --del-hl:#F2CFCB;
+  --l1:#3A6EA5; --l2:#2F7D4F; --l3:#7A5BA6;
+  --f-body:"Pretendard","IBM Plex Sans KR",system-ui,"Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161718; --surface:#1C1D1F; --sunken:#121314; --border:#2B2D30; --border-strong:#3A3C40;
+  --text:#ECECEA; --muted:#9EA3A8; --accent:#7FA7D6; --btn:#C9CBCE; --on-btn:#161718;
+  --added:#6BBF8A; --modified:#D9A54A; --deleted:#E07A70;
+  --add-bg:#1C2B21; --add-hl:#24432F; --del-bg:#2E1D1B; --del-hl:#4A2925;
+  --l1:#7FA7D6; --l2:#6BBF8A; --l3:#B39DDB; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:var(--f-body);color:var(--text)}
+.os{width:1280px;height:786px;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);font-size:13px;line-height:1.45;box-shadow:0 0 0 1px var(--border-strong)}
+.grow{flex:1}.mut{color:var(--muted)}.sm{font-size:12px}
+.mono{font-family:var(--f-mono);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+/* 상단 바: 시작 화면과 같은 52px, bg 바탕, 굵은 글자 동작 */
+.bar{height:52px;flex:none;display:flex;align-items:center;gap:6px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
+.proj{font-size:14px;font-weight:600}
+.caret{color:var(--muted);font-size:10px;margin-left:4px}
+.vsep{width:1px;height:18px;background:var(--border-strong);margin:0 12px}
+.brn{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.tbtxt{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 4px;margin-left:18px;font-weight:600}
+.cnt{font-family:var(--f-mono);font-size:11px;font-weight:400;color:var(--muted)}
+/* 버튼 */
+.b1{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 18px;border-radius:6px;background:var(--btn);color:var(--on-btn);font-weight:600}
+.b2{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface)}
+.chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border-strong);background:var(--surface);flex:none;display:inline-flex;align-items:center;justify-content:center}
+.chk.on{background:var(--btn);border-color:var(--btn)}
+.chk.on:after{content:"";width:8px;height:4px;border:2px solid var(--on-btn);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.chk.part{background:var(--btn);border-color:var(--btn)}.chk.part:after{content:"";width:8px;height:2px;background:var(--on-btn)}
+.st{font-size:12px;font-weight:500;flex:none}
+.st.a{color:var(--added)}.st.m{color:var(--modified)}.st.d{color:var(--deleted)}
+.num{font-family:var(--f-mono);font-size:11px;white-space:nowrap}
+.num .p{color:var(--added)}.num .n{color:var(--deleted)}
+.eyeb{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:22px;padding:0 20px;border-bottom:1px solid var(--border);height:44px;align-items:stretch;flex:none}
+.tab{display:flex;align-items:center;gap:6px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--text);font-weight:600;border-color:var(--text)}
+/* 코드 비교 줄 */
+.dl{display:grid;grid-template-columns:44px 44px 18px 1fr;font-family:var(--f-mono);font-size:12px;line-height:22px;white-space:pre}
+.dl .n{color:var(--muted);text-align:right;padding-right:10px;opacity:.8}
+.dl .s{color:var(--muted)}
+.dl.a{background:var(--add-bg)}.dl.a .s{color:var(--added)}
+.dl.d{background:var(--del-bg)}.dl.d .s{color:var(--deleted)}
+.dl.a mark{background:var(--add-hl);color:inherit;border-radius:2px}
+.dl.d mark{background:var(--del-hl);color:inherit;border-radius:2px}
+.fold{font-size:12px;color:var(--muted);padding:5px 0 5px 106px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+textarea,.ta{display:block;width:100%;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);padding:10px 12px;font:inherit;color:var(--muted);resize:none}
