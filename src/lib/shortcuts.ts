@@ -16,8 +16,9 @@ export type Shortcut = {
   /**
    * global: 창 어디서나(useShortcut). field: 그 입력칸이 직접 처리(버전 저장).
    * fileList: 파일 목록에 포커스가 있을 때만 목록이 처리.
+   * conflict: 충돌 해결 화면이 열려 있을 때만(그 화면이 useShortcut을 켠다).
    */
-  scope: "global" | "field" | "fileList";
+  scope: "global" | "field" | "fileList" | "conflict";
   /** native: 입력칸에 포커스가 있으면 처리하지 않고 브라우저 기본 동작(글자 되돌리기)에 맡긴다. */
   inTextField: "app" | "native";
 };
@@ -45,6 +46,15 @@ export const SHORTCUTS = {
   sync: { keys: [ctrl("KeyS", true)], label: "Ctrl+Shift+S", scope: "global", inTextField: "app" },
   /** 버전 기록 화면 열기·닫기 */
   history: { keys: [ctrl("KeyH")], label: "Ctrl+H", scope: "global", inTextField: "app" },
+  /** 작업 내역 화면 열기·닫기(D-085) */
+  activity: { keys: [ctrl("KeyH", true)], label: "Ctrl+Shift+H", scope: "global", inTextField: "app" },
+  /** 충돌 해결: 내 브랜치·합칠 브랜치·둘 다(D-086). 직접 고치는 글상자에서는 글자로 */
+  chooseOurs: { keys: [plain("Digit1")], label: "1", scope: "conflict", inTextField: "native" },
+  chooseTheirs: { keys: [plain("Digit2")], label: "2", scope: "conflict", inTextField: "native" },
+  chooseBoth: { keys: [plain("Digit3")], label: "3", scope: "conflict", inTextField: "native" },
+  /** 충돌 해결: 다음·이전 곳 */
+  nextHunk: { keys: [ctrl("ArrowDown")], label: "Ctrl+↓", scope: "conflict", inTextField: "native" },
+  prevHunk: { keys: [ctrl("ArrowUp")], label: "Ctrl+↑", scope: "conflict", inTextField: "native" },
   /** 파일 목록에서 다음·이전 파일 */
   nextFile: { keys: [plain("ArrowDown")], label: "↓", scope: "fileList", inTextField: "native" },
   prevFile: { keys: [plain("ArrowUp")], label: "↑", scope: "fileList", inTextField: "native" },

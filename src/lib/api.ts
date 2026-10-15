@@ -40,6 +40,7 @@ export type {
   RiskView,
   MergeHintView,
   ConflictFileView,
+  FileResolution,
   ConflictHunkView,
   ConflictSide,
   ConflictStateView,
