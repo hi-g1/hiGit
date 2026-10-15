@@ -36,6 +36,9 @@ mod remote_tests;
 mod resolve;
 #[cfg(test)]
 mod resolve_tests;
+mod rewrite;
+#[cfg(test)]
+mod rewrite_tests;
 #[cfg(test)]
 mod run_tests;
 mod runner;
@@ -124,12 +127,23 @@ impl CliBackend {
         args: &[&str],
         stdin: Option<&[u8]>,
     ) -> Result<runner::GitOutput> {
+        self.run_local_watched_env(repo, args, &[], stdin)
+    }
+
+    /// `run_local_watched`에 환경 변수를 더한다.
+    fn run_local_watched_env(
+        &self,
+        repo: &RepoPath,
+        args: &[&str],
+        envs: &[(&str, runner::EnvChange<'_>)],
+        stdin: Option<&[u8]>,
+    ) -> Result<runner::GitOutput> {
         let cancel = self.cancel_flag(repo);
         let observer = self.observer_for(repo);
         self.runner.run_watched(
             Some(repo.as_path()),
             args,
-            &[],
+            envs,
             stdin,
             &runner::Watch {
                 cancel: Some(&cancel),
@@ -482,6 +496,14 @@ impl GitBackend for CliBackend {
             Err(GitError::Failed { code: Some(_), .. }) => Ok(false),
             Err(e) => Err(e),
         }
+    }
+
+    fn rebase_state(&self, repo: &RepoPath) -> Result<Option<crate::RebaseState>> {
+        self.rebase_state_impl(repo)
+    }
+
+    fn has_identity(&self, repo: &RepoPath) -> Result<bool> {
+        self.has_identity_impl(repo)
     }
 
     fn check_tag_name(&self, name: &str) -> Result<bool> {
@@ -937,6 +959,9 @@ impl GitBackend for CliBackend {
                 push_revs(&mut args, Cmd::Revert, self.git_version(), &[oid.as_str()]);
                 self.run_local_watched(repo, &args, None)?
             }
+            GitOp::RewriteHistory { base, steps } => {
+                return self.rewrite_history(repo, base, steps);
+            }
             // 이름은 core가 검사했고 `--end-of-options` 뒤에 둔다.
             GitOp::TagCreate { name, oid } => {
                 // tag.gpgSign이 켜져 있으면 가벼운 태그도 서명한 주석 태그가 되므로 끈다.
@@ -988,11 +1013,24 @@ impl GitBackend for CliBackend {
                 self.runner.run(dir, &args)?
             }
             GitOp::OperationContinue { kind } => {
-                // 이어서 버전을 만들므로 hook·서명이 돌 수 있다(진행 알림과 강제 멈춤).
-                self.run_local_watched(repo, &[kind.command(), "--continue"], None)?
+                // 이어서 버전을 만들므로 hook·서명이 돌 수 있다(진행 알림과 강제 멈춤). 기록 정리는
+                // 사용자 설정이 남은 목록을 바꾸지 않게 고정한다.
+                let mut args: Vec<&str> = if *kind == crate::OperationKind::Rebase {
+                    rewrite::REBASE_CONFIG.to_vec()
+                } else {
+                    Vec::new()
+                };
+                args.extend([kind.command(), "--continue"]);
+                self.run_local_watched(repo, &args, None)?
             }
             GitOp::OperationSkip { kind } => {
-                self.run_local_watched(repo, &[kind.command(), "--skip"], None)?
+                let mut args: Vec<&str> = if *kind == crate::OperationKind::Rebase {
+                    rewrite::REBASE_CONFIG.to_vec()
+                } else {
+                    Vec::new()
+                };
+                args.extend([kind.command(), "--skip"]);
+                self.run_local_watched(repo, &args, None)?
             }
             GitOp::OperationAbort { kind } => self.runner.run(dir, &[kind.command(), "--abort"])?,
             GitOp::Merge { rev, message } => {

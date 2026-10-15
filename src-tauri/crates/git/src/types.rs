@@ -277,6 +277,38 @@ pub struct CommitStat {
     pub removed: u32,
 }
 
+/// 기록 정리의 한 줄.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RewriteStep {
+    pub oid: Oid,
+    pub kind: RewriteKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RewriteKind {
+    Pick,
+    /// 바로 위 줄의 버전에 합친다(메시지는 위 줄 것).
+    Fixup,
+    /// 놓은 뒤 멈춘다(core가 메시지를 고치고 이어간다).
+    Edit,
+    Drop,
+}
+
+/// 멈춘 기록 정리의 상태(`<git 폴더>/rebase-merge/`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RebaseState {
+    /// 정리하는 브랜치(`refs/heads/…`).
+    pub head_name: String,
+    pub onto: Option<Oid>,
+    pub orig_head: Option<Oid>,
+    /// `edit` 줄에서 멈췄다(충돌이 아님).
+    pub stopped_at_edit: bool,
+    /// 남은 할 일 줄(주석·빈 줄 제외).
+    pub todo: Vec<String>,
+    /// 한 줄.
+    pub done: Vec<String>,
+}
+
 /// 멈출 수 있는 작업의 종류(D-101).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OperationKind {
@@ -411,6 +443,9 @@ pub enum GitOp {
     /// `oid`의 변경을 취소하는 새 버전(`revert --no-edit`, 합치기 버전은 `-m`). 멈추면 정리하지 않는다.
     /// (올린 뒤 Ctrl+Z가 쓰는 `Revert`는 실패하면 정리한다.)
     RevertStart { oid: Oid, mainline: Option<u32> },
+    /// 기록 정리를 시작한다(`rebase -i`, D-100). `base` 위로 `steps`를 차례로 놓는다. 끝까지 가거나
+    /// `edit`·충돌·hook으로 멈춘다(멈춤은 `rebase_state`로 본다).
+    RewriteHistory { base: Oid, steps: Vec<RewriteStep> },
     /// 가벼운 태그를 만든다(`tag <이름> <해시>`, 서명 설정을 끈다, D-104).
     TagCreate { name: String, oid: Oid },
     /// 태그를 지운다(`tag -d`).

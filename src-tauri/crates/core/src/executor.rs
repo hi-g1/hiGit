@@ -311,6 +311,12 @@ mod tests {
         fn check_tag_name(&self, _: &str) -> git::Result<bool> {
             unreachable!()
         }
+        fn rebase_state(&self, _: &RepoPath) -> git::Result<Option<git::RebaseState>> {
+            unreachable!()
+        }
+        fn has_identity(&self, _: &RepoPath) -> git::Result<bool> {
+            unreachable!()
+        }
         fn excludes_file(&self, _: &RepoPath) -> git::Result<Option<std::path::PathBuf>> {
             unreachable!()
         }

@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use crate::{
     BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp,
     GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput,
-    RefEntry, RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status, TagRef,
+    RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status,
+    TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -39,6 +40,12 @@ pub trait GitBackend: Send + Sync {
 
     /// 로컬 브랜치 끝에서 닿는 버전인지(D-099).
     fn reachable_from_branches(&self, repo: &RepoPath, oid: &Oid) -> Result<bool>;
+
+    /// 멈춘 기록 정리의 상태. 정리 중이 아니면 `None`(D-100, D-102).
+    fn rebase_state(&self, repo: &RepoPath) -> Result<Option<RebaseState>>;
+
+    /// 버전에 남길 이름·이메일이 정해져 있는지.
+    fn has_identity(&self, repo: &RepoPath) -> Result<bool>;
 
     /// 태그 이름으로 쓸 수 있는지(`check-ref-format refs/tags/<이름>`, `-` 시작 금지, D-104).
     fn check_tag_name(&self, name: &str) -> Result<bool>;

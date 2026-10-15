@@ -152,6 +152,14 @@ impl GitBackend for FakeGit {
         Ok(true)
     }
 
+    fn rebase_state(&self, _repo: &RepoPath) -> git::Result<Option<git::RebaseState>> {
+        Ok(None)
+    }
+
+    fn has_identity(&self, _repo: &RepoPath) -> git::Result<bool> {
+        Ok(true)
+    }
+
     fn check_tag_name(&self, name: &str) -> git::Result<bool> {
         Ok(!name.is_empty() && !name.starts_with('-') && !name.contains(' '))
     }
