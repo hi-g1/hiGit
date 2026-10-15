@@ -213,13 +213,15 @@ impl Core {
             TrustState::Clean | TrustState::Decided(TrustDecision::Trust, _) => {
                 self.git.set_repo_overrides(&repo_path, Vec::new());
             }
-            TrustState::Decided(TrustDecision::Disable, found) => {
+            TrustState::Decided(TrustDecision::Disable, found) if found.can_disable => {
                 self.git.set_repo_overrides(&repo_path, found.overrides);
             }
-            TrustState::Unknown(found) => {
+            // 끌 수 없는 키가 생겼으면 "끄고 열기" 결정이 있어도 다시 묻는다.
+            TrustState::Decided(TrustDecision::Disable, found) | TrustState::Unknown(found) => {
                 return Ok(ProjectOpenResult::NeedsTrust {
                     folder: repo.to_string_lossy().into_owned(),
                     keys: found.keys,
+                    can_disable: found.can_disable,
                 });
             }
         }
@@ -242,6 +244,9 @@ impl Core {
             TrustState::Decided(_, found) | TrustState::Unknown(found) => Some(found),
         };
         if let Some(found) = found {
+            if decision == TrustDecision::Disable && !found.can_disable {
+                return Err(CoreError::NeedsTrust);
+            }
             self.trust.record(&repo, &found, decision);
         }
         self.open_project(&repo, OpenHow::Picked)

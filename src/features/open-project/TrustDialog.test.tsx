@@ -30,7 +30,12 @@ function show() {
   act(() =>
     useTrustStore
       .getState()
-      .ask({ kind: "config", folder: "/받은/프로젝트", keys: ["core.fsmonitor", "hooks/post-checkout"] }),
+      .ask({
+        kind: "config",
+        folder: "/받은/프로젝트",
+        keys: ["core.fsmonitor", "hooks/post-checkout"],
+        canDisable: true,
+      }),
   );
 }
 
@@ -53,6 +58,23 @@ describe("신뢰 확인", () => {
     expect(api.trustProject).toHaveBeenCalledWith("/받은/프로젝트", "trust");
   });
 
+  it("끌 수 없는 설정이 있으면 끄고 열기가 없다", async () => {
+    render(
+      <AppProviders client={createQueryClient()}>
+        <TrustDialog />
+      </AppProviders>,
+    );
+    act(() =>
+      useTrustStore
+        .getState()
+        .ask({ kind: "config", folder: "/받은/프로젝트", keys: ["filter.a=b.clean"], canDisable: false }),
+    );
+    expect(screen.queryByRole("button", { name: "끄고 열기" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+    expect(api.trustProject).not.toHaveBeenCalled();
+    expect(useTrustStore.getState().pending).toBeNull();
+  });
+
   it("Esc로 닫으면 열지 않는다", async () => {
     show();
     await userEvent.keyboard("{Escape}");
@@ -67,7 +89,7 @@ describe("신뢰 확인", () => {
         <TrustDialog />
       </AppProviders>,
     );
-    act(() => useTrustStore.getState().ask({ kind: "owner", folder: "/공유/폴더", keys: [] }));
+    act(() => useTrustStore.getState().ask({ kind: "owner", folder: "/공유/폴더", keys: [], canDisable: false }));
     expect(screen.getByText("이 폴더의 주인이 다른 사용자예요.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "이 폴더 믿기" }));
     expect(api.allowFolderOwner).toHaveBeenCalledWith("/공유/폴더");

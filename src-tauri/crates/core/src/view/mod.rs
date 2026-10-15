@@ -553,9 +553,12 @@ pub enum ProjectOpenResult {
         folder: String,
     },
     /// 실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.
+    /// `can_disable`이 거짓이면 덮어써서 끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
+    #[serde(rename_all = "camelCase")]
     NeedsTrust {
         folder: String,
         keys: Vec<String>,
+        can_disable: bool,
     },
 }
 

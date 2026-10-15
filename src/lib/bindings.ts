@@ -270,8 +270,11 @@ export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } |
 { kind: "notARepo"; folder: string } | 
 /**  폴더 주인이 다른 사용자라 git이 다루지 않는다. 사용자가 고르면 이 폴더만 믿는다(D-039). */
 { kind: "notOwned"; folder: string } | 
-/**  실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`. */
-{ kind: "needsTrust"; folder: string; keys: string[] };
+/**
+ *  실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.
+ *  `can_disable`이 거짓이면 덮어써서 끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
+ */
+{ kind: "needsTrust"; folder: string; keys: string[]; canDisable: boolean };
 
 /**  시작 화면의 프로젝트 상태 요약(D-031). 문장은 화면(messages)이 만든다. */
 export type ProjectSummaryView = {

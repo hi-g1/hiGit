@@ -7,7 +7,9 @@ use std::sync::Arc;
 
 use higit_core::recent::RecentStore;
 use higit_core::trust::{TrustDecision, TrustStore};
-use higit_core::view::{ErrorCode, ErrorView, OpenHow, ProjectOpenResult};
+use higit_core::view::{
+    ActionInput, BranchCreateInput, ErrorCode, ErrorView, OpenHow, ProjectOpenResult,
+};
 use higit_core::{Core, GitBackend};
 
 fn git(dir: &Path, args: &[&str]) {
@@ -107,6 +109,79 @@ fn hooks_are_executing_too() {
         panic!("{r:?}");
     };
     assert_eq!(keys, ["hooks/post-checkout"]);
+}
+
+/// 실행 비트를 준다. Windows git은 비트 없이도 hook을 돌리므로 실패해도 된다.
+fn make_executable(path: &Path) {
+    let _ = std::process::Command::new("chmod")
+        .arg("+x")
+        .arg(path)
+        .status();
+}
+
+#[test]
+fn disable_really_turns_hooks_off() {
+    let data = tempfile::tempdir().unwrap();
+    let repo = tempfile::tempdir().unwrap();
+    let dir = repo.path();
+    git(dir, &["init", "-q", "-b", "main"]);
+    git(dir, &["config", "core.autocrlf", "false"]);
+    git(dir, &["config", "user.name", "t"]);
+    git(dir, &["config", "user.email", "t@example.com"]);
+    git(dir, &["commit", "-q", "--allow-empty", "-m", "첫 버전"]);
+    let pwned = dir.join("pwned");
+    let hook = dir.join(".git/hooks/post-checkout");
+    std::fs::write(&hook, "#!/bin/sh\ntouch pwned\n").unwrap();
+    make_executable(&hook);
+
+    let core = core(data.path());
+    let r = core.open_project(dir, OpenHow::Picked).unwrap();
+    assert!(
+        matches!(
+            r,
+            ProjectOpenResult::NeedsTrust {
+                can_disable: true,
+                ..
+            }
+        ),
+        "{r:?}"
+    );
+    core.trust_project(dir, TrustDecision::Disable).unwrap();
+    core.execute(
+        dir,
+        &ActionInput::BranchCreate(BranchCreateInput {
+            name: "새-갈래".into(),
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(
+        !pwned.exists(),
+        "끄고 열면 post-checkout hook이 돌지 않는다"
+    );
+}
+
+#[test]
+fn keys_that_cannot_be_overridden_leave_only_trust() {
+    let data = tempfile::tempdir().unwrap();
+    let repo = tempfile::tempdir().unwrap();
+    let dir = repo.path();
+    git(dir, &["init", "-q", "-b", "main"]);
+    // `-c filter.a=b.clean=cat`은 키 `filter.a`로 읽혀 이 필터를 끄지 못한다.
+    git(dir, &["config", "filter.a=b.clean", "touch pwned"]);
+    let core = core(data.path());
+    let r = core.open_project(dir, OpenHow::Picked).unwrap();
+    let ProjectOpenResult::NeedsTrust { can_disable, .. } = r else {
+        panic!("{r:?}");
+    };
+    assert!(!can_disable);
+    let err = core.trust_project(dir, TrustDecision::Disable).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NeedsTrust);
+    let err = core.queries().status(dir).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    // 믿고 열기는 된다.
+    let r = core.trust_project(dir, TrustDecision::Trust).unwrap();
+    assert!(matches!(r, ProjectOpenResult::Opened { .. }), "{r:?}");
 }
 
 #[test]

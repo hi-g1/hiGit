@@ -14,8 +14,9 @@ export function useOpenProject() {
   const onResult = (result: ProjectOpenResult) => {
     if (result.kind === "opened") openRepo(result.repo);
     // 실행되는 설정이 있으면 신뢰 확인 창을 띄운다(D-039).
-    if (result.kind === "needsTrust") ask({ kind: "config", folder: result.folder, keys: result.keys });
-    if (result.kind === "notOwned") ask({ kind: "owner", folder: result.folder, keys: [] });
+    if (result.kind === "needsTrust")
+      ask({ kind: "config", folder: result.folder, keys: result.keys, canDisable: result.canDisable });
+    if (result.kind === "notOwned") ask({ kind: "owner", folder: result.folder, keys: [], canDisable: false });
     void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
   };
   const mutation = useMutation({

@@ -46,6 +46,9 @@ pub(crate) struct Executing {
     pub keys: Vec<String>,
     /// 끄고 열 때 붙일 `-c 키=값`.
     pub overrides: Vec<String>,
+    /// 끄고 열 수 있는지. 하위 이름에 `=`가 든 키(`[filter "a=b"]`)는 `-c 키=값`으로 덮어쓸 수 없다
+    /// (git이 첫 `=`에서 키와 값을 나눈다). 그런 키가 있으면 "믿고 열기"만 남긴다.
+    pub can_disable: bool,
     hash: String,
 }
 
@@ -134,8 +137,10 @@ impl TrustStore {
         let mut keys = Vec::new();
         let mut overrides = Vec::new();
         let mut fingerprint = Vec::new();
+        let mut can_disable = true;
         for (key, value) in git.local_config(repo)? {
             if let Some(safe) = safe_value(&key, &value) {
+                can_disable &= !key.contains('=');
                 keys.push(key.clone());
                 fingerprint.push(format!("{key}={value}"));
                 overrides.push(format!("{key}={safe}"));
@@ -165,6 +170,7 @@ impl TrustStore {
         Ok(Some(Executing {
             keys,
             overrides,
+            can_disable,
             hash: hex(&Sha256::digest(fingerprint.join("\n").as_bytes())),
         }))
     }
