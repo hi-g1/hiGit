@@ -408,3 +408,42 @@ T4. core: 소유자가 다른 저장소 (`core: handle dubious ownership`) — �
   - 추천: 서명한다(H2에 포함, HMAC 한 함수).
   - 이유: journal은 저장소와 함께 옮겨 다니므로 남이 만든 줄을 되돌리기에 쓰지 않게 하는 가장 작은 방법이다.
 - 004의 Q1~Q12와 D-036 확정 여부는 그대로 열려 있다. Q8의 답이 D-036과 004 Q3의 답이 된다.
+
+## 검토 반영 (code-analyst, 2026-10-15)
+구현 전 검토에서 나온 것. 아래가 위 본문보다 앞선다. 관련 자동 결정 D-064~D-067.
+
+### git 2.34.1 실험 결과 (`--end-of-options`)
+- 됨: `rev-parse --verify`, `log`, `diff`, `switch`, `switch -c --track`, `branch`, `push`, `merge --ff-only`, `merge-base`, `rev-list`, `update-ref`, `cat-file`, `show-ref`, `for-each-ref`, `symbolic-ref`, `fetch`, `ls-remote`, `stash`, `read-tree`, `commit-tree`, `show`.
+- 안 됨: `checkout`(경로로 오해석), `reset`(옵션 위치 오류), `check-ref-format`(usage 오류).
+- 004-3의 버전 표는 "2.34.1에서 확인한 명령" 허용 목록으로 만든다. 목록 밖 명령과 2.34 미만 버전은 `--end-of-options`를 넣지 않고 core 이름 검사(004-4)로 막는다. checkout·reset·check-ref-format에는 절대 넣지 않는다는 테스트를 둔다.
+- `check-ref-format --branch '@{-1}'`은 이전 브랜치 이름을 돌려주며 통과한다. 이름 검사는 `check-ref-format refs/heads/<이름>` 전체 형식으로 하고 `-` 시작과 `HEAD`는 따로 막는다.
+
+### 단계별 고칠 점
+- 004-1(됨): 테스트 보강은 f5f2ffe. `ext::`는 환경 변수 없이도 막혀 `file`·로컬 경로 테스트가 실제 증명이다.
+- 004-6: `dpkg-query -S` 출력에서 패키지 이름을 읽는다(`git`으로 고정하지 않음).
+- 004-7(순번 20): 시작 화면 줄과 platform·Rust 쪽만 한다. 작업 공간 안내 줄(D-053)과 "닫은 버전" 기록은 H14에서 만든다.
+- 004-9: CSP는 D-052 값(`object-src`, `frame-src`, `base-uri`, `form-action` 모두 `'none'`). `asset:`은 asset 프로토콜이 꺼져 있어 넣지 않는다. dev에는 CSP가 없으므로 확인은 릴리스 실행 파일로. 이후 새 Tauri 명령은 `commands.rs`·`build.rs`·capability 세 곳에 같은 커밋으로 넣는다.
+- 004-10(순번 18): `Queries`가 열린 경로 집합을 보도록 생성자에 공유 집합을 넘긴다. 집합 등록 시점은 T2의 신뢰 결정 뒤로 맞춘다(T2 전에는 `Opened`·`NotARepo` 때 등록하고, T2에서 `NeedsTrust`는 등록하지 않게 바꾼다). `project_summary`는 최근 목록에 있고, T2 뒤에는 신뢰 기록의 해시가 맞을 때만 `status`를 돌린다(`core.fsmonitor`는 `status`에서 실행된다).
+- 004-11 보강(별도 커밋 가능): 저장소에서 온 URL이 `href`·`src`에 들어가지 않게, 링크는 https 검사 부품 하나로만.
+- 004-15b: 컨테이너에서 `cargo test --workspace --exclude app`을 돌린다(H11, H13의 2.38 미만 경로는 core 테스트에 있다).
+- IPC 길이 검사(D-037): 명령 인자에 상한을 둔다. 메시지 1MB, 경로 목록 10만 개, 이름 255바이트, `LogQuery.limit` 500. 004-10과 같은 커밋.
+- H1: `update_ref`의 이전 값은 `Expect { Any, Absent, Is(Oid) }`. `Absent`는 영(0) oid로 넘긴다. journal은 worktree별(`--absolute-git-dir`), `refs/higit/*`는 저장소 공통이라는 점을 architecture.md에 적는다.
+- H2: stage·unstage처럼 journal에 남지 않는 동작을 하면 "되돌림 경계" 줄을 남기고, 그 앞 줄은 되돌리지 않는다(D-065). `UndoState`에 `index_tree: Option<Oid>`(`write-tree`)를 둔다. 되돌리기는 `Executor`의 메서드로 두어 백업 ref를 같은 흐름으로 남긴다. 백업 ref 쓰기가 실패하면(사용자 `reference-transaction` hook 등) 본 동작을 하지 않는다. journal 서명(D-063)은 `hmac`+`sha2` crate, 키 파일 만들기·권한은 platform.
+- H3: 다시 하기는 액션을 다시 실행하지 않고 `update-ref <브랜치> <after.head> <before.head>`로 같은 버전을 되살린다(D-065). "모두 넣고 저장"(D-062)을 되돌리면 `index_tree`로 index도 되돌린다. 사용자 hook은 `reset --soft`·`update-ref`에서도 `reference-transaction`으로 돈다(본문의 "hook이 돌지 않는다"는 틀림).
+- H5: 단축키 표가 항목 하나에 키 여러 개를 가질 수 있게 바꾼다(Ctrl+Y 별칭, D-056).
+- H7: commit 입력에 `stage_all: bool`(D-062).
+- H4: `fetch` 쉬운 이름 "원격 확인"(D-059)을 같은 커밋에서. 용어표의 `pull` 명령 열은 `git merge --ff-only`, `sync`는 `git fetch` + `git merge` + `git push`.
+- H8(맡겨 두기): 순서는 ① `refs/stash` oid를 읽음 ② `stash push --include-untracked -m <표지>` ③ `refs/stash`가 바뀌지 않았으면 맡길 것이 없음(사용자 stash를 건드리지 않음) ④ 바뀌었으면 core가 `refs/higit/parked/<이름>`을 먼저 쓰고 ⑤ 그 뒤 `stash@{0}`이 그 oid일 때만 drop. git 쪽은 `park_push`(oid 또는 없음)와 `stash_drop_if(oid)` 두 함수로 나눈다. 합치기·충돌 중이면 맡기지 않는다(git이 거부함).
+- H8(꺼내기): 꺼내기는 작업 폴더가 깨끗할 때만 한다(갈아탄 직후). 적용 전에 stash 세 번째 부모(새 파일)의 경로가 작업 폴더에 이미 있는지 본다. `stash apply --index`가 실패하면 `reset --hard HEAD`와 stash가 만든 새 파일 삭제로 깨끗한 상태로 되돌리고 ref는 남긴다(D-054). 테스트: 겹침 apply 실패 뒤 작업 폴더가 깨끗함.
+- H9: 맡긴 ref 이름은 브랜치 이름을 바꿔 적는다(D-064). 브랜치 `a`와 `a/b`가 함께 있어도 ref가 부딪히지 않는다.
+- H11: 기준이 없으면(무관한 기록) 빈 트리를 기준으로. `merge-file`은 1 이상(255 포함)이면 겹침. 임시 index는 호출마다 고유 파일. 2.38 이상 경로 테스트는 버전을 보고 건너뛴다.
+- H12: D-023의 `BatchMode`가 아직 코드에 없으므로 H12에서 함께 넣는다. 강제 종료는 네트워크·백그라운드 작업에만 건다(D-066). 로컬 쓰기는 시간 제한 없이 기다린다. 백그라운드 fetch는 `-c gc.auto=0 -c maintenance.auto=false`. Linux 프로세스 그룹 종료는 `rustix`의 안전한 API로(platform `forbid(unsafe_code)` 유지). `platform/src/process.rs`는 이미 있으니 거기에 더한다.
+- H13: 합친 버전 메시지는 `-m`으로 넘긴다(2.34.1의 `merge`는 `-F -`를 읽지 못한다). 갈라진 경우 `--no-ff`를 명시(사용자 `merge.ff=only`). `merge --abort`는 `MERGE_HEAD`가 있을 때만. 동기화는 upstream 원격만 fetch한다(`--all` 아님). 테스트에 `commit.gpgsign` 켬, identity 없음, upstream 강제 갱신, upstream 사라짐을 넣는다.
+- H16: 주소 속 자격 증명은 콜론 없는 형태도 가린다(`://[^/@\s]+@` → `://***@`). 001-9(순번 25) 바로 뒤라 순서는 그대로.
+- T2: `<git_dir>/hooks`의 `.sample`이 아닌 파일도 "실행되는 설정"으로 본다(D-067). "끄고 열기"는 `core.hooksPath=<빈 폴더>`를 붙인다.
+
+### 테스트에 더할 실패 경우
+- 맡기기: 바뀐 것 없음 + 사용자 stash 있음(사용자 stash가 그대로), 무시된 파일만 있음, 합치기 중, 꺼내기 겹침 후 깨끗함, ref 이름 `a`와 `a/b`, 한글 브랜치.
+- 되돌리기: Ctrl+Z 두 번, 앱 밖에서 브랜치 삭제·이름 바꿈, 특정 버전을 보는 중, 서명이 다른 journal 줄, hook이 백업 ref를 거부.
+- `--end-of-options`: `-x.txt`, `--output=x` 파일 이름(`--` 뒤), 태그 `refs/tags/-t`.
+- 링크: 대상 없는 링크, 링크 순환, 안쪽 폴더 링크 아래 파일.
