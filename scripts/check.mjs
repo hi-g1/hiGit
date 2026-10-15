@@ -57,6 +57,17 @@ if (mode === "fast") {
   if (groups.frontend) frontend();
   if (groups.rust) rustQuick();
 } else if (mode === "full") {
+  // 로컬에만 있는 새 코드 파일이 있으면 로컬 검사는 통과해도 push한 커밋은 깨진다.
+  const untracked = spawnSync(
+    "git",
+    ["ls-files", "--others", "--exclude-standard", "--", "src", "src-tauri", "scripts"],
+    { encoding: "utf8" },
+  ).stdout.trim();
+  if (untracked) {
+    console.error(`\n✖ 검사 실패: 커밋하지 않은 새 코드 파일이 있습니다.\n${untracked}`);
+    console.error("  커밋에 넣거나 지운 뒤 다시 시도해 주세요.");
+    process.exit(1);
+  }
   frontend();
   rustQuick();
   run("Rust 테스트", "cargo", ["test", "-q", "--workspace"], "src-tauri");
