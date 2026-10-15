@@ -1,0 +1,11 @@
+.preview {
+  width: 100%;
+  max-width: 1100px;
+  overflow: hidden;
+}
+
+.mini {
+  flex: none;
+  width: 240px;
+  overflow: hidden;
+}

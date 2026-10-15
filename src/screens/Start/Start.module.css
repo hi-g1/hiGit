@@ -212,3 +212,8 @@
 .danger {
   color: var(--deleted);
 }
+
+/* 큰 노선도(start-normal.png): 상태 문장과 이어서 하기 사이 */
+.route {
+  margin: var(--space-2) 0 var(--space-4);
+}

@@ -1,6 +1,7 @@
 // 서버 상태(TanStack Query). 화면은 이 훅으로 백엔드를 읽는다.
 import { type InfiniteData, type QueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api, type ApiError, type DiffRequest, type LogPage, type LogScope } from "./api";
+import { limiter } from "./limit";
 
 export const HISTORY_LIMIT = 200;
 
@@ -21,7 +22,21 @@ export const queryKeys = {
   recovery: (repo: string) => ["recovery", repo] as const,
   stashes: (repo: string) => ["stashes", repo] as const,
   pendingWork: (repo: string) => ["pendingWork", repo] as const,
+  routePreview: (repo: string, limit: number) => ["routePreview", repo, limit] as const,
 };
+
+/** 시작 화면 노선도는 동시에 3개까지 부른다(Windows는 git 시작이 느리다, D-093). */
+export const previewQueue = limiter(3);
+
+/** 시작 화면 노선도(D-093). 상태 요약이 성공한 프로젝트만(`enabled`). */
+export function useRoutePreview(repo: string, limit: number, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.routePreview>>, ApiError>({
+    queryKey: queryKeys.routePreview(repo, limit),
+    queryFn: () => previewQueue(() => api.routePreview(repo, limit)),
+    enabled,
+    staleTime: 30_000,
+  });
+}
 
 /** 끝나지 않은 작업(D-082). 오래된 잠금, 남은 맡긴 항목, 다른 도구의 작업. */
 export function usePendingWork(repo: string) {

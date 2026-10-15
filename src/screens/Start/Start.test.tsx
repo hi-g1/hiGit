@@ -12,6 +12,18 @@ vi.mock("../../lib/api", async (importOriginal) => ({
     openProject: vi.fn(),
     removeRecent: vi.fn(),
     listActions: vi.fn(async () => []),
+    routePreview: vi.fn(async () => ({
+      current: "로그인-기능",
+      defaultBranch: "main",
+      twoLines: true,
+      currentCommits: [{ oid: "1".repeat(40), shortOid: "1111111", summary: "로그인 화면" }],
+      currentMore: 0,
+      mainSince: 1,
+      mainLast: { oid: "2".repeat(40), shortOid: "2222222", summary: "오타 수정" },
+      upstreamOid: null,
+      upstreamLabel: null,
+      changedFiles: 0,
+    })),
   },
 }));
 vi.mock("../../lib/dialog", () => ({ pickFolder: vi.fn() }));
@@ -120,6 +132,29 @@ describe("시작 화면", () => {
     expect(within(row).getByText("사라진 폴더").className).toMatch(/muted/);
     await user.click(within(row).getByRole("button", { name: "목록에서 빼기" }));
     expect(api.removeRecent).toHaveBeenCalledWith("/home/me/사라진 폴더");
+  });
+
+  it("마지막 프로젝트의 큰 노선도: 상태 요약이 성공한 뒤에만, 글자에는 브랜치 색 없음", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([project("my-shop", 10)]);
+    vi.mocked(api.projectSummary).mockResolvedValue(summary());
+    renderStart();
+    const map = await screen.findByRole("img", { name: "버전 기록 · 로그인-기능 · 버전 1개" });
+    expect(api.routePreview).toHaveBeenCalledWith("/home/me/my-shop", 12);
+    expect(map.textContent).toContain("로그인 화면");
+    for (const t of map.querySelectorAll("text")) expect(t.getAttribute("fill") ?? "").not.toMatch(/graph/);
+    expect(screen.getAllByRole("button", { name: "이어서 하기" })).toHaveLength(1);
+  });
+
+  it("사라진 폴더·신뢰 필요·저장 없는 프로젝트는 노선도를 부르지 않는다", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([project("믿음 필요", 10), project("빈 것", 20)]);
+    vi.mocked(api.projectSummary).mockImplementation(async (repo) => {
+      if (repo.endsWith("믿음 필요")) throw new ApiError({ code: "needsTrust", detail: null });
+      return summary({}, { hasCommits: false });
+    });
+    renderStart();
+    expect(await screen.findByRole("heading", { name: "믿음 필요" })).toBeInTheDocument();
+    await screen.findByText("확인 필요");
+    expect(api.routePreview).not.toHaveBeenCalled();
   });
 
   it("연 프로젝트가 없으면 빈 상태와 찾은 Git 버전", async () => {

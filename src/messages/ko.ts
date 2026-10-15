@@ -155,6 +155,7 @@ export const ko = {
   forceStop: "강제로 멈추기",
   forceStopTitle: "강제로 멈출까요?",
   forceStopDetail: "하던 작업이 반쯤 남을 수 있어요.",
+  routePreviewLabel: (branch: string, n: number) => `${t("log")} · ${branch} · 버전 ${n}개`,
   /** 버전 기록 노선도(D-087~D-092). */
   scopeAll: `모든 ${t("branch")}`,
   scopeCurrent: `지금 ${t("branch")}만`,

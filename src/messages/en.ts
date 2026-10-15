@@ -131,6 +131,7 @@ export const en: Messages = {
   forceStop: "Force stop",
   forceStopTitle: "Force stop?",
   forceStopDetail: "The task may be left half done.",
+  routePreviewLabel: (branch: string, n: number) => `${t("log")} · ${branch} · ${n} versions`,
   scopeAll: `All ${t("branch").toLowerCase()}es`,
   scopeCurrent: `Current ${t("branch").toLowerCase()} only`,
   zoomNames: { all: "All versions", key: "Key versions", tags: `${t("tag")}s only` },
