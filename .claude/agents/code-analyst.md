@@ -33,6 +33,7 @@ effort: high
 
 ### 3. 보안 점검 (D-034~D-041, `docs/architecture.md` "보안")
 - [ ] git 호출: 인자 배열(셸·문자열 명령줄 없음), 리비전 앞 `--end-of-options`, 경로 앞 `--`, 공통 환경 변수(D-035)
+- [ ] 리비전은 `args.rs`의 `push_revs`로만 붙인다(`rg '"--end-of-options"' src-tauri/crates/git/src`가 args.rs에만). 표시를 넣지 못하는 명령·버전에는 core 이름 검사를 거친 값만 넘긴다
 - [ ] 새 브랜치·태그 이름과 원격 주소를 검사한다(`check-ref-format`, `-` 시작 금지, https·ssh만)
 - [ ] IPC 명령: 인자를 serde 타입으로 받고 형식·길이를 검사한다. 경로는 저장소 루트 안 상대 경로만, 링크를 따라가지 않는다(D-037)
 - [ ] 비밀: 토큰·주소 속 비밀번호가 로그, 오류, Debug, 명령줄, 주소에 들어가지 않는다(D-040)

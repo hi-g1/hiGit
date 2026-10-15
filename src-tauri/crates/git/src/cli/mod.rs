@@ -1,3 +1,4 @@
+mod args;
 mod diff;
 mod log;
 #[cfg(test)]
@@ -6,6 +7,9 @@ mod runner;
 mod status;
 
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+
+use args::{Cmd, push_revs};
 
 pub use runner::ConfigureCommand;
 use runner::Runner;
@@ -18,6 +22,8 @@ use crate::{
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
     runner: Runner,
+    /// `version()` 결과. `--end-of-options`를 넣을지 고를 때 쓴다(args.rs).
+    version: OnceLock<GitVersion>,
 }
 
 impl CliBackend {
@@ -25,6 +31,7 @@ impl CliBackend {
     pub fn new(git: impl Into<PathBuf>, configure: ConfigureCommand) -> Self {
         Self {
             runner: Runner::new(git.into(), configure),
+            version: OnceLock::new(),
         }
     }
 
@@ -38,12 +45,23 @@ impl CliBackend {
 }
 
 impl CliBackend {
+    /// git 버전. 처음 한 번만 읽는다. 읽지 못하면 가장 보수적인 값(표시를 넣지 않음)을 쓴다.
+    fn git_version(&self) -> GitVersion {
+        *self
+            .version
+            .get_or_init(|| self.version().unwrap_or(GitVersion::new(0, 0, 0)))
+    }
+
     /// 저장이 하나라도 있는지. 오류 문구를 읽지 않고 종료 코드로 판단한다.
     fn has_commit(&self, repo: &RepoPath) -> Result<bool> {
-        match self.runner.run(
-            Some(repo.as_path()),
-            &["rev-parse", "--verify", "-q", "HEAD^{commit}"],
-        ) {
+        let mut args = vec!["rev-parse", "--verify", "-q"];
+        push_revs(
+            &mut args,
+            Cmd::RevParse,
+            self.git_version(),
+            &["HEAD^{commit}"],
+        );
+        match self.runner.run(Some(repo.as_path()), &args) {
             Ok(_) => Ok(true),
             Err(GitError::Failed { code: Some(1), .. }) => Ok(false),
             Err(e) => Err(e),
@@ -93,22 +111,18 @@ impl GitBackend for CliBackend {
             Some(rev) => rev.as_str(),
             None => {
                 // 저장이 없는 저장소는 오류 문구를 읽지 않고 HEAD 존재 여부로 판단한다.
-                // -q: 없으면 출력 없이 종료 코드 1.
-                match self
-                    .runner
-                    .run(dir, &["rev-parse", "--verify", "-q", "HEAD^{commit}"])
-                {
-                    Ok(_) => "HEAD",
-                    Err(GitError::Failed { code: Some(1), .. }) => return Ok(Vec::new()),
-                    Err(e) => return Err(e),
+                if !self.has_commit(repo)? {
+                    return Ok(Vec::new());
                 }
+                "HEAD"
             }
         };
         let skip = format!("--skip={}", query.skip);
         let max = format!("--max-count={}", query.limit);
-        let out = self
-            .runner
-            .run(dir, &["log", log::FORMAT, &skip, &max, rev, "--"])?;
+        let mut args = vec!["log", log::FORMAT, &skip, &max];
+        push_revs(&mut args, Cmd::Log, self.git_version(), &[rev]);
+        args.push("--");
+        let out = self.runner.run(dir, &args)?;
         log::parse(&out.stdout_lossy())
     }
 
@@ -133,22 +147,18 @@ impl GitBackend for CliBackend {
         let out = match target.kind {
             DiffKind::Tracked => {
                 // 저장이 없으면 HEAD 대신 빈 트리와 비교한다(해시 방식에 맞게 git이 만든다).
-                let base = match self
-                    .runner
-                    .run(dir, &["rev-parse", "--verify", "-q", "HEAD^{commit}"])
-                {
-                    Ok(_) => "HEAD".to_string(),
-                    Err(GitError::Failed { code: Some(1), .. }) => self
-                        .runner
+                let base = if self.has_commit(repo)? {
+                    "HEAD".to_string()
+                } else {
+                    self.runner
                         .run_with_stdin(dir, diff::EMPTY_TREE_ARGS, b"")?
                         .stdout_utf8()?
                         .trim()
-                        .to_string(),
-                    Err(e) => return Err(e),
+                        .to_string()
                 };
                 let mut args = vec!["--literal-pathspecs", "diff"];
                 args.extend_from_slice(diff::COMMON_ARGS);
-                args.push(&base);
+                push_revs(&mut args, Cmd::Diff, self.git_version(), &[&base]);
                 args.push("--");
                 args.push(&target.path);
                 if let Some(orig) = &target.orig_path {
@@ -534,6 +544,36 @@ mod tests {
             testutil::canonical(found.as_path()),
             testutil::canonical(repo.path())
         );
+    }
+
+    #[test]
+    fn option_like_branch_name_is_a_revision() {
+        let repo = testutil::init_repo();
+        std::fs::write(repo.path().join("a.txt"), "a").unwrap();
+        testutil::git(repo.path(), &["add", "a.txt"]);
+        testutil::git(repo.path(), &["commit", "-q", "-m", "첫 버전"]);
+        // 받은 저장소에 이런 ref가 있을 수 있다. git branch는 막지만 update-ref는 만든다.
+        testutil::git(repo.path(), &["update-ref", "refs/heads/-x", "HEAD"]);
+        let backend = testutil::backend();
+        if !args::supports_end_of_options(Cmd::Log, backend.version().unwrap()) {
+            eprintln!("이 git은 --end-of-options 확인 범위 밖이라 건너뜁니다.");
+            return;
+        }
+        let path = RepoPath::new(repo.path());
+        let query = LogQuery {
+            rev: Some("-x".into()),
+            ..LogQuery::default()
+        };
+        let commits = backend.log(&path, &query).unwrap();
+        assert_eq!(commits.len(), 1);
+
+        let pwned = repo.path().join("pwned");
+        let query = LogQuery {
+            rev: Some(format!("--output={}", pwned.display())),
+            ..LogQuery::default()
+        };
+        assert!(backend.log(&path, &query).is_err());
+        assert!(!pwned.exists());
     }
 
     #[test]
