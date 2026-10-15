@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 1b-2 (계획 005 "합친 순서" 27~42번)
-- 단계: 26 끝 (1b-1 완료). 1b-1 code-analyst 점검을 돌리는 중
-- 마지막 커밋: 8e1f909 core: mask credentials in error detail
-- 다음 할 일: 005 순번 27 = H2 UndoKind·journal(HMAC, D-063)·백업 ref. "검토 반영"의 H2 줄(경계 줄, index_tree, Executor 메서드)을 따른다
+- 단계: 27 끝 (H2). 1b-1 점검 위반 고침(df4b108, 1b72a92, 9c6e0cf)
+- 마지막 커밋: 9c6e0cf fix: address 1b-1 review findings
+- 다음 할 일: 005 순번 28 = H3 버전 저장 되돌리기·다시 하기(`Executor` 메서드, 다시 하기는 update-ref, D-065). H2에서 임시로 둔 `allow(dead_code)`(undo/mod.rs, undo/journal.rs)를 H3에서 지운다
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 3 → 4 → 5.
@@ -54,7 +54,7 @@
 - [x] 26 H16 오류 원문 가리기
 
 ## 1b-2 단계
-- [ ] 27 H2 UndoKind·journal(HMAC, D-063)·백업 ref
+- [x] 27 H2 UndoKind·journal(HMAC, D-063)·백업 ref
 - [ ] 28 H3 버전 저장 되돌리기·다시 하기
 - [ ] 29 H4 용어 sync·park, fetch "원격 확인"(D-059)
 - [ ] 30 H5 단축키 표(D-056)

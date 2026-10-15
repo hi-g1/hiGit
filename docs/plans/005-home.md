@@ -447,3 +447,15 @@ T4. core: 소유자가 다른 저장소 (`core: handle dubious ownership`) — �
 - 되돌리기: Ctrl+Z 두 번, 앱 밖에서 브랜치 삭제·이름 바꿈, 특정 버전을 보는 중, 서명이 다른 journal 줄, hook이 백업 ref를 거부.
 - `--end-of-options`: `-x.txt`, `--output=x` 파일 이름(`--` 뒤), 태그 `refs/tags/-t`.
 - 링크: 대상 없는 링크, 링크 순환, 안쪽 폴더 링크 아래 파일.
+
+## 1b-1 점검 반영 (code-analyst, 2026-10-16)
+1b-1 점검의 위반은 df4b108, 1b72a92, 9c6e0cf에서 고쳤다. 1b-2에서 지킬 것:
+- 백그라운드 fetch에 `--no-recurse-submodules`, `--no-write-fetch-head`(없으면 FETCH_HEAD가 매번 바뀌어 감시 이벤트가 난다). 동기화·자동 확인은 upstream 원격 하나만 지정한다(`Fetch { remote: None }`은 `--all`).
+- 갈아타기 전에 `validate_ref_like`와 `check_branch_name`을 꼭 부른다. git 2.30~2.33과 버전 읽기 실패(0.0.0)에서는 core 검사가 유일한 방어다.
+- 꺼내기(`Unpark`)는 갈아탄 직후, 합치기·리베이스 중이 아닐 때만 부른다(실패 경로가 `reset --hard`).
+- 저장이 없는 저장소는 `stash push`가 거부한다. 그때 맡기기를 건너뛴다.
+- 맡긴 ref 이름은 `%2F` 때문에 길어질 수 있다. 브랜치 이름 200바이트를 넘으면 맡기지 않고 알린다.
+- 신뢰 확인(T2): `NeedsTrust`는 열린 목록에 넣지 않는다. `project_summary`와 `watch`도 신뢰 기록을 확인한다. "끄고 열기" 덮어쓰기는 `Runner::command` 한 곳에서 붙인다.
+- NotOpened 부정 테스트를 preview, diff, branches, check_branch_name, watch에도 둔다.
+- `Queries::branches`는 맡긴 ref마다 git을 한 번씩 부른다. 많아지면 묶는다.
+- H13 테스트에 `commit.gpgsign` 켬, identity 없음, upstream 강제 갱신, upstream 사라짐을 넣는다.
