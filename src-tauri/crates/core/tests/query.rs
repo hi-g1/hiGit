@@ -551,6 +551,24 @@ fn unopened_paths_are_rejected() {
         .execute(dir.path(), &ActionInput::Init, None)
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::NotOpened);
+    // 나머지 조회·액션·감시도 열지 않은 경로를 받지 않는다(D-037).
+    let not_opened = |r: Result<(), higit_core::CoreError>| {
+        assert_eq!(ErrorView::from(&r.unwrap_err()).code, ErrorCode::NotOpened);
+    };
+    let q = core.queries();
+    let request = higit_core::view::DiffRequest {
+        path: "a.txt".into(),
+        orig_path: None,
+        untracked: false,
+    };
+    not_opened(q.diff(dir.path(), &request).map(drop));
+    not_opened(q.branches(dir.path()).map(drop));
+    not_opened(q.check_branch_name(dir.path(), "새것").map(drop));
+    not_opened(q.home_map(dir.path()).map(drop));
+    not_opened(core.preview(dir.path(), &ActionInput::Init).map(drop));
+    not_opened(core.undo(dir.path()).map(drop));
+    not_opened(core.redo(dir.path()).map(drop));
+    not_opened(core.watch(dir.path(), Arc::new(|_| {})));
     core.open_project(dir.path(), OpenHow::Picked).unwrap();
     assert!(core.queries().status(dir.path()).is_ok());
 }
