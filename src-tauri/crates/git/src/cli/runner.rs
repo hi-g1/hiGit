@@ -61,6 +61,8 @@ pub(crate) struct Runner {
     configure: ConfigureCommand,
     allowed_protocols: &'static str,
     pub(crate) process: ProcessControl,
+    /// 저장소 폴더별로 모든 호출에 붙이는 `-c 키=값`(믿지 않기로 한 저장소의 실행 설정 끄기, D-039).
+    overrides: std::sync::Mutex<std::collections::HashMap<PathBuf, Vec<String>>>,
 }
 
 #[derive(Debug)]
@@ -99,6 +101,20 @@ impl Runner {
             configure,
             allowed_protocols: ALLOWED_PROTOCOLS,
             process: ProcessControl::default(),
+            overrides: std::sync::Mutex::new(std::collections::HashMap::new()),
+        }
+    }
+
+    /// `repo` 폴더에서 도는 모든 호출에 `-c 키=값`을 붙인다. 빈 목록이면 지운다.
+    pub fn set_overrides(&self, repo: &Path, pairs: Vec<String>) {
+        let mut map = self
+            .overrides
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if pairs.is_empty() {
+            map.remove(repo);
+        } else {
+            map.insert(repo.to_path_buf(), pairs);
         }
     }
 
@@ -282,8 +298,19 @@ impl Runner {
             .env("GIT_ALLOW_PROTOCOL", self.allowed_protocols)
             .env("GIT_OPTIONAL_LOCKS", "0")
             // 한글 파일명을 따옴표·8진수 이스케이프 없이 받는다.
-            .args(["-c", "core.quotepath=off", "-c", "color.ui=never"])
-            .args(args);
+            .args(["-c", "core.quotepath=off", "-c", "color.ui=never"]);
+        if let Some(dir) = cwd
+            && let Some(pairs) = self
+                .overrides
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .get(dir)
+        {
+            for pair in pairs {
+                cmd.arg("-c").arg(pair);
+            }
+        }
+        cmd.args(args);
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }

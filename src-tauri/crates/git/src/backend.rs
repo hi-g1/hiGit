@@ -81,6 +81,12 @@ pub trait GitBackend: Send + Sync {
     /// 맡겨 둔 stash에 든 파일 경로(고친 파일과 새 파일).
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
 
+    /// 저장소 로컬 설정(include 포함)의 (키, 값) 목록. 키는 git이 주는 소문자 형태.
+    fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>;
+
+    /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
+    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);
+
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
 }

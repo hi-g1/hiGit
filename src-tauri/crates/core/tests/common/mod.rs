@@ -34,6 +34,7 @@ pub struct FakeGit {
     pub remote_heads: Mutex<Vec<(String, String)>>,
     pub merge_check: Mutex<MergeCheck>,
     pub parked_paths: Mutex<Vec<String>>,
+    pub local_config: Mutex<Vec<(String, String)>>,
 }
 
 impl FakeGit {
@@ -57,6 +58,7 @@ impl FakeGit {
             remote_heads: Mutex::new(Vec::new()),
             merge_check: Mutex::new(MergeCheck::Clean),
             parked_paths: Mutex::new(Vec::new()),
+            local_config: Mutex::new(Vec::new()),
         }
     }
 
@@ -241,6 +243,17 @@ impl GitBackend for FakeGit {
 
     fn parked_paths(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<Vec<String>> {
         Ok(self.parked_paths.lock().unwrap().clone())
+    }
+
+    fn local_config(&self, _repo: &RepoPath) -> git::Result<Vec<(String, String)>> {
+        Ok(self.local_config.lock().unwrap().clone())
+    }
+
+    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("overrides {} {pairs:?}", repo.as_path().display()));
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

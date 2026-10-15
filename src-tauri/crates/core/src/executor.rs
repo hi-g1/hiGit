@@ -289,6 +289,12 @@ mod tests {
         fn current_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
             unreachable!()
         }
+        fn local_config(&self, _: &RepoPath) -> git::Result<Vec<(String, String)>> {
+            unreachable!()
+        }
+        fn set_repo_overrides(&self, _: &RepoPath, _: Vec<String>) {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }

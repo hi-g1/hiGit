@@ -424,6 +424,32 @@ impl GitBackend for CliBackend {
         self.parked_paths_impl(repo, oid)
     }
 
+    fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>> {
+        // 설정이 하나도 없으면 종료 코드 1이 아니라 빈 출력이다. 레코드는 `키\n값\0`.
+        let out = match self.runner.run(
+            Some(repo.as_path()),
+            &["config", "--local", "--includes", "--list", "-z"],
+        ) {
+            Ok(out) => out,
+            Err(GitError::Failed { code: Some(1), .. }) => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
+        Ok(out
+            .stdout_lossy()
+            .split('\0')
+            .filter(|r| !r.is_empty())
+            .map(|r| match r.split_once('\n') {
+                Some((k, v)) => (k.to_string(), v.to_string()),
+                // 값 없이 키만 쓴 불리언(`[core] bare`)
+                None => (r.to_string(), String::new()),
+            })
+            .collect())
+    }
+
+    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
+        self.runner.set_overrides(repo.as_path(), pairs);
+    }
+
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {
         let dir = Some(repo.as_path());
         // 경로 목록은 명령줄 대신 stdin으로 넘긴다(Windows 명령줄 길이 제한, 파일 수천 개).
@@ -899,6 +925,32 @@ mod tests {
         };
         assert!(backend.log(&path, &query).is_err());
         assert!(!pwned.exists());
+    }
+
+    #[test]
+    fn local_config_and_repo_overrides() {
+        let repo = testutil::init_repo();
+        testutil::git(repo.path(), &["config", "core.fsmonitor", "touch pwned"]);
+        testutil::git(repo.path(), &["config", "filter.lfs.clean", "lfs clean %f"]);
+        let backend = testutil::backend();
+        let path = RepoPath::new(repo.path());
+        let config = backend.local_config(&path).unwrap();
+        assert!(config.contains(&("core.fsmonitor".into(), "touch pwned".into())));
+        assert!(config.contains(&("filter.lfs.clean".into(), "lfs clean %f".into())));
+
+        // 덮어쓰기가 이 저장소의 호출에만 붙는다.
+        backend.set_repo_overrides(&path, vec!["core.fsmonitor=false".into()]);
+        let out = backend
+            .runner
+            .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
+            .unwrap();
+        assert_eq!(out.stdout_utf8().unwrap().trim(), "false");
+        backend.set_repo_overrides(&path, Vec::new());
+        let out = backend
+            .runner
+            .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
+            .unwrap();
+        assert_eq!(out.stdout_utf8().unwrap().trim(), "touch pwned");
     }
 
     #[test]
