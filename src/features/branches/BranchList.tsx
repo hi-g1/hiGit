@@ -2,12 +2,14 @@ import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
-import { useBranchNameCheck, useBranches } from "../../lib/queries";
+import { useBranchNameCheck, useBranches, useMergeHint } from "../../lib/queries";
 import { formatDate } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
-import { useTermLabel } from "../../ui/Term";
+import { Button } from "../../ui/Button";
+import { TermTooltip, useTermLabel } from "../../ui/Term";
+import { useMergeAction } from "../merge/useMergeAction";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./BranchList.module.css";
 import { branchColor } from "./color";
@@ -61,6 +63,9 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
   const view = branches.data;
+  // 지금 브랜치만 앞서 있으면 "main에 합치기"(D-071). 노선도 옆이 아니라 여기에 둔다(D-048).
+  const hint = useMergeHint(repo).data;
+  const merge = useMergeAction(repo, onDone);
   const debounced = useDebounced(query.trim(), 300);
   const nameCheck = useBranchNameCheck(repo, view && canOfferCreate(view, debounced) ? debounced : "");
 
@@ -134,6 +139,22 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
         onKeyDown={onKeyDown}
       />
       {view && <List view={view} choices={choices} query={query} active={active} onPick={(c) => void run(c)} />}
+      {!query.trim() && hint?.kind === "into" && hint.branch !== null && (
+        <div className={styles.mergeInto}>
+          <TermTooltip id="merge">
+            <Button
+              disabled={merge.pending}
+              onClick={() => {
+                const target = hint.branch;
+                if (target === null) return;
+                void merge.run("merge-into", target).then(close);
+              }}
+            >
+              {m.mergeIntoBranch(hint.branch)}
+            </Button>
+          </TermTooltip>
+        </div>
+      )}
       {view && !query.trim() && !expanded && sections(view).more.length > 0 && (
         <button type="button" className={styles.more} onClick={() => setExpanded(true)}>
           {m.moreBranches(sections(view).more.length)}

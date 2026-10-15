@@ -362,6 +362,7 @@ pub enum ActionResult {
         count: u32,
     },
     /// 합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다.
+    #[serde(rename_all = "camelCase")]
     Merged {
         branch: String,
         fast_forward: bool,

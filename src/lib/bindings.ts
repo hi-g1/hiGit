@@ -79,7 +79,7 @@ parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "
 /**  겹쳐서 합치지 않은 파일. 비어 있지 않으면 올리지도 않았다. */
 overlap: string[] } | { kind: "ignored"; count: number } | 
 /**  합쳤다. `fast_forward`면 새 버전 없이 앞으로 감았다. */
-{ kind: "merged"; branch: string; fast_forward: boolean } | 
+{ kind: "merged"; branch: string; fastForward: boolean } | 
 /**  겹쳐서 합치는 중으로 멈췄다. 충돌 해결 화면으로 간다(D-069). */
 { kind: "mergeConflicts"; paths: string[] } | 
 /**  합치기를 마쳤다(합친 버전을 만들었다). */

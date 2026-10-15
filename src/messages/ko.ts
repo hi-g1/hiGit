@@ -45,6 +45,9 @@ export const ko = {
   sideSubmodule: "하위 저장소",
   sideLink: (target: string) => `링크 → ${target}`,
   merged: "합쳤어요",
+  mainNewVersions: (branch: string, n: number) => `${branch}에 새 버전 ${n}개`,
+  bringMerge: (branch: string) => `${branch} 가져와 ${t("merge")}`,
+  mergeIntoBranch: (branch: string) => `${branch}에 ${t("merge")}`,
   mergeAborted: `${josa(t("merge"), "을/를")} 그만뒀어요`,
   otherOperation: "다른 도구에서 시작한 작업이 멈춰 있어요.",
   // 비밀 파일 알림 줄(D-077)

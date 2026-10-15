@@ -133,3 +133,9 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 지금 브랜치만 앞서 있을 때 "main에 합치기"(D-071) */
+.mergeInto {
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--border-width) solid var(--border);
+}

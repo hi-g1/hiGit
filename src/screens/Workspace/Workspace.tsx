@@ -79,7 +79,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         <History repo={repo.path} />
       ) : (
         <>
-        <HomeMap repo={repo.path} />
+        <HomeMap repo={repo.path} onDone={notifyDone} />
         <div className={styles.twoPane}>
           <section className={styles.left}>
             <div className={styles.scroll}>

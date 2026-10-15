@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import styles from "./Button.module.css";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -6,7 +6,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "text";
 };
 
-export function Button({ variant = "secondary", className, type = "button", ...rest }: ButtonProps) {
+/** ref를 넘긴다(툴팁·팝오버의 `asChild` 트리거가 위치를 잡으려면 필요하다). */
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = "secondary", className, type = "button", ...rest },
+  ref,
+) {
   const classes = [styles.button, styles[variant], className].filter(Boolean).join(" ");
-  return <button type={type} className={classes} {...rest} />;
-}
+  return <button ref={ref} type={type} className={classes} {...rest} />;
+});

@@ -1,5 +1,13 @@
 .map {
+  display: flex;
   overflow: hidden;
   border-bottom: var(--border-width) solid var(--border);
   background: var(--bg);
+}
+
+/* 노선도는 남는 폭을 쓰고 오른쪽에 합치기 제안이 붙는다(r-mergehint). */
+.route {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }

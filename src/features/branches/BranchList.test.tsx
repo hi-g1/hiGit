@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { branches: vi.fn(), checkBranchName: vi.fn(), executeAction: vi.fn() },
+  api: { branches: vi.fn(), checkBranchName: vi.fn(), executeAction: vi.fn(), mergeHint: vi.fn() },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -39,6 +39,7 @@ function show(onDone = vi.fn()) {
   vi.mocked(api.branches).mockResolvedValue(view);
   vi.mocked(api.checkBranchName).mockResolvedValue({ ok: true, problem: null });
   vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchCreated", name: "x" });
+  vi.mocked(api.mergeHint).mockResolvedValue({ kind: "none", branch: null, behind: 0, ahead: 0, overlap: [], overlapCount: 0 });
   render(
     <AppProviders client={createQueryClient()}>
       <BranchList repo="/repo" current="로그인 기능" onDone={onDone}>
@@ -52,6 +53,23 @@ function show(onDone = vi.fn()) {
 afterEach(() => vi.clearAllMocks());
 
 describe("브랜치 목록", () => {
+  it("지금 브랜치만 앞서 있으면 main에 합치기", async () => {
+    const onDone = show();
+    vi.mocked(api.mergeHint).mockResolvedValue({ kind: "into", branch: "main", behind: 0, ahead: 2, overlap: [], overlapCount: 0 });
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "merged", branch: "main", fastForward: true });
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "main에 합치기" }));
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "merge-into", input: { branch: "main" } });
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("합쳤어요"));
+  });
+
+  it("제안이 없으면 main에 합치기도 없다", async () => {
+    show();
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await screen.findByText("최근에 쓴 브랜치");
+    expect(screen.queryByRole("button", { name: "main에 합치기" })).not.toBeInTheDocument();
+  });
+
   it("단추를 누르면 지금·최근 브랜치와 오른쪽 글자", async () => {
     show();
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));

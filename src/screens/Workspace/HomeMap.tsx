@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { branchColor } from "../../features/branches/color";
+import { MergeHint } from "../../features/merge/MergeHint";
 import { layoutTwoLine, MAP_HEIGHT } from "../../features/history/layout/twoLine";
 import { SvgRenderer } from "../../features/history/render/SvgRenderer";
 import { useHomeMap } from "../../lib/queries";
@@ -8,7 +9,7 @@ import { useTermLabel } from "../../ui/Term";
 import styles from "./HomeMap.module.css";
 
 /** 홈 위쪽 두 줄 노선도(D-046, r-home.png). main과 지금 브랜치만. 전체는 버전 기록 화면에서. */
-export function HomeMap({ repo }: { repo: string }) {
+export function HomeMap({ repo, onDone }: { repo: string; onDone: (text: string) => void }) {
   const m = useMessages();
   const label = useTermLabel("log");
   const map = useHomeMap(repo);
@@ -29,8 +30,11 @@ export function HomeMap({ repo }: { repo: string }) {
   const main = branchColor(view.defaultBranch ?? "", view.defaultBranch);
   const current = view.twoLines && view.current ? branchColor(view.current, view.defaultBranch) : main;
   return (
-    <div ref={box} className={styles.map} style={{ height: MAP_HEIGHT }}>
-      <SvgRenderer scene={scene} colors={{ main, current }} label={label} />
+    <div className={styles.map} style={{ height: MAP_HEIGHT }}>
+      <div ref={box} className={styles.route}>
+        <SvgRenderer scene={scene} colors={{ main, current }} label={label} />
+      </div>
+      <MergeHint repo={repo} onDone={onDone} />
     </div>
   );
 }
