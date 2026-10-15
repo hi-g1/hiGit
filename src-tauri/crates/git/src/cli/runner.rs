@@ -11,7 +11,7 @@ pub type ConfigureCommand = Arc<dyn Fn(&mut Command) + Send + Sync>;
 /// 모든 git 호출에 허용하는 전송 방식(D-035). `ext::`, `file://`, 로컬 경로 원격은 막는다.
 pub(crate) const ALLOWED_PROTOCOLS: &str = "https:ssh:git";
 
-/// 상위 프로세스에서 물려받으면 엉뚱한 저장소를 가리키게 하는 변수(D-052).
+/// 상위 프로세스에서 물려받으면 엉뚱한 저장소나 설정을 쓰게 하는 변수(D-052).
 const REPO_LOCATION_VARS: &[&str] = &[
     "GIT_DIR",
     "GIT_WORK_TREE",
@@ -20,6 +20,10 @@ const REPO_LOCATION_VARS: &[&str] = &[
     "GIT_ALTERNATE_OBJECT_DIRECTORIES",
     "GIT_COMMON_DIR",
     "GIT_NAMESPACE",
+    // 부모 환경이 몰래 설정을 끼워 넣는 길. 앱은 필요한 설정을 `-c`로 직접 준다.
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT",
+    "GIT_EXTERNAL_DIFF",
 ];
 
 pub(crate) struct Runner {

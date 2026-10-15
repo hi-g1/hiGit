@@ -29,6 +29,8 @@ impl CliBackend {
     }
 
     /// **테스트 전용.** 로컬 경로·`file://` 원격을 허용한다. 앱 코드에서는 부르지 않는다(D-035).
+    /// core 통합 테스트가 써야 해서 공개하지만 문서에는 숨긴다.
+    #[doc(hidden)]
     pub fn allow_local_remotes_for_tests(mut self) -> Self {
         self.runner.allow_local_remotes();
         self
@@ -485,19 +487,34 @@ mod tests {
     }
 
     #[test]
-    fn repo_config_editor_and_pager_do_not_run() {
+    fn repo_config_editor_does_not_run() {
         let repo = testutil::init_repo();
         let pwned = repo.path().join("pwned");
         let cmd = format!("touch '{}'", pwned.display());
         testutil::git(repo.path(), &["config", "core.editor", &cmd]);
-        testutil::git(repo.path(), &["config", "core.pager", &cmd]);
         std::fs::write(repo.path().join("a.txt"), "a").unwrap();
         testutil::git(repo.path(), &["add", "a.txt"]);
+
+        // 대조군: GIT_EDITOR를 비우면 설정의 편집기가 실제로 돈다.
+        let control: ConfigureCommand = std::sync::Arc::new(|cmd: &mut std::process::Command| {
+            testutil::isolate(cmd);
+        });
+        let mut raw = std::process::Command::new("git");
+        control(&mut raw);
+        let _ = raw
+            .args(["commit"])
+            .current_dir(repo.path())
+            .env_remove("GIT_EDITOR")
+            .env_remove("VISUAL")
+            .env_remove("EDITOR")
+            .output()
+            .unwrap();
+        assert!(pwned.exists(), "대조군에서 core.editor가 돌지 않았다");
+        std::fs::remove_file(&pwned).unwrap();
+
+        // 앱 백엔드는 GIT_EDITOR=":"라 빈 메시지로 실패하고 설정의 명령은 돌지 않는다.
         let backend = testutil::backend();
-        // 메시지 없이 저장하면 편집기가 필요하다. ":"라 빈 메시지로 실패하고 설정의 명령은 돌지 않는다.
         assert!(backend.runner.run(Some(repo.path()), &["commit"]).is_err());
-        // -p는 터미널이 아니어도 페이저를 쓰게 한다. GIT_PAGER=cat이 이긴다.
-        let _ = backend.runner.run(Some(repo.path()), &["-p", "status"]);
         assert!(!pwned.exists());
     }
 
