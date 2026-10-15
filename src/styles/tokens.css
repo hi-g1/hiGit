@@ -28,6 +28,7 @@
 
   /* 글꼴 */
   --font-body: "Pretendard", system-ui, sans-serif;
+
   /* 코드 글꼴은 latin만 포함하므로 한글은 Pretendard로 이어 받아 OS마다 같게 보이게 한다 */
   --font-mono: "JetBrains Mono", "Pretendard", ui-monospace, monospace;
   --font-size-sm: 12px;
