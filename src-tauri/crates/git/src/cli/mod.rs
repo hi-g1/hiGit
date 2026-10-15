@@ -23,9 +23,13 @@ mod ref_tests;
 mod refs;
 #[cfg(test)]
 mod remote_tests;
+mod resolve;
+#[cfg(test)]
+mod resolve_tests;
 #[cfg(test)]
 mod run_tests;
 mod runner;
+mod segments;
 mod status;
 
 use std::path::{Path, PathBuf};
@@ -40,8 +44,8 @@ pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
     BlobHead, Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError,
-    GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, Oid, OpOutput, RefEntry, Remote, RepoPath,
-    Result, Status,
+    GitOp, GitVersion, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry,
+    Remote, RepoPath, Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -476,6 +480,16 @@ impl GitBackend for CliBackend {
         self.blob_heads(repo, oids, max_bytes)
     }
 
+    fn merge_segments(
+        &self,
+        repo: &RepoPath,
+        base: &[u8],
+        ours: &[u8],
+        theirs: &[u8],
+    ) -> Result<Vec<MergeSegment>> {
+        self.segments(repo, base, ours, theirs)
+    }
+
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.runner.set_overrides(repo.as_path(), pairs);
     }
@@ -574,6 +588,13 @@ impl GitBackend for CliBackend {
             GitOp::ResetSoft { oid } => self
                 .runner
                 .run(dir, &["reset", "--soft", "-q", oid.as_str()])?,
+            GitOp::ResolveFile { path, mode, bytes } => {
+                self.resolve_file(repo, path, mode, bytes)?
+            }
+            GitOp::ResolveDelete { path } => self.resolve_delete(repo, path)?,
+            GitOp::SnapshotFiles { paths, message } => {
+                return self.snapshot_files(repo, paths, message);
+            }
             GitOp::Revert { oid, mainline } => {
                 let number;
                 let mut args = vec!["revert", "--no-edit"];

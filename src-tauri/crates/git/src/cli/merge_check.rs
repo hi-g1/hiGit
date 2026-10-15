@@ -202,10 +202,10 @@ fn unmerged(out: &str) -> Result<Vec<(String, [Option<String>; 3])>> {
 
 /// 호출마다 따로 쓰는 임시 폴더. 무작위 이름으로 새로 만들고(남이 미리 만든 폴더·링크를 쓰지 않음)
 /// Linux에서는 0700이다. 동기화와 백그라운드 확인이 겹쳐도 부딪히지 않는다.
-struct Scratch(tempfile::TempDir);
+pub(super) struct Scratch(tempfile::TempDir);
 
 impl Scratch {
-    fn new() -> Result<Self> {
+    pub(super) fn new() -> Result<Self> {
         tempfile::Builder::new()
             .prefix("higit-merge-")
             .tempdir()
@@ -213,7 +213,7 @@ impl Scratch {
             .map_err(GitError::Spawn)
     }
 
-    fn path(&self, name: &str) -> PathBuf {
+    pub(super) fn path(&self, name: &str) -> PathBuf {
         self.0.path().join(name)
     }
 }

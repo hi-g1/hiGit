@@ -204,6 +204,22 @@ impl Runner {
         Ok(out.status.success())
     }
 
+    /// `git merge-file -p <옵션> <우리> <기준> <그쪽>`의 (종료 코드, 출력). 종료 코드는 겹친 곳 수,
+    /// 이진 파일·오류면 255다. 실패로 보지 않고 그대로 돌려준다.
+    pub fn merge_file_print(
+        &self,
+        cwd: Option<&Path>,
+        options: &[&str],
+        files: &[&OsStr],
+    ) -> Result<(i32, Vec<u8>)> {
+        let mut args = vec!["merge-file", "-p"];
+        args.extend_from_slice(options);
+        let mut cmd = self.command(cwd, &args);
+        cmd.args(files).stdin(Stdio::null());
+        let out = cmd.output().map_err(GitError::Spawn)?;
+        Ok((out.status.code().unwrap_or(255), out.stdout))
+    }
+
     /// 출력이 `cap` 바이트를 넘으면 거기까지만 읽고 git을 끝낸다(큰 파일 비교, 001 10b).
     /// 종료 코드 0·1을 성공으로 본다(`diff --no-index`는 차이가 있으면 1).
     pub fn run_capped(&self, cwd: Option<&Path>, args: &[&str], cap: usize) -> Result<Capped> {
@@ -260,7 +276,21 @@ impl Runner {
         args: &[&str],
         input: &[u8],
     ) -> Result<GitOutput> {
+        self.run_with_stdin_env(cwd, args, input, &[])
+    }
+
+    /// `run_with_stdin`에 이 호출에만 쓸 환경 변수를 더한다(예: 임시 `GIT_INDEX_FILE`).
+    pub fn run_with_stdin_env(
+        &self,
+        cwd: Option<&Path>,
+        args: &[&str],
+        input: &[u8],
+        envs: &[(&str, &OsStr)],
+    ) -> Result<GitOutput> {
         let mut cmd = self.command(cwd, args);
+        for (key, value) in envs {
+            cmd.env(key, value);
+        }
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());

@@ -184,6 +184,19 @@ pub struct BlobHead {
     pub head: Vec<u8>,
 }
 
+/// 세 쪽을 합친 결과의 한 구간. 줄 끝(`\r\n`)까지 그대로 담아 이어 붙이면 원본과 같다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MergeSegment {
+    /// 겹치지 않아 저절로 합쳐진 줄들.
+    Same(Vec<u8>),
+    /// 두 쪽이 같은 곳을 다르게 고친 곳.
+    Conflict {
+        ours: Vec<u8>,
+        base: Vec<u8>,
+        theirs: Vec<u8>,
+    },
+}
+
 /// ref 하나(이름과 가리키는 해시).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefEntry {
@@ -278,6 +291,19 @@ pub enum GitOp {
     StageAll,
     /// 브랜치를 `oid`로 되돌린다. index와 작업 폴더는 그대로(`reset --soft`, 버전 저장 되돌리기).
     ResetSoft { oid: Oid },
+    /// 충돌한 파일 하나를 고른 내용(`bytes`, index 형식)으로 해결한다. 블롭을 만들어 index에
+    /// 넣고(stage 1·2·3을 지움) 작업 폴더 파일을 사용자의 줄바꿈 설정대로 다시 쓴다.
+    /// `mode`는 `100644`·`100755`·`120000`만 받는다.
+    ResolveFile {
+        path: String,
+        mode: String,
+        bytes: Vec<u8>,
+    },
+    /// 충돌한 파일을 지우는 쪽으로 해결한다(`rm -f`).
+    ResolveDelete { path: String },
+    /// 작업 폴더의 `paths` 파일 내용을 stash 모양 커밋(부모: HEAD, index 커밋)으로 만든다.
+    /// index·작업 폴더·stash 목록은 그대로다. 만든 해시는 [`OpOutput::oid`]. 덮어쓰기 전 백업용.
+    SnapshotFiles { paths: Vec<String>, message: String },
     /// `oid`의 변경을 취소하는 새 버전을 만든다(`revert --no-edit`, 합치기 버전은 `-m`).
     /// 실패하면 반쯤 된 되돌리기를 그만두고(`revert --abort`, 안 되면 `reset --merge`) 오류를 돌려준다.
     /// 정리가 넣은 파일을 되돌리므로 core는 넣은 파일이 없을 때만 부른다.

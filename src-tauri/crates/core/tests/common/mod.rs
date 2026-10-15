@@ -268,6 +268,16 @@ impl GitBackend for FakeGit {
         Ok(Vec::new())
     }
 
+    fn merge_segments(
+        &self,
+        _repo: &RepoPath,
+        _base: &[u8],
+        _ours: &[u8],
+        _theirs: &[u8],
+    ) -> git::Result<Vec<git::MergeSegment>> {
+        Ok(Vec::new())
+    }
+
     fn local_config(&self, _repo: &RepoPath) -> git::Result<Vec<(String, String)>> {
         Ok(self.local_config.lock().unwrap().clone())
     }

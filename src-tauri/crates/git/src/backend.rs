@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     BlobHead, Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, IndexEntry, LogQuery,
-    MergeCheck, Oid, OpOutput, RefEntry, RefExpect, Remote, RepoPath, Result, Status,
+    MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, RefExpect, Remote, RepoPath, Result, Status,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -93,6 +93,16 @@ pub trait GitBackend: Send + Sync {
     /// 블롭들의 크기와 앞 `max_bytes`바이트. 1MB가 넘는 블롭은 앞부분을 읽지 않는다.
     /// 없는 해시는 결과에서 빠진다. 프로세스는 둘(`cat-file --batch-check`, `--batch`)만 띄운다.
     fn read_blobs(&self, repo: &RepoPath, oids: &[Oid], max_bytes: usize) -> Result<Vec<BlobHead>>;
+
+    /// 세 쪽 내용(`base`는 없으면 빈 값)을 줄 단위로 합쳐 구간으로 나눈다(`merge-file --diff3`).
+    /// 이진 파일이거나, 내용에 충돌 표시와 같은 줄이 있어 구간을 믿을 수 없으면 오류.
+    fn merge_segments(
+        &self,
+        repo: &RepoPath,
+        base: &[u8],
+        ours: &[u8],
+        theirs: &[u8],
+    ) -> Result<Vec<MergeSegment>>;
 
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);

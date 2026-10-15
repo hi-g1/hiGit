@@ -142,7 +142,7 @@ impl CliBackend {
 }
 
 /// 저장소 안 상대 경로인지: 절대 경로, 드라이브, `\`, `..`, 빈 조각, `.git` 조각을 거부한다.
-fn safe_relative(path: &str) -> bool {
+pub(super) fn safe_relative(path: &str) -> bool {
     let b = path.as_bytes();
     let drive = b.len() >= 2 && b[0].is_ascii_alphabetic() && b[1] == b':';
     !(path.starts_with('/')

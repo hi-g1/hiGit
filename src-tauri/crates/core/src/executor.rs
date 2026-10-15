@@ -351,6 +351,15 @@ mod tests {
         ) -> git::Result<Vec<git::BlobHead>> {
             unreachable!()
         }
+        fn merge_segments(
+            &self,
+            _: &RepoPath,
+            _: &[u8],
+            _: &[u8],
+            _: &[u8],
+        ) -> git::Result<Vec<git::MergeSegment>> {
+            unreachable!()
+        }
         fn local_config(&self, _: &RepoPath) -> git::Result<Vec<(String, String)>> {
             unreachable!()
         }
