@@ -61,7 +61,11 @@ impl Runner {
             .stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
         // 입력을 다른 스레드에서 써야 큰 입력에서 출력 파이프가 차서 서로 기다리는 일이 없다.
-        let mut stdin = child.stdin.take().expect("stdin은 piped");
+        let Some(mut stdin) = child.stdin.take() else {
+            return Err(GitError::Spawn(std::io::Error::other(
+                "stdin을 열지 못했어요",
+            )));
+        };
         let input = input.to_vec();
         let writer = std::thread::spawn(move || stdin.write_all(&input));
         let out = child.wait_with_output().map_err(GitError::Spawn)?;

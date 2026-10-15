@@ -1,5 +1,7 @@
 //! 파일 변경 감시(실제 git과 실제 파일 시스템).
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use std::path::Path;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};

@@ -1,4 +1,6 @@
 //! 시작 화면의 프로젝트 상태 요약(D-031).
+
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod common;
 
 use std::path::Path;

@@ -4,7 +4,7 @@
 //! 화면에 보내는 타입은 `view`에 따로 둔다(D-019).
 
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -66,7 +66,10 @@ impl RecentStore {
 
     /// 최근 것부터.
     pub fn list(&self) -> Vec<RecentEntry> {
-        self.entries.lock().unwrap().clone()
+        self.entries
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     /// 저장소를 열었다고 기록한다(맨 앞으로, 시각 갱신). 경로가 UTF-8이 아니면 기록하지 않는다.
@@ -78,7 +81,7 @@ impl RecentStore {
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| path.to_string());
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         entries.retain(|e| !platform::same_path(Path::new(&e.path), repo));
         entries.insert(
             0,
@@ -93,7 +96,7 @@ impl RecentStore {
     }
 
     pub fn remove(&self, path: &Path) {
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = self.entries.lock().unwrap_or_else(PoisonError::into_inner);
         entries.retain(|e| !platform::same_path(Path::new(&e.path), path));
         self.save(&entries);
     }

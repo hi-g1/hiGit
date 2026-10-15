@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use crate::view::ActionInput;
@@ -60,7 +60,7 @@ impl Executor {
         let token = format!("p{}", self.next.fetch_add(1, Ordering::Relaxed));
         // 토큰은 실행 때 검사하는 caution 이상만 보관한다. 보관할 때 만료된 것을 치운다.
         if action.meta().risk >= Risk::Caution {
-            let mut tickets = self.tickets.lock().unwrap();
+            let mut tickets = self.tickets.lock().unwrap_or_else(PoisonError::into_inner);
             tickets.retain(|_, t| t.issued_at.elapsed() < self.ttl);
             tickets.insert(
                 token.clone(),
@@ -116,7 +116,7 @@ impl Executor {
         let ticket = self
             .tickets
             .lock()
-            .unwrap()
+            .unwrap_or_else(PoisonError::into_inner)
             .remove(&token.0)
             .ok_or(CoreError::PreviewMismatch)?;
         let matches = ticket.action_id == action_id
@@ -189,7 +189,10 @@ mod tests {
     }
 
     fn pending(exec: &Executor) -> usize {
-        exec.tickets.lock().unwrap().len()
+        exec.tickets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len()
     }
 
     #[test]

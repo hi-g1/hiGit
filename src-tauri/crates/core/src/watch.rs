@@ -1,7 +1,7 @@
 //! 저장소 파일 변경 감시를 화면 이벤트로 바꾼다.
 
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError};
 
 use git::RepoPath;
 use watcher::{RepoWatcher, WatchEvent};
@@ -47,7 +47,7 @@ impl Core {
         })
         .map_err(|e| CoreError::WatchUnavailable(e.to_string()))?;
 
-        *self.watcher.lock().unwrap() = Some(watcher);
+        *self.watcher.lock().unwrap_or_else(PoisonError::into_inner) = Some(watcher);
         sink(WatchSignal::Status(WatchStatus {
             repo: name,
             active: true,
@@ -58,6 +58,9 @@ impl Core {
 
     pub fn unwatch(&self) {
         // 버리면 감시가 멈춘다(Windows에서 폴더 잠금도 풀린다).
-        self.watcher.lock().unwrap().take();
+        self.watcher
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
     }
 }

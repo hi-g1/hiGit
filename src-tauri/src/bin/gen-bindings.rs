@@ -4,6 +4,8 @@
 
 use std::path::Path;
 
+// 개발 도구라 실패하면 바로 끝내고 원인을 보여준다.
+#[allow(clippy::expect_used)]
 fn main() {
     let lib = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/lib");
     std::fs::create_dir_all(&lib).expect("src/lib 폴더를 만들지 못했습니다");

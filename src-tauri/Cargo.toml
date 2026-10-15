@@ -20,6 +20,9 @@ path = "src/main.rs"
 name = "gen-bindings"
 path = "src/bin/gen-bindings.rs"
 
+[lints]
+workspace = true
+
 [build-dependencies]
 tauri-build = { workspace = true }
 
@@ -35,6 +38,12 @@ tauri-specta = { workspace = true }
 [workspace]
 members = ["crates/*"]
 resolver = "3"
+
+[workspace.lints.clippy]
+# 테스트 밖에서 패닉으로 앱을 죽이지 않는다(D-038). 테스트는 clippy.toml에서 허용한다.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
 
 [workspace.package]
 version = "0.1.0"

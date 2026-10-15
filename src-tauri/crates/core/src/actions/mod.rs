@@ -37,6 +37,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
 }
 
 /// 등록되는 액션의 메타 목록. git 없이도 만들 수 있다(바인딩 생성용).
+// 등록 목록은 코드에 고정돼 있고 겹치면 테스트가 먼저 실패한다. 바인딩 생성과 테스트만 부른다.
+#[allow(clippy::expect_used)]
 pub fn all_metas() -> Vec<ActionMeta> {
     let mut registry = Registry::new();
     register_all(&mut registry).expect("액션 id가 겹치지 않아야 한다");

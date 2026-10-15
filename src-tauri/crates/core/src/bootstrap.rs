@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use git::{CliBackend, GitBackend, GitVersion, RepoPath};
 
@@ -39,7 +39,10 @@ struct BusyGuard<'a> {
 
 impl Drop for BusyGuard<'_> {
     fn drop(&mut self) {
-        self.busy.lock().unwrap().remove(&self.key);
+        self.busy
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&self.key);
     }
 }
 
@@ -160,7 +163,12 @@ impl Core {
             .as_ref()
             .map(|r| r.as_path().to_path_buf())
             .unwrap_or_else(|| state.folder.clone());
-        if !self.busy.lock().unwrap().insert(key.clone()) {
+        if !self
+            .busy
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(key.clone())
+        {
             return Err(CoreError::Busy);
         }
         let _guard = BusyGuard {

@@ -1,0 +1,4 @@
+# 테스트 코드는 unwrap·expect·panic을 써도 된다(D-038).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

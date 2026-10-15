@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use notify::event::ModifyKind;
@@ -97,7 +97,7 @@ impl RepoWatcher {
             let mut changes = ChangeSet::default();
             let mut reload = false;
             {
-                let rules = rules.lock().unwrap();
+                let rules = rules.lock().unwrap_or_else(PoisonError::into_inner);
                 for event in &events {
                     // 읽기만 한 것(앱이 status를 읽을 때 등)은 알리지 않는다. 되먹임 고리를 막는다.
                     if matches!(event.event.kind, EventKind::Access(_)) {
@@ -122,7 +122,8 @@ impl RepoWatcher {
                 }
             }
             if reload {
-                *rules.lock().unwrap() = IgnoreRules::load(&handler_root, &extra_excludes);
+                *rules.lock().unwrap_or_else(PoisonError::into_inner) =
+                    IgnoreRules::load(&handler_root, &extra_excludes);
             }
             if changes != ChangeSet::default() {
                 handler_sink(WatchEvent::Changed(changes));

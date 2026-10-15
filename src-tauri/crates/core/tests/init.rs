@@ -1,5 +1,7 @@
 //! 실제 git으로 관리 시작(init)을 실행한다.
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 

@@ -1,4 +1,6 @@
 //! 저장에 넣기·빼기·저장하기 액션.
+
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod common;
 
 use std::sync::Arc;

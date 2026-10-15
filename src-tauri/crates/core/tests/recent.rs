@@ -1,4 +1,6 @@
 //! 최근 프로젝트 목록과 프로젝트 열기(D-032).
+
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod common;
 
 use std::path::{Path, PathBuf};
