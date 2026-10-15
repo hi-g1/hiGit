@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { PendingNotice } from "../../features/pending/PendingNotice";
 import { StuckNotice } from "../../features/progress/StuckNotice";
 import { useProgressEvents } from "../../features/progress/useProgress";
 import { CompareFooter } from "../../features/stash/CompareFooter";
@@ -69,12 +70,9 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         </div>
       )}
       <StuckNotice repo={repo.path} />
+      {/* 합치는 중이면 충돌 해결 화면이 대신 알린다(D-082). */}
+      {!merging && <PendingNotice repo={repo.path} otherConflicts={conflict?.otherOperation ?? false} />}
       <SyncNotice repo={repo.path} />
-      {conflict?.otherOperation && (
-        <div className={styles.watchNotice} role="status">
-          <span>{m.otherOperation}</span>
-        </div>
-      )}
       {merging && conflict ? (
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
       ) : view === "history" ? (

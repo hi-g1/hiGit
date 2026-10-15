@@ -28,6 +28,8 @@ export type {
   HomeMapView,
   MapCommit,
   OpenHow,
+  OtherOperation,
+  PendingWorkView,
   ProjectOpenResult,
   ProjectSummaryView,
   RecentProject,

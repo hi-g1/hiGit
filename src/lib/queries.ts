@@ -28,6 +28,8 @@ export function usePendingWork(repo: string) {
   return useQuery<Awaited<ReturnType<typeof api.pendingWork>>, ApiError>({
     queryKey: queryKeys.pendingWork(repo),
     queryFn: () => api.pendingWork(repo),
+    // 잠금 파일은 60초가 지나야 버려진 것으로 본다. 그사이 파일 변경 알림이 없을 수 있어 다시 묻는다.
+    refetchInterval: 60_000,
   });
 }
 
