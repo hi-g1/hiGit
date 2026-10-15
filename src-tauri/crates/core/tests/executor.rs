@@ -132,8 +132,12 @@ fn preview_token_must_match() {
     assert!(mismatch(exec.execute(&ctx, "caution", &input, Some(&fake))));
 
     // 입력이 다름
-    let message =
-        |m: &str| ActionInput::Commit(higit_core::view::CommitInput { message: m.into() });
+    let message = |m: &str| {
+        ActionInput::Commit(higit_core::view::CommitInput {
+            message: m.into(),
+            stage_all: false,
+        })
+    };
     let (_, token) = exec.preview(&ctx, "caution", &message("가")).unwrap();
     assert!(mismatch(exec.execute(
         &ctx,

@@ -39,7 +39,7 @@ const emptyLog: LogPage = { commits: [], hasMore: false };
 beforeEach(() => {
   vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null });
   vi.mocked(api.listActions).mockResolvedValue([
-    { id: "init", glossaryId: "init", risk: "safe" },
+    { id: "init", glossaryId: "init", risk: "safe", undo: "nothing" },
   ]);
   vi.mocked(api.status).mockResolvedValue(emptyStatus);
   vi.mocked(api.log).mockResolvedValue(emptyLog);

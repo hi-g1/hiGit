@@ -33,6 +33,10 @@ pub enum CoreError {
     #[error("입력이 올바르지 않습니다: {0}")]
     InvalidInput(&'static str),
 
+    /// journal을 쓰지 못했다(디스크, 권한).
+    #[error("작업 기록을 쓰지 못했습니다: {0}")]
+    Journal(String),
+
     /// 프로젝트 열기를 거치지 않은 경로다(D-037).
     #[error("열지 않은 프로젝트입니다")]
     NotOpened,

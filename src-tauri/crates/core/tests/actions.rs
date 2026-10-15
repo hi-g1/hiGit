@@ -27,6 +27,7 @@ fn paths(p: &[&str]) -> PathsInput {
 fn commit(message: &str) -> ActionInput {
     ActionInput::Commit(CommitInput {
         message: message.into(),
+        stage_all: false,
     })
 }
 

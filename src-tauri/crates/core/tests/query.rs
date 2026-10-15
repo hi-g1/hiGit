@@ -237,6 +237,7 @@ fn action_input_tags_match_registry() {
         ActionInput::Unstage(paths),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
+            stage_all: false,
         }),
     ];
     samples.iter().for_each(every_variant);

@@ -19,6 +19,25 @@ pub fn app_data_dir(app_id: &str) -> io::Result<PathBuf> {
     Ok(dir)
 }
 
+/// 다른 사용자가 읽지 못하게 파일을 쓴다(journal 서명 키 등, D-063). 임시 파일에 쓰고 바꿔 넣는다.
+/// Linux: 권한 0600. Windows: 사용자 앱 데이터 폴더의 기본 권한(본인만)을 따른다.
+pub fn write_private_file(path: &std::path::Path, bytes: &[u8]) -> io::Result<()> {
+    use std::io::Write;
+    let tmp = path.with_extension("tmp");
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(&tmp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    std::fs::rename(&tmp, path)
+}
+
 /// 사용자 홈 폴더. 오류 원문에서 개인 경로를 가릴 때 쓴다(D-040).
 pub fn home_dir() -> Option<PathBuf> {
     dirs::home_dir()
@@ -59,6 +78,20 @@ mod tests {
         assert_eq!(got, wanted);
         let err = resolve_data_dir(None, None, "a").unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::NotFound);
+    }
+
+    #[test]
+    fn private_file_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("비밀.key");
+        write_private_file(&path, b"abc").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"abc");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
     }
 
     #[test]

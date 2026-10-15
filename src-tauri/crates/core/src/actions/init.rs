@@ -18,6 +18,7 @@ impl InitAction {
                 id: "init",
                 glossary_id: "init",
                 risk: Risk::Safe,
+                undo: crate::undo::UndoKind::Nothing,
             },
         }
     }

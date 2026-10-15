@@ -40,6 +40,7 @@ export type ActionMetaView = {
 	id: string,
 	glossaryId: string,
 	risk: RiskView,
+	undo: UndoKindView,
 };
 
 /**  액션 실행 결과. */
@@ -112,6 +113,8 @@ export type ChangedFile = {
 
 export type CommitInput = {
 	message: string,
+	/**  넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062). */
+	stageAll?: boolean,
 };
 
 export type CommitRow = {
@@ -251,6 +254,9 @@ export type StatusView = {
 	branch: BranchView,
 	files: ChangedFile[],
 };
+
+/**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
+export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "deleteCreated" | "inverse" | "irreversible";
 
 /**  감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다. */
 export type WatchStatus = {

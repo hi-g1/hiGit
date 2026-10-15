@@ -142,3 +142,20 @@ fn git_dir_for_main_tree_and_worktree() {
         "{wt_dir:?}"
     );
 }
+
+#[test]
+fn write_tree_and_current_branch() {
+    let repo = testutil::init_repo();
+    let path = RepoPath::new(repo.path());
+    let backend = testutil::backend();
+    assert_eq!(
+        backend.current_branch(&path).unwrap().as_deref(),
+        Some("main")
+    );
+    commit(repo.path(), "a.txt", "하나");
+    let tree = backend.write_tree(&path).unwrap().unwrap();
+    let head_tree = testutil::git(repo.path(), &["rev-parse", "HEAD^{tree}"]);
+    assert_eq!(tree.as_str(), head_tree.trim());
+    testutil::git(repo.path(), &["switch", "-q", "--detach"]);
+    assert_eq!(backend.current_branch(&path).unwrap(), None);
+}

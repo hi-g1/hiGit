@@ -11,7 +11,7 @@ mod link;
 mod path;
 mod process;
 
-pub use app_dir::{DATA_DIR_ENV, app_data_dir, home_dir};
+pub use app_dir::{DATA_DIR_ENV, app_data_dir, home_dir, write_private_file};
 pub use git_exe::{GitBuild, find_git, git_build, git_download_url};
 pub use link::{symlink_dir, symlink_file};
 pub use path::{normalize_repo_path, same_path};

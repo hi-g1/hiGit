@@ -215,6 +215,35 @@ pub struct ActionMetaView {
     pub id: String,
     pub glossary_id: String,
     pub risk: RiskView,
+    pub undo: UndoKindView,
+}
+
+/// 되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum UndoKindView {
+    Nothing,
+    RestoreRef,
+    RestoreIndex,
+    SwitchBack,
+    DeleteCreated,
+    Inverse,
+    Irreversible,
+}
+
+impl From<crate::undo::UndoKind> for UndoKindView {
+    fn from(k: crate::undo::UndoKind) -> Self {
+        use crate::undo::UndoKind as K;
+        match k {
+            K::Nothing => Self::Nothing,
+            K::RestoreRef => Self::RestoreRef,
+            K::RestoreIndex => Self::RestoreIndex,
+            K::SwitchBack => Self::SwitchBack,
+            K::DeleteCreated => Self::DeleteCreated,
+            K::Inverse => Self::Inverse,
+            K::Irreversible => Self::Irreversible,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -237,6 +266,7 @@ impl From<&ActionMeta> for ActionMetaView {
                 Risk::Caution => RiskView::Caution,
                 Risk::Danger => RiskView::Danger,
             },
+            undo: m.undo.into(),
         }
     }
 }
@@ -376,7 +406,9 @@ impl From<&CoreError> for ErrorView {
             CoreError::NotOpened => ErrorCode::NotOpened,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::Git(e) => e.kind().into(),
-            CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,
+            CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {
+                ErrorCode::Internal
+            }
         };
         let detail = e.detail().or_else(|| match code {
             ErrorCode::Internal | ErrorCode::UnknownAction | ErrorCode::InvalidInput => {

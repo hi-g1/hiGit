@@ -10,7 +10,7 @@ pub trait Action: Send + Sync {
     /// 지금 쓸 수 있는지. 못 쓰면 화면이 쉬운 말로 보여줄 이유.
     fn available(&self, state: &RepoState) -> Availability;
 
-    /// 실행하면 무엇이 바뀌는지. `caution` 이상은 실행기가 이 단계를 강제한다(D-007).
+    /// 실행하면 무엇이 바뀌는지. 되돌릴 수 없는 액션은 실행기가 이 단계를 강제한다(D-043).
     fn preview(&self, _ctx: &ExecCtx<'_>, _input: &ActionInput) -> Result<Preview> {
         Ok(Preview::default())
     }
@@ -25,6 +25,8 @@ pub struct ActionMeta {
     /// 용어표 id. 쉬운 이름·원래 이름·설명은 glossary에서 온다(D-006).
     pub glossary_id: &'static str,
     pub risk: Risk,
+    /// 되돌리는 방법(D-042). `Irreversible`이면 실행 전에 확인을 받는다(D-043).
+    pub undo: crate::undo::UndoKind,
 }
 
 /// 위험도. 순서가 있다: `Safe < Normal < Caution < Danger`.

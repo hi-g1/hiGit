@@ -2,21 +2,25 @@
   {
     "id": "init",
     "glossaryId": "init",
-    "risk": "safe"
+    "risk": "safe",
+    "undo": "nothing"
   },
   {
     "id": "stage",
     "glossaryId": "stage",
-    "risk": "safe"
+    "risk": "safe",
+    "undo": "restoreIndex"
   },
   {
     "id": "unstage",
     "glossaryId": "unstage",
-    "risk": "safe"
+    "risk": "safe",
+    "undo": "restoreIndex"
   },
   {
     "id": "commit",
     "glossaryId": "commit",
-    "risk": "safe"
+    "risk": "safe",
+    "undo": "restoreRef"
   }
 ]

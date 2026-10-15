@@ -39,4 +39,7 @@ pub struct PathsInput {
 #[serde(rename_all = "camelCase")]
 pub struct CommitInput {
     pub message: String,
+    /// 넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062).
+    #[serde(default)]
+    pub stage_all: bool,
 }

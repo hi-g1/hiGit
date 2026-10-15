@@ -72,6 +72,12 @@ pub trait GitBackend: Send + Sync {
         theirs: &str,
     ) -> Result<MergeCheck>;
 
+    /// 지금 index를 트리로 저장한 해시(되돌리기에 쓴다). 충돌 중이라 만들 수 없으면 `None`.
+    fn write_tree(&self, repo: &RepoPath) -> Result<Option<Oid>>;
+
+    /// 지금 브랜치 이름. 특정 버전을 보는 중이면 `None`.
+    fn current_branch(&self, repo: &RepoPath) -> Result<Option<String>>;
+
     /// 맡겨 둔 stash에 든 파일 경로(고친 파일과 새 파일).
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
 

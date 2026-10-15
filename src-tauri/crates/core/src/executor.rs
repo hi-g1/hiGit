@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
+use crate::undo::journal::{self, Body, Journal};
+use crate::undo::{JournalKey, UndoKind, UndoState};
 use crate::view::ActionInput;
 use crate::{Availability, CoreError, ExecCtx, Outcome, Preview, Registry, Result, Risk};
 
@@ -17,12 +19,15 @@ struct Ticket {
     issued_at: Instant,
 }
 
-/// 위험도에 따라 공통 흐름을 강제한다(D-007). 액션이 안전장치를 따로 구현하지 않는다.
+/// 위험도와 되돌리는 방법에 따라 공통 흐름을 강제한다(D-043). 액션이 안전장치를 따로 구현하지 않는다.
 ///
-/// 지금 흐름: `caution` 이상은 미리보기 토큰을 확인한 뒤, 백업·되돌리기가 생기는
-/// 반복 2 전까지 실행을 거부한다(D-011).
+/// - 되돌릴 수 없는(`Irreversible`) 액션은 미리보기 토큰(사용자 확인)이 있어야 한다.
+/// - `caution` 이상은 백업이 갖춰지는 반복 2 전까지 거부한다(D-011).
+/// - 되돌릴 수 있는 액션은 전후 상태를 journal에 남기고, 1b에서 되돌리지 못하는 상태 변경은
+///   경계 줄을 남긴다(D-065).
 pub struct Executor {
     registry: Registry,
+    journal_key: JournalKey,
     tickets: Mutex<HashMap<String, Ticket>>,
     next: AtomicU64,
     ttl: Duration,
@@ -38,10 +43,21 @@ impl Executor {
     pub fn with_ttl(registry: Registry, ttl: Duration) -> Self {
         Self {
             registry,
+            journal_key: JournalKey::ephemeral(),
             tickets: Mutex::new(HashMap::new()),
             next: AtomicU64::new(1),
             ttl,
         }
+    }
+
+    /// journal 서명 키를 정한다(앱은 앱 데이터의 키, D-063).
+    pub fn with_journal_key(mut self, key: JournalKey) -> Self {
+        self.journal_key = key;
+        self
+    }
+
+    pub(crate) fn set_journal_key(&mut self, key: JournalKey) {
+        self.journal_key = key;
     }
 
     pub fn registry(&self) -> &Registry {
@@ -58,8 +74,8 @@ impl Executor {
         let preview = action.preview(ctx, input)?;
 
         let token = format!("p{}", self.next.fetch_add(1, Ordering::Relaxed));
-        // 토큰은 실행 때 검사하는 caution 이상만 보관한다. 보관할 때 만료된 것을 치운다.
-        if action.meta().risk >= Risk::Caution {
+        // 토큰은 실행 때 검사하는 되돌릴 수 없는 액션만 보관한다. 보관할 때 만료된 것을 치운다.
+        if action.meta().undo == UndoKind::Irreversible {
             let mut tickets = self.tickets.lock().unwrap_or_else(PoisonError::into_inner);
             tickets.retain(|_, t| t.issued_at.elapsed() < self.ttl);
             tickets.insert(
@@ -83,15 +99,57 @@ impl Executor {
         token: Option<&PreviewToken>,
     ) -> Result<Outcome> {
         let action = self.available_action(ctx, id)?;
+        let meta = action.meta();
 
-        if action.meta().risk >= Risk::Caution {
+        if meta.undo == UndoKind::Irreversible {
             let token = token.ok_or(CoreError::PreviewRequired)?;
-            self.take_ticket(ctx, action.meta().id, input, token)?;
-            // 여기서 백업 참조를 만들고 UndoJournal에 남긴 뒤 실행해야 한다(반복 2).
+            self.take_ticket(ctx, meta.id, input, token)?;
+        }
+        if meta.risk >= Risk::Caution {
+            // 백업 ref를 남기는 caution 흐름은 반복 2에서 연다(D-011).
             return Err(CoreError::NotYetSupported);
         }
 
-        action.execute(ctx, input)
+        let repo = ctx.state.repo.as_ref();
+        let before = match repo {
+            Some(r) if meta.undo.is_recorded() => Some(UndoState::capture(ctx.git, r)?),
+            _ => None,
+        };
+        let outcome = action.execute(ctx, input)?;
+        if let Some(repo) = repo {
+            // 작업은 이미 끝났다. 기록을 못 남기면 되돌리기만 안 될 뿐이라 결과는 그대로 돌려준다.
+            let _ = self.record(ctx, repo, meta.id, meta.undo, input, before);
+        }
+        Ok(outcome)
+    }
+
+    fn record(
+        &self,
+        ctx: &ExecCtx<'_>,
+        repo: &git::RepoPath,
+        action: &str,
+        kind: UndoKind,
+        input: &ActionInput,
+        before: Option<UndoState>,
+    ) -> Result<()> {
+        let at = journal::now();
+        let body = match before {
+            Some(before) => Body::Action {
+                id: journal::new_id(at),
+                at,
+                action: action.to_string(),
+                input: input.clone(),
+                before,
+                after: UndoState::capture(ctx.git, repo)?,
+                kind,
+            },
+            None if kind.is_barrier() => Body::Barrier {
+                at,
+                action: action.to_string(),
+            },
+            None => return Ok(()),
+        };
+        Journal::at(&ctx.git.git_dir(repo)?, self.journal_key.clone()).append(&body)
     }
 
     fn available_action(&self, ctx: &ExecCtx<'_>, id: &str) -> Result<&dyn crate::Action> {
@@ -211,6 +269,12 @@ mod tests {
         fn parked_paths(&self, _: &RepoPath, _: &git::Oid) -> git::Result<Vec<String>> {
             unreachable!()
         }
+        fn write_tree(&self, _: &RepoPath) -> git::Result<Option<git::Oid>> {
+            unreachable!()
+        }
+        fn current_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }
@@ -236,6 +300,11 @@ mod tests {
                 id,
                 glossary_id: "commit",
                 risk,
+                undo: if risk >= Risk::Caution {
+                    crate::undo::UndoKind::Irreversible
+                } else {
+                    crate::undo::UndoKind::Nothing
+                },
             };
             registry.register(Box::new(Noop(meta))).unwrap();
         }

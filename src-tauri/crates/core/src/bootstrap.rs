@@ -61,12 +61,18 @@ pub fn init() -> Result<Core> {
             kill: Arc::new(platform::kill_tree),
         });
     // 앱 데이터 폴더를 못 만들면 최근 목록은 메모리에만 둔다(앱은 계속 쓸 수 있다).
-    let recent = match platform::app_data_dir(APP_ID) {
-        Ok(dir) => RecentStore::open(&dir),
-        Err(_) => RecentStore::in_memory(),
+    let data_dir = platform::app_data_dir(APP_ID).ok();
+    let recent = match &data_dir {
+        Some(dir) => RecentStore::open(dir),
+        None => RecentStore::in_memory(),
     };
     let mut core = Core::with_backend_and_recent(Arc::new(backend), recent)?;
     core.git_build = git_build;
+    // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063).
+    if let Some(dir) = &data_dir {
+        core.executor
+            .set_journal_key(crate::undo::JournalKey::load_or_create(dir));
+    }
     Ok(core)
 }
 

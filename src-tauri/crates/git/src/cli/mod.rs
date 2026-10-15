@@ -392,6 +392,34 @@ impl GitBackend for CliBackend {
         self.merge_check_impl(repo, base, ours, theirs)
     }
 
+    fn write_tree(&self, repo: &RepoPath) -> Result<Option<Oid>> {
+        match self.runner.run(Some(repo.as_path()), &["write-tree"]) {
+            Ok(out) => Ok(Oid::parse(&out.stdout_lossy())),
+            // 합치지 못한 파일이 index에 있으면 트리를 만들 수 없다.
+            Err(GitError::Failed {
+                code: Some(128), ..
+            }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn current_branch(&self, repo: &RepoPath) -> Result<Option<String>> {
+        let mut args = vec!["symbolic-ref", "-q", "--short"];
+        push_revs(&mut args, Cmd::SymbolicRef, self.git_version(), &["HEAD"]);
+        match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => {
+                let name = out
+                    .stdout_lossy()
+                    .trim_end_matches(['\n', '\r'])
+                    .to_string();
+                Ok((!name.is_empty()).then_some(name))
+            }
+            // 특정 버전을 보는 중이면 종료 코드 1(-q).
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>> {
         self.parked_paths_impl(repo, oid)
     }

@@ -21,6 +21,7 @@ impl CommitAction {
                 id: "commit",
                 glossary_id: "commit",
                 risk: Risk::Safe,
+                undo: crate::undo::UndoKind::RestoreRef,
             },
         }
     }

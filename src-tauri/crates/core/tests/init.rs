@@ -99,6 +99,7 @@ fn stage_and_commit_with_real_git() {
             "commit",
             &ActionInput::Commit(CommitInput {
                 message: "첫 저장".into(),
+                stage_all: false,
             }),
             None,
         )

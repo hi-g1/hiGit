@@ -18,6 +18,7 @@ impl PathsAction {
                 id: "stage",
                 glossary_id: "stage",
                 risk: Risk::Safe,
+                undo: crate::undo::UndoKind::RestoreIndex,
             },
         }
     }
@@ -28,6 +29,7 @@ impl PathsAction {
                 id: "unstage",
                 glossary_id: "unstage",
                 risk: Risk::Safe,
+                undo: crate::undo::UndoKind::RestoreIndex,
             },
         }
     }

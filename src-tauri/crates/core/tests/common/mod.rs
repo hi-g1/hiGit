@@ -231,6 +231,14 @@ impl GitBackend for FakeGit {
         Ok(self.merge_check.lock().unwrap().clone())
     }
 
+    fn write_tree(&self, _repo: &RepoPath) -> git::Result<Option<Oid>> {
+        Ok(Oid::parse(&"e".repeat(40)))
+    }
+
+    fn current_branch(&self, _repo: &RepoPath) -> git::Result<Option<String>> {
+        Ok(self.status.lock().unwrap().branch.head.clone())
+    }
+
     fn parked_paths(&self, _repo: &RepoPath, _oid: &Oid) -> git::Result<Vec<String>> {
         Ok(self.parked_paths.lock().unwrap().clone())
     }
@@ -282,6 +290,12 @@ impl FakeAction {
                 id,
                 glossary_id: "commit",
                 risk,
+                // caution 이상은 되돌릴 수 없는 것으로 시험한다(확인 흐름, D-043).
+                undo: if risk >= Risk::Caution {
+                    higit_core::undo::UndoKind::Irreversible
+                } else {
+                    higit_core::undo::UndoKind::Nothing
+                },
             },
             executed: AtomicUsize::new(0),
         }
