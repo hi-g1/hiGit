@@ -18,7 +18,7 @@ effort: high
 - 바꾸면 깨질 수 있는 곳(호출하는 쪽, 테스트, 타입 바인딩, 용어표)을 나열한다.
 
 ### 2. 규칙 점검 (구현 후)
-아래 항목을 확인하고 위반만 보고한다.
+아래 항목과 3절 보안 점검을 확인하고 위반만 보고한다.
 - [ ] `src/`에서 git을 직접 실행하거나 `invoke`로 액션 실행기를 우회하는 코드가 없다.
 - [ ] `crates/core` 밖에서 `GitBackend`를 직접 쓰는 코드가 없다(`app`은 core만 호출).
 - [ ] 조회 기능이 Action으로 등록돼 있지 않다. 조회는 `core::query`, 결과는 `core::view` 타입(D-010, D-019).
@@ -30,6 +30,16 @@ effort: high
 - [ ] `cfg(windows)` / `cfg(target_os = "linux")` 분기가 `crates/platform` 밖에 없다.
 - [ ] CSS에 토큰 대신 색 값을 직접 쓴 곳이 없다(`rg "#[0-9a-fA-F]{3,6}" src --glob '!**/tokens.css'`).
 - [ ] 새 기능에 테스트가 있고 `cargo test --workspace`, `pnpm test`가 통과한다.
+
+### 3. 보안 점검 (D-034~D-041, `docs/architecture.md` "보안")
+- [ ] git 호출: 인자 배열(셸·문자열 명령줄 없음), 리비전 앞 `--end-of-options`, 경로 앞 `--`, 공통 환경 변수(D-035)
+- [ ] 새 브랜치·태그 이름과 원격 주소를 검사한다(`check-ref-format`, `-` 시작 금지, https·ssh만)
+- [ ] IPC 명령: 인자를 serde 타입으로 받고 형식·길이를 검사한다. 경로는 저장소 루트 안 상대 경로만, 링크를 따라가지 않는다(D-037)
+- [ ] 비밀: 토큰·주소 속 비밀번호가 로그, 오류, Debug, 명령줄, 주소에 들어가지 않는다(D-040)
+- [ ] 화면: `innerHTML`·`dangerouslySetInnerHTML`·`eval` 없음, 저장소에서 온 글자는 그대로 그린다
+- [ ] 지우거나 덮어쓰는 일: 백업 ref와 journal을 먼저 남긴다
+- [ ] `unsafe`, 테스트 밖 `unwrap`·`expect`·`panic!`이 새로 생기지 않았다(D-038)
+- [ ] 새 의존성: 필요성, 관리 상태, `cargo-deny` 통과
 
 ## 보고 형식
 ```

@@ -62,7 +62,7 @@ Rust 크레이트를 나누면 컴파일 경계가 생겨 의존 방향이 강�
 
 ```rust
 pub trait GitBackend: Send + Sync {
-    fn version(&self) -> Result<GitVersion>;                          // 반복 0. 2.30 이상 확인(D-003)
+    fn version(&self) -> Result<GitVersion>;                          // 반복 0. 2.30 이상 확인(D-003). 2.38은 D-036 제안
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 반복 0. 고른 폴더의 저장소 최상위 찾기
     fn status(&self, repo: &RepoPath) -> Result<Status>;              // 반복 0
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>; // 반복 0
@@ -83,6 +83,14 @@ pub trait GitBackend: Send + Sync {
 - CLI 출력은 기계용 형식만 파싱한다: `status --porcelain=v2 -z`, `log --format=%x1e…%x00…`, unified diff, `for-each-ref --format`. 실패 종류는 `crates/git/src/failure.rs` 한 곳에서만 영어 원문으로 가린다(D-021).
 - 경로 목록은 `--pathspec-from-file=- --pathspec-file-nul`로 stdin에 넘기고 `--literal-pathspecs`를 붙인다.
 - 모든 git 호출에 `LC_ALL=C`(그리고 `LANGUAGE` 지움), `GIT_TERMINAL_PROMPT=0`, `GIT_PAGER=cat`, `GIT_OPTIONAL_LOCKS=0`, `-c core.quotepath=off -c color.ui=never`를 준다. `GIT_OPTIONAL_LOCKS=0`은 조회가 index를 쓰지 않게 해 파일 감시의 되먹임 고리를 막는다. OS별 설정(Windows 콘솔 창 숨기기)은 platform이 먼저 붙이고 위 값이 마지막에 이긴다.
+
+#### git 실행 규칙 (D-035)
+- 인자는 배열로 넘기고 셸을 거치지 않는다. 문자열을 이어 붙여 명령줄을 만들지 않는다.
+- 리비전 앞에는 `--end-of-options`, 경로 앞에는 `--`. 경로 목록은 위처럼 stdin으로.
+- 공통 환경에 `PAGER=cat`, `GIT_EDITOR`(hiGit 지정 값), `GIT_ALLOW_PROTOCOL=https:ssh:git`도 둔다. 조회는 `--no-ext-diff`, `--no-textconv`.
+- 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
+- git 실행 파일은 시작할 때 절대 경로로 한 번 찾아 그 경로만 쓴다.
+- 믿지 않기로 한 저장소(D-039)는 모든 호출에 실행 설정을 끄는 `-c` 덮어쓰기를 붙인다.
 
 ### Action (crates/core) — 상태를 바꾸는 기능
 
@@ -160,6 +168,20 @@ pub trait HostingProvider {
 }
 ```
 GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자, Ubuntu Secret Service)에 저장한다.
+
+## 보안 (D-034)
+| 공격자나 사고 | 노리는 것 | 주된 대책 |
+| --- | --- | --- |
+| 악성 저장소를 복제하거나 받은 zip을 연다 | 저장소 설정, 서브모듈, 심볼릭 링크로 명령 실행 | 최소 Git 버전(D-036), 신뢰 확인(D-039), 위험한 설정 끄기 |
+| 이상한 브랜치 이름이나 파일 이름 | git 옵션으로 해석되게 만들기 | `--end-of-options`와 `--`, 이름 검사(D-035) |
+| 저장소 파일 내용에 섞인 HTML이나 스크립트 | 웹뷰에서 실행되어 IPC 호출 | 이스케이프, CSP, 좁은 capability(D-037) |
+| 같은 PC의 다른 사용자나 악성 프로그램 | 토큰, 설정 파일 | OS 키체인, 평문 저장 금지(D-040) |
+| 오염된 의존성 | 빌드 결과물에 코드 심기 | lockfile, cargo-deny, 설치 스크립트 제한(D-038) |
+| 사용자의 실수 | 비밀 파일을 버전에 넣어 올리기 | 버전 저장 전 경고(D-040) |
+| 중간에 끊기는 작업 | 저장소 깨짐, index.lock 남음 | 시간 제한, 취소, 백업 ref, journal(D-041) |
+
+- 새 Action과 새 IPC 명령을 만들 때 위 표의 해당 줄을 확인한다. 점검 항목은 `.claude/agents/code-analyst.md` "보안 점검".
+- IPC 명령 인자는 serde 타입으로 받고 길이와 형식을 검사한다. 파일 경로는 저장소 루트 기준 상대 경로만 받아 백엔드가 정규화하고, 루트 밖이면 거부한다. 심볼릭 링크는 따라가지 않는다.
 
 ## 프론트와 백엔드 계약
 - 프로젝트 열기는 한 곳: 앱을 켤 때 열기, 최근 목록, 폴더 고르기, 프로젝트 메뉴는 모두 `project_open` 명령 → `Core::open_project` 하나를 거친다(D-032). 저장소 신뢰 확인은 그 함수 안에 넣는다. 화면은 `useOpenProject` 훅 하나로 연다.
