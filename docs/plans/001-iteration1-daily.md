@@ -324,6 +324,7 @@ app 명령과 바인딩은 따로 단계를 두지 않고 10~14단계의 core �
 ## 위험과 열린 질문
 - specta rc.25의 adjacently tagged enum 출력 모양(1단계 실험으로 먼저 확인).
 - 성공 출력 외에 stderr를 분류하는 것은 D-003 보완이 필요하다(D-021 제안).
+- (4단계 실험 결과, 2026-10-15) 비밀번호 걸린 SSH 키를 BatchMode에서 "키 없음"과 구분할 수 있는지는 확인하지 못했다. 시험하려면 그 키를 실제 GitHub 계정에 등록해야 하고(바깥 계정 변경이라 하지 않음), 사용자 `~/.ssh/config` 없이는 이 PC에서 GitHub SSH 접속이 시간 초과됐다. 그래서 `SshKeyLocked`는 두지 않고 `SshAuthFailed` 안내에 "키에 비밀번호가 있으면 ssh-agent에 올려 주세요"를 함께 쓴다. 호스트 확인 실패(`SshHostUnverified`)는 문구가 분명해 따로 둔다.
 - SSH 원격에서 호스트 키 확인·암호 질문이 터미널(tty)로 나와 `pnpm tauri dev`처럼 터미널에서 띄운 앱의 git이 멈출 수 있다(H-13). 데스크톱에서 띄운 앱은 tty가 없어 실패로 끝난다.
 - 네트워크 작업 취소·시간 제한이 없다. 멈춘 push는 앱을 닫아야 끝난다(반복 2 이후 `op-progress`와 함께).
 - 비교가 lossy UTF-8이라 EUC-KR 등 다른 인코딩 파일은 깨져 보인다.
