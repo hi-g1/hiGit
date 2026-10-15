@@ -45,6 +45,7 @@ fn setup() -> Setup {
     let url = remote.path().to_string_lossy().into_owned();
     let mine = tempfile::tempdir().unwrap();
     git(mine.path(), &["init", "-q", "-b", "main"]);
+    git(mine.path(), &["config", "core.autocrlf", "false"]);
     git(mine.path(), &["config", "user.name", "나"]);
     git(mine.path(), &["config", "user.email", "me@example.com"]);
     git(mine.path(), &["config", "commit.gpgsign", "false"]);
@@ -53,6 +54,7 @@ fn setup() -> Setup {
     git(mine.path(), &["push", "-q", "-u", "origin", "main"]);
     let other = tempfile::tempdir().unwrap();
     git(other.path(), &["clone", "-q", &url, "."]);
+    git(other.path(), &["config", "core.autocrlf", "false"]);
     Setup {
         _remote: remote,
         url,

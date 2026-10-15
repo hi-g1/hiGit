@@ -37,6 +37,8 @@ fn repo() -> tempfile::TempDir {
     let repo = tempfile::tempdir().unwrap();
     let dir = repo.path();
     git(dir, &["init", "-q", "-b", "main"]);
+    // CI 러너의 전역 core.autocrlf가 앱 쪽 git에 섞이지 않게 저장소에 고정한다.
+    git(dir, &["config", "core.autocrlf", "false"]);
     commit_file(dir, "a.txt", "a\n");
     commit_file(dir, "b.txt", "b\n");
     git(dir, &["branch", "other"]);
