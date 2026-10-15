@@ -3,10 +3,10 @@
 이 파일만 읽고 이어서 할 수 있게 단계마다 갱신한다.
 
 ## 지금
-- 반복: 1b-2 (계획 005 "합친 순서" 27~42번)
-- 반복: 1b 끝. 1b 끝 점검(code-analyst) 위반 9건과 낮음 항목을 고침. 반복 2 계획(006) 검토 중
-- 마지막 커밋: 1348a21 test: check every query, action and watch refuses unopened paths (push함)
-- 다음 할 일: 006 검토 결과를 계획에 반영 → 자동 결정을 decision.md에(D-069부터, D-068은 잠금 결정) → 006 R1부터 구현
+- 반복: 2 (계획 006, "검토 반영" 절의 바뀐 순서를 따른다)
+- 단계: R2 끝 (caution 실행·백업 ref·Barrier)
+- 마지막 커밋: e8d0040 core: run caution actions with backup refs
+- 다음 할 일: R3a 넣기·빼기 되돌리기(RestoreIndex)와 journal 호환(새 필드 skip_serializing_if, 옛 서명 고정 문자열 테스트, journal_copy)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 3 → 4 → 5.
@@ -79,8 +79,38 @@
 - H13 빠진 테스트: commit.gpgsign, 이름 없음, upstream 강제 갱신·사라짐, push 거부 뒤 재시도
 - 목록 안 방향키·Enter·Esc는 부품 안 조작으로 보고 `shortcuts.ts` 밖에 둠(Ctrl 조합만 표에)
 
+## 반복 2 단계 (계획 006, 바뀐 순서)
+- [x] R1 결정 D-069~D-086·용어(047ecf7)
+- [x] R2 caution 실행과 백업(e8d0040)
+- [ ] R3a 넣기·빼기 되돌리기, journal 호환
+- [ ] R3b RestoreTree·refs·Barrier
+- [ ] R4 올린 뒤 되돌리기(revert)
+- [ ] R5 로그 파일
+- [ ] R6 비밀 파일 검사·ignore
+- [ ] R7 비밀 파일 알림 줄
+- [ ] R8 충돌 git 조각(+SnapshotFiles)
+- [ ] R9a 합치기 제안 조회·merge
+- [ ] R9b merge-into(앞으로 감기)
+- [ ] R10 충돌 조회
+- [ ] R11a 조립 함수 / R11b 마치기 / R11c 그만두기
+- [ ] R13 충돌 모델·단축키
+- [ ] R14 충돌 해결 화면
+- [ ] R12 합치기 제안 화면
+- [ ] R9c 동기화 겹침 → 합치기 시작
+- [ ] R15 임시 보관
+- [ ] R16 겹친 맡긴 파일 해결
+- [ ] R17 고친 것 버리기
+- [ ] R19a 백업 정리 / R19b 작업 내역 조회 / R19c 되살리기
+- [ ] R20 작업 내역 화면
+- [ ] R18 임시 보관·버리기 화면
+- [ ] R21 진행 감시·취소(git·platform)
+- [ ] R22 op-progress·취소 명령
+- [ ] R23 진행·취소 화면
+- [ ] R24a 멈춘 작업 조회 / R24b 잠금 정리·맡긴 항목 복구
+- [ ] R25 끝나지 않은 작업 알림
+- [ ] R26 마무리 + code-analyst 점검
+
 ## 다음 반복
-- [ ] 반복 2: 합치기와 복구 (계획 006)
 - [ ] 반복 3: 기록 다루기
 - [ ] 반복 4: GitHub
 - [ ] 반복 5: OS 통합과 배포
