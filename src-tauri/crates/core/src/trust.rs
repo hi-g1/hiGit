@@ -71,10 +71,20 @@ pub struct TrustStore {
 
 impl TrustStore {
     /// 메모리에만 두는 기록(테스트, 앱 데이터 폴더를 못 쓸 때).
+    /// 빈 hooks 폴더 이름은 무작위로 정한다. 정해진 이름이면 같은 PC의 다른 사용자가 임시 폴더에
+    /// 먼저 만들어 hook을 넣어 둘 수 있다.
     pub fn in_memory() -> Self {
+        let mut bytes = [0u8; 16];
+        if getrandom::fill(&mut bytes).is_err() {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0);
+            bytes = (nanos ^ u128::from(std::process::id())).to_le_bytes();
+        }
         Self {
             file: None,
-            empty_hooks: std::env::temp_dir().join("higit-empty-hooks"),
+            empty_hooks: std::env::temp_dir().join(format!("higit-empty-hooks-{}", hex(&bytes))),
             entries: Mutex::new(Vec::new()),
         }
     }
@@ -288,6 +298,14 @@ mod tests {
         assert_eq!(safe_value("core.alternaterefscommand", "x"), Some(""));
         assert_eq!(safe_value("gpg.ssh.defaultkeycommand", "x"), Some(""));
         assert_eq!(safe_value("mergetool.x.cmd", "x"), Some(""));
+    }
+
+    #[test]
+    fn in_memory_hooks_folder_is_not_guessable() {
+        let a = TrustStore::in_memory();
+        let b = TrustStore::in_memory();
+        assert_ne!(a.empty_hooks, b.empty_hooks);
+        assert!(!a.empty_hooks.exists());
     }
 
     #[test]
