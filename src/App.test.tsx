@@ -13,6 +13,7 @@ vi.mock("./lib/api", async (importOriginal) => ({
     executeAction: vi.fn(),
     status: vi.fn(),
     log: vi.fn(),
+    logStats: vi.fn(async () => []),
     diff: vi.fn(),
     homeMap: vi.fn(async () => ({ current: null, defaultBranch: null, twoLines: false, currentCommits: [], currentMore: 0, mainSince: 0, mainLast: null, upstreamOid: null, upstreamLabel: null, changedFiles: 0 })),
     branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: null, orphanParked: [], remotes: [] })),
@@ -115,13 +116,13 @@ describe("홈에서 폴더 열기", () => {
     // 상단 바 "버전 기록"(Ctrl+H)은 창 전체 폭 화면, Esc로 돌아온다(D-058).
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "버전 기록" }));
-    expect(await screen.findByText("첫 저장")).toBeInTheDocument();
-    expect(screen.getByText("aaaaaaa")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /첫 저장/ })).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "버전 기록" })).toBeInTheDocument();
     expect(screen.queryByText("고친 파일 2개")).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(await screen.findByText("고친 파일 2개")).toBeInTheDocument();
     await user.keyboard("{Control>}h{/Control}");
-    expect(await screen.findByText("첫 저장")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /첫 저장/ })).toBeInTheDocument();
   });
 
   it("저장소가 아닌 폴더는 버전 관리 시작으로 저장소를 만든다", async () => {

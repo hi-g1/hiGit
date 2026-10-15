@@ -26,6 +26,8 @@ type Props = {
   onActivate: (id: string) => void;
   /** 끝에서 두 화면 안으로 스크롤하면(다음 쪽 받기). */
   onNearEnd?: () => void;
+  /** 그리는 행 범위가 바뀌면(줄 수 늦게 받기). */
+  onWindow?: (first: number, last: number) => void;
   /** 상대 날짜의 기준 시각(ms). */
   now: number;
   /** 목록 이름("버전 기록"). */
@@ -45,6 +47,7 @@ export function RouteList({
   onSelect,
   onActivate,
   onNearEnd,
+  onWindow,
   now,
   label,
 }: Props) {
@@ -138,6 +141,19 @@ export function RouteList({
   };
 
   const { first, last } = visibleRows(scrollTop, viewHeight, ROW_H, total);
+  useEffect(() => {
+    onWindow?.(first, last);
+  }, [first, last, onWindow]);
+  // 밖에서 고른 역("지금 여기", 확대·축소 뒤)이 화면 밖이면 보이게 스크롤한다.
+  useEffect(() => {
+    const el = box.current;
+    if (!el || selected < 0) return;
+    const top = scrollToRow(selected, el.scrollTop, viewHeight, ROW_H);
+    if (top !== el.scrollTop) {
+      el.scrollTop = top;
+      setScrollTop(top);
+    }
+  }, [selected, viewHeight]);
   const shown: number[] = [];
   for (let i = first; i < last; i++) shown.push(i);
   // 고른 행은 창 밖이어도 그려 aria-activedescendant가 있는 요소를 가리키게 한다.

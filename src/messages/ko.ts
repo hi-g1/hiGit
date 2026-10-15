@@ -156,6 +156,13 @@ export const ko = {
   forceStopTitle: "강제로 멈출까요?",
   forceStopDetail: "하던 작업이 반쯤 남을 수 있어요.",
   /** 버전 기록 노선도(D-087~D-092). */
+  scopeAll: `모든 ${t("branch")}`,
+  scopeCurrent: `지금 ${t("branch")}만`,
+  zoomNames: { all: "모든 버전", key: "주요 버전", tags: `${t("tag")}만` },
+  zoomIn: "늘리기",
+  zoomOut: "줄이기",
+  zoomStatus: (zoom: string, n: number) => `${zoom} · ${n}개`,
+  tipsCut: (n: number) => `${t("branch")} 200개까지 · ${n}개 더`,
   notPushedMark: "안 올림",
   routeFold: (n: number) => `버전 ${n}개 · 펼치기`,
   routeFoldLabel: (n: number) => `접힌 버전 ${n}개`,

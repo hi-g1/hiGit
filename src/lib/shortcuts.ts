@@ -17,8 +17,9 @@ export type Shortcut = {
    * global: 창 어디서나(useShortcut). field: 그 입력칸이 직접 처리(버전 저장).
    * fileList: 파일 목록에 포커스가 있을 때만 목록이 처리.
    * conflict: 충돌 해결 화면이 열려 있을 때만(그 화면이 useShortcut을 켠다).
+   * history: 버전 기록 화면이 열려 있을 때만.
    */
-  scope: "global" | "field" | "fileList" | "conflict";
+  scope: "global" | "field" | "fileList" | "conflict" | "history";
   /** native: 입력칸에 포커스가 있으면 처리하지 않고 브라우저 기본 동작(글자 되돌리기)에 맡긴다. */
   inTextField: "app" | "native";
 };
@@ -55,6 +56,14 @@ export const SHORTCUTS = {
   /** 충돌 해결: 다음·이전 곳 */
   nextHunk: { keys: [ctrl("ArrowDown")], label: "Ctrl+↓", scope: "conflict", inTextField: "native" },
   prevHunk: { keys: [ctrl("ArrowUp")], label: "Ctrl+↑", scope: "conflict", inTextField: "native" },
+  /** 버전 기록 노선도 늘리기·줄이기(D-095). 입력칸에서는 글자로. 주 조작은 화면의 −·+ 단추 */
+  zoomIn: {
+    keys: [{ code: "Equal", ctrl: false, shift: true, alt: false }, plain("Equal"), plain("NumpadAdd")],
+    label: "+",
+    scope: "history",
+    inTextField: "native",
+  },
+  zoomOut: { keys: [plain("Minus"), plain("NumpadSubtract")], label: "-", scope: "history", inTextField: "native" },
   /** 파일 목록에서 다음·이전 파일 */
   nextFile: { keys: [plain("ArrowDown")], label: "↓", scope: "fileList", inTextField: "native" },
   prevFile: { keys: [plain("ArrowUp")], label: "↑", scope: "fileList", inTextField: "native" },

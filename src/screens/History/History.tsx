@@ -1,20 +1,41 @@
-import { useEffect } from "react";
-import { HistoryList } from "../../features/history/HistoryList";
-import { toHistoryRows } from "../../features/history/model";
-import { HISTORY_LIMIT, useLogPages } from "../../lib/queries";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildRoute, ROW_H, verticalScene } from "../../features/history/layout/route";
+import { simplify, ZOOMS, type Zoom } from "../../features/history/layout/simplify";
+import { toRouteNodes } from "../../features/history/model";
+import { branchPalette } from "../../features/history/render/palette";
+import { RouteList } from "../../features/history/RouteList";
+import { useCommitStats } from "../../features/history/stats";
+import { HISTORY_MAX, useLogPages } from "../../lib/queries";
+import { useShortcut } from "../../lib/useShortcut";
+import { useWheelZoom } from "../../lib/wheelZoom";
 import { useMessages } from "../../messages";
+import { useHistoryStore } from "../../state/historyStore";
 import { useRepoStore } from "../../state/repoStore";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { Term, TermTooltip } from "../../ui/Term";
 import styles from "./History.module.css";
 
-/** 버전 기록 화면(D-058). 창 전체 폭. Esc나 상단 바 "버전 기록"을 다시 누르면 홈으로 돌아간다. */
+/** 접혀서 행이 모자랄 때 저절로 이어 받는 쪽 수. */
+const AUTO_PAGES = 10;
+/** "지금 여기"를 찾아 이어 받는 쪽 수. */
+const SEEK_PAGES = 25;
+
+/**
+ * 버전 기록 화면(D-058, D-087~D-095): 창 전체 폭 노선도(r-log.png). 머리에 범위 전환과 확대·축소,
+ * "지금 여기". Esc나 상단 바 "버전 기록"을 다시 누르면 홈으로 돌아간다.
+ */
 export function History({ repo }: { repo: string }) {
   const m = useMessages();
-  const log = useLogPages(repo, "all");
-  const first = log.data?.pages[0];
-  const page = first && { ...first, commits: log.data!.pages.flatMap((p) => p.commits) };
   const setView = useRepoStore((s) => s.setView);
+  const { selectedId, zoom, scope, expanded, select, setZoom, setScope, expand } = useHistoryStore();
+  const log = useLogPages(repo, scope);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = log;
+  const pages = log.data?.pages;
+  const first = pages?.[0];
+  const [now] = useState(() => Date.now());
+  const box = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !e.defaultPrevented) setView("home");
@@ -23,19 +44,177 @@ export function History({ repo }: { repo: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setView]);
 
+  const nodes = useMemo(() => toRouteNodes(pages ?? []), [pages]);
+  const shown = useMemo(() => simplify(nodes, zoom, expanded), [nodes, zoom, expanded]);
+  const route = useMemo(
+    () =>
+      buildRoute(shown, {
+        trunkId: first?.defaultTip ?? null,
+        trunkName: first?.defaultBranch ?? null,
+        headBranch: first?.currentBranch ?? null,
+      }),
+    [shown, first?.defaultTip, first?.defaultBranch, first?.currentBranch],
+  );
+  const [windowRows, setWindowRows] = useState<[number, number]>([0, 0]);
+  const onWindow = useCallback((a: number, b: number) => setWindowRows([a, b]), []);
+  const wanted = useMemo(
+    () => shown.slice(windowRows[0], windowRows[1]).flatMap((n) => (n.kind === "open" ? [] : n.statOids)),
+    [shown, windowRows],
+  );
+  const stats = useCommitStats(repo, wanted);
+  const scene = useMemo(() => verticalScene(route, stats), [route, stats]);
+  const palette = useMemo(() => branchPalette(first?.defaultBranch ?? null), [first?.defaultBranch]);
+  const received = nodes.length;
+
+  const more = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // 접혀서 행이 화면보다 적으면 몇 쪽 더 받아 둔다.
+  const auto = useRef(0);
+  useEffect(() => {
+    auto.current = 0;
+  }, [zoom, scope]);
+  useEffect(() => {
+    if (shown.length * ROW_H < 2 * 600 && hasNextPage && !isFetchingNextPage && auto.current < AUTO_PAGES) {
+      auto.current += 1;
+      void fetchNextPage();
+    }
+  }, [shown.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // "지금 여기": 지금 위치가 아직 안 왔으면 이어 받아 찾는다(최대 25쪽).
+  const seeking = useRef(0);
+  const head = shown.find((n) => n.isHead);
+  const goHere = () => {
+    if (head) {
+      select(head.id);
+      return;
+    }
+    seeking.current = 1;
+    more();
+  };
+  useEffect(() => {
+    if (seeking.current === 0) return;
+    if (head) {
+      seeking.current = 0;
+      select(head.id);
+    } else if (hasNextPage && seeking.current <= SEEK_PAGES) {
+      if (!isFetchingNextPage) {
+        seeking.current += 1;
+        void fetchNextPage();
+      }
+    } else {
+      seeking.current = 0;
+    }
+    // 쪽이 올 때마다(받은 수가 바뀔 때) 다시 본다.
+  }, [head, received, hasNextPage, isFetchingNextPage, fetchNextPage, select]);
+
+  const changeZoom = useCallback(
+    (dir: "in" | "out") => {
+      const i = ZOOMS.indexOf(zoom) + (dir === "in" ? -1 : 1);
+      const next = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i))]!;
+      if (next !== zoom) setZoom(next);
+    },
+    [zoom, setZoom],
+  );
+  useShortcut("zoomIn", () => changeZoom("in"));
+  useShortcut("zoomOut", () => changeZoom("out"));
+  useWheelZoom(box, changeZoom);
+
+  const onActivate = useCallback(
+    (id: string) => {
+      const node = shown.find((n) => n.id === id);
+      if (node?.kind === "fold") expand(id);
+      // 역 메뉴는 M13.
+    },
+    [shown, expand],
+  );
+
+  const zoomName = (z: Zoom) =>
+    z === "tags" ? (
+      <TermTooltip id="tag">
+        <span>{m.zoomNames.tags}</span>
+      </TermTooltip>
+    ) : (
+      m.zoomNames[z]
+    );
+
   return (
-    <section className={styles.history} aria-label={m.historyArea}>
+    <section ref={box} className={styles.history} aria-label={m.historyArea}>
+      <header className={styles.head}>
+        <h2 className={styles.title}>
+          <Term id="log" focusable={false} />
+        </h2>
+        <div className={styles.scope}>
+          {(["all", "current"] as const).map((s) => (
+            <TermTooltip key={s} id="branch">
+              <button
+                type="button"
+                className={styles.scopeButton}
+                aria-pressed={scope === s}
+                onClick={() => setScope(s)}
+              >
+                {s === "all" ? m.scopeAll : m.scopeCurrent}
+              </button>
+            </TermTooltip>
+          ))}
+        </div>
+        <span className={styles.spacer} />
+        {first?.head && (
+          <button type="button" className={styles.here} onClick={goHere}>
+            {m.hereNow}
+            <span className={styles.headName}>
+              {" · "}
+              <bdi>{first.currentBranch ?? first.head.slice(0, 7)}</bdi>
+            </span>
+          </button>
+        )}
+        <div className={styles.zoom}>
+          <button
+            type="button"
+            className={styles.zoomButton}
+            aria-label={m.zoomOut}
+            disabled={zoom === "tags"}
+            onClick={() => changeZoom("out")}
+          >
+            −
+          </button>
+          <span className={styles.zoomName}>{zoomName(zoom)}</span>
+          <button
+            type="button"
+            className={styles.zoomButton}
+            aria-label={m.zoomIn}
+            disabled={zoom === "all"}
+            onClick={() => changeZoom("in")}
+          >
+            +
+          </button>
+        </div>
+        <span className={styles.status} role="status">
+          {m.zoomStatus(m.zoomNames[zoom], shown.length)}
+        </span>
+      </header>
       {log.isPending && <EmptyState>{m.loading}</EmptyState>}
       {log.error && <ErrorNotice error={log.error} />}
-      {page &&
-        (page.commits.length === 0 ? (
+      {pages &&
+        (received === 0 ? (
           <EmptyState>{m.noCommits}</EmptyState>
         ) : (
-          <>
-            <HistoryList rows={toHistoryRows(page)} now={log.dataUpdatedAt} />
-            {log.hasNextPage && <p className={styles.note}>{m.moreCommits(HISTORY_LIMIT)}</p>}
-          </>
+          <RouteList
+            nodes={shown}
+            scene={scene}
+            palette={palette}
+            selectedId={selectedId}
+            onSelect={select}
+            onActivate={onActivate}
+            onNearEnd={more}
+            onWindow={onWindow}
+            now={now}
+            label={m.historyArea}
+          />
         ))}
+      {pages && (first?.tipsCut ?? 0) > 0 && <p className={styles.note}>{m.tipsCut(first!.tipsCut)}</p>}
+      {pages && !hasNextPage && received >= HISTORY_MAX && <p className={styles.note}>{m.moreCommits(received)}</p>}
     </section>
   );
 }
