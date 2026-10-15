@@ -187,6 +187,70 @@ fn failed_switch_restores_edits() {
 }
 
 #[test]
+fn failing_to_keep_the_parked_files_puts_them_back() {
+    let repo = repo();
+    let dir = repo.path();
+    std::fs::write(dir.join("a.txt"), "a 고침\n").unwrap();
+    std::fs::write(dir.join("새 파일.txt"), "새것\n").unwrap();
+    // 맡긴 ref 자리에 잠금 파일이 있어 ref 쓰기가 실패한다.
+    let lock = dir.join(".git/refs/higit/parked/main.lock");
+    std::fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    std::fs::write(&lock, "").unwrap();
+    let core = core(dir);
+    let err = core
+        .execute(
+            dir,
+            &ActionInput::Switch(SwitchInput {
+                branch: "other".into(),
+                remote: None,
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::ParkBlocked);
+    assert_eq!(branch(dir), "main");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+        "a 고침\n"
+    );
+    assert!(dir.join("새 파일.txt").exists());
+    assert_eq!(
+        git(dir, &["stash", "list"]),
+        "",
+        "사용자 stash 목록에 남기지 않는다"
+    );
+    assert!(!parked_ref(dir, "main"));
+}
+
+#[test]
+fn arriving_with_edits_leaves_parked_files_without_an_error() {
+    let repo = repo();
+    let dir = repo.path();
+    std::fs::write(dir.join("a.txt"), "a 고침\n").unwrap();
+    let core = core(dir);
+    switch(&core, dir, "other");
+    assert!(parked_ref(dir, "main"));
+    // 특정 버전을 보는 중에 다른 파일을 고친 채로 main으로 돌아온다(맡기지 않고 따라온다).
+    git(dir, &["switch", "-q", "--detach"]);
+    std::fs::write(dir.join("b.txt"), "b 고침\n").unwrap();
+    let r = switch(&core, dir, "main");
+    assert_eq!(
+        r,
+        ActionResult::Switched {
+            branch: "main".into(),
+            parked_on: None,
+            unparked: false,
+            unpark_blocked: true,
+        }
+    );
+    assert!(parked_ref(dir, "main"), "맡긴 파일은 그대로 남는다");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("b.txt")).unwrap(),
+        "b 고침\n"
+    );
+}
+
+#[test]
 fn switch_undo_and_redo() {
     let repo = repo();
     let dir = repo.path();

@@ -118,7 +118,10 @@ pub(crate) fn switch_with_parking(
     }
 
     // 3. 도착한 브랜치에 맡겨 둔 것이 있으면 겹치지 않을 때만 꺼낸다(D-054).
-    let (unparked, unpark_blocked) = unpark_arrived(git, repo, &input.branch)?;
+    // 갈아타기는 이미 끝났으므로 여기서 나는 오류는 "꺼내지 못함"으로 알린다. 오류로 올리면
+    // 작업 목록에 남지 않아 되돌리기가 없어진다. 맡긴 파일은 ref에 그대로 있다.
+    let (unparked, unpark_blocked) =
+        unpark_arrived(git, repo, &input.branch).unwrap_or((false, true));
     Ok(SwitchReport {
         branch: input.branch.clone(),
         parked: parked.map(|(b, oid, _)| (b, oid)),
@@ -159,12 +162,38 @@ fn park(git: &dyn GitBackend, repo: &RepoPath, branch: &str) -> Result<Option<(O
     let Some(oid) = git.run(repo, &GitOp::Park { message })?.oid else {
         return Ok(None);
     };
+    match keep_parked(git, repo, branch, &name, &oid) {
+        Ok(undo) => Ok(Some((oid, undo))),
+        Err(e) => {
+            // 작업 폴더는 이미 비었다. 맡긴 파일을 곧바로 꺼내 원래대로 돌리고 갈아타지 않는다.
+            let detail = e.detail().unwrap_or_default();
+            match git.run(repo, &GitOp::Unpark { oid: oid.clone() }) {
+                Ok(_) => {
+                    let _ = git.run(repo, &GitOp::StashDropIf { oid });
+                    Err(CoreError::ParkBlocked(detail))
+                }
+                // 꺼내지도 못하면 stash 목록에 남아 있다(파일을 잃지 않는다).
+                Err(unpark) => Err(CoreError::ParkBlocked(unpark.detail())),
+            }
+        }
+    }
+}
+
+/// 만든 stash를 맡긴 ref에 쓰고 stash 목록에서 뺀다. 실패하면 ref를 되돌린다.
+fn keep_parked(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    branch: &str,
+    name: &str,
+    oid: &Oid,
+) -> Result<ParkUndo> {
+    let name = name.to_string();
     // ref를 먼저 쓰고 나서 stash 목록에서 뺀다. 쓰기가 실패해도 목록에 남아 파일을 잃지 않는다.
     let undo = match git.resolve_ref(repo, &name)? {
         Some(old) => {
             // 이미 맡긴 것이 있으면(앞서 꺼내지 못함) 백업 ref로 옮겨 두고 새로 쓴다.
             backup::backup_oid(git, repo, &old, &format!("parked-{branch}"))?;
-            git.update_ref(repo, &name, &oid, &RefExpect::Is(old.clone()))?;
+            git.update_ref(repo, &name, oid, &RefExpect::Is(old.clone()))?;
             ParkUndo::Restore {
                 name,
                 old,
@@ -172,15 +201,18 @@ fn park(git: &dyn GitBackend, repo: &RepoPath, branch: &str) -> Result<Option<(O
             }
         }
         None => {
-            git.update_ref(repo, &name, &oid, &RefExpect::Absent)?;
+            git.update_ref(repo, &name, oid, &RefExpect::Absent)?;
             ParkUndo::Delete {
                 name,
                 oid: oid.clone(),
             }
         }
     };
-    git.run(repo, &GitOp::StashDropIf { oid: oid.clone() })?;
-    Ok(Some((oid, undo)))
+    if let Err(e) = git.run(repo, &GitOp::StashDropIf { oid: oid.clone() }) {
+        let _ = undo.revert(git, repo);
+        return Err(e.into());
+    }
+    Ok(undo)
 }
 
 /// 도착한 브랜치의 맡긴 파일을 꺼낸다. (꺼냄, 겹쳐서 못 꺼냄).
@@ -207,7 +239,15 @@ fn unpark_arrived(git: &dyn GitBackend, repo: &RepoPath, branch: &str) -> Result
             git.delete_ref(repo, &name, &RefExpect::Is(oid))?;
             Ok((true, false))
         }
-        Err(e) if e.kind() == git::FailureKind::UnparkConflict => Ok((false, true)),
+        // 겹치거나, 갈아탄 뒤에도 고친 파일이 남아 있으면(특정 버전에서 온 경우 등) 두고 알린다.
+        Err(e)
+            if matches!(
+                e.kind(),
+                git::FailureKind::UnparkConflict | git::FailureKind::WouldOverwrite
+            ) =>
+        {
+            Ok((false, true))
+        }
         Err(e) => Err(e.into()),
     }
 }
