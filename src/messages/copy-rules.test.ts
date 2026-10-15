@@ -41,6 +41,21 @@ const SAMPLES: Record<string, unknown[][]> = {
     [{ kind: "notUploaded" }],
     [{ kind: "upToDate" }],
   ],
+  routeRowLabel: [
+    [
+      {
+        summary: "로그인 화면",
+        author: "지원",
+        date: "10월 7일",
+        branches: ["기능"],
+        tags: ["v1"],
+        head: true,
+        merge: true,
+        unpushed: true,
+        position: 3,
+      },
+    ],
+  ],
 
 };
 

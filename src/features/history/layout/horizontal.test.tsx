@@ -58,7 +58,7 @@ describe("홈 두 줄 노선도(같은 배치 함수, D-090)", () => {
       for (const changedFiles of [0, 2]) {
         const s = home(view({ twoLines: false, current: "main", changedFiles, currentCommits: [c(1, long), c(2)] }), width);
         const name = s.texts.find((t) => t.text.startsWith("가"))!;
-        expect(name.x - textWidth(name.text, 13) / 2, `${width}`).toBeGreaterThanOrEqual(8);
+        expect(name.x - textWidth(name.text, 12) / 2, `${width}`).toBeGreaterThanOrEqual(8);
       }
     }
   });
@@ -70,7 +70,7 @@ describe("홈 두 줄 노선도(같은 배치 함수, D-090)", () => {
     for (let i = 1; i < names.length; i++) {
       const left = names[i - 1]!;
       const right = names[i]!;
-      expect(left.x + textWidth(left.text, 13) / 2).toBeLessThanOrEqual(right.x - textWidth(right.text, 13) / 2);
+      expect(left.x + textWidth(left.text, 12) / 2).toBeLessThanOrEqual(right.x - textWidth(right.text, 12) / 2);
     }
   });
 

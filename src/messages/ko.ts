@@ -7,6 +7,19 @@ import type { LastVersion, ShortCase, StatusCase } from "../features/start/summa
 import type { ErrorCode, ChangeKind, RecoverySource, SecretRule } from "../lib/api";
 import { josa } from "./josa";
 
+/** 버전 기록 노선도 행의 읽기 이름에 들어가는 것. 저장소 글자는 부르는 쪽이 자른다. */
+export type RouteRowParts = {
+  summary: string;
+  author: string;
+  date: string;
+  branches: string[];
+  tags: string[];
+  head: boolean;
+  merge: boolean;
+  unpushed: boolean;
+  position: number;
+};
+
 /** 문장에 끼울 쉬운 이름 */
 const t = (id: TermId) => glossary[id].friendly;
 
@@ -142,6 +155,24 @@ export const ko = {
   forceStop: "강제로 멈추기",
   forceStopTitle: "강제로 멈출까요?",
   forceStopDetail: "하던 작업이 반쯤 남을 수 있어요.",
+  /** 버전 기록 노선도(D-087~D-092). */
+  notPushedMark: "안 올림",
+  routeFold: (n: number) => `버전 ${n}개 · 펼치기`,
+  routeFoldLabel: (n: number) => `접힌 버전 ${n}개`,
+  routeRowLabel: (r: RouteRowParts) =>
+    [
+      r.summary,
+      r.author,
+      r.date,
+      ...r.branches.map((b) => `${t("branch")} ${b}`),
+      ...r.tags.map((x) => `${t("tag")} ${x}`),
+      r.head ? "지금 여기" : null,
+      r.merge ? t("merge") : null,
+      r.unpushed ? "안 올림" : null,
+      `${r.position}번째`,
+    ]
+      .filter(Boolean)
+      .join(", "),
   /** 끝나지 않은 작업 알림 줄(D-081, D-082). */
   staleLocks: (n: number) => `멈춘 작업 파일 ${n}개`,
   clearLocks: "정리하기",

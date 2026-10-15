@@ -2,7 +2,7 @@
 import { en as glossary } from "../glossary/en";
 import type { TermId } from "../glossary/types";
 import type { RecoverySource, SecretRule } from "../lib/api";
-import type { Messages } from "./ko";
+import type { Messages, RouteRowParts } from "./ko";
 
 const t = (id: TermId) => glossary[id].friendly;
 
@@ -131,6 +131,23 @@ export const en: Messages = {
   forceStop: "Force stop",
   forceStopTitle: "Force stop?",
   forceStopDetail: "The task may be left half done.",
+  notPushedMark: "not uploaded",
+  routeFold: (n: number) => `${n} versions · expand`,
+  routeFoldLabel: (n: number) => `${n} folded versions`,
+  routeRowLabel: (r: RouteRowParts) =>
+    [
+      r.summary,
+      r.author,
+      r.date,
+      ...r.branches.map((b) => `${t("branch")} ${b}`),
+      ...r.tags.map((x) => `${t("tag")} ${x}`),
+      r.head ? "You are here" : null,
+      r.merge ? t("merge") : null,
+      r.unpushed ? "not uploaded" : null,
+      `number ${r.position}`,
+    ]
+      .filter(Boolean)
+      .join(", "),
   staleLocks: (n: number) => `${n} files left by a stopped task`,
   clearLocks: "Clean up",
   clearLocksTitle: (n: number) => `Delete ${n} files left by a stopped task?`,

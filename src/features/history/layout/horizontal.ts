@@ -14,7 +14,8 @@ export type HorizontalLabels = { here: string; changed: (n: number) => string };
 export const MAP_HEIGHT = 104;
 export const MINI_HEIGHT = 28;
 
-const FONT = 13;
+/** 노선도 글자 크기(--font-size-sm). */
+const FONT = 12;
 const LEFT = 24;
 const STEP = 120;
 const MIN_STEP = 84;
