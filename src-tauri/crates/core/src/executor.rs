@@ -379,7 +379,7 @@ mod tests {
         fn request_cancel(&self, _: &RepoPath) {}
         fn clear_cancel(&self, _: &RepoPath) {}
         fn set_observer(&self, _: Option<git::ProgressObserver>) {}
-        fn git_running(&self) -> bool {
+        fn other_git_running(&self) -> bool {
             unreachable!()
         }
         fn set_repo_overrides(&self, _: &RepoPath, _: Vec<String>) {

@@ -126,8 +126,7 @@ pub fn init() -> Result<Core> {
             prepare: Arc::new(platform::prepare_killable),
             kill: Arc::new(platform::kill_tree),
             terminate: Arc::new(platform::terminate_tree),
-            // 알아내지 못하면 도는 것으로 본다(잠금을 지우지 않는다).
-            git_running: Arc::new(|| platform::running_git_pids().is_none_or(|p| !p.is_empty())),
+            git_pids: Arc::new(platform::running_git_pids),
         });
     // 앱 데이터 폴더를 못 만들면 최근 목록은 메모리에만 둔다(앱은 계속 쓸 수 있다).
     let data_dir = platform::app_data_dir(APP_ID).ok();
@@ -502,7 +501,7 @@ impl Core {
         }
         let common_dir = self.git.common_dir(&repo)?;
         let stale_locks = crate::locks::stale(&git_dir, &common_dir, SystemTime::now(), || {
-            self.git.git_running()
+            self.git.other_git_running()
         })
         .into_iter()
         .map(|l| l.name)

@@ -19,8 +19,8 @@ pub struct ProcessControl {
     pub kill: Arc<dyn Fn(&mut Child) + Send + Sync>,
     /// 끝내 달라고 알린다(취소·멈춤). 2초 안에 끝나지 않으면 `kill`을 부른다.
     pub terminate: Arc<dyn Fn(&mut Child) + Send + Sync>,
-    /// 시스템에 도는 git 프로세스가 있는지(앱 것 포함). 알 수 없으면 true(D-081).
-    pub git_running: Arc<dyn Fn() -> bool + Send + Sync>,
+    /// 시스템에 도는 git 프로세스의 pid(앱 것 포함). 알 수 없으면 `None`(D-081).
+    pub git_pids: Arc<dyn Fn() -> Option<Vec<u32>> + Send + Sync>,
 }
 
 impl Default for ProcessControl {
@@ -34,7 +34,7 @@ impl Default for ProcessControl {
             terminate: Arc::new(|child: &mut Child| {
                 let _ = child.kill();
             }),
-            git_running: Arc::new(|| false),
+            git_pids: Arc::new(|| Some(Vec::new())),
         }
     }
 }
@@ -82,6 +82,23 @@ pub(crate) struct Runner {
     pub(crate) process: ProcessControl,
     /// 저장소 폴더별로 모든 호출에 붙이는 `-c 키=값`(믿지 않기로 한 저장소의 실행 설정 끄기, D-039).
     overrides: std::sync::Mutex<std::collections::HashMap<PathBuf, Vec<String>>>,
+    /// 지금 도는, 앱이 띄운 git의 pid. 잠금 판정에서 앱 것을 뺀다(D-081).
+    live: std::sync::Mutex<std::collections::HashSet<u32>>,
+}
+
+/// 앱이 띄운 git 하나가 도는 동안 pid를 `live`에 둔다. 끝나면(오류여도) 뺀다.
+struct Live<'a> {
+    set: &'a std::sync::Mutex<std::collections::HashSet<u32>>,
+    pid: u32,
+}
+
+impl Drop for Live<'_> {
+    fn drop(&mut self) {
+        self.set
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .remove(&self.pid);
+    }
 }
 
 #[derive(Debug)]
@@ -121,7 +138,34 @@ impl Runner {
             allowed_protocols: ALLOWED_PROTOCOLS,
             process: ProcessControl::default(),
             overrides: std::sync::Mutex::new(std::collections::HashMap::new()),
+            live: std::sync::Mutex::default(),
         }
+    }
+
+    /// 지금 도는, 앱이 띄운 git의 pid.
+    pub(crate) fn live_pids(&self) -> std::collections::HashSet<u32> {
+        self.live
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    fn track(&self, pid: u32) -> Live<'_> {
+        self.live
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(pid);
+        Live {
+            set: &self.live,
+            pid,
+        }
+    }
+
+    /// `Command::output`과 같되 도는 동안 pid를 기록한다. 부르는 쪽이 stdin을 정한다.
+    fn output(&self, cmd: &mut Command) -> std::io::Result<Output> {
+        let child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+        let _live = self.track(child.id());
+        child.wait_with_output()
     }
 
     /// `repo` 폴더에서 도는 모든 호출에 `-c 키=값`을 붙인다. 빈 목록이면 지운다.
@@ -146,7 +190,7 @@ impl Runner {
     pub fn run(&self, cwd: Option<&Path>, args: &[&str]) -> Result<GitOutput> {
         let mut cmd = self.command(cwd, args);
         cmd.stdin(Stdio::null());
-        let out = cmd.output().map_err(GitError::Spawn)?;
+        let out = self.output(&mut cmd).map_err(GitError::Spawn)?;
         finish(args, out)
     }
 
@@ -162,7 +206,7 @@ impl Runner {
         for (key, value) in envs {
             cmd.env(key, value);
         }
-        let out = cmd.output().map_err(GitError::Spawn)?;
+        let out = self.output(&mut cmd).map_err(GitError::Spawn)?;
         finish(args, out)
     }
 
@@ -192,6 +236,7 @@ impl Runner {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let _live = self.track(child.id());
         let writer = match (stdin, child.stdin.take()) {
             (Some(input), Some(mut pipe)) => {
                 let input = input.to_vec();
@@ -301,7 +346,7 @@ impl Runner {
     pub fn merge_file_quiet(&self, cwd: Option<&Path>, files: &[&OsStr]) -> Result<bool> {
         let mut cmd = self.command(cwd, &["merge-file", "-p", "--quiet"]);
         cmd.args(files).stdin(Stdio::null());
-        let out = cmd.output().map_err(GitError::Spawn)?;
+        let out = self.output(&mut cmd).map_err(GitError::Spawn)?;
         Ok(out.status.success())
     }
 
@@ -317,7 +362,7 @@ impl Runner {
         args.extend_from_slice(options);
         let mut cmd = self.command(cwd, &args);
         cmd.args(files).stdin(Stdio::null());
-        let out = cmd.output().map_err(GitError::Spawn)?;
+        let out = self.output(&mut cmd).map_err(GitError::Spawn)?;
         Ok((out.status.code().unwrap_or(255), out.stdout))
     }
 
@@ -329,6 +374,7 @@ impl Runner {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let _live = self.track(child.id());
         let mut stderr = child.stderr.take();
         let err_reader = std::thread::spawn(move || {
             let mut buf = Vec::new();
@@ -396,6 +442,7 @@ impl Runner {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let _live = self.track(child.id());
         // 입력을 다른 스레드에서 써야 큰 입력에서 출력 파이프가 차서 서로 기다리는 일이 없다.
         let Some(mut stdin) = child.stdin.take() else {
             return Err(GitError::Spawn(std::io::Error::other(

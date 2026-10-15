@@ -603,8 +603,15 @@ impl GitBackend for CliBackend {
             .unwrap_or_else(std::sync::PoisonError::into_inner) = observer;
     }
 
-    fn git_running(&self) -> bool {
-        (self.runner.process.git_running)()
+    fn other_git_running(&self) -> bool {
+        // 목록을 읽는 사이에 시작하거나 끝난 앱의 git도 빼도록 앞뒤 기록을 함께 본다.
+        let before = self.runner.live_pids();
+        let Some(pids) = (self.runner.process.git_pids)() else {
+            return true;
+        };
+        let after = self.runner.live_pids();
+        pids.iter()
+            .any(|p| !before.contains(p) && !after.contains(p))
     }
 
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {

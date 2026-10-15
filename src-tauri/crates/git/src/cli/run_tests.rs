@@ -222,3 +222,52 @@ fn commit_without_identity() {
         .unwrap_err();
     assert_eq!(err.kind(), FailureKind::IdentityMissing, "{}", err.detail());
 }
+
+#[test]
+fn only_git_the_app_did_not_start_counts_as_another_tool() {
+    let listed: Arc<std::sync::Mutex<Vec<u32>>> = Arc::default();
+    let backend = {
+        let listed = listed.clone();
+        Arc::new(
+            testutil::backend().with_process_control(crate::ProcessControl {
+                git_pids: Arc::new(move || Some(listed.lock().unwrap().clone())),
+                ..crate::ProcessControl::default()
+            }),
+        )
+    };
+    assert!(!backend.other_git_running());
+    listed.lock().unwrap().push(u32::MAX);
+    assert!(backend.other_git_running());
+
+    // 앱이 띄운 git(별칭이 sh로 sleep을 띄운다)은 다른 도구가 아니다.
+    let slow = {
+        let backend = backend.clone();
+        std::thread::spawn(move || {
+            let _ = backend
+                .runner
+                .run(None, &["-c", "alias.slow=!sleep 2", "slow"]);
+        })
+    };
+    let start = std::time::Instant::now();
+    let ours = loop {
+        let live = backend.runner.live_pids();
+        if !live.is_empty() {
+            break live;
+        }
+        assert!(start.elapsed().as_secs() < 10, "git이 시작하지 않음");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    };
+    *listed.lock().unwrap() = ours.into_iter().collect();
+    assert!(!backend.other_git_running());
+    slow.join().unwrap();
+    assert!(backend.runner.live_pids().is_empty());
+}
+
+#[test]
+fn unknown_process_list_means_running() {
+    let backend = testutil::backend().with_process_control(crate::ProcessControl {
+        git_pids: Arc::new(|| None),
+        ..crate::ProcessControl::default()
+    });
+    assert!(backend.other_git_running());
+}

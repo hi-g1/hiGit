@@ -59,7 +59,7 @@ impl Action for ClearLockAction {
             return Ok(Outcome::LocksCleared { count: 0 });
         }
         let stale = crate::locks::stale(&git_dir, &common_dir, SystemTime::now(), || {
-            git.git_running()
+            git.other_git_running()
         });
         if stale.is_empty() {
             return Err(CoreError::Busy);
