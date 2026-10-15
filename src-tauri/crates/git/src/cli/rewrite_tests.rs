@@ -139,7 +139,8 @@ fn edit_stops_then_amend_and_continue_changes_the_message() {
     run(
         p,
         &GitOp::Amend {
-            message: Some("고친 셋".into()),
+            // stdin으로 가므로 Windows에서도 `/`·`C:\`로 시작하는 글자가 경로로 바뀌지 않는다.
+            message: Some("/고친 셋\n\nC:\\폴더 /c/x".into()),
         },
     )
     .unwrap();
@@ -151,7 +152,11 @@ fn edit_stops_then_amend_and_continue_changes_the_message() {
     )
     .unwrap();
     assert!(state(p).is_none());
-    assert_eq!(subjects(p, &base), ["둘", "고친 셋", "넷"]);
+    assert_eq!(subjects(p, &base), ["둘", "/고친 셋", "넷"]);
+    assert_eq!(
+        git(p, &["log", "-1", "--format=%B", "HEAD~1"]).trim_end(),
+        "/고친 셋\n\nC:\\폴더 /c/x"
+    );
 }
 
 #[test]
