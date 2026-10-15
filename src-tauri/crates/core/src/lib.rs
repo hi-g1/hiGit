@@ -9,6 +9,7 @@ mod bootstrap;
 mod error;
 mod executor;
 mod query;
+pub mod recent;
 mod registry;
 mod state;
 pub mod view;
@@ -17,7 +18,7 @@ mod watch;
 pub use action::{
     Action, ActionMeta, Availability, ExecCtx, Outcome, Preview, Risk, UnavailableReason,
 };
-pub use bootstrap::{Core, MIN_GIT_VERSION, init};
+pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, Result};
 pub use executor::{Executor, PreviewToken};
 pub use query::Queries;

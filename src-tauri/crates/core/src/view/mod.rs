@@ -386,3 +386,48 @@ pub struct WatchStatus {
     pub active: bool,
     pub reason: Option<String>,
 }
+
+// ---- 프로젝트 열기, 최근 프로젝트 (D-032) ----
+
+/// 어떻게 여는지. 고른 폴더는 저장소가 아니면 버전 관리 시작 안내로, 최근 목록은 기록과 같은
+/// 저장소일 때만 연다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum OpenHow {
+    Picked,
+    Recent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ProjectOpenResult {
+    Opened {
+        repo: RepoInfo,
+    },
+    /// 폴더가 없다.
+    Missing,
+    /// 폴더는 있지만 (그 자리의) 저장소가 아니다.
+    NotARepo {
+        folder: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentProject {
+    pub path: String,
+    pub name: String,
+    /// 마지막으로 연 시각(unix 초).
+    #[specta(type = u32)]
+    pub last_opened_at: i64,
+}
+
+impl From<crate::recent::RecentEntry> for RecentProject {
+    fn from(e: crate::recent::RecentEntry) -> Self {
+        Self {
+            path: e.path,
+            name: e.name,
+            last_opened_at: e.last_opened_at,
+        }
+    }
+}
