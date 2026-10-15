@@ -42,6 +42,8 @@ describe("비교 칸 아래 줄", () => {
     await userEvent.click(screen.getByRole("button", { name: "고친 것 버리기" }));
     expect(await screen.findByText("화면.tsx의 고친 내용을 버려요.")).toBeInTheDocument();
     expect(api.executeAction).not.toHaveBeenCalled();
+    // Enter가 버리기가 되지 않게 닫기에 포커스가 있다.
+    expect(screen.getByRole("button", { name: "닫기" })).toHaveFocus();
     // 닫으면 실행하지 않는다.
     await userEvent.click(screen.getByRole("button", { name: "닫기" }));
     expect(api.executeAction).not.toHaveBeenCalled();

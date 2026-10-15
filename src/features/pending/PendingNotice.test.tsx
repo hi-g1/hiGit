@@ -70,6 +70,8 @@ describe("끝나지 않은 작업 알림", () => {
     expect(api.previewAction).toHaveBeenCalledWith("/repo", { id: "clear-lock" });
     const dialog = await screen.findByRole("dialog", { name: "멈춘 작업 파일 2개를 지울까요?" });
     expect(dialog).toHaveTextContent("index.lock · refs/heads/main.lock");
+    // Enter가 지우기가 되지 않게 닫기에 포커스가 있다.
+    expect(within(dialog).getByRole("button", { name: "닫기" })).toHaveFocus();
     expect(api.executeAction).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "정리하기" }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "clear-lock" }, "t1");

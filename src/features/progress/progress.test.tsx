@@ -70,6 +70,7 @@ describe("진행", () => {
     await userEvent.click(screen.getByRole("button", { name: "강제로 멈추기" }));
     expect(api.cancelAction).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("dialog", { name: "강제로 멈출까요?" });
+    expect(within(dialog).getByRole("button", { name: "닫기" })).toHaveFocus();
     await userEvent.click(within(dialog).getByRole("button", { name: "강제로 멈추기" }));
     expect(api.cancelAction).toHaveBeenCalledWith("/repo");
   });

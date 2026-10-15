@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ApiError, api, type ChangedFile } from "../../lib/api";
 import { useStashes } from "../../lib/queries";
 import { formatRelative } from "../../lib/time";
@@ -37,6 +37,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const [confirm, setConfirm] = useState<{ token: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [now] = useState(() => Date.now());
+  const closeRef = useRef<HTMLButtonElement>(null);
   const paths = file.origPath ? [file.path, file.origPath] : [file.path];
 
   const refresh = () => {
@@ -138,14 +139,21 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
       <Dialog.Root open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.overlay} />
-          <Dialog.Content className={styles.dialog}>
+          <Dialog.Content
+            className={styles.dialog}
+            // 되돌릴 수 없어 Enter가 버리기가 되지 않게 안전한 쪽에 포커스를 둔다(D-043).
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              closeRef.current?.focus();
+            }}
+          >
             <Dialog.Title className={styles.title}>{m.discardTitle(file.path.split("/").pop() ?? file.path)}</Dialog.Title>
             <Dialog.Description className={styles.path}>{paths.join(" · ")}</Dialog.Description>
             <div className={styles.actions}>
               <Button variant="danger" disabled={pending} onClick={() => void discard()}>
                 {m.discardConfirm}
               </Button>
-              <Button variant="primary" onClick={() => setConfirm(null)}>
+              <Button ref={closeRef} variant="primary" onClick={() => setConfirm(null)}>
                 {m.close}
               </Button>
             </div>

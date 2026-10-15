@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ApiError, api } from "../../lib/api";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
@@ -16,6 +16,7 @@ export function StuckNotice({ repo }: { repo: string }) {
   const show = useToastStore((s) => s.show);
   const progress = useProgress(repo);
   const [confirm, setConfirm] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const stuck =
     progress !== null && !REMOTE_ACTIONS.has(progress.action) && progress.elapsedSecs >= STUCK_LOCAL_SECS;
   if (!stuck && !confirm) return null;
@@ -42,14 +43,21 @@ export function StuckNotice({ repo }: { repo: string }) {
       <Dialog.Root open={confirm} onOpenChange={setConfirm}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.overlay} />
-          <Dialog.Content className={styles.dialog}>
+          <Dialog.Content
+            className={styles.dialog}
+            // Enter가 강제로 멈추기가 되지 않게 안전한 쪽에 포커스를 둔다(D-043).
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              closeRef.current?.focus();
+            }}
+          >
             <Dialog.Title className={styles.title}>{m.forceStopTitle}</Dialog.Title>
             <Dialog.Description className={styles.detail}>{m.forceStopDetail}</Dialog.Description>
             <div className={styles.actions}>
               <Button variant="danger" onClick={() => void stop()}>
                 {m.forceStop}
               </Button>
-              <Button variant="primary" onClick={() => setConfirm(false)}>
+              <Button ref={closeRef} variant="primary" onClick={() => setConfirm(false)}>
                 {m.close}
               </Button>
             </div>

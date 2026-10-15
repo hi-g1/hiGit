@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ApiError, api } from "../../lib/api";
 import { queryKeys, usePendingWork } from "../../lib/queries";
 import { useMessages } from "../../messages";
@@ -19,6 +19,7 @@ export function ClearLockButton({ repo }: { repo: string }) {
   const locks = usePendingWork(repo).data?.staleLocks ?? [];
   const [token, setToken] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
   if (locks.length === 0 && token === null) return null;
 
   const fail = (e: unknown) => show(m.errors[e instanceof ApiError ? e.code : "internal"]);
@@ -59,14 +60,21 @@ export function ClearLockButton({ repo }: { repo: string }) {
       <Dialog.Root open={token !== null} onOpenChange={(open) => !open && setToken(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.overlay} />
-          <Dialog.Content className={styles.dialog}>
+          <Dialog.Content
+            className={styles.dialog}
+            // 되돌릴 수 없어 Enter가 정리하기가 되지 않게 안전한 쪽에 포커스를 둔다(D-043).
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              closeRef.current?.focus();
+            }}
+          >
             <Dialog.Title className={styles.title}>{m.clearLocksTitle(locks.length)}</Dialog.Title>
             <Dialog.Description className={styles.paths}>{locks.join(" · ")}</Dialog.Description>
             <div className={styles.actions}>
               <Button variant="danger" disabled={pending} onClick={() => void clear()}>
                 {m.clearLocks}
               </Button>
-              <Button variant="primary" onClick={() => setToken(null)}>
+              <Button ref={closeRef} variant="primary" onClick={() => setToken(null)}>
                 {m.close}
               </Button>
             </div>
