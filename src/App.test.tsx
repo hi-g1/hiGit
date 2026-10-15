@@ -49,7 +49,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
-  act(() => useRepoStore.setState({ repo: null, leftTab: "changes", selectedPath: null }));
+  act(() =>
+    useRepoStore.setState({ repo: null, leftTab: "changes", selectedPath: null, pendingInit: null }),
+  );
 });
 
 async function openFolder() {
@@ -131,6 +133,20 @@ describe("홈에서 폴더 열기", () => {
     expect(await screen.findByText("마지막 버전 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "버전 기록" }));
     expect(await screen.findByText("아직 저장한 버전이 없어요.")).toBeInTheDocument();
+  });
+
+  it("작업 공간에서 Ctrl+O로 저장소가 아닌 폴더를 고르면 시작 화면에서 버전 관리 시작을 묻는다", async () => {
+    vi.mocked(pickFolder).mockResolvedValueOnce(repo.path).mockResolvedValueOnce("/home/me/그냥 폴더");
+    vi.mocked(api.openProject)
+      .mockResolvedValueOnce({ kind: "opened", repo })
+      .mockResolvedValueOnce({ kind: "notARepo", folder: "/home/me/그냥 폴더" });
+    const user = await openFolder();
+    expect(await screen.findByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
+
+    await user.keyboard("{Control>}o{/Control}");
+    expect(await screen.findByText("이 폴더는 아직 Git으로 관리하지 않는 폴더예요.")).toBeInTheDocument();
+    expect(screen.getByText("/home/me/그냥 폴더")).toBeInTheDocument();
+    expect(api.openProject).toHaveBeenLastCalledWith("/home/me/그냥 폴더", "picked");
   });
 
   it("파일 감시를 쓸 수 없으면 안내 줄과 다시 읽기 버튼", async () => {

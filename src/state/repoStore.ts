@@ -10,18 +10,23 @@ type RepoState = {
   leftTab: LeftTab;
   /** 비교 보기에 띄울 파일(저장소 기준 경로). */
   selectedPath: string | null;
+  /** 저장소가 아닌 폴더를 골랐을 때, 시작 화면이 "버전 관리 시작"을 물을 폴더. */
+  pendingInit: string | null;
   openRepo: (repo: RepoInfo) => void;
   closeRepo: () => void;
   setLeftTab: (tab: LeftTab) => void;
   selectPath: (path: string | null) => void;
+  setPendingInit: (folder: string | null) => void;
 };
 
 export const useRepoStore = create<RepoState>()((set) => ({
   repo: null,
   leftTab: "changes",
   selectedPath: null,
-  openRepo: (repo) => set({ repo, leftTab: "changes", selectedPath: null }),
+  pendingInit: null,
+  openRepo: (repo) => set({ repo, leftTab: "changes", selectedPath: null, pendingInit: null }),
   closeRepo: () => set({ repo: null, selectedPath: null }),
   setLeftTab: (leftTab) => set({ leftTab }),
   selectPath: (selectedPath) => set({ selectedPath }),
+  setPendingInit: (pendingInit) => set({ pendingInit }),
 }));

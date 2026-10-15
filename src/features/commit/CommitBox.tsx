@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type KeyboardEvent } from "react";
 import { api } from "../../lib/api";
 import { queryKeys } from "../../lib/queries";
+import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
@@ -35,10 +36,9 @@ export function CommitBox({ folder, includedCount }: { folder: string; includedC
   const canCommit = reason === null && !commit.isPending;
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // 한글 조합 중 Enter는 글자를 확정하는 키라서 저장하지 않는다(design.md).
-    // WebKitGTK는 조합을 확정하는 keydown에 isComposing=false, keyCode=229를 줄 수 있다.
-    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    // 단축키 표(D-033)로 판정한다. 한글 조합 중 Enter(WebKitGTK의 keyCode 229 포함)는
+    // 글자를 확정하는 키라서 저장하지 않는다(design.md).
+    if (matches("commit", e.nativeEvent)) {
       e.preventDefault();
       if (canCommit) commit.mutate();
     }

@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Home } from "./screens/Home/Home";
 import { Workspace } from "./screens/Workspace/Workspace";
+import { useOpenFolder } from "./features/open-project/useOpenFolder";
+import { useAppStatus } from "./lib/queries";
+import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 
 export function createQueryClient() {
@@ -21,6 +24,18 @@ export function AppProviders({ children, client }: { children: ReactNode; client
 
 /** 라우터 없이 열린 저장소가 있으면 작업 공간, 없으면 홈. */
 export function App() {
+  return (
+    <AppProviders>
+      <Screens />
+    </AppProviders>
+  );
+}
+
+function Screens() {
   const repo = useRepoStore((s) => s.repo);
-  return <AppProviders>{repo ? <Workspace repo={repo} /> : <Home />}</AppProviders>;
+  const gitReady = useAppStatus().isSuccess;
+  const openFolder = useOpenFolder();
+  // Ctrl+O: 시작 화면과 작업 공간 어디서나 폴더 열기(D-033)
+  useShortcut("openFolder", openFolder.pick, gitReady);
+  return repo ? <Workspace repo={repo} /> : <Home />;
 }

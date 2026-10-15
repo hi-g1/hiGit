@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ActionButton } from "../../features/actions/ActionButton";
-import { useOpenProject } from "../../features/open-project/useOpenProject";
-import { ApiError } from "../../lib/api";
-import { pickFolder } from "../../lib/dialog";
+import { useOpenFolder } from "../../features/open-project/useOpenFolder";
 import { queryKeys, useAppStatus } from "../../lib/queries";
+import { SHORTCUTS } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
@@ -16,20 +14,10 @@ export function Home() {
   const openRepo = useRepoStore((s) => s.openRepo);
   const appStatus = useAppStatus();
   const queryClient = useQueryClient();
-  const project = useOpenProject();
-  // 저장소가 아닌 폴더를 골랐을 때 "버전 관리 시작"을 보여주려고 기억한다.
-  const [plainFolder, setPlainFolder] = useState<string | null>(null);
-
-  const open = useMutation({
-    mutationFn: async () => {
-      const path = await pickFolder();
-      if (path === null) return;
-      const result = await project.open(path, "picked");
-      if (result.kind === "notARepo") setPlainFolder(result.folder);
-      else setPlainFolder(null);
-      if (result.kind === "missing") throw new ApiError({ code: "folderNotFound", detail: path });
-    },
-  });
+  const open = useOpenFolder();
+  // 저장소가 아닌 폴더를 골랐을 때 "버전 관리 시작"을 묻는다(Ctrl+O로 작업 공간에서 골라도).
+  const plainFolder = useRepoStore((s) => s.pendingInit);
+  const setPlainFolder = useRepoStore((s) => s.setPendingInit);
 
   const gitReady = appStatus.isSuccess;
 
@@ -42,7 +30,7 @@ export function Home() {
         {appStatus.error && <ErrorNotice error={appStatus.error} />}
 
         <div>
-          <Button variant="primary" disabled={!gitReady || open.isPending} onClick={() => open.mutate()}>
+          <Button variant="primary" disabled={!gitReady || open.isPending} onClick={open.pick} aria-keyshortcuts="Control+O" title={SHORTCUTS.openFolder.label}>
             {m.openFolder}
           </Button>
         </div>
