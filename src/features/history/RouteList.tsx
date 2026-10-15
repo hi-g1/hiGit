@@ -124,7 +124,13 @@ export function RouteList({
     [nodes, total, onSelect, viewHeight],
   );
 
+  // 역 메뉴는 포털로 그려지지만 React 이벤트는 포털을 넘어 이 목록으로 올라온다. 메뉴 안의 누름·키가
+  // 목록의 선택을 바꾸지 않게, 목록 요소 안에서 일어난 것만 받는다.
+  const fromList = (e: { currentTarget: HTMLElement; target: EventTarget }) =>
+    e.target instanceof Node && e.currentTarget.contains(e.target);
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!fromList(e)) return;
     if (e.nativeEvent.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
     const page = Math.max(1, Math.floor(viewHeight / ROW_H) - 1);
     const at = selected < 0 ? -1 : selected;
@@ -151,7 +157,7 @@ export function RouteList({
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     const el = box.current;
-    if (!el || e.button !== 0) return;
+    if (!el || e.button !== 0 || !fromList(e)) return;
     const rect = el.getBoundingClientRect();
     // 스크롤 막대를 누른 것은 고르지 않는다.
     if (e.clientX - rect.left > el.clientWidth) return;

@@ -124,6 +124,40 @@ describe("역 메뉴", () => {
     await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사하지 못했어요"));
   });
 
+  it("메뉴 안의 누름·키는 목록의 선택을 바꾸지 않는다(포털 이벤트)", async () => {
+    serve();
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    const item = await screen.findByRole("menuitem", { name: "버전 번호 복사" });
+    // 셋째 행 높이에서 메뉴 항목을 누르고, 메뉴 안에서 ↓를 눌러도 선택은 첫 행 그대로다.
+    fireEvent.pointerDown(item, { button: 0, clientX: 300, clientY: 120 });
+    fireEvent.keyDown(item, { key: "ArrowDown" });
+    expect(list.getAttribute("aria-activedescendant")).toBe("route-row-0");
+    fireEvent.click(item);
+    expect(writeText).toHaveBeenCalledWith(oid(0));
+  });
+
+  it("메뉴 항목에서 Enter로 고르면 메뉴가 닫힌 채로 남는다", async () => {
+    serve();
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText: vi.fn(async () => {}) } });
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    const item = await screen.findByRole("menuitem", { name: "버전 번호 복사" });
+    item.focus();
+    fireEvent.keyDown(item, { key: "Enter" });
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  });
+
   it("같은 역을 다시 누르면 닫는다", async () => {
     serve();
     showHistory();
