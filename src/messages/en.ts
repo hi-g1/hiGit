@@ -10,6 +10,7 @@ export const en: Messages = {
   workspaceTabs: "Workspace views",
   compareArea: "Compare",
   pickFileToCompare: "Pick a file to see the comparison.",
+  allFiles: "All files",
   loading: "Loading…",
   showDetail: "Show details",
   notARepo: "This folder is not managed with Git yet.",

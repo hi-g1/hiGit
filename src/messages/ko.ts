@@ -11,6 +11,7 @@ export const ko = {
   workspaceTabs: "작업 공간 보기",
   compareArea: "비교 보기",
   pickFileToCompare: "파일을 고르면 비교가 보여요.",
+  allFiles: "모든 파일",
   loading: "불러오는 중…",
   showDetail: "자세히 보기",
   notARepo: "이 폴더는 아직 Git으로 관리하지 않는 폴더예요.",

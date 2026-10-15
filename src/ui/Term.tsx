@@ -1,7 +1,38 @@
+import type { ReactElement } from "react";
 import { getTerm, type TermId } from "../glossary";
 import { useUiStore } from "../state/uiStore";
 import styles from "./Term.module.css";
 import { Tooltip } from "./Tooltip";
+
+/** 설정("Git 원래 이름으로 보기")과 언어를 따른 용어 이름. 접근성 이름처럼 글자만 필요할 때 쓴다. */
+export function useTermLabel(id: TermId): string {
+  const termDisplay = useUiStore((s) => s.termDisplay);
+  const locale = useUiStore((s) => s.locale);
+  const term = getTerm(id, locale);
+  return termDisplay === "git" ? term.gitName : term.friendly;
+}
+
+/** 용어 툴팁(원래 이름 · 명령 · 설명)을 다른 부품(체크 상자 등)에 씌운다. */
+export function TermTooltip({ id, children }: { id: TermId; children: ReactElement }) {
+  const termDisplay = useUiStore((s) => s.termDisplay);
+  const locale = useUiStore((s) => s.locale);
+  const term = getTerm(id, locale);
+  const heading = termDisplay === "git" ? term.friendly : term.gitName;
+
+  return (
+    <Tooltip
+      content={
+        <span className={styles.tip}>
+          <span className={styles.heading}>{heading}</span>
+          {term.command !== null && <code className={styles.command}>{term.command}</code>}
+          <span className={styles.description}>{term.description}</span>
+        </span>
+      }
+    >
+      {children}
+    </Tooltip>
+  );
+}
 
 type TermProps = {
   id: TermId;
@@ -18,27 +49,12 @@ type TermProps = {
  * "Git 원래 이름으로 보기"에서는 본문과 툴팁 첫 줄이 서로 바뀐다.
  */
 export function Term({ id, focusable = true }: TermProps) {
-  const termDisplay = useUiStore((s) => s.termDisplay);
-  const locale = useUiStore((s) => s.locale);
-  const term = getTerm(id, locale);
-
-  const showGit = termDisplay === "git";
-  const body = showGit ? term.gitName : term.friendly;
-  const heading = showGit ? term.friendly : term.gitName;
-
+  const label = useTermLabel(id);
   return (
-    <Tooltip
-      content={
-        <span className={styles.tip}>
-          <span className={styles.heading}>{heading}</span>
-          {term.command !== null && <code className={styles.command}>{term.command}</code>}
-          <span className={styles.description}>{term.description}</span>
-        </span>
-      }
-    >
+    <TermTooltip id={id}>
       <span className={styles.term} tabIndex={focusable ? 0 : undefined}>
-        {body}
+        {label}
       </span>
-    </Tooltip>
+    </TermTooltip>
   );
 }
