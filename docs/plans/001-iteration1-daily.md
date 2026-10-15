@@ -30,7 +30,7 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
 ### 범위 나누기 제안 (H-7)
 한 반복에 22단계(11단계는 커밋 2개)라 크다. 임의로 빼지 않고 나누는 안을 제시한다.
 - **1a (기반 + 내 컴퓨터 안의 작업)**: 1~3단계(기반), 4·5·7단계(git), 10단계의 diff 부분, 11단계, 14단계(감시), 15~18·21단계(화면), 22단계.
-- **1b (브랜치와 원격)**: 6·8·9단계(git), 10단계의 브랜치 조회 부분, 12·13단계(core), 19·20단계(화면).
+- **1b (브랜치와 원격)**: 6·8·9단계(git), 10단계의 브랜치 조회 부분, 10b(큰 파일 비교 상한), 12·13단계(core), 19·20단계(화면).
 - 아래 단계 번호는 나누든 안 나누든 그대로 쓴다. 나누면 1a 끝에 22단계를 한 번, 1b 끝에 한 번 더 한다. 1a의 상단 바 브랜치 단추는 1b 전까지 누를 수 없는 표시다.
 
 ## 완료 기준
@@ -211,6 +211,13 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 �
     - 테스트: 가짜 백엔드로 view 변환, 분류된 git 오류 → `ErrorCode` 대응 표 테스트.
     - 완료 기준: `cargo test --workspace`, `pnpm typecheck`, `pnpm test`, 바인딩 최신.
     - 문구 예: `pushRejected` "올리기 전에 최신 내용을 먼저 받아야 해요.", `wouldOverwrite` "저장하지 않은 변경이 덮어써져요. 먼저 저장해 주세요.", `identityMissing` "저장에 쓸 이름과 이메일이 설정되어 있지 않아요."(H-16), `authFailed` "원격 저장소에 로그인하지 못했어요."
+
+10b. 큰 새 파일 비교 상한 (`git: cap diff input size for large files`) — 1b (2026-10-15 사용자 지시, 1a 점검에서 나옴)
+    - 문제: 지금 비교는 git 출력을 전부 메모리로 읽은 뒤 5,000줄/1MB에서 자른다. 아주 큰 새 파일(수백 MB 로그 등)을 고르면 앱이 그만큼 메모리를 먼저 쓴다.
+    - 고침: core `Queries::diff`가 git을 부르기 전에 파일 크기를 본다(`std::fs::metadata`). 상한(예: 2MB, `crates/git/src/cli/diff.rs`의 상수와 함께 둠)을 넘는 새 파일은 git diff를 부르지 않고 앞부분 상한만 읽어 추가 줄로 보여주고 `truncated: true`. 추적 중인 큰 파일은 `Runner`가 출력을 상한까지만 읽고 자식 프로세스를 끝내는 스트리밍 읽기(`run_capped`)로 바꾼다. 이진 판정은 앞부분의 NUL 바이트로 한다.
+    - 화면 문구: `diffTruncated`를 "파일이 커서 일부만 보여줘요."로 바꾼다(ko). en "The file is large, so only part of it is shown."
+    - 테스트: 상한보다 큰 새 파일·추적 중 파일에서 `truncated`이고 읽은 바이트가 상한 근처인지, 상한 아래는 그대로인지.
+    - 완료 기준: `cargo test --workspace`, `pnpm test`. 수동: 500MB 파일을 골라도 앱 메모리가 크게 늘지 않음.
 
 11. 용어 + core 액션: 저장에 넣기·빼기·저장하기 (`glossary: add unstage term` → `core: add stage, unstage and commit actions`) — 두 커밋
     - 11a 용어(H-8): `docs/spec.md` 표에서 `stage` 바로 아래에 행 추가 `| unstage | 저장에서 빼기 | unstage · \`git restore --staged\` | 다음 저장에 넣었던 파일을 다시 빼기 | safe | 매일 |`, `src/glossary/types.ts`의 `TERM_IDS`에 같은 순서로, `ko.ts`, `en.ts`("Unstage", "Take a file back out of the next commit"). 완료 기준: `pnpm test`(spec-sync)가 통과하고, 표 순서와 `TERM_IDS` 순서를 일부러 어긋나게 하면 실패.
