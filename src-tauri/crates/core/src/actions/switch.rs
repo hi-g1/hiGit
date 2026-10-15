@@ -12,9 +12,6 @@ use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk, parked,
 };
 
-/// 맡긴 ref 이름 한 조각의 한도(파일 시스템 이름 한도 255바이트 안쪽).
-const MAX_PARKED_NAME_BYTES: usize = 200;
-
 pub struct SwitchAction {
     meta: ActionMeta,
 }
@@ -157,7 +154,7 @@ impl ParkUndo {
 /// 고친 파일을 `refs/higit/parked/<브랜치>`에 맡긴다. 맡길 것이 없으면 `None`.
 fn park(git: &dyn GitBackend, repo: &RepoPath, branch: &str) -> Result<Option<(Oid, ParkUndo)>> {
     let name = parked::ref_name(branch);
-    if name.len() - parked::PARKED_PREFIX.len() > MAX_PARKED_NAME_BYTES {
+    if name.len() - parked::PARKED_PREFIX.len() > parked::MAX_NAME_BYTES {
         return Err(CoreError::InvalidInput(
             "브랜치 이름이 너무 길어 고친 파일을 맡길 수 없어요",
         ));

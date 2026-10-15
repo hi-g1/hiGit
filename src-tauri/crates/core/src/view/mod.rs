@@ -404,6 +404,12 @@ pub enum ActionResult {
         count: u32,
     },
     Restored,
+    LocksCleared {
+        count: u32,
+    },
+    ParkedRecovered {
+        count: u32,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -448,6 +454,8 @@ impl From<Outcome> for ActionResult {
             Outcome::ParkedResolved => ActionResult::ParkedResolved,
             Outcome::Discarded { count } => ActionResult::Discarded { count },
             Outcome::Restored => ActionResult::Restored,
+            Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
+            Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
         }
     }
 }

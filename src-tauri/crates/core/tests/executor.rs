@@ -317,6 +317,8 @@ fn registered_actions_match_spec_risk() {
             ("take-out", "stash", Risk::Safe),
             ("discard", "discard", Risk::Caution),
             ("restore", "reflog", Risk::Safe),
+            ("clear-lock", "lock", Risk::Caution),
+            ("recover-parked", "park", Risk::Safe),
             ("switch", "switch", Risk::Normal),
             ("branch-create", "branch", Risk::Safe),
             ("fetch", "fetch", Risk::Safe),

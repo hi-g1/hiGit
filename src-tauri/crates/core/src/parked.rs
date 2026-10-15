@@ -3,6 +3,44 @@
 //! 브랜치 이름의 `%`와 `/`를 바꿔 적어 한 조각으로 만든다. 그래야 `a`와 `a/b`를 함께 맡길 수 있다.
 
 pub(crate) const PARKED_PREFIX: &str = "refs/higit/parked/";
+/// 맡긴 ref 이름 한 조각의 한도(바이트). 파일 시스템 이름 한도 255바이트 안쪽.
+pub(crate) const MAX_NAME_BYTES: usize = 200;
+
+/// 브랜치를 갈아타다 끊겨 stash 목록에 남은 맡긴 항목(D-082). 최근 것부터.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Leftover {
+    pub oid: git::Oid,
+    pub branch: String,
+}
+
+/// stash 목록에서 메시지가 `higit parked <브랜치>`인 항목. 메시지만 믿지 않고 브랜치 이름과
+/// 든 파일 경로를 검사한다(받은 폴더에 가짜 항목이 있을 수 있다). 검사를 통과하지 못한 항목은
+/// 여기 들지 않고 임시 보관 목록에 그대로 보인다.
+pub(crate) fn leftovers(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+) -> crate::Result<Vec<Leftover>> {
+    use crate::actions::stash::{PARKED_PREFIX as MESSAGE, stash_message};
+    let mut out = Vec::new();
+    for e in git.stash_list(repo)? {
+        let Some(branch) = stash_message(&e.subject)
+            .strip_prefix(MESSAGE)
+            .and_then(|b| b.strip_prefix(' '))
+        else {
+            continue;
+        };
+        let name_ok = crate::actions::names::validate_ref_like(branch).is_ok()
+            && ref_name(branch).len() - PARKED_PREFIX.len() <= MAX_NAME_BYTES;
+        if !name_ok || !safe_paths(&git.parked_paths(repo, &e.oid)?) {
+            continue;
+        }
+        out.push(Leftover {
+            oid: e.oid,
+            branch: branch.to_string(),
+        });
+    }
+    Ok(out)
+}
 
 /// `feature/login` → `refs/higit/parked/feature%2Flogin`.
 pub(crate) fn ref_name(branch: &str) -> String {
@@ -17,6 +55,14 @@ pub(crate) fn branch_of(refname: &str) -> Option<String> {
         return None;
     }
     Some(encoded.replace("%2F", "/").replace("%25", "%"))
+}
+
+/// 저장소 안의 상대 경로이고 `.git` 폴더를 건드리지 않는다.
+fn safe_paths(paths: &[String]) -> bool {
+    crate::actions::paths::validate(paths).is_ok()
+        && !paths
+            .iter()
+            .any(|p| p.split('/').any(|c| c.eq_ignore_ascii_case(".git")))
 }
 
 /// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`.

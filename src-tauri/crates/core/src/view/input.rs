@@ -32,6 +32,10 @@ pub enum ActionInput {
     Discard(PathsInput),
     /// 작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085).
     Restore(RestoreInput),
+    /// 버려진 잠금 파일을 지운다(확인 필요, D-081).
+    ClearLock,
+    /// stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082).
+    RecoverParked,
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -57,6 +61,8 @@ impl ActionInput {
             ActionInput::TakeOut(_) => "take-out",
             ActionInput::Discard(_) => "discard",
             ActionInput::Restore(_) => "restore",
+            ActionInput::ClearLock => "clear-lock",
+            ActionInput::RecoverParked => "recover-parked",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",

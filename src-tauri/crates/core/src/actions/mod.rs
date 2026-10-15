@@ -1,6 +1,7 @@
 //! 등록된 액션들. 새 액션 추가 절차는 docs/architecture.md "새 액션 추가 절차".
 
 mod branch_create;
+mod clear_lock;
 mod commit;
 pub(crate) mod conflict;
 mod discard;
@@ -9,6 +10,7 @@ mod init;
 pub(crate) mod merge;
 pub(crate) mod names;
 pub(crate) mod paths;
+mod recover_parked;
 mod remote;
 mod restore;
 mod stage;
@@ -16,12 +18,14 @@ pub(crate) mod stash;
 pub(crate) mod switch;
 
 pub use branch_create::BranchCreateAction;
+pub use clear_lock::ClearLockAction;
 pub use commit::CommitAction;
 pub use conflict::ConflictAction;
 pub use discard::DiscardAction;
 pub use ignore::IgnoreAction;
 pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
+pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
 pub use restore::RestoreAction;
 pub use stage::PathsAction;
@@ -75,6 +79,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(StashAction::take_out()))?;
     registry.register(Box::new(DiscardAction::new()))?;
     registry.register(Box::new(RestoreAction::new()))?;
+    registry.register(Box::new(ClearLockAction::new()))?;
+    registry.register(Box::new(RecoverParkedAction::new()))?;
     registry.register(Box::new(SwitchAction::new()))?;
     registry.register(Box::new(BranchCreateAction::new()))?;
     registry.register(Box::new(RemoteAction::fetch()))?;

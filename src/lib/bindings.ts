@@ -81,7 +81,11 @@ export type ActionInput =
 /**  고른 파일의 고친 내용을 버린다(확인 필요, D-074). */
 { id: "discard"; input: PathsInput } | 
 /**  작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085). */
-{ id: "restore"; input: RestoreInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "restore"; input: RestoreInput } | 
+/**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
+{ id: "clear-lock" } | 
+/**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
+{ id: "recover-parked" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -105,7 +109,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  합치기를 마쳤다(합친 버전을 만들었다). */
 { kind: "conflictFinished" } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "parkedRecovered"; count: number };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {

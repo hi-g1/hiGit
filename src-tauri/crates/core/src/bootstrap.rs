@@ -426,7 +426,8 @@ impl Core {
         // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
             "fetch" | "push" => Locks::Network,
-            "pull" | "sync" => Locks::Both,
+            // 잠금 정리는 앱의 다른 작업이 하나도 없을 때만(D-081).
+            "pull" | "sync" | "clear-lock" => Locks::Both,
             _ => Locks::Worktree,
         };
         let background = matches!(input, ActionInput::Fetch(i) if i.background);
@@ -489,7 +490,6 @@ impl Core {
     /// 끝나지 않은 작업(D-082): 오래된 잠금 파일, stash 목록에 남은 맡긴 항목, 다른 도구의 작업.
     /// 조회라 잠금을 잡지 않는다. 앱의 작업이 이 저장소에서 돌면 잠금과 맡긴 항목은 비워 둔다.
     pub fn pending_work(&self, folder: &Path) -> Result<crate::view::PendingWorkView> {
-        use crate::actions::stash::{PARKED_PREFIX, stash_message};
         let state = self.state_of(folder)?;
         let repo = state.repo.ok_or(CoreError::NotARepo)?;
         let git_dir = self.git.git_dir(&repo)?;
@@ -507,13 +507,7 @@ impl Core {
         .into_iter()
         .map(|l| l.name)
         .collect();
-        let parked = format!("{PARKED_PREFIX} ");
-        let leftover = self
-            .git
-            .stash_list(&repo)?
-            .iter()
-            .filter(|e| stash_message(&e.subject).starts_with(&parked))
-            .count();
+        let leftover = crate::parked::leftovers(self.git.as_ref(), &repo)?.len();
         Ok(crate::view::PendingWorkView {
             stale_locks,
             leftover_parked: u32::try_from(leftover).unwrap_or(u32::MAX),

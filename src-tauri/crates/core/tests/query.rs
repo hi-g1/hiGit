@@ -236,6 +236,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::TakeOut(_)
             | ActionInput::Discard(_)
             | ActionInput::Restore(_)
+            | ActionInput::ClearLock
+            | ActionInput::RecoverParked
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -276,6 +278,8 @@ fn action_input_tags_match_registry() {
         ActionInput::Restore(higit_core::view::RestoreInput {
             oid: "a".repeat(40),
         }),
+        ActionInput::ClearLock,
+        ActionInput::RecoverParked,
         ActionInput::Commit(CommitInput {
             message: "저장".into(),
             stage_all: false,

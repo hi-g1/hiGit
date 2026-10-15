@@ -53,6 +53,30 @@ pub(crate) fn stale(
     found
 }
 
+/// 잠금 파일 하나를 지운다. 지우기 직전에 다시 본다: 링크가 아닌 일반 파일, 이름이 `.lock`으로
+/// 끝남, 실제 위치가 git 폴더 안. 다른 프로그램이 쥐고 있어 못 지우면(Windows) `Busy`.
+pub(crate) fn remove(lock: &LockFile, roots: &[&Path]) -> crate::Result<()> {
+    let is_file = std::fs::symlink_metadata(&lock.path).is_ok_and(|m| m.file_type().is_file());
+    let named = lock
+        .path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| n.ends_with(".lock"));
+    let inside = lock
+        .path
+        .parent()
+        .and_then(|p| std::fs::canonicalize(p).ok())
+        .is_some_and(|parent| {
+            roots
+                .iter()
+                .any(|root| std::fs::canonicalize(root).is_ok_and(|root| parent.starts_with(root)))
+        });
+    if !(is_file && named && inside) {
+        return Err(crate::CoreError::InvalidInput("지울 수 없는 파일이에요"));
+    }
+    std::fs::remove_file(&lock.path).map_err(|_| crate::CoreError::Busy)
+}
+
 fn is_lock_file(entry: &std::fs::DirEntry) -> bool {
     entry
         .file_name()
@@ -191,6 +215,28 @@ mod tests {
         );
         std::fs::write(d.join("refs/heads/feature/x.lock"), "").unwrap();
         assert!(stale(d, d, SystemTime::now(), || false).is_empty());
+    }
+
+    #[test]
+    fn remove_checks_the_file_again() {
+        let dir = git_dir();
+        let d = dir.path();
+        std::fs::write(d.join("index.lock"), "").unwrap();
+        let lock = find(d, d).pop().unwrap();
+        // git 폴더 밖이라고 하면 지우지 않는다.
+        let other = tempfile::tempdir().unwrap();
+        assert!(remove(&lock, &[other.path()]).is_err());
+        assert!(d.join("index.lock").exists());
+        remove(&lock, &[d]).unwrap();
+        assert!(!d.join("index.lock").exists());
+        // 이름이 .lock이 아니면 지우지 않는다.
+        std::fs::write(d.join("index"), "").unwrap();
+        let not_lock = LockFile {
+            path: d.join("index"),
+            name: "index".into(),
+        };
+        assert!(remove(&not_lock, &[d]).is_err());
+        assert!(d.join("index").exists());
     }
 
     #[test]

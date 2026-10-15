@@ -187,3 +187,123 @@ fn locks_are_not_stale_while_git_or_the_app_runs() {
     git.hold.store(false, Ordering::SeqCst);
     first.join().unwrap().unwrap();
 }
+
+fn clear_lock(
+    core: &Core,
+    dir: &Path,
+) -> Result<higit_core::view::ActionResult, higit_core::CoreError> {
+    let preview = core.preview(dir, &ActionInput::ClearLock).unwrap();
+    core.execute(dir, &ActionInput::ClearLock, Some(preview.token))
+}
+
+#[test]
+fn clear_lock_removes_stale_locks_after_confirmation() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    make_old(&dir.join(".git/index.lock"));
+    make_old(&dir.join(".git/refs/heads/main.lock"));
+    let err = core
+        .execute(dir, &ActionInput::ClearLock, None)
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::PreviewRequired);
+    assert!(dir.join(".git/index.lock").exists());
+
+    assert_eq!(
+        clear_lock(&core, dir).unwrap(),
+        higit_core::view::ActionResult::LocksCleared { count: 2 }
+    );
+    assert!(!dir.join(".git/index.lock").exists());
+    assert!(!dir.join(".git/refs/heads/main.lock").exists());
+    // 작업 목록에 경계를 남기지 않는다.
+    let journal = std::fs::read_to_string(dir.join(".git/higit/journal.jsonl")).unwrap_or_default();
+    assert!(!journal.contains("clear-lock"), "{journal}");
+    // 다시 하면 지울 것이 없다.
+    assert_eq!(
+        clear_lock(&core, dir).unwrap(),
+        higit_core::view::ActionResult::LocksCleared { count: 0 }
+    );
+}
+
+#[test]
+fn clear_lock_keeps_fresh_locks() {
+    let repo = repo();
+    let dir = repo.path();
+    let core = core(dir);
+    std::fs::write(dir.join(".git/index.lock"), "").unwrap();
+    let err = clear_lock(&core, dir).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::Busy);
+    assert!(dir.join(".git/index.lock").exists());
+}
+
+#[test]
+fn clear_lock_waits_while_git_runs() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    make_old(&dir.path().join(".git/index.lock"));
+    let git = Arc::new(FakeGit::new());
+    *git.repo.lock().unwrap() = Some(higit_core::RepoPath::new(dir.path()));
+    let core = Core::with_backend(git.clone() as Arc<dyn GitBackend>).unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
+    git.git_running.store(true, Ordering::SeqCst);
+    let err = clear_lock(&core, dir.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::Busy);
+    assert!(dir.path().join(".git/index.lock").exists());
+}
+
+fn stash(dir: &Path, content: &str, message: &str) -> String {
+    std::fs::write(dir.join("a.txt"), content).unwrap();
+    git(dir, &["stash", "push", "-q", "-m", message]);
+    git(dir, &["rev-parse", "refs/stash"])
+}
+
+#[test]
+fn recover_parked_moves_leftovers_to_parked_refs() {
+    let repo = repo();
+    let dir = repo.path();
+    git(dir, &["branch", "feature/로그인"]);
+    let older = stash(dir, "먼저\n", "higit parked main");
+    let mine = stash(dir, "내 보관\n", "내 보관");
+    let newer = stash(dir, "나중\n", "higit parked main");
+    let feature = stash(dir, "기능\n", "higit parked feature/로그인");
+    // 이름이 이상한 항목은 복구하지 않고 임시 보관 목록에 그대로 보인다.
+    let odd = stash(dir, "이상\n", "higit parked -x");
+    let core = core(dir);
+    assert_eq!(core.pending_work(dir).unwrap().leftover_parked, 3);
+
+    assert_eq!(
+        core.execute(dir, &ActionInput::RecoverParked, None)
+            .unwrap(),
+        higit_core::view::ActionResult::ParkedRecovered { count: 3 }
+    );
+    assert_eq!(git(dir, &["rev-parse", "refs/higit/parked/main"]), newer);
+    assert_eq!(
+        git(dir, &["rev-parse", "refs/higit/parked/feature%2F로그인"]),
+        feature
+    );
+    // 같은 브랜치의 앞선 것은 백업 ref에 남는다.
+    let backups = git(
+        dir,
+        &[
+            "for-each-ref",
+            "--format=%(objectname)",
+            "refs/higit/backup/",
+        ],
+    );
+    assert!(backups.contains(&older), "{backups}");
+    let left = git(dir, &["stash", "list", "--format=%H"]);
+    assert_eq!(
+        left.lines().collect::<Vec<_>>(),
+        vec![odd.as_str(), mine.as_str()]
+    );
+    assert_eq!(core.pending_work(dir).unwrap().leftover_parked, 0);
+    let listed: Vec<String> = core
+        .queries()
+        .stashes(dir)
+        .unwrap()
+        .items
+        .into_iter()
+        .map(|i| i.oid)
+        .collect();
+    assert_eq!(listed, vec![odd, mine]);
+}

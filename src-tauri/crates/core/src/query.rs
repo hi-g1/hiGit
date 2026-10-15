@@ -157,14 +157,19 @@ impl Queries {
 
     /// 임시 보관 목록(D-076). 맡겨 두기가 잠깐 만든 항목("higit parked …")은 뺀다.
     pub fn stashes(&self, repo: &Path) -> Result<crate::view::StashListView> {
-        use crate::actions::stash::{PARKED_PREFIX, STASH_PREFIX, stash_message};
+        use crate::actions::stash::{STASH_PREFIX, stash_message};
         let root = self.opened_repo(repo)?;
+        // 맡겨 두기 항목은 알림 줄의 "복구하기"가 다룬다. 검사를 통과하지 못한 것은 그대로 보인다.
+        let parked: HashSet<git::Oid> = crate::parked::leftovers(self.git.as_ref(), &root)?
+            .into_iter()
+            .map(|l| l.oid)
+            .collect();
         let mut items = Vec::new();
         for e in self.git.stash_list(&root)? {
-            let message = stash_message(&e.subject).to_string();
-            if message.starts_with(PARKED_PREFIX) {
+            if parked.contains(&e.oid) {
                 continue;
             }
+            let message = stash_message(&e.subject).to_string();
             let files = self.git.parked_paths(&root, &e.oid)?.len();
             let branch = message
                 .strip_prefix(STASH_PREFIX)

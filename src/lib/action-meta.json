@@ -78,6 +78,18 @@
     "undo": "restoreTree"
   },
   {
+    "id": "clear-lock",
+    "glossaryId": "lock",
+    "risk": "caution",
+    "undo": "irreversible"
+  },
+  {
+    "id": "recover-parked",
+    "glossaryId": "park",
+    "risk": "safe",
+    "undo": "nothing"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",
