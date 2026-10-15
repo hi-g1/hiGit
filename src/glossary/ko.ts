@@ -21,6 +21,12 @@ export const ko: Glossary = {
     command: "git add",
     description: "다음 저장에 포함할 파일 고르기",
   },
+  unstage: {
+    friendly: "저장에서 빼기",
+    gitName: "unstage",
+    command: "git restore --staged",
+    description: "다음 저장에 넣었던 파일을 다시 빼기",
+  },
   commit: {
     friendly: "저장하기",
     gitName: "commit",

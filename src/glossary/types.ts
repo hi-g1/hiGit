@@ -3,6 +3,7 @@ export const TERM_IDS = [
   "status",
   "diff",
   "stage",
+  "unstage",
   "commit",
   "fetch",
   "pull",

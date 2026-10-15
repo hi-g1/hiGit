@@ -20,6 +20,12 @@ export const en: Glossary = {
     command: "git add",
     description: "Pick the files to include in the next save",
   },
+  unstage: {
+    friendly: "Take out of save",
+    gitName: "unstage",
+    command: "git restore --staged",
+    description: "Take a file back out of the next save",
+  },
   commit: {
     friendly: "Save",
     gitName: "commit",

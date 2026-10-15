@@ -40,6 +40,7 @@ Git을 모르는 사람도 프로젝트 폴더를 열고 버튼 몇 번으로 �
 | status | 바뀐 내용 | status · `git status` | 마지막 저장 이후 바뀐 파일 목록 | safe | 매일 |
 | diff | 비교 보기 | diff · `git diff` | 파일이 어떻게 바뀌었는지 줄 단위로 비교 | safe | 매일 |
 | stage | 저장에 넣기 | stage · `git add` | 다음 저장에 포함할 파일 고르기 | safe | 매일 |
+| unstage | 저장에서 빼기 | unstage · `git restore --staged` | 다음 저장에 넣었던 파일을 다시 빼기 | safe | 매일 |
 | commit | 저장하기 | commit · `git commit` | 지금 상태를 설명과 함께 기록으로 남기기 | safe | 매일 |
 | fetch | 새 소식 확인 | fetch · `git fetch` | 원격 저장소의 변경을 내려받되 아직 합치지 않음 | safe | 매일 |
 | pull | 최신으로 받기 | pull · `git pull` | 원격의 변경을 받아 내 갈래에 합치기 | normal | 매일 |
