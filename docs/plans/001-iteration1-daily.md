@@ -1,9 +1,10 @@
 # 001 반복 1: 매일 쓰는 기능
-- 관련 결정: D-002, D-003, D-006, D-007, D-010, D-011, D-013, D-014, D-015, D-019 (확정). D-020, D-021, D-022, D-023 (확정, 2026-10-15). D-017(제안)은 다루지 않는다(저장 기록은 계속 단순 목록).
-- 관련 명세: spec.md "원칙" 3(지금 상태가 항상 보인다), "화면 구성"의 작업 공간(왼쪽 갈래 목록, 가운데 바뀐 파일과 비교, 오른쪽 저장 상자)과 저장 기록 탭, 용어표의 `stage`·`commit`·`diff`·`branch`·`switch`·`fetch`·`pull`·`push`, "오류 메시지 원칙". roadmap.md "반복 1".
+- 2026-10-15 개정: D-024~D-026(새 용어, 2단 + 상단 바, 먹색 모노)으로 남은 단계(6, 8, 9, 12, 13, 15~22)와 머리말을 고쳤다. 끝난 단계 본문은 기록이라 옛 용어 그대로 둔다. 계획 002 참고.
+- 관련 결정: D-002, D-003, D-006, D-007, D-010, D-011, D-013, D-014, D-015, D-019 (확정). D-020, D-021, D-022, D-023 (확정, 2026-10-15). D-017(제안)은 다루지 않는다(버전 기록은 계속 단순 목록).
+- 관련 명세: spec.md "원칙" 3(지금 상태가 항상 보인다), "화면 구성"의 작업 공간(상단 바 + 2단: 왼쪽 변경 사항 | 버전 기록 탭과 버전 저장 상자, 오른쪽 비교), 용어표의 `stage`·`commit`·`diff`·`branch`·`switch`·`fetch`·`pull`·`push`, "오류 메시지 원칙". roadmap.md "반복 1".
 
 ## 목표
-Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파일 수·올릴/받을 저장 수가 늘 보이고, 파일을 골라 저장에 넣고, 비교를 보고, 메시지를 써서 저장하고, 갈래를 만들고 바꾸고, 새 소식 확인·최신으로 받기·올리기를 할 수 있다. 파일을 바꾸면 화면이 저절로 새로 고쳐진다.
+Windows와 Ubuntu에서 저장소를 열면 상단에 현재 브랜치·바뀐 파일 수·올릴/가져올 버전 수가 늘 보이고, 파일을 골라 저장에 넣고, 비교를 보고, 메시지를 써서 저장하고, 브랜치를 만들고 바꾸고, 새로 고침·가져오기·올리기를 할 수 있다. 파일을 바꾸면 화면이 저절로 새로 고쳐진다.
 그 앞에 기반 세 가지를 갖춘다: 타입 있는 액션 입력, 저장소에 포함된 커밋 전 검사 hook, CI의 Windows 실행 파일 artifact.
 
 ## 현재 상태 (main, 반복 0 완료)
@@ -19,27 +20,27 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파�
 ## 범위
 들어가는 것:
 - 기반: ① 타입 있는 액션 입력(D-020), ② 저장소 hook(D-022), ③ CI Windows artifact.
-- 액션(전부 `safe`/`normal`, D-011 범위 안): `stage`(저장에 넣기), `unstage`(저장에서 빼기, 새 용어), `commit`(저장하기), `branch-create`(작업 갈래 만들기, 용어 `branch`), `switch`(갈래 바꾸기), `fetch`(새 소식 확인), `pull`(최신으로 받기, fast-forward만), `push`(올리기).
-- 조회: `diff`(비교 보기), `branches`(갈래 목록), 갈래 이름 검사.
+- 액션(전부 `safe`/`normal`, D-011 범위 안): `stage`(이번 버전에 넣기), `unstage`(이번 버전에서 빼기, 새 용어), `commit`(버전 저장), `branch-create`(브랜치 만들기, 용어 `branch`), `switch`(브랜치 바꾸기), `fetch`(새로 고침), `pull`(가져오기, fast-forward만), `push`(올리기).
+- 조회: `diff`(비교 보기), `branches`(브랜치 목록), 브랜치 이름 검사.
 - 파일 변경 감시(`crates/watcher`) → `repo-changed` 이벤트 → 화면 자동 새로 고침.
-- 상단 상태 표시, 작업 공간 3단 배치, 저장 기록 탭 분리.
+- 상단 바, 작업 공간 2단(D-025), 왼쪽 탭에 변경 사항 | 버전 기록.
 
-들어가지 않는 것: 합치기·충돌 화면·잠시 치워두기·변경 취소(반복 2), 진행률 이벤트 `op-progress`(반복 1은 진행 중 표시만), 원격 추가·관리(`remote`), 이름·이메일 설정 화면, 자동 새 소식 확인(H-12에서 정함), 설치 파일(H-6에서 정함), 노선도.
+들어가지 않는 것: 합치기·충돌 화면·잠시 치워두기·변경 취소(반복 2), 진행률 이벤트 `op-progress`(반복 1은 진행 중 표시만), 원격 추가·관리(`remote`), 이름·이메일 설정 화면, 자동 새로 고침(H-12에서 정함), 설치 파일(H-6에서 정함), 노선도.
 
 ### 범위 나누기 제안 (H-7)
 한 반복에 22단계(11단계는 커밋 2개)라 크다. 임의로 빼지 않고 나누는 안을 제시한다.
 - **1a (기반 + 내 컴퓨터 안의 작업)**: 1~3단계(기반), 4·5·7단계(git), 10단계의 diff 부분, 11단계, 14단계(감시), 15~18·21단계(화면), 22단계.
-- **1b (갈래와 원격)**: 6·8·9단계(git), 10단계의 갈래 조회 부분, 12·13단계(core), 19·20단계(화면).
-- 아래 단계 번호는 나누든 안 나누든 그대로 쓴다. 나누면 1a 끝에 22단계를 한 번, 1b 끝에 한 번 더 한다. 1a의 15단계 왼쪽 패널은 1b 전까지 현재 갈래 이름만 보여준다.
+- **1b (브랜치와 원격)**: 6·8·9단계(git), 10단계의 브랜치 조회 부분, 12·13단계(core), 19·20단계(화면).
+- 아래 단계 번호는 나누든 안 나누든 그대로 쓴다. 나누면 1a 끝에 22단계를 한 번, 1b 끝에 한 번 더 한다. 1a의 상단 바 브랜치 단추는 1b 전까지 누를 수 없는 표시다.
 
 ## 완료 기준
 - 1~3단계: 아래 각 단계의 완료 기준.
-- Ubuntu 22.04와 Windows 11에서 `pnpm tauri dev`로 저장소를 열면 상단에 현재 갈래 이름, 바뀐 파일 수, 올릴 저장 수, 받을 저장 수(연결된 갈래가 없으면 "아직 올린 적 없음")가 보인다.
-- 바뀐 파일의 체크 상자로 저장에 넣기/빼기를 하면 목록 상태가 바로 바뀐다(한글·공백 파일명, 파일 1,000개 한 번에 넣기 포함).
-- 파일을 고르면 가운데에 마지막 저장과의 줄 단위 비교가 보인다(추가/삭제 줄 색 토큰, 새 파일, 삭제 파일, 이진 파일 안내, 큰 파일 잘림 안내).
-- 메시지를 쓰고 "저장하기"를 누르면(또는 Ctrl+Enter, 한글 조합 중 Enter는 무시) 저장 기록 탭에 새 저장이 맨 위에 보인다. 넣은 파일이 없거나 메시지가 비면 버튼이 꺼져 있다.
-- 왼쪽 갈래 목록에서 새 갈래를 만들고 바꿀 수 있다. 잘못된 이름은 입력 중에 안내가 뜬다. 바꿀 때 덮어쓸 변경이 있으면 쉬운 안내와 "자세히 보기"가 뜬다.
-- 로컬 원격(임시 bare 저장소)과 GitHub 저장소 각각에서 새 소식 확인 → 받을 저장 수 갱신, 최신으로 받기(fast-forward), 올리기(연결된 갈래 없을 때 포함)가 된다. 올리기가 거부되면 "올리기 전에 최신 내용을 먼저 받아야 해요." 안내와 [최신으로 받기] 버튼이 뜬다.
+- Ubuntu 22.04와 Windows 11에서 `pnpm tauri dev`로 저장소를 열면 상단에 현재 브랜치 이름, 바뀐 파일 수, 올릴 버전 수, 가져올 버전 수(연결된 브랜치가 없으면 "아직 올린 적 없음")가 보인다.
+- 바뀐 파일의 체크 상자로 이번 버전에 넣기/빼기를 하면 목록 상태가 바로 바뀐다(한글·공백 파일명, 파일 1,000개 한 번에 넣기 포함).
+- 파일을 고르면 오른쪽 칸에 마지막 버전과의 줄 단위 비교가 보인다(추가/삭제 줄 색 토큰, 새 파일, 삭제 파일, 이진 파일 안내, 큰 파일 잘림 안내).
+- 메시지를 쓰고 "버전 저장"을 누르면(또는 Ctrl+Enter, 한글 조합 중 Enter는 무시) 버전 기록 탭에 새 저장이 맨 위에 보인다. 넣은 파일이 없거나 메시지가 비면 버튼이 꺼져 있다.
+- 상단 바 브랜치 단추의 드롭다운에서 새 브랜치를 만들고 바꿀 수 있다. 잘못된 이름은 입력 중에 안내가 뜬다. 바꿀 때 덮어쓸 변경이 있으면 쉬운 안내와 "자세히 보기"가 뜬다.
+- 로컬 원격(임시 bare 저장소)과 GitHub 저장소 각각에서 새로 고침 → 가져올 버전 수 갱신, 가져오기(fast-forward), 올리기(연결된 브랜치 없을 때 포함)가 된다. 올리기가 거부되면 "올리기 전에 원격 저장소의 새 버전을 먼저 가져와야 해요." 안내와 [가져오기] 버튼이 뜬다.
 - 앱 밖(편집기)에서 파일을 저장하면 1초 안에 바뀐 파일 목록과 상단 숫자가 바뀐다. 터미널에서 `git commit`해도 바뀐다.
 - `pnpm test`가 레지스트리의 모든 액션 `glossaryId`·위험도를 spec.md 표와 대조해 통과하고, spec.md 표·`ko.ts`·`en.ts`가 새 용어 `unstage`까지 일치한다.
 - 두 OS CI 초록, Windows artifact를 받아 깨끗한 Windows 11에서 실행된다.
@@ -170,10 +171,10 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파�
    - 완료 기준: `cargo test -p git` 두 OS 통과.
    - Windows/Ubuntu: 테스트 저장소는 `core.autocrlf=false`로 만들어 CRLF 내용을 그대로 비교한다. 사용자의 `autocrlf=true`(Windows 기본)에서는 diff에 줄 끝 차이가 안 보이는 게 정상. 텍스트는 바이트로 받아 lossy UTF-8(EUC-KR 파일은 깨져 보임 → 위험에 기록).
 
-6. git: 갈래 목록, 원격 목록, 갈래 이름 검사 (`git: add branches, remotes and ref name check`) — 1b
+6. git: 브랜치 목록, 원격 목록, 브랜치 이름 검사 (`git: add branches, remotes and ref name check`) — 1b
    - 변경 파일: `backend.rs`(`branches`, `remotes`, `check_branch_name`), `cli/branches.rs`(신규), `types.rs`(`Branch { name, kind: Local | Remote, is_head, upstream, ahead, behind, gone }`, `Remote { name }`).
-   - 명령: `git for-each-ref --format=%(refname)%00%(objectname)%00%(HEAD)%00%(upstream)%00%(upstream:track,nobracket) refs/heads refs/remotes`(레코드는 줄, 필드는 NUL. 갈래 이름에 줄바꿈은 들어갈 수 없다). `refs/remotes/*/HEAD`는 뺀다. 원격은 `git remote`(줄당 이름 하나). 이름 검사는 `git check-ref-format --branch <name>`(종료 코드만 본다).
-   - 테스트: 로컬 갈래 여러 개, 현재 갈래 표시, 한글 갈래 이름, upstream ahead/behind/gone, 원격 갈래, 저장 없는 저장소(갈래 0개), 잘못된 이름(`a..b`, `-x`, 공백, `@{`)과 올바른 한글 이름.
+   - 명령: `git for-each-ref --format=%(refname)%00%(objectname)%00%(HEAD)%00%(upstream)%00%(upstream:track,nobracket) refs/heads refs/remotes`(레코드는 줄, 필드는 NUL. 브랜치 이름에 줄바꿈은 들어갈 수 없다). `refs/remotes/*/HEAD`는 뺀다. 원격은 `git remote`(줄당 이름 하나). 이름 검사는 `git check-ref-format --branch <name>`(종료 코드만 본다).
+   - 테스트: 로컬 브랜치 여러 개, 현재 브랜치 표시, 한글 브랜치 이름, upstream ahead/behind/gone, 원격 브랜치, 저장 없는 저장소(브랜치 0개), 잘못된 이름(`a..b`, `-x`, 공백, `@{`)과 올바른 한글 이름.
    - 완료 기준: `cargo test -p git` 두 OS 통과.
 
 7. git: 저장에 넣기·빼기·저장하기 (`git: add stage, unstage and commit ops`)
@@ -186,14 +187,14 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파�
    - 완료 기준: `cargo test -p git` 두 OS 통과.
    - Windows/Ubuntu: Windows에서 `-F -`로 넘긴 UTF-8 메시지가 그대로 저장되는지(`i18n.commitEncoding` 기본 UTF-8) 테스트로 확인. 테스트 환경에서 사용자 전역 설정이 섞이지 않게 `GIT_CONFIG_GLOBAL`을 임시 파일로.
 
-8. git: 갈래 만들기·바꾸기 (`git: add branch create and switch ops`) — 1b
+8. git: 브랜치 만들기·바꾸기 (`git: add branch create and switch ops`) — 1b
    - 변경 파일: `types.rs`(`GitOp::CreateBranch { name, start: Option<String> }`, `Switch { branch, track: Option<String> }`), `cli/mod.rs`.
-   - 매핑: CreateBranch `git branch <name> [<start>]`. `-`로 시작하는 이름이 옵션으로 읽히지 않도록 core가 6단계의 이름 검사를 먼저 통과시킨 이름만 넘긴다. Switch: 로컬 갈래 `git switch <branch>`, 원격 갈래 `git switch -c <local> --track <remote>/<branch>`. `--no-guess`로 이름 추측을 끈다(동작을 명시적으로).
-   - 테스트: 만들기 후 `branches`에 보임, 같은 이름 → `BranchExists`, 바꾸기 후 `status.branch.head`, 덮어쓸 변경이 있는 바꾸기 → `WouldOverwrite`, 겹치지 않는 변경은 따라옴(H-15), 원격 갈래로 바꾸기(로컬 bare 원격).
+   - 매핑: CreateBranch `git branch <name> [<start>]`. `-`로 시작하는 이름이 옵션으로 읽히지 않도록 core가 6단계의 이름 검사를 먼저 통과시킨 이름만 넘긴다. Switch: 로컬 브랜치 `git switch <branch>`, 원격 브랜치 `git switch -c <local> --track <remote>/<branch>`. `--no-guess`로 이름 추측을 끈다(동작을 명시적으로).
+   - 테스트: 만들기 후 `branches`에 보임, 같은 이름 → `BranchExists`, 바꾸기 후 `status.branch.head`, 덮어쓸 변경이 있는 바꾸기 → `WouldOverwrite`, 겹치지 않는 변경은 따라옴(H-15), 원격 브랜치로 바꾸기(로컬 bare 원격).
    - 완료 기준: `cargo test -p git` 두 OS 통과.
-   - Windows/Ubuntu: 대소문자만 다른 갈래 이름(`Feature`/`feature`)은 Windows 파일 시스템에서 충돌한다 → 테스트로 결과를 기록하고 core의 이름 검사에서 기존 갈래와 대소문자 무시 비교로 막을지 H로(H-18).
+   - Windows/Ubuntu: 대소문자만 다른 브랜치 이름(`Feature`/`feature`)은 Windows 파일 시스템에서 충돌한다 → 테스트로 결과를 기록하고 core의 이름 검사에서 기존 브랜치와 대소문자 무시 비교로 막을지 H로(H-18).
 
-9. git: 새 소식 확인·최신으로 받기·올리기 (`git: add fetch, pull and push ops`) — 1b
+9. git: 새로 고침·가져오기·올리기 (`git: add fetch, pull and push ops`) — 1b
    - 변경 파일: `types.rs`(`GitOp::Fetch`, `Pull`, `Push { set_upstream: Option<(String, String)> }`), `cli/mod.rs`, `cli/runner.rs`(네트워크 작업용 env).
    - 매핑(H-10~H-13 추천안 기준): Fetch `git fetch --all`(prune 안 함), Pull `git pull --ff-only`, Push `git push` 또는 `git push -u <remote> HEAD:refs/heads/<branch>`.
    - 네트워크 작업에는 추가로 `GIT_ASKPASS`를 비워 두고(`GIT_TERMINAL_PROMPT=0`은 이미 있음), SSH 질문으로 멈추지 않게 하는 방법을 H-13 결정대로 넣는다. 자격 증명 도우미(Windows Git Credential Manager 창)는 막지 않는다.
@@ -226,18 +227,18 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파�
     - 완료 기준: `cargo test --workspace`, `pnpm test`, 바인딩 최신, `action-meta.json`에 네 액션.
     - Windows/Ubuntu: 경로 검사에서 `C:` 드라이브 접두사와 `\\` UNC도 거부되는지 두 OS 단위 테스트(문자열 검사라 OS 분기 불필요).
 
-12. core 액션: 갈래 만들기·바꾸기 (`core: add branch-create and switch actions`) — 1b
+12. core 액션: 브랜치 만들기·바꾸기 (`core: add branch-create and switch actions`) — 1b
     - `view/input.rs`: `BranchCreate(BranchCreateInput { name, start: Option<String> })`, `Switch(SwitchInput { branch: String, remote: Option<String> })`.
     - `actions/{branch_create.rs, switch.rs}`. 메타: `branch-create`/`branch`/Safe, `switch`/`switch`/Normal. "만들고 바로 바꾸기"는 화면이 두 액션을 차례로 부른다(한 액션으로 묶으면 위험도가 `branch`의 safe와 어긋남).
-    - `available`: 저장소 + 저장이 하나 이상(`has_commits`, 저장 없는 저장소에서 갈래를 만들 수 없음 → 새 `UnavailableReason::NoCommits`).
+    - `available`: 저장소 + 저장이 하나 이상(`has_commits`, 저장 없는 저장소에서 브랜치를 만들 수 없음 → 새 `UnavailableReason::NoCommits`).
     - 테스트: 가짜 백엔드 호출, 이름 검사 실패 시 git 작업을 부르지 않음, 저장 없음.
     - 완료 기준: 11b와 같음.
 
-13. core 액션: 새 소식 확인·최신으로 받기·올리기 (`core: add fetch, pull and push actions`) — 1b
+13. core 액션: 새로 고침·가져오기·올리기 (`core: add fetch, pull and push actions`) — 1b
     - `view/input.rs`: `Fetch`, `Pull`, `Push`(셋 다 입력 없음 unit 변형).
     - `actions/{fetch.rs, pull.rs, push.rs}`. 메타: `fetch`/Safe, `pull`/Normal, `push`/Normal.
-    - `available`: 원격이 하나 이상(`NoRemote`). pull은 upstream이 있어야(`NoUpstream`). push는 갈래 위에 있어야(detached면 `Detached`).
-    - push의 upstream 정하기(H-11 추천안): upstream이 있으면 그대로. 없으면 원격이 하나면 그것, 여럿이면 `origin`, 없으면 `NoRemote`. 같은 이름의 원격 갈래로 `-u`.
+    - `available`: 원격이 하나 이상(`NoRemote`). pull은 upstream이 있어야(`NoUpstream`). push는 브랜치 위에 있어야(detached면 `Detached`).
+    - push의 upstream 정하기(H-11 추천안): upstream이 있으면 그대로. 없으면 원격이 하나면 그것, 여럿이면 `origin`, 없으면 `NoRemote`. 같은 이름의 원격 브랜치로 `-u`.
     - 네트워크 작업은 저장소 잠금을 잡는 동안 오래 걸릴 수 있다 → 화면은 진행 중 표시. 취소는 범위 밖(위험에 기록).
     - 테스트: 가짜 백엔드로 upstream 정하기 경우 전부, `available` 조합.
     - 완료 기준: 11b와 같음.
@@ -258,54 +259,48 @@ Windows와 Ubuntu에서 저장소를 열면 상단에 현재 갈래·바뀐 파�
     - 테스트 추가: 무시된 파일(`node_modules/x.js`, `target/a`) 쓰기 → 이벤트 없음, `.gitignore` 수정 → 규칙 갱신 후 이전에 무시되던 파일 이벤트 발생, 감시 중 폴더 삭제 → `active: false`.
     - 위험: 빌드 산출물 폭주는 위 제외로 대부분 사라진다. 남는 것은 무시되지 않은 큰 생성물 → 디바운스 + 화면 1초 throttle.
 
-### D. 화면
-app 명령과 바인딩은 따로 단계를 두지 않고 10~14단계의 core 변경과 같은 커밋에 넣는다(바인딩 최신 검사가 단계마다 통과해야 하므로).
+### D. 화면 (2026-10-15 개정: 상단 바 + 2단, D-025·D-026, 새 용어 D-024)
 
-15. 작업 공간 배치와 상단 상태 표시 (`screens: workspace layout and status bar`)
-    - 변경 파일: `src/screens/Workspace/{Workspace.tsx, Workspace.module.css}`, `src/screens/Workspace/StatusBar.tsx` + CSS(신규), `src/screens/History/History.tsx`(저장 기록 탭, 기존 `HistoryList` 사용), `src/state/repoStore.ts`(현재 탭, 고른 파일), `src/messages/{ko,en}.ts`, 테스트.
-    - 배치(spec.md "화면 구성"): 상단 막대(저장소 이름 · 상태 표시 · 탭 "작업 공간 | <Term id="log" />" · 새로 고침 · 다른 폴더 열기). 작업 공간 탭: 왼쪽 갈래 목록 자리(1b 전에는 현재 갈래 이름만), 가운데 바뀐 파일 + 비교, 오른쪽 저장 상자. 최소 창 너비 800px에서 왼쪽 패널은 접힌다.
-    - 상태 표시(spec.md 원칙 3, `StatusView.branch` 사용): `<Term id="branch" />` 이름(detached면 "특정 저장을 보는 중"), `<Term id="status" />` N개, upstream이 있으면 "올릴 저장 N"(`<Term id="push" />`와 함께), "받을 저장 N"(`<Term id="pull" />`), 없으면 "아직 올린 적 없음". 숫자는 tokens.css 색만 쓴다.
-    - 테스트: 상태 표시 문구(upstream 있음/없음/detached/저장 없음), 탭 전환.
-    - 완료 기준: `pnpm test`, `pnpm lint` 통과. 두 OS 수동: 800px 너비, 라이트/다크, 툴팁.
-    - Windows/Ubuntu: WebKitGTK에서 CSS grid `minmax`·`container queries` 지원 여부 확인(D-001). 쓰기 전에 Ubuntu 22.04의 WebKitGTK 2.4x에서 동작하는지 본다.
+15. 작업 공간 배치와 상단 바 (`screens: workspace layout and top bar`)
+    - 변경 파일: `src/screens/Workspace/{Workspace.tsx, Workspace.module.css}`, `TopBar.tsx` + CSS(신규), `ChangesTab.tsx`·`HistoryTab.tsx`(신규, 왼쪽 탭 내용), `src/state/repoStore.ts`(`leftTab: "changes" | "history"`, `selectedPath`), `src/ui/Panel.*`(작업 공간에서는 둥근 상자 대신 1px 선 칸, 필요하면 `variant="pane"`), `src/messages/{ko,en}.ts`, 테스트.
+    - 상단 바 왼쪽: 프로젝트 이름(경로는 툴팁), 브랜치 단추 "● main"(`<Term id="branch" />` 툴팁, 1a는 누를 수 없는 표시, 1b에서 드롭다운). 브랜치가 없으면 "특정 버전을 보는 중". upstream이 있으면 `<Term id="push" />` N · `<Term id="pull" />` N 글자, 없으면 "아직 올린 적 없음". 오른쪽: 다른 폴더 열기. 1a에는 화면 다시 읽기 버튼을 두지 않는다(1b에서 이 자리에 fetch "새로 고침"). 컨트롤 5개 이하.
+    - 왼쪽 칸(너비 320px, 최소 280px): 탭 "`<Term id="status" />` N | `<Term id="log" />`"(role=tablist, 좌우 화살표로 이동, 고른 탭 밑줄 `--accent`). 변경 사항 탭 아래쪽에 버전 저장 상자 자리(18단계).
+    - 오른쪽 칸: 변경 사항 탭에서는 비교(17단계 전에는 빈 상태 "파일을 고르면 비교가 보여요."). 버전 기록 탭에서는 목록을 창 전체 폭으로 쓴다(002 Q13).
+    - 칸 사이는 간격 없이 `--border` 1px 선, 둥근 모서리·그림자 없음(design.md "배치").
+    - 테스트: 탭 전환(키보드 포함), 상단 바 문구 네 경우(upstream 있음/없음/브랜치 없음/버전 없음), 세 번째 칸이 없음.
+    - 완료 기준: `pnpm test`, `pnpm lint`. 두 OS 수동: 800px 너비, 라이트/다크, 툴팁.
 
-16. 저장에 넣기·빼기 화면 (`features: stage and unstage from changed files`)
-    - 변경 파일: `src/screens/Workspace/ChangedFiles.tsx`(체크 상자 열, 행 클릭은 비교 선택), `src/features/stage/useStageMutation.ts`, "모두 넣기/모두 빼기", 테스트.
-    - 동작: 체크 → `executeAction(folder, { id: "stage", input: { paths: [path] } })`, 해제 → `unstage`. 이름 바꿈은 `origPath`도 같이 보낸다. 성공 후 `status` 쿼리 무효화(감시 이벤트를 기다리지 않음). 낙관적 갱신은 하지 않는다(실패 시 되돌리기 복잡).
-    - 체크 상자 이름표는 `<Term id="stage" />`·`<Term id="unstage" />`를 aria/툴팁으로.
-    - 테스트: api 모킹으로 체크·해제 호출 인자, 실패 시 `ErrorNotice`, 모두 넣기.
-    - 완료 기준: `pnpm test` 통과, 수동: 한글 파일명, 1,000개 모두 넣기가 2초 안.
+16. 이번 버전에 넣기·빼기 (`features: include and leave out files`)
+    - 변경 파일: `src/screens/Workspace/ChangedFiles.tsx`, `src/features/stage/useStageMutation.ts`, `src/glossary/index.ts`(`useTermLabel(id)`: 설정 "Git 원래 이름으로 보기"를 따르는 문자열), 테스트.
+    - 체크 상자는 왼쪽 탭 목록의 행 앞. 보이는 글자는 없고, 접근성 이름과 툴팁은 `useTermLabel("stage" | "unstage")`. 목록 머리에 "모두" 체크 상자 하나(세 상태). 체크 상자는 `appearance: none` + `--border-strong` 테두리 + 켜짐 `--primary` 채움(002 Q15).
+    - 동작: 체크 → `executeAction(folder, { id: "stage", input: { paths } })`, 해제 → `unstage`. 이름 바꿈은 `origPath`도 같이. 성공 후 `status` 무효화. 낙관적 갱신 없음. 행 클릭은 비교 선택(`selectedPath`).
+    - 테스트: api 모킹으로 체크·해제·모두 인자, 실패 시 `ErrorNotice`.
+    - 완료 기준: `pnpm test`. 수동: 한글 파일명, 1,000개 모두 넣기가 2초 안.
 
-17. 비교 보기 화면 (`features: diff viewer`)
+17. 비교 보기 (`features: diff viewer`)
     - 변경 파일: `src/features/diff/{DiffView.tsx, DiffView.module.css, model.ts, model.test.ts}`, `src/lib/queries.ts`(`useDiff(repo, request)`), 테스트.
-    - 동작: 고른 파일의 비교. 줄 번호 두 열, 추가 줄 `--diff-add-bg`/`--added`, 삭제 줄 `--diff-del-bg`/`--deleted`, 코드 글꼴. 이진·잘림·빈 차이 안내. 제목 `<Term id="diff" />`. 긴 줄은 가로 스크롤.
-    - `model.ts`: `FileDiffView` → 그리기용 행(순수 함수, 단위 테스트).
-    - 테스트: 모델 변환, 이진·잘림 문구.
-    - 완료 기준: `pnpm test`, `pnpm lint`. 두 OS 수동: 한글 내용, CRLF 파일, 5,000줄 파일 스크롤.
-    - Windows/Ubuntu: 줄 끝 `\r`은 화면에서 지우고 "이 파일은 CRLF 줄바꿈" 작은 안내(Windows 사용자가 흔히 만남).
+    - 오른쪽 칸. 맨 위 한 줄 "마지막 버전과 지금 파일을 비교해요 · N줄 추가, M줄 삭제"(002 Q14, 숫자는 `model.ts`가 셈). 한 줄로 보기만. 줄 번호 두 열, 줄 배경 `--diff-add-bg`/`--diff-del-bg`, 글자 색 + `+`/`−` 기호 함께, 코드 글꼴, 코드 바탕 `--surface`. 이진·잘림·빈 차이 안내. 제목 `<Term id="diff" />`. 긴 줄은 가로 스크롤.
+    - 테스트: 모델 변환(줄 수 세기 포함), 이진·잘림 문구.
+    - 완료 기준: `pnpm test`, `pnpm lint`. 두 OS 수동: 한글 내용, CRLF 파일, 5,000줄 스크롤.
 
-18. 저장 상자 (`features: commit box`)
+18. 버전 저장 상자 (`features: save version box`)
     - 변경 파일: `src/features/commit/{CommitBox.tsx, CommitBox.module.css, CommitBox.test.tsx}`.
-    - 동작: 여러 줄 입력, 주 버튼 `<Term id="commit" />`(화면의 유일한 주 버튼, design.md). 넣은 파일 0개 또는 메시지가 공백뿐이면 꺼짐(H-14). Ctrl+Enter로 저장, `event.nativeEvent.isComposing`이면 무시(design.md 한글 입력). 성공 시 입력을 비우고 `status`, `log` 무효화, "저장했어요 · <짧은 해시>" 한 줄. `identityMissing`이면 안내 + "자세히 보기"(H-16).
-    - 테스트: 버튼 활성 조건, Ctrl+Enter, 조합 중 Enter 무시, 성공 후 비움, 오류 문구.
-    - 완료 기준: `pnpm test`. 두 OS 수동: 한글 IME(Windows MS 입력기, Ubuntu IBus/fcitx)로 메시지 입력 중 Enter가 저장을 실행하지 않음.
+    - 왼쪽 칸 아래. 입력칸 안내 문구 "무엇을 바꿨나요?", 주 버튼 `<Term id="commit" />`(= "버전 저장", `--primary`, 작업 공간의 유일한 주 버튼). 넣은 파일 0개 또는 메시지가 공백뿐이면 꺼짐(H-14). 꺼진 이유는 버튼 아래 둘째 줄("이번 버전에 넣을 파일을 골라 주세요." / "무엇을 바꿨는지 적어 주세요."). Ctrl+Enter로 저장, `isComposing`이면 무시. 성공 시 입력을 비우고 `status`, `log` 무효화, "버전을 저장했어요 · <짧은 해시>".
+    - 테스트: 버튼 활성 조건과 둘째 줄, Ctrl+Enter, 조합 중 Enter 무시, 성공 후 비움, `identityMissing` 문구.
+    - 완료 기준: `pnpm test`. 두 OS 수동: 한글 IME로 메시지 입력 중 Enter가 저장을 실행하지 않음.
 
-19. 갈래 목록·만들기·바꾸기 화면 (`features: branch list, create and switch`) — 1b
-    - 변경 파일: `src/features/branches/{BranchList.tsx, CreateBranchDialog.tsx, *.module.css, *.test.tsx}`, `src/lib/queries.ts`(`useBranches`, `useBranchNameCheck`), 대화상자에 Radix Dialog(D-004, 새 의존성 `@radix-ui/react-dialog`).
-    - 동작: 왼쪽 목록에 로컬 갈래(현재 갈래는 왼쪽 2px `--accent` 막대), 접힌 "원격 갈래". 행 더블클릭 또는 메뉴 "바꾸기" → `switch`. "새 <Term id="branch" />" → 대화상자(이름 입력, 300ms 디바운스로 이름 검사, "만들고 바로 바꾸기" 체크 기본 켬) → `branch-create` 후 체크 시 `switch`. 만들기는 됐는데 바꾸기가 실패하면 그 사실을 문구로.
-    - 테스트: 목록, 이름 검사 안내, 두 액션 순서 호출, 바꾸기 실패 문구.
-    - 완료 기준: `pnpm test`, 수동 두 OS.
+19. 브랜치 목록·만들기·바꾸기 (`features: branch menu, create and switch`) — 1b
+    - 상단 바 브랜치 단추의 드롭다운(`@radix-ui/react-popover`, D-004). 현재 브랜치는 `--accent` 막대 대신 체크 표시 + 굵게(002 Q10). "새 `<Term id="branch" />`" → 대화상자(이름 검사 결과를 입력 중에 둘째 줄로). 바꿀 때 `wouldOverwrite`면 안내와 "자세히 보기".
+    - 완료 기준: `pnpm test`. 수동: 두 OS에서 만들기·바꾸기.
 
-20. 받기·올리기·새 소식 확인 화면 (`features: fetch, pull and push in status bar`) — 1b
-    - 변경 파일: `src/screens/Workspace/StatusBar.tsx`, `src/features/sync/{SyncButtons.tsx, *.test.tsx}`.
-    - 동작: 상태 표시 옆 `<Term id="fetch" />`, `<Term id="pull" />`(받을 저장이 있을 때 강조), `<Term id="push" />`(올릴 저장이 있거나 upstream 없을 때). 실행 중에는 버튼 끄고 진행 표시. `pushRejected` 오류에는 [최신으로 받기] 버튼(spec.md 예시). `notFastForward`는 "내 저장과 원격 저장이 갈라져 있어요. 합치기는 다음 버전에서 지원해요."(H-10). 성공 후 `status`, `log`, `branches` 무효화.
-    - 테스트: 버튼 표시 조건, 오류별 해결 버튼, 실행 중 꺼짐.
-    - 완료 기준: `pnpm test`. 수동: GitHub 비공개 저장소에서 Windows(Credential Manager)·Ubuntu(HTTPS 토큰 또는 SSH 키) 각각 push/pull.
+20. 새로 고침·가져오기·올리기 (`features: refresh, get updates and upload in top bar`) — 1b
+    - 상단 바 오른쪽에 `<Term id="fetch" />`(원격이 없으면 화면만 다시 읽음), `<Term id="pull" />` ↓N, `<Term id="push" />` ↑N. 동기화 단추는 이 단계에서 정한다(002 Q5). `pushRejected` 해결 버튼은 [가져오기]. `notFastForward`는 "합치기는 아직 준비 중이에요."
+    - 완료 기준: `pnpm test`. 수동: GitHub 비공개 저장소에서 두 OS 각각 올리기·가져오기.
 
-21. 변경 감시를 화면에 연결 (`screens: refresh on repo-changed`)
-    - 변경 파일: `src/lib/useRepoWatch.ts`(Workspace가 열릴 때 `repo_watch`, 닫힐 때 `repo_unwatch`, `onRepoChanged` → `worktree`면 `status`·`diff`, `git`이면 `status`·`log`·`branches` 무효화, 1초 throttle), `Workspace.tsx`, 테스트.
-    - 감시를 못 쓰거나 실행 중 꺼지면(`watchUnavailable` 또는 `watch-status`의 `active: false`) 창 포커스 새로 고침을 켠다. 감시가 켜져 있으면 끈다. 사용자에게 따로 표시하지 않는다.
-    - 테스트: 가짜 이벤트로 무효화되는 쿼리 키, throttle, 닫을 때 unwatch.
+21. 파일 감시를 화면에 연결 (`screens: refresh on repo-changed`)
+    - 변경 파일: `src/lib/useRepoWatch.ts`(작업 공간이 열리면 `repo_watch`, 닫히면 `repo_unwatch`, `onRepoChanged` → `worktree`면 `status`·`diff`, `git`이면 `status`·`log` 무효화, 1초 throttle), `Workspace.tsx`, 테스트.
+    - 감시가 켜지지 않거나 꺼지면(`watchUnavailable`, `watch-status`의 `active: false`): 작업 공간 위에 안내 줄 "파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요."와 "다시 읽기" 버튼(`messages.reload`). 버튼은 status·log·diff를 무효화한다. 창 포커스 새로 고침도 켠다. 감시가 켜져 있으면 안내 줄·버튼이 없고 창 포커스 새로 고침도 끈다(002 Q3).
+    - 테스트: 가짜 이벤트로 무효화되는 쿼리 키, throttle, 닫을 때 unwatch, 감시 꺼짐 → 안내 줄과 "다시 읽기".
     - 완료 기준: `pnpm test`. 두 OS 수동: 앱 밖 편집기 저장·터미널 커밋 후 1초 안에 갱신.
 
 ### E. 마무리
@@ -313,9 +308,11 @@ app 명령과 바인딩은 따로 단계를 두지 않고 10~14단계의 core �
 22. 문서 정리와 점검 (`docs: wrap up iteration 1`)
     - 변경 파일: `docs/architecture.md`(GitBackend 주석의 "반복 1에서 구현" 표시 갱신, `remotes`·`check_branch_name` 추가, watcher 절, 이벤트 절의 `op-progress`는 아직 없음 표시), `docs/roadmap.md`(반복 1 완료 표시, 1a/1b로 나눴다면 반영), `CLAUDE.md` "명령" 절 최종 확인, `docs/spec.md` 열린 질문 갱신.
     - `code-analyst`로 점검: 화면에서 `invoke`/`listen` 직접 호출 없음, `rg "cfg\((windows|target_os)" src-tauri --glob '!crates/platform/**'` 비어 있음, `cargo tree -p watcher -e normal`에 내부 크레이트 없음, 화면의 Git 용어가 모두 `<Term>`, tokens.css 밖 색 값 없음.
+    - 점검 추가(002): 문구 규칙 테스트 통과, 옛 용어 `rg "갈래|저장하기|저장에 넣기|새 소식|안전망|최신으로 받기|관리 시작" src --glob '!*.test.*'`가 비어 있음, 주 버튼에 `--accent`를 쓰는 곳 없음(`rg "background: var\(--accent\)" src`).
     - 완료 기준: 위반 0건, 두 OS 새 clone에서 `pnpm install && pnpm check:full` 통과.
 
 ## 용어 변경
+- D-024로 쉬운 이름 전체를 개편한다(계획 002 3단계). 아래는 이 계획을 처음 쓸 때의 기록이다.
 - spec.md 용어표에 추가(11a, H-8): `| unstage | 저장에서 빼기 | unstage · \`git restore --staged\` | 다음 저장에 넣었던 파일을 다시 빼기 | safe | 매일 |` (`stage` 행 바로 아래).
 - `src/glossary/types.ts`(`TERM_IDS`), `ko.ts`, `en.ts`에 같은 항목(D-015).
 - 기존 용어의 화면 사용 추가: `diff`, `stage`, `commit`, `branch`, `switch`, `fetch`, `pull`, `push`, `log`(탭).
@@ -333,7 +330,7 @@ app 명령과 바인딩은 따로 단계를 두지 않고 10~14단계의 core �
 - (14단계 구현 결과) `.gitignore` 대상은 **이벤트 단계에서 거른다**. 감시 등록은 저장소 루트 재귀 하나라서, Ubuntu에서는 무시된 폴더(`node_modules`, `target`)에도 inotify 감시가 걸린다. 폴더별 선별 등록은 Windows에서 폴더마다 핸들을 잡아 잠금 문제를 키우므로 OS별 전략이 필요하다(OS별 코드는 platform으로). 한도에 걸리면 감시 시작 실패 → 창 포커스 새로 고침으로 대체된다. 필요해지면 별도 단계로 다룬다.
 - (14단계 구현 결과) 전역 무시 규칙은 `core.excludesFile`이 설정된 경우만 읽는다. 설정이 없을 때 git이 쓰는 기본 위치(`$XDG_CONFIG_HOME/git/ignore`, `~/.config/git/ignore`)는 홈 폴더 찾기가 OS별이라 아직 반영하지 않았다. 그 파일에만 있는 패턴의 파일이 바뀌면 화면이 한 번 더 새로 고쳐질 뿐 결과는 같다.
 - Windows artifact는 서명이 없고 VC++ 런타임 정적 링크 여부를 실기기로 확인해야 한다(3단계).
-- 작업 공간 3단 배치가 800px 최소 너비에서 좁다.
+- 작업 공간이 800px 최소 너비에서 좁던 문제는 2단 배치로 해결(D-025).
 
 ## 결정 결과 (2026-10-15)
 - D-020, D-021, D-022 확정, D-023(SSH 질문 끄기) 추가 확정.
