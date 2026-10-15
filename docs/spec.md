@@ -72,15 +72,17 @@ D-032·D-033(계획 003). 프로젝트를 여는 모든 진입점은 core의 한
 | stage | 이번 버전에 넣기 | stage · `git add` | 이번 버전에 포함할 파일 고르기 | safe | 매일 |
 | unstage | 이번 버전에서 빼기 | unstage · `git restore --staged` | 이번 버전에 넣었던 파일을 다시 빼기 | safe | 매일 |
 | commit | 버전 저장 | commit · `git commit` | 지금 상태를 설명과 함께 버전으로 남기기 | safe | 매일 |
-| fetch | 새로 고침 | fetch · `git fetch` | 다른 사람이 올린 버전을 확인하기. 내 파일은 아직 바뀌지 않아요. | safe | 매일 |
-| pull | 가져오기 | pull · `git pull` | 다른 사람이 올린 버전을 받아 지금 브랜치에 합치기 | normal | 매일 |
+| fetch | 원격 확인 | fetch · `git fetch` | 다른 사람이 올린 버전이 있는지 확인하기. 내 파일은 바뀌지 않아요. | safe | 매일 |
+| pull | 가져오기 | pull · `git pull --ff-only` | 다른 사람이 올린 버전을 받아 지금 브랜치에 합치기 | normal | 매일 |
 | push | 올리기 | push · `git push` | 내 버전들을 원격 저장소로 보내기 | normal | 매일 |
+| sync | 동기화 | sync · `git pull + git push` | 원격 저장소의 새 버전을 가져온 다음 내 버전을 올리기 | normal | 매일 |
 | branch | 브랜치 | branch · `git branch` | 원래 작업에 영향 없이 따로 작업하는 공간 | safe | 매일 |
 | switch | 브랜치 바꾸기 | switch · `git switch` | 다른 브랜치로 옮겨 가기 | normal | 매일 |
 | log | 버전 기록 | log · `git log` | 지금까지 저장한 버전 목록 | safe | 매일 |
 | merge | 합치기 | merge · `git merge` | 다른 브랜치의 작업을 지금 브랜치에 합치기. 병합이라고도 해요. | normal | 자주 |
 | conflict | 충돌 | merge conflict | 두 브랜치가 같은 곳을 다르게 고쳐서 어느 쪽을 남길지 정해야 하는 상태 | normal | 자주 |
 | stash | 임시 보관 | stash · `git stash` | 하던 작업을 잠시 보관했다가 나중에 꺼내기 | safe | 자주 |
+| park | 맡겨 두기 | stash · `git stash -u` | 브랜치를 바꿀 때 고친 파일을 그 브랜치에 두었다가 돌아오면 꺼내기 | safe | 자주 |
 | discard | 변경 취소 | restore · `git restore` | 아직 버전으로 저장하지 않은 변경을 버리고 마지막 버전으로 돌아가기 | caution | 자주 |
 | pr | 검토 요청 | Pull Request | 내 브랜치를 합쳐 달라고 팀에 요청 | safe | 자주 |
 | clone | 복제 | clone · `git clone` | 원격 저장소를 내 컴퓨터로 복사 | safe | 자주 |

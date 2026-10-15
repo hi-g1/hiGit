@@ -33,15 +33,15 @@ export const en: Glossary = {
     description: "Keep the current state as a version with a description",
   },
   fetch: {
-    friendly: "Refresh",
+    friendly: "Check remote",
     gitName: "fetch",
     command: "git fetch",
-    description: "Check versions others uploaded. Your files don't change yet.",
+    description: "Check whether others uploaded new versions. Your files don't change.",
   },
   pull: {
     friendly: "Get updates",
     gitName: "pull",
-    command: "git pull",
+    command: "git pull --ff-only",
     description: "Receive versions others uploaded and combine them into the current branch",
   },
   push: {
@@ -49,6 +49,12 @@ export const en: Glossary = {
     gitName: "push",
     command: "git push",
     description: "Send your versions to the remote repository",
+  },
+  sync: {
+    friendly: "Sync",
+    gitName: "sync",
+    command: "git pull + git push",
+    description: "Get new versions from the remote, then upload yours",
   },
   branch: {
     friendly: "Branch",
@@ -85,6 +91,12 @@ export const en: Glossary = {
     gitName: "stash",
     command: "git stash",
     description: "Put unfinished work aside and take it out later",
+  },
+  park: {
+    friendly: "Park",
+    gitName: "stash",
+    command: "git stash -u",
+    description: "Keep changed files on a branch when you switch away, and bring them back when you return",
   },
   discard: {
     friendly: "Discard changes",

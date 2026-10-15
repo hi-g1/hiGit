@@ -34,15 +34,15 @@ export const ko: Glossary = {
     description: "지금 상태를 설명과 함께 버전으로 남기기",
   },
   fetch: {
-    friendly: "새로 고침",
+    friendly: "원격 확인",
     gitName: "fetch",
     command: "git fetch",
-    description: "다른 사람이 올린 버전을 확인하기. 내 파일은 아직 바뀌지 않아요.",
+    description: "다른 사람이 올린 버전이 있는지 확인하기. 내 파일은 바뀌지 않아요.",
   },
   pull: {
     friendly: "가져오기",
     gitName: "pull",
-    command: "git pull",
+    command: "git pull --ff-only",
     description: "다른 사람이 올린 버전을 받아 지금 브랜치에 합치기",
   },
   push: {
@@ -50,6 +50,12 @@ export const ko: Glossary = {
     gitName: "push",
     command: "git push",
     description: "내 버전들을 원격 저장소로 보내기",
+  },
+  sync: {
+    friendly: "동기화",
+    gitName: "sync",
+    command: "git pull + git push",
+    description: "원격 저장소의 새 버전을 가져온 다음 내 버전을 올리기",
   },
   branch: {
     friendly: "브랜치",
@@ -86,6 +92,12 @@ export const ko: Glossary = {
     gitName: "stash",
     command: "git stash",
     description: "하던 작업을 잠시 보관했다가 나중에 꺼내기",
+  },
+  park: {
+    friendly: "맡겨 두기",
+    gitName: "stash",
+    command: "git stash -u",
+    description: "브랜치를 바꿀 때 고친 파일을 그 브랜치에 두었다가 돌아오면 꺼내기",
   },
   discard: {
     friendly: "변경 취소",
