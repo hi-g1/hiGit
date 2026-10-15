@@ -3,6 +3,8 @@ import { type RefObject, useEffect, useRef } from "react";
 
 /** 한 단계로 보는 휠 양. 터치패드는 작은 값이 여러 번 오므로 모아서 판단한다. */
 const STEP = 80;
+/** 이만큼 쉬면 모은 양을 버린다(따로 한 동작이 합쳐지지 않게). */
+const IDLE_MS = 300;
 
 /**
  * `ref` 요소 위의 Ctrl+휠(터치패드 핀치는 웹뷰가 Ctrl+휠로 보낸다)을 받아 페이지 확대 대신
@@ -17,9 +19,12 @@ export function useWheelZoom(ref: RefObject<HTMLElement | null>, onZoom: (dir: "
     const el = ref.current;
     if (!el) return;
     let sum = 0;
+    let last = 0;
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
+      if (e.timeStamp - last > IDLE_MS) sum = 0;
+      last = e.timeStamp;
       sum += e.deltaY;
       if (Math.abs(sum) < STEP && Math.abs(e.deltaY) < STEP) return;
       latest.current(sum < 0 ? "in" : "out");

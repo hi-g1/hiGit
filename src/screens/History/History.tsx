@@ -98,6 +98,8 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
       select(head.id);
       return;
     }
+    // 더 받을 쪽이 없으면 찾지 않는다(남은 표시가 나중에 선택을 옮기지 않게).
+    if (!hasNextPage) return;
     seeking.current = 1;
     more();
   };

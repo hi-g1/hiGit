@@ -63,7 +63,7 @@ export function LastProject({
             <RoutePreview
               view={map}
               density="preview"
-              label={m.routePreviewLabel(map.current ?? "", map.currentCommits.length + map.currentMore)}
+              label={m.routePreviewLabel((map.current ?? "").slice(0, 200), map.currentCommits.length + map.currentMore)}
             />
           )}
         </div>
