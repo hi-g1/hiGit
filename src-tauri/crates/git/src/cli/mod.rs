@@ -85,7 +85,7 @@ impl GitBackend for CliBackend {
         let max = format!("--max-count={}", query.limit);
         let out = self
             .runner
-            .run(dir, &["log", "-z", log::FORMAT, &skip, &max, rev, "--"])?;
+            .run(dir, &["log", log::FORMAT, &skip, &max, rev, "--"])?;
         log::parse(&out.stdout_lossy())
     }
 

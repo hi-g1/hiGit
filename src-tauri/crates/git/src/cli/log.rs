@@ -1,40 +1,37 @@
-//! `git log -z` 파서. 필드는 NUL로 나누고, 저장 사이도 `-z`로 NUL이다.
+//! `git log` 파서. 저장마다 앞에 RS(0x1e)를 붙이고, 필드는 NUL로 나눈다.
+//! 끝을 잘라내는 방식은 마지막 필드(메시지)가 비어 있을 때 필드가 사라지므로,
+//! 저장 단위로 먼저 나눈 뒤 각 저장의 줄바꿈 하나만 뗀다.
 
 use crate::{Commit, GitError, Result};
 
 /// 해시, 짧은 해시, 부모들, 작성자 이름, 이메일, 작성 시각(unix), 메시지 첫 줄.
-pub(crate) const FORMAT: &str = "--format=%H%x00%h%x00%P%x00%an%x00%ae%x00%at%x00%s";
+pub(crate) const FORMAT: &str = "--format=%x1e%H%x00%h%x00%P%x00%an%x00%ae%x00%at%x00%s";
+const RECORD: char = '\x1e';
 const FIELDS: usize = 7;
 
 pub(crate) fn parse(text: &str) -> Result<Vec<Commit>> {
-    let text = text.trim_end_matches(['\0', '\n']);
-    if text.is_empty() {
-        return Ok(Vec::new());
-    }
-    // 부모가 없는 첫 저장은 %P가 빈 필드라서 빈 조각도 그대로 센다.
-    let parts: Vec<&str> = text.split('\0').collect();
-    if !parts.len().is_multiple_of(FIELDS) {
-        return Err(GitError::Parse(format!(
-            "log 필드 수가 {FIELDS}의 배수가 아닙니다: {}",
-            parts.len()
-        )));
-    }
-    let (chunks, _) = parts.as_chunks::<FIELDS>();
-    chunks
-        .iter()
-        .map(|f| {
-            let author_time = f[5]
+    text.split(RECORD)
+        .skip(1) // 첫 RS 앞은 빈 문자열
+        .map(|record| {
+            let record = record.strip_suffix('\n').unwrap_or(record);
+            let f: Vec<&str> = record.split('\0').collect();
+            let [oid, short_oid, parents, name, email, time, summary] = f[..] else {
+                return Err(GitError::Parse(format!(
+                    "log 필드 수가 {FIELDS}개가 아닙니다: {record:?}"
+                )));
+            };
+            let author_time = time
                 .parse()
-                .map_err(|_| GitError::Parse(format!("작성 시각이 숫자가 아닙니다: {:?}", f[5])))?;
+                .map_err(|_| GitError::Parse(format!("작성 시각이 숫자가 아닙니다: {time:?}")))?;
             Ok(Commit {
-                // -z의 저장 구분 NUL 뒤에 줄바꿈이 붙는 git 버전도 견딘다.
-                oid: f[0].trim_start_matches('\n').to_string(),
-                short_oid: f[1].to_string(),
-                parents: f[2].split_whitespace().map(str::to_string).collect(),
-                author_name: f[3].to_string(),
-                author_email: f[4].to_string(),
+                oid: oid.to_string(),
+                short_oid: short_oid.to_string(),
+                // 첫 저장은 부모가 없어 빈 필드다.
+                parents: parents.split_whitespace().map(str::to_string).collect(),
+                author_name: name.to_string(),
+                author_email: email.to_string(),
                 author_time,
-                summary: f[6].to_string(),
+                summary: summary.to_string(),
             })
         })
         .collect()
@@ -48,31 +45,28 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
+    fn record(fields: [&str; FIELDS]) -> String {
+        format!("{RECORD}{}\n", fields.join("\0"))
+    }
+
     #[test]
     fn parses_fixed_output() {
-        let text = [
+        let text = record([
             "bbb",
             "bb",
             "aaa ccc",
             "이름",
             "a@b.c",
             "1700000000",
-            "합침", //
-            "aaa",
-            "aa",
-            "",
-            "이름",
-            "a@b.c",
-            "1690000000",
-            "처음 저장",
-        ]
-        .join("\0");
+            "합침",
+        ]) + &record(["aaa", "aa", "", "이름", "a@b.c", "1690000000", ""]);
         let commits = parse(&text).unwrap();
         assert_eq!(commits.len(), 2);
         assert_eq!(commits[0].parents, ["aaa", "ccc"]);
         assert_eq!(commits[0].summary, "합침");
         assert_eq!(commits[1].parents, Vec::<String>::new());
         assert_eq!(commits[1].author_time, 1_690_000_000);
+        assert_eq!(commits[1].summary, "");
     }
 
     #[test]
@@ -82,8 +76,8 @@ mod tests {
 
     #[test]
     fn rejects_broken_output() {
-        assert!(parse("a\0b\0c").is_err());
-        assert!(parse(&["a", "a", "", "n", "e", "시각", "s"].join("\0")).is_err());
+        assert!(parse(&format!("{RECORD}a\0b\0c\n")).is_err());
+        assert!(parse(&record(["a", "a", "", "n", "e", "시각", "s"])).is_err());
     }
 
     fn commit(p: &Path, file: &str, message: &str) {
@@ -139,6 +133,32 @@ mod tests {
         let commits = log(p, LogQuery::default());
         assert_eq!(commits[0].parents.len(), 2);
         assert_eq!(commits.len(), 4);
+    }
+
+    #[test]
+    fn empty_message_commits() {
+        let repo = testutil::init_repo();
+        let p = repo.path();
+        fs::write(p.join("a.txt"), "a").unwrap();
+        git(p, &["add", "-A"]);
+        git(p, &["commit", "-q", "--allow-empty-message", "-m", ""]);
+        commit(p, "b.txt", "가운데");
+        git(
+            p,
+            &[
+                "commit",
+                "-q",
+                "--allow-empty",
+                "--allow-empty-message",
+                "-m",
+                "",
+            ],
+        );
+
+        let commits = log(p, LogQuery::default());
+        let summaries: Vec<_> = commits.iter().map(|c| c.summary.as_str()).collect();
+        assert_eq!(summaries, ["", "가운데", ""]);
+        assert!(commits[2].parents.is_empty());
     }
 
     #[test]
