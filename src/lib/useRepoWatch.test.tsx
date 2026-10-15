@@ -55,7 +55,7 @@ describe("useRepoWatch", () => {
     invalidate.mockClear();
     await act(async () => vi.advanceTimersByTime(WATCH_THROTTLE_MS));
     act(() => handlers.changed?.({ repo: "/repo", worktree: false, git: true }));
-    expect(keys().sort()).toEqual(["log", "status"]);
+    expect(keys().sort()).toEqual(["diff", "log", "status"]);
   });
 
   it("1초 안의 여러 알림은 한 번 더로 묶는다", async () => {
@@ -90,10 +90,39 @@ describe("useRepoWatch", () => {
     expect(hook.result.current.active).toBe(false);
   });
 
-  it("닫히면 감시를 끈다", async () => {
-    const { hook } = setup();
+  it("닫히면 감시를 끄고 창 포커스 새로 고침을 되돌린다", async () => {
+    const { hook, client } = setup();
     await act(async () => {});
+    act(() => handlers.status?.({ repo: "/repo", active: true, reason: null }));
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
     hook.unmount();
+    await act(async () => {});
     expect(api.unwatch).toHaveBeenCalled();
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(true);
+  });
+
+  it("watch와 unwatch는 부른 순서대로 실행된다", async () => {
+    const order: string[] = [];
+    let release: () => void = () => {};
+    vi.mocked(api.watch).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => {
+            order.push("watch");
+            resolve(null);
+          };
+        }),
+    );
+    vi.mocked(api.unwatch).mockImplementation(async () => {
+      order.push("unwatch");
+      return null;
+    });
+    const { hook } = setup();
+    hook.unmount();
+    await act(async () => {});
+    expect(order).toEqual([]);
+    release();
+    await act(async () => {});
+    expect(order).toEqual(["watch", "unwatch"]);
   });
 });

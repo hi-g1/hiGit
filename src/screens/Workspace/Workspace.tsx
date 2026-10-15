@@ -1,4 +1,5 @@
 import { CommitBox } from "../../features/commit/CommitBox";
+import { useEffect } from "react";
 import { DiffView } from "../../features/diff/DiffView";
 import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
@@ -23,8 +24,13 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const status = useStatus(repo.path);
   const log = useLog(repo.path);
   const watch = useRepoWatch(repo.path);
-  // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 비교를 닫는다.
+  const selectPath = useRepoStore((s) => s.selectPath);
   const selected = status.data?.files.find((f) => f.path === selectedPath);
+  // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 선택도 지운다.
+  // 같은 경로가 나중에 다시 생겨도 비교가 저절로 열리지 않게 한다.
+  useEffect(() => {
+    if (status.data && selectedPath !== null && !selected) selectPath(null);
+  }, [status.data, selectedPath, selected, selectPath]);
 
   return (
     <div className={styles.workspace}>

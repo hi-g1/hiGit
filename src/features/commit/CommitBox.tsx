@@ -36,7 +36,8 @@ export function CommitBox({ folder, includedCount }: { folder: string; includedC
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // 한글 조합 중 Enter는 글자를 확정하는 키라서 저장하지 않는다(design.md).
-    if (e.nativeEvent.isComposing) return;
+    // WebKitGTK는 조합을 확정하는 keydown에 isComposing=false, keyCode=229를 줄 수 있다.
+    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       if (canCommit) commit.mutate();

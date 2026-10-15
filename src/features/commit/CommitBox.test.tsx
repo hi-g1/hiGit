@@ -67,6 +67,7 @@ describe("CommitBox", () => {
     await user.type(input, "한글");
     const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
     fireEvent.keyDown(input, { key: "Enter", ctrlKey: true, isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", ctrlKey: true, keyCode: 229 });
     fireEvent.keyDown(input, { key: "Enter" });
     await settle();
     expect(api.executeAction).not.toHaveBeenCalled();
