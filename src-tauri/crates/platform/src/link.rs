@@ -14,6 +14,35 @@ pub fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
     }
 }
 
+/// 폴더 링크를 만든다. Windows는 심볼릭 링크가 안 되면 권한 없이 되는 정션으로 만든다.
+/// 테스트 도우미(저장소 밖을 가리키는 폴더 링크 시험).
+pub fn symlink_dir(target: &Path, link: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    {
+        if std::os::windows::fs::symlink_dir(target, link).is_ok() {
+            return Ok(());
+        }
+        let status = std::process::Command::new("cmd")
+            .arg("/C")
+            .arg("mklink")
+            .arg("/J")
+            .arg(link)
+            .arg(target)
+            .output()?;
+        if status.status.success() {
+            Ok(())
+        } else {
+            Err(io::Error::other(
+                String::from_utf8_lossy(&status.stderr).into_owned(),
+            ))
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

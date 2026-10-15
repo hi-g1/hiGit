@@ -53,6 +53,16 @@ impl Queries {
         let root = self.opened_repo(repo)?;
         for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
             paths::validate_one(path)?;
+        }
+        // 링크는 안·밖 어디를 가리키든 따라가 읽지 않고 대상만 보여준다(D-052).
+        // 링크 자신이 밖을 가리키는 폴더 링크 아래에 있으면 막는다.
+        if let Some(target) = link_target(root.as_path(), &request.path) {
+            if let Some(parent) = Path::new(&request.path).parent() {
+                stays_inside(root.as_path(), &parent.to_string_lossy())?;
+            }
+            return Ok(FileDiffView::link(target));
+        }
+        for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
             stays_inside(root.as_path(), path)?;
         }
         Ok(self.git.diff(&root, &request.into())?.into())
@@ -263,9 +273,23 @@ fn repo_path(path: &Path) -> Result<RepoPath> {
         .map_err(CoreError::FolderNotFound)
 }
 
+/// `rel`이 심볼릭 링크(Windows 정션 포함)면 가리키는 곳. 아니면 `None`.
+fn link_target(root: &Path, rel: &str) -> Option<String> {
+    let full = root.join(rel);
+    let meta = std::fs::symlink_metadata(&full).ok()?;
+    if !meta.file_type().is_symlink() {
+        return None;
+    }
+    let target = std::fs::read_link(&full).ok()?;
+    Some(target.to_string_lossy().into_owned())
+}
+
 /// 경로 글자는 저장소 안이어도 심볼릭 링크가 밖을 가리킬 수 있다. 실제 위치를 풀어 확인한다.
 /// 없는 파일(지운 파일)은 그대로 둔다. 대상이 없는 링크와 밖을 가리키는 링크는 막는다.
 fn stays_inside(root: &Path, rel: &str) -> Result<()> {
+    if rel.is_empty() {
+        return Ok(());
+    }
     let full = root.join(rel);
     let Ok(meta) = std::fs::symlink_metadata(&full) else {
         return Ok(());

@@ -71,6 +71,7 @@ export const ko = {
   allFiles: "모든 파일",
   diffSummary: ({ added, removed }: { added: number; removed: number }) =>
     `마지막 버전과 지금 파일을 비교해요 · ${added}줄 추가, ${removed}줄 삭제`,
+  linkTarget: (target: string) => `링크: ${target}`,
   binaryFile: "이진 파일이라 내용을 비교할 수 없어요.",
   noDiff: "바뀐 줄이 없어요.",
   diffTruncated: "파일이 커서 앞부분만 보여요.",

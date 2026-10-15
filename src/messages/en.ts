@@ -63,6 +63,7 @@ export const en: Messages = {
   allFiles: "All files",
   diffSummary: ({ added, removed }: { added: number; removed: number }) =>
     `Comparing the last version with the current file · ${added} added, ${removed} removed`,
+  linkTarget: (target: string) => `Link: ${target}`,
   binaryFile: "This is a binary file, so its content can't be compared.",
   noDiff: "No lines changed.",
   diffTruncated: "The file is large, so only the beginning is shown.",

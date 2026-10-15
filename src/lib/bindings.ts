@@ -161,6 +161,8 @@ export type FileDiffView = {
 	binary: boolean,
 	truncated: boolean,
 	hunks: HunkView[],
+	/**  심볼릭 링크면 가리키는 곳. 이때는 내용을 읽지 않고 줄도 없다(D-052). */
+	link: string | null,
 };
 
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */

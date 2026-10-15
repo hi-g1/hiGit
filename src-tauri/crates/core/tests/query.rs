@@ -386,7 +386,7 @@ fn diff_rejects_paths_outside_repo() {
 }
 
 #[test]
-fn diff_rejects_symlink_pointing_outside_repo() {
+fn diff_shows_outside_link_target_without_reading_it() {
     use higit_core::view::DiffRequest;
     let base = tempfile::tempdir().unwrap();
     let repo = base.path().join("repo");
@@ -398,7 +398,7 @@ fn diff_rejects_symlink_pointing_outside_repo() {
         .current_dir(&repo)
         .status()
         .unwrap();
-    // 저장소 안의 링크가 밖의 파일을 가리킨다. 경로 글자만 보면 "링크.txt"라 문제가 없어 보인다.
+    // 저장소 안의 링크가 밖의 파일을 가리킨다. 내용은 읽지 않고 대상만 보여준다(D-052).
     if let Err(e) = platform::symlink_file(&secret, &repo.join("링크.txt")) {
         eprintln!("이 환경에서는 심볼릭 링크를 만들 수 없어 시험을 건너뜁니다: {e}");
         return;
@@ -406,20 +406,83 @@ fn diff_rejects_symlink_pointing_outside_repo() {
     let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
     core.open_project(&repo, OpenHow::Picked).unwrap();
     for untracked in [true, false] {
+        let view = core
+            .queries()
+            .diff(
+                &repo,
+                &DiffRequest {
+                    path: "링크.txt".into(),
+                    orig_path: None,
+                    untracked,
+                },
+            )
+            .unwrap();
+        assert!(view.hunks.is_empty());
+        assert!(view.link.as_deref().unwrap().ends_with("비밀.txt"));
+    }
+}
+
+#[test]
+fn diff_rejects_files_under_outside_folder_link() {
+    use higit_core::view::DiffRequest;
+    let base = tempfile::tempdir().unwrap();
+    let repo = base.path().join("repo");
+    let outside = base.path().join("밖 폴더");
+    std::fs::create_dir(&repo).unwrap();
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(outside.join("비밀.txt"), "밖\n").unwrap();
+    std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(&repo)
+        .status()
+        .unwrap();
+    if let Err(e) = platform::symlink_dir(&outside, &repo.join("링크폴더")) {
+        eprintln!("이 환경에서는 폴더 링크를 만들 수 없어 시험을 건너뜁니다: {e}");
+        return;
+    }
+    let core = Core::with_backend(Arc::new(git::CliBackend::new("git", Arc::new(|_| {})))).unwrap();
+    core.open_project(&repo, OpenHow::Picked).unwrap();
+    for path in ["링크폴더/비밀.txt", "링크폴더"] {
         let result = core.queries().diff(
             &repo,
             &DiffRequest {
-                path: "링크.txt".into(),
+                path: path.into(),
                 orig_path: None,
-                untracked,
+                untracked: true,
             },
         );
-        match result {
-            Err(err) => assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput),
-            Ok(view) => {
-                panic!("밖을 가리키는 링크가 막히지 않았다(untracked={untracked}): {view:?}")
-            }
+        match (path, result) {
+            // 폴더 링크 자체는 대상만 보여준다.
+            ("링크폴더", Ok(view)) => assert!(view.link.is_some()),
+            (_, Err(err)) => assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput),
+            (p, Ok(view)) => panic!("{p}가 막히지 않았다: {view:?}"),
         }
+    }
+}
+
+#[test]
+fn diff_rejects_absolute_and_drive_paths() {
+    use higit_core::view::DiffRequest;
+    let (core, _git) = core_with(FakeGit::new());
+    let dir = tempfile::tempdir().unwrap();
+    core.open_project(dir.path(), OpenHow::Picked).unwrap();
+    for path in ["/etc/passwd", "C:/x", "c:\\x", "../a"] {
+        let err = core
+            .queries()
+            .diff(
+                dir.path(),
+                &DiffRequest {
+                    path: path.into(),
+                    orig_path: None,
+                    untracked: true,
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            ErrorView::from(&err).code,
+            ErrorCode::InvalidInput,
+            "{path}"
+        );
     }
 }
 
@@ -446,7 +509,8 @@ fn diff_allows_symlink_inside_repo() {
         orig_path: None,
         untracked: true,
     };
-    assert!(core.queries().diff(&repo, &request).is_ok());
+    let view = core.queries().diff(&repo, &request).unwrap();
+    assert!(view.link.is_some(), "안쪽 링크도 대상만 보여준다");
 }
 
 #[test]

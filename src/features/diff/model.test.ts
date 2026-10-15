@@ -5,6 +5,7 @@ import { countChanges, toDiffRows } from "./model";
 const diff: FileDiffView = {
   binary: false,
   truncated: false,
+  link: null,
   hunks: [
     {
       section: "함수",
@@ -32,6 +33,6 @@ describe("비교 보기 모델", () => {
 
   it("추가·삭제 줄 수를 센다", () => {
     expect(countChanges(diff)).toEqual({ added: 2, removed: 1 });
-    expect(countChanges({ binary: true, truncated: false, hunks: [] })).toEqual({ added: 0, removed: 0 });
+    expect(countChanges({ binary: true, truncated: false, hunks: [], link: null })).toEqual({ added: 0, removed: 0 });
   });
 });

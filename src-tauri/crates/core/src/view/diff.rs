@@ -19,6 +19,19 @@ pub struct FileDiffView {
     pub binary: bool,
     pub truncated: bool,
     pub hunks: Vec<HunkView>,
+    /// 심볼릭 링크면 가리키는 곳. 이때는 내용을 읽지 않고 줄도 없다(D-052).
+    pub link: Option<String>,
+}
+
+impl FileDiffView {
+    pub(crate) fn link(target: String) -> Self {
+        Self {
+            binary: false,
+            truncated: false,
+            hunks: Vec::new(),
+            link: Some(target),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -69,6 +82,7 @@ impl From<git::FileDiff> for FileDiffView {
             binary: d.binary,
             truncated: d.truncated,
             hunks: d.hunks.into_iter().map(HunkView::from).collect(),
+            link: None,
         }
     }
 }

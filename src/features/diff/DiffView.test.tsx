@@ -28,6 +28,7 @@ describe("DiffView", () => {
     show({
       binary: false,
       truncated: false,
+      link: null,
       hunks: [
         {
           section: "",
@@ -49,7 +50,7 @@ describe("DiffView", () => {
   });
 
   it("이진 파일은 내용 대신 안내", async () => {
-    show({ binary: true, truncated: false, hunks: [] });
+    show({ binary: true, truncated: false, hunks: [], link: null });
     expect(await screen.findByText("이진 파일이라 내용을 비교할 수 없어요.")).toBeInTheDocument();
   });
 
@@ -57,13 +58,20 @@ describe("DiffView", () => {
     show({
       binary: false,
       truncated: true,
+      link: null,
       hunks: [{ section: "", lines: [{ kind: "added", text: "x", oldLine: null, newLine: 1, noNewlineAtEnd: false }] }],
     });
     expect(await screen.findByText("파일이 커서 앞부분만 보여요.")).toBeInTheDocument();
   });
 
   it("바뀐 줄이 없으면 그렇게 알려준다", async () => {
-    show({ binary: false, truncated: false, hunks: [] });
+    show({ binary: false, truncated: false, hunks: [], link: null });
     expect(await screen.findByText("바뀐 줄이 없어요.")).toBeInTheDocument();
+  });
+
+  it("심볼릭 링크는 내용 대신 가리키는 곳", async () => {
+    show({ binary: false, truncated: false, hunks: [], link: "../밖/비밀.txt" });
+    expect(await screen.findByText("링크: ../밖/비밀.txt")).toBeInTheDocument();
+    expect(screen.queryByText("바뀐 줄이 없어요.")).toBeNull();
   });
 });

@@ -21,7 +21,7 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
         <span className={styles.path} title={request.path}>
           {request.path}
         </span>
-        {diff.data && !diff.data.binary && (
+        {diff.data && !diff.data.binary && !diff.data.link && (
           <p className={styles.summary}>{m.diffSummary(countChanges(diff.data))}</p>
         )}
       </header>
@@ -29,7 +29,9 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
         {diff.isPending && <EmptyState>{m.loading}</EmptyState>}
         {diff.error && <ErrorNotice error={diff.error} />}
         {diff.data &&
-          (diff.data.binary ? (
+          (diff.data.link !== null ? (
+            <EmptyState>{m.linkTarget(diff.data.link)}</EmptyState>
+          ) : diff.data.binary ? (
             <EmptyState>{m.binaryFile}</EmptyState>
           ) : diff.data.hunks.length === 0 ? (
             <EmptyState>{m.noDiff}</EmptyState>
