@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { branchColor } from "../../features/branches/color";
 import { MergeHint } from "../../features/merge/MergeHint";
-import { layoutTwoLine, MAP_HEIGHT } from "../../features/history/layout/twoLine";
+import { layoutHorizontal, MAP_HEIGHT } from "../../features/history/layout/horizontal";
+import { branchPalette } from "../../features/history/render/palette";
 import { SvgRenderer } from "../../features/history/render/SvgRenderer";
 import { useHomeMap } from "../../lib/queries";
 import { useMessages } from "../../messages";
@@ -26,13 +26,11 @@ export function HomeMap({ repo, onDone }: { repo: string; onDone: (text: string)
   }, []);
   const view = map.data;
   if (!view || view.currentCommits.length === 0) return null;
-  const scene = layoutTwoLine(view, width, { here: m.hereNow, changed: m.changedFilesCount });
-  const main = branchColor(view.defaultBranch ?? "", view.defaultBranch);
-  const current = view.twoLines && view.current ? branchColor(view.current, view.defaultBranch) : main;
+  const scene = layoutHorizontal(view, width, "home", { here: m.hereNow, changed: m.changedFilesCount });
   return (
     <div className={styles.map} style={{ height: MAP_HEIGHT }}>
       <div ref={box} className={styles.route}>
-        <SvgRenderer scene={scene} palette={(key) => (key === "main" ? main : current)} label={label} />
+        <SvgRenderer scene={scene} palette={branchPalette(view.defaultBranch)} label={label} />
       </div>
       <MergeHint repo={repo} onDone={onDone} />
     </div>
