@@ -1,0 +1,104 @@
+/* 디자인 토큰. 색 값은 이 파일에만 쓴다(docs/design.md). */
+
+:root {
+  color-scheme: light;
+
+  /* 색: 라이트 */
+  --bg: #f7f7f5;
+  --surface: #fff;
+  --surface-hover: #f0f0ee;
+  --border: #e4e4e1;
+  --text: #1f2328;
+  --text-muted: #6b6f76;
+  --accent: #3a6ea5;
+  --accent-text: #fff;
+  --added: #2f7d4f;
+  --modified: #9a6110;
+  --deleted: #b4423a;
+  --diff-add-bg: #eaf5ee;
+  --diff-del-bg: #fbecea;
+
+  /* 갈래 그래프 선 6색. 현재 갈래만 --accent */
+  --graph-1: #3a6ea5;
+  --graph-2: #2f7d4f;
+  --graph-3: #9a6110;
+  --graph-4: #7a5ba6;
+  --graph-5: #2e7f86;
+  --graph-6: #8a5a44;
+
+  /* 글꼴 */
+  --font-body: "Pretendard", system-ui, sans-serif;
+  /* 코드 글꼴은 latin만 포함하므로 한글은 Pretendard로 이어 받아 OS마다 같게 보이게 한다 */
+  --font-mono: "JetBrains Mono", "Pretendard", ui-monospace, monospace;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-title: 15px;
+  --font-size-home: 20px;
+  --font-weight-regular: 400;
+  --font-weight-bold: 600;
+  --line-height: 1.5;
+
+  /* 간격 (4px 단위) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* 모양 */
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --border-width: 1px;
+  --row-height: 32px;
+  --selected-bar: 2px;
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 8%);
+  --scrollbar-size: 8px;
+  --scrollbar-thumb: #c9c9c5;
+
+  /* 움직임 */
+  --motion-duration: 150ms;
+  --motion-ease: ease-out;
+  --motion-shift: 4px;
+}
+
+/* 다크: 시스템 설정을 따르되, 설정 화면에서 data-theme으로 덮어쓸 수 있다 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #18191b;
+    --surface: #1f2023;
+    --surface-hover: #26272b;
+    --border: #2e3034;
+    --text: #e6e6e3;
+    --text-muted: #9a9da3;
+    --accent: #7fa7d6;
+    --accent-text: #18191b;
+    --added: #6bbf8a;
+    --modified: #d9a54a;
+    --deleted: #e07a70;
+    --diff-add-bg: #1e2e24;
+    --diff-del-bg: #33201f;
+    --scrollbar-thumb: #3a3c41;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #18191b;
+  --surface: #1f2023;
+  --surface-hover: #26272b;
+  --border: #2e3034;
+  --text: #e6e6e3;
+  --text-muted: #9a9da3;
+  --accent: #7fa7d6;
+  --accent-text: #18191b;
+  --added: #6bbf8a;
+  --modified: #d9a54a;
+  --deleted: #e07a70;
+  --diff-add-bg: #1e2e24;
+  --diff-del-bg: #33201f;
+  --scrollbar-thumb: #3a3c41;
+}

@@ -25,7 +25,7 @@
 
 ## 글꼴
 - 본문: **Pretendard** (한글·영문 균형, OFL 라이선스, npm 패키지로 앱에 포함, D-014). 대체: `system-ui`.
-- 코드·해시·파일 경로: **JetBrains Mono** (OFL, latin 부분만 포함, D-014). 대체: `ui-monospace`.
+- 코드·해시·파일 경로: **JetBrains Mono** (OFL, latin 부분만 포함, D-014). 한글은 Pretendard로 이어 받고, 그다음 대체는 `ui-monospace`.
 - 크기: 13px(기본), 12px(보조), 15px(화면 제목), 20px(홈 제목). 줄 간격 1.5.
 - 굵기는 400과 600 두 가지만. JetBrains Mono는 400만 포함한다(D-014).
 
