@@ -27,6 +27,12 @@ impl CliBackend {
             runner: Runner::new(git.into(), configure),
         }
     }
+
+    /// **테스트 전용.** 로컬 경로·`file://` 원격을 허용한다. 앱 코드에서는 부르지 않는다(D-035).
+    pub fn allow_local_remotes_for_tests(mut self) -> Self {
+        self.runner.allow_local_remotes();
+        self
+    }
 }
 
 impl CliBackend {
@@ -405,6 +411,112 @@ mod tests {
             )
             .unwrap();
         assert_eq!(out.stdout_utf8().unwrap(), "0");
+    }
+
+    /// git 별칭으로 자식 셸이 받은 환경 변수 값을 읽는다.
+    fn child_env(backend: &CliBackend, var: &str) -> String {
+        let alias = format!("alias.envcheck=!printf %s \"${var}\"");
+        backend
+            .runner
+            .run(None, &["-c", &alias, "envcheck"])
+            .unwrap()
+            .stdout_utf8()
+            .unwrap()
+    }
+
+    #[test]
+    fn child_env_has_no_pager_editor_or_unsafe_transport() {
+        let backend = testutil::backend();
+        assert_eq!(child_env(&backend, "PAGER"), "cat");
+        assert_eq!(child_env(&backend, "GIT_PAGER"), "cat");
+        assert_eq!(child_env(&backend, "GIT_EDITOR"), ":");
+        assert_eq!(child_env(&backend, "GIT_ALLOW_PROTOCOL"), "https:ssh:git");
+        let local = testutil::backend().allow_local_remotes_for_tests();
+        assert_eq!(
+            child_env(&local, "GIT_ALLOW_PROTOCOL"),
+            "file:https:ssh:git"
+        );
+    }
+
+    #[test]
+    fn ext_transport_is_blocked() {
+        let dir = tempfile::tempdir().unwrap();
+        let pwned = dir.path().join("pwned");
+        let url = format!(
+            "ext::sh -c touch% {}",
+            pwned.display().to_string().replace(' ', "% ")
+        );
+        let err = testutil::backend()
+            .runner
+            .run(Some(dir.path()), &["ls-remote", &url])
+            .unwrap_err();
+        assert_eq!(
+            err.kind(),
+            FailureKind::ProtocolNotAllowed,
+            "{}",
+            err.detail()
+        );
+        assert!(!pwned.exists());
+    }
+
+    #[test]
+    fn local_remotes_need_the_test_switch() {
+        let remote = tempfile::tempdir().unwrap();
+        testutil::git(remote.path(), &["init", "-q", "--bare"]);
+        let path = remote.path().to_string_lossy().into_owned();
+        let file_url = format!("file://{}", path.replace('\\', "/"));
+        for url in [path.as_str(), file_url.as_str()] {
+            let err = testutil::backend()
+                .runner
+                .run(None, &["ls-remote", url])
+                .unwrap_err();
+            assert_eq!(
+                err.kind(),
+                FailureKind::ProtocolNotAllowed,
+                "{url}: {}",
+                err.detail()
+            );
+            testutil::backend()
+                .allow_local_remotes_for_tests()
+                .runner
+                .run(None, &["ls-remote", url])
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn repo_config_editor_and_pager_do_not_run() {
+        let repo = testutil::init_repo();
+        let pwned = repo.path().join("pwned");
+        let cmd = format!("touch '{}'", pwned.display());
+        testutil::git(repo.path(), &["config", "core.editor", &cmd]);
+        testutil::git(repo.path(), &["config", "core.pager", &cmd]);
+        std::fs::write(repo.path().join("a.txt"), "a").unwrap();
+        testutil::git(repo.path(), &["add", "a.txt"]);
+        let backend = testutil::backend();
+        // 메시지 없이 저장하면 편집기가 필요하다. ":"라 빈 메시지로 실패하고 설정의 명령은 돌지 않는다.
+        assert!(backend.runner.run(Some(repo.path()), &["commit"]).is_err());
+        // -p는 터미널이 아니어도 페이저를 쓰게 한다. GIT_PAGER=cat이 이긴다.
+        let _ = backend.runner.run(Some(repo.path()), &["-p", "status"]);
+        assert!(!pwned.exists());
+    }
+
+    #[test]
+    fn inherited_git_dir_is_ignored() {
+        let repo = testutil::init_repo();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let missing = elsewhere.path().join("없는 곳");
+        let configure: ConfigureCommand =
+            std::sync::Arc::new(move |cmd: &mut std::process::Command| {
+                testutil::isolate(cmd);
+                cmd.env("GIT_DIR", &missing).env("GIT_WORK_TREE", &missing);
+            });
+        let backend = CliBackend::new("git", configure);
+        let found = backend.discover(repo.path()).unwrap().unwrap();
+        assert_eq!(
+            testutil::canonical(found.as_path()),
+            testutil::canonical(repo.path())
+        );
     }
 
     #[test]

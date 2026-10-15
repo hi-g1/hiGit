@@ -87,7 +87,7 @@ pub trait GitBackend: Send + Sync {
 #### git 실행 규칙 (D-035)
 - 인자는 배열로 넘기고 셸을 거치지 않는다. 문자열을 이어 붙여 명령줄을 만들지 않는다.
 - 리비전 앞에는 `--end-of-options`, 경로 앞에는 `--`. 경로 목록은 위처럼 stdin으로.
-- 공통 환경에 `PAGER=cat`, `GIT_EDITOR`(hiGit 지정 값), `GIT_ALLOW_PROTOCOL=https:ssh:git`도 둔다. 조회는 `--no-ext-diff`, `--no-textconv`.
+- 공통 환경에 `PAGER=cat`, `GIT_EDITOR=:`(편집기를 띄우지 않는 특별 값), `GIT_ALLOW_PROTOCOL=https:ssh:git`도 둔다. 상위 프로세스의 `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` 등 저장소 위치 변수는 지운다(D-052). 로컬 경로 원격은 테스트에서만 `CliBackend::allow_local_remotes_for_tests()`로 켠다. 조회는 `--no-ext-diff`, `--no-textconv`.
 - 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
 - git 실행 파일은 시작할 때 절대 경로로 한 번 찾아 그 경로만 쓴다.
 - 믿지 않기로 한 저장소(D-039)는 모든 호출에 실행 설정을 끄는 `-c` 덮어쓰기를 붙인다.

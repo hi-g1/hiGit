@@ -33,6 +33,8 @@ pub enum FailureKind {
     RemoteUnreachable,
     /// 폴더가 저장소가 아니다(`discover`가 씀).
     NotARepository,
+    /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).
+    ProtocolNotAllowed,
     Other,
 }
 
@@ -40,6 +42,15 @@ pub enum FailureKind {
 /// 인증을 먼저 본다.
 const RULES: &[(FailureKind, &[&str])] = &[
     (FailureKind::NotARepository, &["not a git repository"]),
+    (
+        FailureKind::ProtocolNotAllowed,
+        &[
+            "transport 'ext' not allowed",
+            "transport 'file' not allowed",
+            "transport 'http' not allowed",
+            "transport 'fd' not allowed",
+        ],
+    ),
     (
         FailureKind::SshHostUnverified,
         &["Host key verification failed"],
@@ -173,6 +184,10 @@ mod tests {
             (
                 "fatal: 'a..b' is not a valid branch name\n",
                 FailureKind::InvalidRefName,
+            ),
+            (
+                "fatal: transport 'ext' not allowed\n",
+                FailureKind::ProtocolNotAllowed,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];

@@ -8,9 +8,24 @@ use crate::{GitError, Result};
 /// git을 실행하기 전에 OS별 설정(예: Windows 콘솔 창 숨기기)을 붙이는 함수.
 pub type ConfigureCommand = Arc<dyn Fn(&mut Command) + Send + Sync>;
 
+/// 모든 git 호출에 허용하는 전송 방식(D-035). `ext::`, `file://`, 로컬 경로 원격은 막는다.
+pub(crate) const ALLOWED_PROTOCOLS: &str = "https:ssh:git";
+
+/// 상위 프로세스에서 물려받으면 엉뚱한 저장소를 가리키게 하는 변수(D-052).
+const REPO_LOCATION_VARS: &[&str] = &[
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_NAMESPACE",
+];
+
 pub(crate) struct Runner {
     git: PathBuf,
     configure: ConfigureCommand,
+    allowed_protocols: &'static str,
 }
 
 #[derive(Debug)]
@@ -37,7 +52,16 @@ impl GitOutput {
 
 impl Runner {
     pub fn new(git: PathBuf, configure: ConfigureCommand) -> Self {
-        Self { git, configure }
+        Self {
+            git,
+            configure,
+            allowed_protocols: ALLOWED_PROTOCOLS,
+        }
+    }
+
+    /// 테스트 전용: 로컬 경로 원격(`file`)을 허용한다.
+    pub fn allow_local_remotes(&mut self) {
+        self.allowed_protocols = "file:https:ssh:git";
     }
 
     /// `cwd`에서 git을 실행하고, 성공하면 출력을 돌려준다. stdin은 막는다.
@@ -78,12 +102,19 @@ impl Runner {
         let mut cmd = Command::new(&self.git);
         // OS별 설정을 먼저 붙이고, 아래 앱 고정 설정이 마지막에 이기게 한다.
         (self.configure)(&mut cmd);
+        for var in REPO_LOCATION_VARS {
+            cmd.env_remove(var);
+        }
         // 영어 원문 오류(D-021), 프롬프트 없음, 페이저 없음, 읽기 작업이 index 잠금을 잡지 않음.
         // LANGUAGE는 gettext에서 LC_ALL보다 앞설 수 있어 지운다.
+        // GIT_EDITOR=":"는 git이 편집기를 띄우지 않는 특별 값이라 셸이 없어도 된다(D-052).
         cmd.env("LC_ALL", "C")
             .env_remove("LANGUAGE")
             .env("GIT_TERMINAL_PROMPT", "0")
             .env("GIT_PAGER", "cat")
+            .env("PAGER", "cat")
+            .env("GIT_EDITOR", ":")
+            .env("GIT_ALLOW_PROTOCOL", self.allowed_protocols)
             .env("GIT_OPTIONAL_LOCKS", "0")
             // 한글 파일명을 따옴표·8진수 이스케이프 없이 받는다.
             .args(["-c", "core.quotepath=off", "-c", "color.ui=never"])
