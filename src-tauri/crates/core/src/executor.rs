@@ -199,6 +199,15 @@ mod tests {
         fn merge_base(&self, _: &RepoPath, _: &str, _: &str) -> git::Result<Option<git::Oid>> {
             unreachable!()
         }
+        fn merge_check(
+            &self,
+            _: &RepoPath,
+            _: Option<&str>,
+            _: &str,
+            _: &str,
+        ) -> git::Result<git::MergeCheck> {
+            unreachable!()
+        }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }

@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, Oid, OpOutput, RefEntry,
-    RefExpect, Remote, RepoPath, Result, Status,
+    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, MergeCheck, Oid, OpOutput,
+    RefEntry, RefExpect, Remote, RepoPath, Result, Status,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -61,6 +61,16 @@ pub trait GitBackend: Send + Sync {
 
     /// 두 버전이 갈라진 버전. 기록이 이어져 있지 않으면 `None`.
     fn merge_base(&self, repo: &RepoPath, a: &str, b: &str) -> Result<Option<Oid>>;
+
+    /// `ours`에 `theirs`를 합치면 겹치는 파일이 있는지 미리 본다. index와 작업 폴더는 그대로다.
+    /// `base`가 없으면 두 버전이 갈라진 곳을 기준으로 한다.
+    fn merge_check(
+        &self,
+        repo: &RepoPath,
+        base: Option<&str>,
+        ours: &str,
+        theirs: &str,
+    ) -> Result<MergeCheck>;
 
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;

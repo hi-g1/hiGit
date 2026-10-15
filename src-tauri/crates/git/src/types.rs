@@ -173,6 +173,16 @@ pub struct RefEntry {
     pub oid: String,
 }
 
+/// 두 버전을 합칠 때 겹치는지(작업 폴더를 건드리지 않고 미리 본 결과).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MergeCheck {
+    Clean,
+    /// 두 쪽이 같은 곳을 다르게 바꾼 파일들.
+    Overlap {
+        paths: Vec<String>,
+    },
+}
+
 /// 저장(커밋) 하나.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Commit {

@@ -28,6 +28,7 @@ pub(crate) enum Cmd {
     LsRemote,
     Stash,
     ReadTree,
+    MergeTree,
     CommitTree,
     Show,
     /// 2.34.1에서 `--end-of-options`를 경로로 읽는다.

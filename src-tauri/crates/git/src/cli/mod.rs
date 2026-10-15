@@ -4,6 +4,9 @@ mod branch_tests;
 mod branches;
 mod diff;
 mod log;
+mod merge_check;
+#[cfg(test)]
+mod merge_check_tests;
 mod park;
 #[cfg(test)]
 mod park_tests;
@@ -26,7 +29,7 @@ use runner::Runner;
 
 use crate::{
     Branch, Commit, DiffKind, DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp,
-    GitVersion, LogQuery, Oid, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
+    GitVersion, LogQuery, MergeCheck, Oid, OpOutput, RefEntry, Remote, RepoPath, Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -347,6 +350,16 @@ impl GitBackend for CliBackend {
             Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
             Err(e) => Err(e),
         }
+    }
+
+    fn merge_check(
+        &self,
+        repo: &RepoPath,
+        base: Option<&str>,
+        ours: &str,
+        theirs: &str,
+    ) -> Result<MergeCheck> {
+        self.merge_check_impl(repo, base, ours, theirs)
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {

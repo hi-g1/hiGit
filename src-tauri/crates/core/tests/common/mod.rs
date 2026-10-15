@@ -6,8 +6,8 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use git::{
-    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, Oid, OpOutput, RefEntry,
-    RefExpect, Remote, RepoPath, Status,
+    Branch, Commit, DiffTarget, FileDiff, GitOp, GitVersion, LogQuery, MergeCheck, Oid, OpOutput,
+    RefEntry, RefExpect, Remote, RepoPath, Status,
 };
 use higit_core::view::ActionInput;
 use higit_core::{
@@ -32,6 +32,7 @@ pub struct FakeGit {
     pub remotes: Mutex<Vec<Remote>>,
     pub refs: Mutex<Vec<RefEntry>>,
     pub remote_heads: Mutex<Vec<(String, String)>>,
+    pub merge_check: Mutex<MergeCheck>,
 }
 
 impl FakeGit {
@@ -53,6 +54,7 @@ impl FakeGit {
             remotes: Mutex::new(Vec::new()),
             refs: Mutex::new(Vec::new()),
             remote_heads: Mutex::new(Vec::new()),
+            merge_check: Mutex::new(MergeCheck::Clean),
         }
     }
 
@@ -215,6 +217,16 @@ impl GitBackend for FakeGit {
 
     fn merge_base(&self, _repo: &RepoPath, _a: &str, _b: &str) -> git::Result<Option<Oid>> {
         Ok(None)
+    }
+
+    fn merge_check(
+        &self,
+        _repo: &RepoPath,
+        _base: Option<&str>,
+        _ours: &str,
+        _theirs: &str,
+    ) -> git::Result<MergeCheck> {
+        Ok(self.merge_check.lock().unwrap().clone())
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -74,6 +75,31 @@ impl Runner {
         cmd.stdin(Stdio::null());
         let out = cmd.output().map_err(GitError::Spawn)?;
         finish(args, out)
+    }
+
+    /// 이 호출에만 환경 변수를 더해 실행한다(예: 임시 `GIT_INDEX_FILE`). 공통 설정 뒤에 붙어 이긴다.
+    pub fn run_env(
+        &self,
+        cwd: Option<&Path>,
+        args: &[&str],
+        envs: &[(&str, &OsStr)],
+    ) -> Result<GitOutput> {
+        let mut cmd = self.command(cwd, args);
+        cmd.stdin(Stdio::null());
+        for (key, value) in envs {
+            cmd.env(key, value);
+        }
+        let out = cmd.output().map_err(GitError::Spawn)?;
+        finish(args, out)
+    }
+
+    /// `git merge-file -p --quiet <우리> <기준> <그쪽>`이 겹침 없이 합쳐지는지. 파일은 바꾸지 않는다.
+    /// 종료 코드 0만 깨끗하다(겹친 곳 수, 이진 파일·오류는 255).
+    pub fn merge_file_quiet(&self, cwd: Option<&Path>, files: &[&OsStr]) -> Result<bool> {
+        let mut cmd = self.command(cwd, &["merge-file", "-p", "--quiet"]);
+        cmd.args(files).stdin(Stdio::null());
+        let out = cmd.output().map_err(GitError::Spawn)?;
+        Ok(out.status.success())
     }
 
     /// `input`을 stdin으로 넘겨 git을 실행한다(예: `--pathspec-from-file=-`).
