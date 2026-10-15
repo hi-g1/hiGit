@@ -23,9 +23,13 @@
 }
 
 .primary {
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--primary);
+  color: var(--primary-text);
   font-weight: var(--font-weight-bold);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
 }
 
 .secondary {
@@ -36,7 +40,7 @@
 
 .text {
   padding: 0 var(--space-2);
-  color: var(--accent);
+  color: var(--text);
 }
 
 .secondary:hover:not(:disabled),

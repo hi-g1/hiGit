@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from "react";
 import styles from "./Button.module.css";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  /** primary: 화면마다 하나(--accent 채움). secondary: 테두리. text: 글자만. */
+  /** primary: 화면마다 하나(--primary 채움, D-026). secondary: 테두리. text: 글자만(본문색). */
   variant?: "primary" | "secondary" | "text";
 };
 
