@@ -229,6 +229,10 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
     assert_eq!(git.cancel_cleared.load(Ordering::SeqCst), 1);
     observe(repo.as_path(), secs(5), secs(2));
     observe(std::path::Path::new("/다른 저장소"), secs(5), secs(2));
+    // 로컬 쓰기는 60초가 지나야 강제로 멈출 수 있다(화면이 아니라 core가 확인한다).
+    core.cancel(dir.path()).unwrap();
+    assert!(!git.calls().iter().any(|c| c.starts_with("cancel")));
+    observe(repo.as_path(), secs(61), secs(61));
     core.cancel(dir.path()).unwrap();
     git.hold.store(false, Ordering::SeqCst);
     first.join().unwrap().unwrap();
@@ -237,20 +241,28 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
 
     assert_eq!(
         *heard.lock().unwrap(),
-        vec![higit_core::view::OpProgress {
-            repo: repo.as_path().to_string_lossy().into_owned(),
-            action: "stage".into(),
-            elapsed_secs: 5,
-            idle_secs: 2,
-        }]
+        vec![
+            higit_core::view::OpProgress {
+                repo: repo.as_path().to_string_lossy().into_owned(),
+                action: "stage".into(),
+                elapsed_secs: 5,
+                idle_secs: 2,
+            },
+            higit_core::view::OpProgress {
+                repo: repo.as_path().to_string_lossy().into_owned(),
+                action: "stage".into(),
+                elapsed_secs: 61,
+                idle_secs: 61,
+            }
+        ]
     );
     assert!(
         git.calls()
             .contains(&format!("cancel {}", repo.as_path().display()))
     );
     // 끝난 뒤에는 다시 알리지 않는다.
-    observe(repo.as_path(), secs(6), secs(6));
-    assert_eq!(heard.lock().unwrap().len(), 1);
+    observe(repo.as_path(), secs(62), secs(62));
+    assert_eq!(heard.lock().unwrap().len(), 2);
 }
 
 #[test]

@@ -45,11 +45,26 @@ pub struct Core {
     trust: Arc<TrustStore>,
     /// 로그 파일(D-078). 앱 데이터 폴더를 못 쓰면 남기지 않는다.
     logger: crate::log::Logger,
-    /// 지금 도는 액션(저장소 → 액션 id). 진행 알림에 쓴다(D-080).
-    running: Arc<Mutex<std::collections::HashMap<PathBuf, &'static str>>>,
+    /// 지금 도는 사람이 시킨 작업(저장소 → 무엇, 마지막 진행 알림의 경과). 진행 알림과
+    /// 취소에 쓴다(D-080).
+    running: Arc<Mutex<std::collections::HashMap<PathBuf, Running>>>,
     /// 신뢰 확인을 물은 경로. 신뢰·주인 허용 명령은 core가 물은 경로만 받는다(D-037).
     asked: Mutex<Vec<(PathBuf, Ask)>>,
 }
+
+/// 도는 작업 하나.
+#[derive(Clone, Copy)]
+struct Running {
+    /// 액션 id, 또는 `undo`·`redo`.
+    action: &'static str,
+    /// 마지막 진행 알림의 경과(초). 강제로 멈추기를 core도 확인한다.
+    elapsed_secs: u64,
+}
+
+/// 원격 작업. 언제든 취소할 수 있다.
+const REMOTE_ACTIONS: [&str; 4] = ["fetch", "pull", "push", "sync"];
+/// 로컬 쓰기는 이만큼 지나야 강제로 멈출 수 있다(D-080). 화면도 이때부터 단추를 보인다.
+const STUCK_LOCAL_SECS: u64 = 60;
 
 /// core가 사용자에게 물은 것.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -203,31 +218,61 @@ impl Core {
         let running = self.running.clone();
         self.git
             .set_observer(Some(Arc::new(move |path, elapsed, idle| {
-                let action = running
-                    .lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .get(path)
-                    .copied();
+                let action = {
+                    let mut running = running.lock().unwrap_or_else(PoisonError::into_inner);
+                    running.get_mut(path).map(|r| {
+                        r.elapsed_secs = elapsed.as_secs();
+                        r.action
+                    })
+                };
                 if let Some(action) = action {
                     sink(progress(path, action, elapsed, idle));
                 }
             })));
     }
 
-    /// 이 저장소에서 도는 원격 작업이나 멈춘 로컬 쓰기를 끝낸다(취소·강제로 멈추기, D-080).
-    /// 도는 작업이 없으면 아무것도 하지 않는다.
+    /// 이 저장소에서 도는 원격 작업을 취소하거나, 60초 넘게 도는 로컬 쓰기를 강제로 멈춘다
+    /// (D-080). 그 밖에는 아무것도 하지 않는다. 확인과 취소 표시를 한 잠금 안에서 해서 끝난
+    /// 작업 뒤에 표시가 남지 않게 한다.
     pub fn cancel(&self, folder: &Path) -> Result<()> {
         let state = self.state_of(folder)?;
         let repo = state.repo.ok_or(CoreError::NotARepo)?;
-        let running = self
-            .running
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .contains_key(repo.as_path());
-        if running {
+        let running = self.running.lock().unwrap_or_else(PoisonError::into_inner);
+        let allowed = running.get(repo.as_path()).is_some_and(|r| {
+            REMOTE_ACTIONS.contains(&r.action) || r.elapsed_secs >= STUCK_LOCAL_SECS
+        });
+        if allowed {
             self.git.request_cancel(&repo);
         }
         Ok(())
+    }
+
+    /// 사람이 시킨 작업 하나를 진행 알림·취소 대상으로 두고 실행한다. 취소 표시는 이 작업
+    /// 동안만 둔다(끝난 뒤 남으면 다음 작업이 바로 멈춘다).
+    fn tracked<T>(
+        &self,
+        git: &dyn GitBackend,
+        repo: &RepoPath,
+        action: &'static str,
+        f: impl FnOnce() -> Result<T>,
+    ) -> Result<T> {
+        let key = repo.as_path().to_path_buf();
+        {
+            let mut running = self.running.lock().unwrap_or_else(PoisonError::into_inner);
+            git.clear_cancel(repo);
+            running.insert(
+                key.clone(),
+                Running {
+                    action,
+                    elapsed_secs: 0,
+                },
+            );
+        }
+        let result = f();
+        let mut running = self.running.lock().unwrap_or_else(PoisonError::into_inner);
+        git.clear_cancel(repo);
+        running.remove(&key);
+        result
     }
 
     fn remember_ask(&self, path: &Path, ask: Ask) {
@@ -431,25 +476,12 @@ impl Core {
         };
         let background = matches!(input, ActionInput::Fetch(i) if i.background);
         let result = self.with_locks_by(folder, locks, background, |executor, ctx| {
+            let run = || executor.execute(ctx, input.action_id(), input, token.as_ref());
             // 원격 확인은 화면에 진행을 보이지 않고 취소도 받지 않는다.
-            let repo = match ctx.state.repo.as_ref() {
-                Some(repo) if !background => repo,
-                _ => return executor.execute(ctx, input.action_id(), input, token.as_ref()),
-            };
-            let key = repo.as_path().to_path_buf();
-            self.running
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .insert(key.clone(), input.action_id());
-            // 취소 표시는 이 작업 동안만 둔다. 끝난 뒤 남으면 다음 원격 확인이 바로 멈춘다.
-            ctx.git.clear_cancel(repo);
-            let result = executor.execute(ctx, input.action_id(), input, token.as_ref());
-            ctx.git.clear_cancel(repo);
-            self.running
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .remove(&key);
-            result
+            match ctx.state.repo.as_ref() {
+                Some(repo) if !background => self.tracked(ctx.git, repo, input.action_id(), run),
+                _ => run(),
+            }
         });
         self.logger.action("execute", input.action_id(), &result);
         let outcome = result?;
@@ -462,14 +494,21 @@ impl Core {
 
     /// 마지막 작업을 되돌린다(Ctrl+Z, D-042).
     pub fn undo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
-        let result = self.with_repo_lock(folder, |executor, ctx| executor.undo(ctx));
+        let result = self.with_repo_lock(folder, |executor, ctx| match ctx.state.repo.as_ref() {
+            // 올린 버전을 되돌리는 새 버전은 서명·hook으로 오래 걸릴 수 있다(D-073, D-080).
+            Some(repo) => self.tracked(ctx.git, repo, "undo", || executor.undo(ctx)),
+            None => executor.undo(ctx),
+        });
         self.logger.action("undo", "last", &result);
         result.map(Into::into)
     }
 
     /// 되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y).
     pub fn redo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
-        let result = self.with_repo_lock(folder, |executor, ctx| executor.redo(ctx));
+        let result = self.with_repo_lock(folder, |executor, ctx| match ctx.state.repo.as_ref() {
+            Some(repo) => self.tracked(ctx.git, repo, "redo", || executor.redo(ctx)),
+            None => executor.redo(ctx),
+        });
         self.logger.action("redo", "last", &result);
         result.map(Into::into)
     }
