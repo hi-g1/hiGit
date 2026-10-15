@@ -13,7 +13,7 @@ const MAX_ITEMS: usize = 200;
 const SAME_MOMENT: i64 = 2;
 
 /// stash 모양(부모 둘 이상, 둘째 부모 메시지가 `index on `)이면 꺼낼 것, 아니면 버전.
-fn kind_of(git: &dyn GitBackend, repo: &RepoPath, oid: &str) -> RestoreKind {
+pub(crate) fn kind_of(git: &dyn GitBackend, repo: &RepoPath, oid: &str) -> RestoreKind {
     let second = git
         .log(
             repo,

@@ -192,3 +192,176 @@ mod timeline {
         assert_eq!(item.restore, RestoreKind::None);
     }
 }
+
+mod restore {
+    use super::*;
+    use higit_core::view::{
+        ActionInput, ActionResult, CommitInput, ErrorCode, ErrorView, PathsInput, RestoreInput,
+        TakeOutInput, TakeOutSource,
+    };
+
+    fn save(core: &Core, dir: &Path, file: &str, text: &str) {
+        std::fs::write(dir.join(file), text).unwrap();
+        core.execute(
+            dir,
+            &ActionInput::Commit(CommitInput {
+                message: format!("{file} 저장"),
+                stage_all: true,
+            }),
+            None,
+        )
+        .unwrap();
+    }
+
+    fn restore(core: &Core, dir: &Path, oid: &str) -> Result<ActionResult, higit_core::CoreError> {
+        core.execute(
+            dir,
+            &ActionInput::Restore(RestoreInput { oid: oid.into() }),
+            None,
+        )
+    }
+
+    fn take_out(
+        core: &Core,
+        dir: &Path,
+        refname: &str,
+    ) -> Result<ActionResult, higit_core::CoreError> {
+        core.execute(
+            dir,
+            &ActionInput::TakeOut(TakeOutInput {
+                source: TakeOutSource::Ref {
+                    refname: refname.into(),
+                },
+            }),
+            None,
+        )
+    }
+
+    fn code(e: higit_core::CoreError) -> ErrorCode {
+        ErrorView::from(&e).code
+    }
+
+    #[test]
+    fn going_back_keeps_edits_and_the_current_version() {
+        let repo = repo();
+        let dir = repo.path();
+        let core = open(dir);
+        let first = git(dir, &["rev-parse", "HEAD"]);
+        save(&core, dir, "b.txt", "b\n");
+        save(&core, dir, "c.txt", "c\n");
+        let latest = git(dir, &["rev-parse", "HEAD"]);
+        std::fs::write(dir.join("a.txt"), "고치는 중\n").unwrap();
+        assert_eq!(restore(&core, dir, &first).unwrap(), ActionResult::Restored);
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), first);
+        assert!(!dir.join("b.txt").exists());
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "고치는 중\n"
+        );
+        // 지금 버전은 백업 ref로 남아 작업 내역에서 다시 되살릴 수 있다.
+        let backups = git(
+            dir,
+            &[
+                "for-each-ref",
+                "--format=%(refname) %(objectname)",
+                "refs/higit/backup/",
+            ],
+        );
+        assert!(
+            backups.contains(&format!("restore-main {latest}")),
+            "{backups}"
+        );
+        // Ctrl+Z로 원래 버전으로.
+        core.undo(dir).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), latest);
+    }
+
+    #[test]
+    fn only_listed_versions_are_accepted() {
+        let repo = repo();
+        let dir = repo.path();
+        let core = open(dir);
+        assert_eq!(
+            code(restore(&core, dir, &"0".repeat(40)).unwrap_err()),
+            ErrorCode::InvalidInput
+        );
+        assert_eq!(
+            code(restore(&core, dir, "-x").unwrap_err()),
+            ErrorCode::InvalidInput
+        );
+        let head = git(dir, &["rev-parse", "HEAD"]);
+        git(dir, &["switch", "-q", "--detach"]);
+        assert_eq!(
+            code(restore(&core, dir, &head).unwrap_err()),
+            ErrorCode::InvalidInput
+        );
+    }
+
+    #[test]
+    fn discarded_changes_and_orphan_parked_files_come_back() {
+        let repo = repo();
+        let dir = repo.path();
+        let core = open(dir);
+        std::fs::write(dir.join("a.txt"), "버린 것\n").unwrap();
+        let input = ActionInput::Discard(PathsInput {
+            paths: vec!["a.txt".into()],
+        });
+        let preview = core.preview(dir, &input).unwrap();
+        core.execute(dir, &input, Some(preview.token)).unwrap();
+        let backup = git(
+            dir,
+            &["for-each-ref", "--format=%(refname)", "refs/higit/backup/"],
+        );
+        assert_eq!(
+            take_out(&core, dir, &backup).unwrap(),
+            ActionResult::TookOut
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "버린 것\n"
+        );
+        // 버전 모양 백업은 꺼내지 않는다.
+        git(dir, &["checkout", "-q", "--", "a.txt"]);
+        let head = git(dir, &["rev-parse", "HEAD"]);
+        git(
+            dir,
+            &[
+                "update-ref",
+                "refs/higit/backup/20990101T000000Z-0/undo-main",
+                &head,
+            ],
+        );
+        assert_eq!(
+            code(
+                take_out(&core, dir, "refs/higit/backup/20990101T000000Z-0/undo-main").unwrap_err()
+            ),
+            ErrorCode::InvalidInput
+        );
+        assert_eq!(
+            code(take_out(&core, dir, "refs/heads/main").unwrap_err()),
+            ErrorCode::InvalidInput
+        );
+        // 지운 브랜치에 맡겨 둔 파일.
+        std::fs::write(dir.join("a.txt"), "맡긴 것\n").unwrap();
+        git(
+            dir,
+            &["stash", "push", "-q", "-m", "higit parked 지운-브랜치"],
+        );
+        let stash = git(dir, &["rev-parse", "refs/stash"]);
+        git(dir, &["stash", "drop", "-q"]);
+        let parked = "refs/higit/parked/지운-브랜치";
+        git(dir, &["update-ref", parked, &stash]);
+        take_out(&core, dir, parked).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("a.txt")).unwrap(),
+            "맡긴 것\n"
+        );
+        assert_eq!(
+            git(
+                dir,
+                &["for-each-ref", "--format=%(refname)", "refs/higit/parked/"]
+            ),
+            ""
+        );
+    }
+}

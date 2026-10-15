@@ -30,6 +30,8 @@ pub enum ActionInput {
     TakeOut(TakeOutInput),
     /// 고른 파일의 고친 내용을 버린다(확인 필요, D-074).
     Discard(PathsInput),
+    /// 작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085).
+    Restore(RestoreInput),
     Switch(SwitchInput),
     BranchCreate(BranchCreateInput),
     Fetch(FetchInput),
@@ -54,6 +56,7 @@ impl ActionInput {
             ActionInput::Stash => "stash",
             ActionInput::TakeOut(_) => "take-out",
             ActionInput::Discard(_) => "discard",
+            ActionInput::Restore(_) => "restore",
             ActionInput::Switch(_) => "switch",
             ActionInput::BranchCreate(_) => "branch-create",
             ActionInput::Fetch(_) => "fetch",
@@ -210,6 +213,15 @@ pub enum TakeOutSource {
     Stash { oid: String },
     /// 지금 브랜치에 맡겨 둔 파일. 겹치면 충돌 해결 화면으로 간다(D-083).
     Parked { branch: String },
+    /// 작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085).
+    Ref { refname: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreInput {
+    /// 작업 내역이 준 버전 해시.
+    pub oid: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

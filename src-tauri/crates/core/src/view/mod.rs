@@ -21,8 +21,8 @@ pub use conflict::{
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
     ActionInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput, FileChoice,
-    FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, SwitchInput, SyncInput,
-    TakeOutInput, TakeOutSource,
+    FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, RestoreInput, SwitchInput,
+    SyncInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -389,6 +389,7 @@ pub enum ActionResult {
     Discarded {
         count: u32,
     },
+    Restored,
 }
 
 impl From<Outcome> for ActionResult {
@@ -432,6 +433,7 @@ impl From<Outcome> for ActionResult {
             Outcome::TookOut => ActionResult::TookOut,
             Outcome::ParkedResolved => ActionResult::ParkedResolved,
             Outcome::Discarded { count } => ActionResult::Discarded { count },
+            Outcome::Restored => ActionResult::Restored,
         }
     }
 }

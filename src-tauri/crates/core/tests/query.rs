@@ -235,6 +235,7 @@ fn action_input_tags_match_registry() {
             | ActionInput::Stash
             | ActionInput::TakeOut(_)
             | ActionInput::Discard(_)
+            | ActionInput::Restore(_)
             | ActionInput::Switch(_)
             | ActionInput::BranchCreate(_)
             | ActionInput::Fetch(_)
@@ -271,6 +272,9 @@ fn action_input_tags_match_registry() {
         }),
         ActionInput::Discard(PathsInput {
             paths: vec!["a.txt".into()],
+        }),
+        ActionInput::Restore(higit_core::view::RestoreInput {
+            oid: "a".repeat(40),
         }),
         ActionInput::Commit(CommitInput {
             message: "저장".into(),

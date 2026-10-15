@@ -118,6 +118,8 @@ pub enum Outcome {
     Discarded {
         count: u32,
     },
+    /// 작업 내역의 버전으로 되돌렸다.
+    Restored,
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.

@@ -73,7 +73,9 @@ export type ActionInput =
 /**  보관해 둔 것을 꺼낸다. */
 { id: "take-out"; input: TakeOutInput } | 
 /**  고른 파일의 고친 내용을 버린다(확인 필요, D-074). */
-{ id: "discard"; input: PathsInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "discard"; input: PathsInput } | 
+/**  작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085). */
+{ id: "restore"; input: RestoreInput } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -97,7 +99,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  합치기를 마쳤다(합친 버전을 만들었다). */
 { kind: "conflictFinished" } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" };
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {
@@ -505,6 +507,11 @@ export type RepoInfo = {
 	name: string,
 };
 
+export type RestoreInput = {
+	/**  작업 내역이 준 버전 해시. */
+	oid: string,
+};
+
 /**  되살리는 방법. `Version`은 "이 시점으로 되돌리기", `Changes`는 "꺼내기". */
 export type RestoreKind = "none" | "version" | "changes";
 
@@ -592,7 +599,9 @@ export type TakeOutSource =
 /**  임시 보관 목록의 항목. */
 { kind: "stash"; oid: string } | 
 /**  지금 브랜치에 맡겨 둔 파일. 겹치면 충돌 해결 화면으로 간다(D-083). */
-{ kind: "parked"; branch: string };
+{ kind: "parked"; branch: string } | 
+/**  작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085). */
+{ kind: "ref"; refname: string };
 
 /**  신뢰 확인에서 고른 것(D-039). */
 export type TrustChoice = 

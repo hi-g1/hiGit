@@ -72,6 +72,12 @@
     "undo": "irreversible"
   },
   {
+    "id": "restore",
+    "glossaryId": "reflog",
+    "risk": "safe",
+    "undo": "restoreTree"
+  },
+  {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",
