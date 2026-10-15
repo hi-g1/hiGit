@@ -78,6 +78,10 @@ pub(crate) fn switch_with_parking(
     if let Some(remote) = &input.remote {
         names::validate_ref_like(remote)?;
     }
+    // `--end-of-options`를 넣지 못하는 git에서도 이름이 옵션으로 읽히지 않게 git 규칙으로 한 번 더 본다.
+    if !git.check_branch_name(&input.branch)? {
+        return Err(CoreError::InvalidInput("쓸 수 없는 브랜치 이름이에요"));
+    }
     refuse_during_operation(git, repo)?;
     let current = git.current_branch(repo)?;
     if input.remote.is_none() && current.as_deref() == Some(input.branch.as_str()) {

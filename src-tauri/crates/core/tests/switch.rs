@@ -251,6 +251,23 @@ fn arriving_with_edits_leaves_parked_files_without_an_error() {
 }
 
 #[test]
+fn switching_to_a_name_git_rejects_is_refused() {
+    let repo = repo();
+    let dir = repo.path();
+    let err = core(dir)
+        .execute(
+            dir,
+            &ActionInput::Switch(SwitchInput {
+                branch: "a..b".into(),
+                remote: None,
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+}
+
+#[test]
 fn switch_undo_and_redo() {
     let repo = repo();
     let dir = repo.path();
