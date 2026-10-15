@@ -64,6 +64,9 @@
   --row-height: 32px;
   --selected-bar: 2px;
   --shadow-float: 0 4px 16px rgb(0 0 0 / 8%);
+
+  /* 대화상자 뒤 바탕 */
+  --overlay: rgb(0 0 0 / 30%);
   --scrollbar-size: 8px;
   --scrollbar-thumb: #c9c9c5;
 
@@ -96,6 +99,7 @@
     --diff-add-bg: #1e2e24;
     --diff-del-bg: #33201f;
     --scrollbar-thumb: #3a3c41;
+    --overlay: rgb(0 0 0 / 55%);
   }
 }
 
@@ -120,4 +124,5 @@
   --diff-add-bg: #1e2e24;
   --diff-del-bg: #33201f;
   --scrollbar-thumb: #3a3c41;
+  --overlay: rgb(0 0 0 / 55%);
 }

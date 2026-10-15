@@ -24,7 +24,14 @@ export function LastProject({
   const locale = useUiStore((s) => s.locale);
   const open = useOpenProject();
   const selectFirstChange = useRepoStore((s) => s.setSelectFirstChange);
-  const gone = summary.error?.code === "folderNotFound" ? m.folderMissing : summary.error ? m.folderNotRepo : null;
+  const gone =
+    summary.error?.code === "folderNotFound"
+      ? m.folderMissing
+      : summary.error?.code === "needsTrust"
+        ? m.trustNeeded
+        : summary.error
+          ? m.folderNotRepo
+          : null;
 
   return (
     <div className={styles.last}>

@@ -22,7 +22,14 @@ export function ProjectRow({
   const locale = useUiStore((s) => s.locale);
   const open = useOpenProject();
   const summary = useProjectSummary(project.path);
-  const gone = summary.error?.code === "folderNotFound" ? m.folderMissing : summary.error ? m.folderNotRepo : null;
+  const gone =
+    summary.error?.code === "folderNotFound"
+      ? m.folderMissing
+      : summary.error?.code === "needsTrust"
+        ? m.trustNeeded
+        : summary.error
+          ? m.folderNotRepo
+          : null;
 
   const short = summary.data ? pickShort(summary.data) : null;
   const prefix = summary.data ? branchPrefix(summary.data) : null;

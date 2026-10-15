@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
+import { TrustDialog } from "./features/open-project/TrustDialog";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { useAppStatus } from "./lib/queries";
 import { useShortcut } from "./lib/useShortcut";
@@ -47,5 +48,10 @@ function Screens() {
   // 마지막 프로젝트를 여는 동안은 빈 바탕(시작 화면이 잠깐 보였다 사라지지 않게)
   const ready = useStartup();
   if (!ready) return null;
-  return repo ? <Workspace repo={repo} /> : <Start />;
+  return (
+    <>
+      {repo ? <Workspace repo={repo} /> : <Start />}
+      <TrustDialog />
+    </>
+  );
 }
