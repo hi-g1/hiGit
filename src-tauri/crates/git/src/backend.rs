@@ -28,8 +28,8 @@ pub trait GitBackend: Send + Sync {
     /// 없다, D-096). 경로는 돌려주지 않는다.
     fn commit_stats(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitStat>>;
 
-    /// 버전을 가리키는 태그(이름순, 최대 1000개). 버전이 아닌 것을 가리키는 태그와 태그를
-    /// 가리키는 태그는 뺀다.
+    /// 버전을 가리키는 태그(이름순, 최대 1000개). 버전이 아닌 것을 가리키는 태그는 뺀다. 태그를
+    /// 가리키는 태그는 git 버전에 따라 빠지거나(2.34) 그 버전을 가리킨다(새 git은 끝까지 벗김).
     fn tags(&self, repo: &RepoPath) -> Result<Vec<TagRef>>;
 
     /// 전역 무시 규칙 파일(`core.excludesFile`) 경로. 설정이 없으면 `None`.

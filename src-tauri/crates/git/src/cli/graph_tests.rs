@@ -114,19 +114,25 @@ fn tags_point_at_versions() {
     let second = commit(p, "b.txt", "둘째");
     git(p, &["tag", "가벼운", first.as_str()]);
     git(p, &["tag", "-a", "v1.0", "-m", "릴리스", second.as_str()]);
-    // 버전이 아닌 것(트리)을 가리키는 태그와 태그를 가리키는 태그는 뺀다.
+    // 버전이 아닌 것(트리)을 가리키는 태그는 뺀다.
     let tree = git(p, &["rev-parse", "HEAD^{tree}"]);
     git(p, &["tag", "트리", tree.trim()]);
+    // 태그를 가리키는 태그: git 2.34는 `%(*objectname)`을 한 단계만 벗겨 빠지고, 새 git은 끝까지
+    // 벗겨 그 버전을 가리킨다. 어느 쪽이든 엉뚱한 해시가 되지 않는다.
     git(p, &["tag", "-a", "겹태그", "-m", "겹", "v1.0"]);
     let tags = testutil::backend().tags(&RepoPath::new(p)).unwrap();
     let pairs: Vec<(&str, &str)> = tags
         .iter()
+        .filter(|t| t.name != "겹태그")
         .map(|t| (t.name.as_str(), t.commit.as_str()))
         .collect();
     assert_eq!(
         pairs,
         [("v1.0", second.as_str()), ("가벼운", first.as_str())]
     );
+    if let Some(nested) = tags.iter().find(|t| t.name == "겹태그") {
+        assert_eq!(nested.commit, second);
+    }
 }
 
 #[test]
