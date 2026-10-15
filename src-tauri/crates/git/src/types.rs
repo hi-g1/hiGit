@@ -138,6 +138,20 @@ impl Default for LogQuery {
     }
 }
 
+/// 상태를 바꾸는 git 작업. 새 작업은 변형 하나와 `CliBackend` 매핑 하나를 더한다.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GitOp {
+    /// 아직 저장소가 아닌 폴더를 저장소로 만든다. 기본 갈래 이름은 사용자 git 설정을 따른다.
+    Init,
+}
+
+/// 쓰기 작업의 출력 원문.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OpOutput {
+    pub stdout: String,
+    pub stderr: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

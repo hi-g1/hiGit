@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{Commit, GitVersion, LogQuery, RepoPath, Result, Status};
+use crate::{Commit, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Result, Status};
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
 /// 여기에는 지금 반복에서 구현한 메서드만 둔다.
@@ -16,4 +16,7 @@ pub trait GitBackend: Send + Sync {
 
     /// 저장 기록. 최근 것부터. 저장이 하나도 없으면 빈 목록.
     fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>;
+
+    /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
+    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
 }

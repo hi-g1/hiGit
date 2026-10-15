@@ -14,6 +14,7 @@ pub(crate) struct Runner {
 
 pub(crate) struct GitOutput {
     pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
 }
 
 impl GitOutput {
@@ -25,6 +26,10 @@ impl GitOutput {
     /// 파일 이름처럼 UTF-8이 아닐 수도 있는 출력. 읽을 수 없는 바이트는 대체 문자로 바꾼다.
     pub fn stdout_lossy(&self) -> String {
         String::from_utf8_lossy(&self.stdout).into_owned()
+    }
+
+    pub fn stderr_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stderr).into_owned()
     }
 }
 
@@ -52,7 +57,10 @@ impl Runner {
 
         let out = cmd.output().map_err(GitError::Spawn)?;
         if out.status.success() {
-            Ok(GitOutput { stdout: out.stdout })
+            Ok(GitOutput {
+                stdout: out.stdout,
+                stderr: out.stderr,
+            })
         } else {
             Err(GitError::Failed {
                 args: args.iter().map(|a| a.to_string()).collect(),

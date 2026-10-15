@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 pub use runner::ConfigureCommand;
 use runner::Runner;
 
-use crate::{Commit, GitBackend, GitError, GitVersion, LogQuery, RepoPath, Result, Status};
+use crate::{
+    Commit, GitBackend, GitError, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Result, Status,
+};
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
@@ -86,6 +88,17 @@ impl GitBackend for CliBackend {
             .run(dir, &["log", "-z", log::FORMAT, &skip, &max, rev, "--"])?;
         log::parse(&out.stdout_lossy())
     }
+
+    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {
+        let args: &[&str] = match op {
+            GitOp::Init => &["init"],
+        };
+        let out = self.runner.run(Some(repo.as_path()), args)?;
+        Ok(OpOutput {
+            stdout: out.stdout_lossy(),
+            stderr: out.stderr_lossy(),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -119,6 +132,35 @@ mod tests {
     fn discover_returns_none_outside_repo() {
         let dir = tempfile::tempdir().unwrap();
         assert_eq!(testutil::backend().discover(dir.path()).unwrap(), None);
+    }
+
+    #[test]
+    fn init_makes_folder_a_repo() {
+        let dir = tempfile::tempdir().unwrap();
+        let folder = dir.path().join("새 프로젝트");
+        std::fs::create_dir(&folder).unwrap();
+
+        let backend = testutil::backend();
+        assert_eq!(backend.discover(&folder).unwrap(), None);
+        backend.run(&RepoPath::new(&folder), &GitOp::Init).unwrap();
+
+        let repo = backend
+            .discover(&folder)
+            .unwrap()
+            .expect("init 뒤에는 저장소");
+        assert_eq!(
+            testutil::canonical(repo.as_path()),
+            testutil::canonical(&folder)
+        );
+        // 새 저장소는 저장이 없다.
+        assert!(backend.log(&repo, &LogQuery::default()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn init_in_missing_folder_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = RepoPath::new(dir.path().join("없는 폴더"));
+        assert!(testutil::backend().run(&missing, &GitOp::Init).is_err());
     }
 
     #[test]

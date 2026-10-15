@@ -14,5 +14,6 @@ pub use backend::GitBackend;
 pub use cli::{CliBackend, ConfigureCommand};
 pub use error::{GitError, Result};
 pub use types::{
-    BranchInfo, Change, Commit, EntryKind, GitVersion, LogQuery, RepoPath, Status, StatusEntry,
+    BranchInfo, Change, Commit, EntryKind, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status,
+    StatusEntry,
 };
