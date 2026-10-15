@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 2 (계획 006, "검토 반영" 절의 바뀐 순서를 따른다)
-- 단계: R2 끝 (caution 실행·백업 ref·Barrier)
-- 마지막 커밋: e8d0040 core: run caution actions with backup refs
-- 다음 할 일: R3a 넣기·빼기 되돌리기(RestoreIndex)와 journal 호환(새 필드 skip_serializing_if, 옛 서명 고정 문자열 테스트, journal_copy)
+- 단계: R7 끝 (비밀 파일 알림 줄)
+- 마지막 커밋: aad1b30 features: secret warning before saving
+- 다음 할 일: R8 충돌 git 조각(merge_segments, ResolveFile/Delete, SnapshotFiles). 반복 2 뒤에 반복 2b(노선도)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -82,12 +82,12 @@
 ## 반복 2 단계 (계획 006, 바뀐 순서)
 - [x] R1 결정 D-069~D-086·용어(047ecf7)
 - [x] R2 caution 실행과 백업(e8d0040)
-- [ ] R3a 넣기·빼기 되돌리기, journal 호환
-- [ ] R3b RestoreTree·refs·Barrier
-- [ ] R4 올린 뒤 되돌리기(revert)
-- [ ] R5 로그 파일
-- [ ] R6 비밀 파일 검사·ignore
-- [ ] R7 비밀 파일 알림 줄
+- [x] R3a 넣기·빼기 되돌리기, journal 호환(e434f4c)
+- [x] R3b RestoreTree·refs·Barrier(e68d582)
+- [x] R4 올린 뒤 되돌리기(revert)(f0266c5)
+- [x] R5 로그 파일(44bf63c)
+- [x] R6 비밀 파일 검사·ignore(59ce686, 5ba6e1a)
+- [x] R7 비밀 파일 알림 줄(aad1b30)
 - [ ] R8 충돌 git 조각(+SnapshotFiles)
 - [ ] R9a 합치기 제안 조회·merge
 - [ ] R9b merge-into(앞으로 감기)
