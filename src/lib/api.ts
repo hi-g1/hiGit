@@ -1,7 +1,14 @@
 // 화면이 백엔드를 부르는 유일한 입구(D-010). 생성된 바인딩을 감싸고 오류를 ApiError로 바꾼다.
-import { commands, type ErrorCode, type ErrorView, type LogQuery } from "./bindings";
+import {
+  commands,
+  type ActionInput,
+  type ErrorCode,
+  type ErrorView,
+  type LogQuery,
+} from "./bindings";
 
 export type {
+  ActionInput,
   ActionMetaView,
   ActionResult,
   ChangeKind,
@@ -51,14 +58,10 @@ export const api = {
   appStatus: () => call(commands.appStatus()),
   openFolder: (path: string) => call(commands.repoOpen(path)),
   listActions: () => call(commands.actionList()),
-  previewAction: (folder: string, id: string, input: Record<string, string> = {}) =>
-    call(commands.actionPreview(folder, id, input)),
-  executeAction: (
-    folder: string,
-    id: string,
-    input: Record<string, string> = {},
-    previewToken: string | null = null,
-  ) => call(commands.actionExecute(folder, id, input, previewToken)),
+  previewAction: (folder: string, input: ActionInput) =>
+    call(commands.actionPreview(folder, input)),
+  executeAction: (folder: string, input: ActionInput, previewToken: string | null = null) =>
+    call(commands.actionExecute(folder, input, previewToken)),
   status: (repo: string) => call(commands.queryStatus(repo)),
   log: (repo: string, query: LogQuery) => call(commands.queryLog(repo, query)),
 };

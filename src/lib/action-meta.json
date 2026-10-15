@@ -2,7 +2,6 @@
   {
     "id": "init",
     "glossaryId": "init",
-    "risk": "safe",
-    "inputSchema": []
+    "risk": "safe"
   }
 ]

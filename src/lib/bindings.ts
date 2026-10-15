@@ -9,18 +9,21 @@ export const commands = {
 	appStatus: () => __TAURI_INVOKE<AppStatus>("app_status"),
 	repoOpen: (path: string) => __TAURI_INVOKE<FolderInfo>("repo_open", { path }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
-	actionPreview: (folder: string, id: string, input: { [key in string]: string }) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, id, input }),
-	actionExecute: (folder: string, id: string, input: { [key in string]: string }, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, id, input, previewToken }),
+	actionPreview: (folder: string, input: ActionInput) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
+	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
 };
 
 /* Types */
+export type ActionInput = 
+/**  관리 시작. 입력 없음. */
+{ id: "init" };
+
 export type ActionMetaView = {
 	id: string,
 	glossaryId: string,
 	risk: RiskView,
-	inputSchema: InputFieldView[],
 };
 
 /**  액션 실행 결과. */
@@ -80,14 +83,6 @@ export type FolderInfo = {
 	folder: string,
 	repo: RepoInfo | null,
 };
-
-export type InputFieldView = {
-	name: string,
-	kind: InputKindView,
-	required: boolean,
-};
-
-export type InputKindView = "text";
 
 export type LogPage = {
 	commits: CommitRow[],

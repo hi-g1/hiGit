@@ -1,6 +1,6 @@
 use git::{GitBackend, RepoPath};
-use serde_json::Value;
 
+use crate::view::ActionInput;
 use crate::{RepoState, Result};
 
 /// 상태를 바꾸는 기능 하나(D-010). 조회는 Action이 아니라 Query다.
@@ -11,11 +11,12 @@ pub trait Action: Send + Sync {
     fn available(&self, state: &RepoState) -> Availability;
 
     /// 실행하면 무엇이 바뀌는지. `caution` 이상은 실행기가 이 단계를 강제한다(D-007).
-    fn preview(&self, _ctx: &ExecCtx<'_>, _input: &Value) -> Result<Preview> {
+    fn preview(&self, _ctx: &ExecCtx<'_>, _input: &ActionInput) -> Result<Preview> {
         Ok(Preview::default())
     }
 
-    fn execute(&self, ctx: &ExecCtx<'_>, input: &Value) -> Result<Outcome>;
+    /// `input`의 변형이 이 액션 것이 아니면 [`crate::CoreError::InputMismatch`].
+    fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,8 +25,6 @@ pub struct ActionMeta {
     /// 용어표 id. 쉬운 이름·원래 이름·설명은 glossary에서 온다(D-006).
     pub glossary_id: &'static str,
     pub risk: Risk,
-    /// 프론트가 입력 폼을 만들 때 쓰는 입력 목록. 반복 0은 최소 형식.
-    pub input_schema: Vec<InputField>,
 }
 
 /// 위험도. 순서가 있다: `Safe < Normal < Caution < Danger`.
@@ -35,18 +34,6 @@ pub enum Risk {
     Normal,
     Caution,
     Danger,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InputField {
-    pub name: &'static str,
-    pub kind: InputKind,
-    pub required: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InputKind {
-    Text,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

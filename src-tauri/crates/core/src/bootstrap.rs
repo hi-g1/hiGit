@@ -2,7 +2,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use git::{CliBackend, GitBackend, GitVersion, RepoPath};
-use serde_json::Value;
 
 use crate::query::Queries;
 use crate::view::{ActionInput, ActionMetaView, ActionResult, FolderInfo, PreviewView, RepoInfo};
@@ -71,20 +70,19 @@ impl Core {
             .collect()
     }
 
-    pub fn preview(&self, folder: &Path, id: &str, input: &ActionInput) -> Result<PreviewView> {
+    pub fn preview(&self, folder: &Path, input: &ActionInput) -> Result<PreviewView> {
         let state = self.state_of(folder)?;
         let ctx = ExecCtx {
             git: self.git.as_ref(),
             state: &state,
         };
-        let (_preview, token) = self.executor.preview(&ctx, id, &to_value(input))?;
+        let (_preview, token) = self.executor.preview(&ctx, input.action_id(), input)?;
         Ok(PreviewView { token: token.0 })
     }
 
     pub fn execute(
         &self,
         folder: &Path,
-        id: &str,
         input: &ActionInput,
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
@@ -96,7 +94,7 @@ impl Core {
         let token = preview_token.map(PreviewToken);
         let outcome = self
             .executor
-            .execute(&ctx, id, &to_value(input), token.as_ref())?;
+            .execute(&ctx, input.action_id(), input, token.as_ref())?;
         Ok(outcome.into())
     }
 
@@ -110,13 +108,4 @@ impl Core {
         });
         Ok(RepoState { folder, repo })
     }
-}
-
-fn to_value(input: &ActionInput) -> Value {
-    Value::Object(
-        input
-            .iter()
-            .map(|(k, v)| (k.clone(), Value::String(v.clone())))
-            .collect(),
-    )
 }

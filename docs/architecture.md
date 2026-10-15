@@ -87,16 +87,20 @@ pub trait GitBackend: Send + Sync {
 pub trait Action: Send + Sync {
     fn meta(&self) -> &ActionMeta;                       // id, risk, glossary_id, 단축키
     fn available(&self, state: &RepoState) -> Availability; // 지금 쓸 수 있나, 아니면 쉬운 이유
-    fn preview(&self, ctx: &ExecCtx, input: &Value) -> Result<Preview>; // 무엇이 바뀌나
-    fn execute(&self, ctx: &ExecCtx, input: &Value) -> Result<Outcome>; // ExecCtx = { git, state }
+    fn preview(&self, ctx: &ExecCtx, input: &ActionInput) -> Result<Preview>; // 무엇이 바뀌나
+    fn execute(&self, ctx: &ExecCtx, input: &ActionInput) -> Result<Outcome>; // ExecCtx = { git, state }
 }
 
 pub struct ActionMeta {
     pub id: &'static str,          // "commit"
     pub glossary_id: &'static str, // 용어표 id. 쉬운 이름·원래 이름·설명은 여기서 온다
     pub risk: Risk,                // Safe | Normal | Caution | Danger
-    pub input_schema: Schema,      // 프론트가 입력 폼을 만들 때 사용
 }
+
+// core::view (D-020). 화면은 태그 붙은 enum으로 액션과 입력을 함께 보낸다.
+// TS: { id: "init" } | { id: "commit"; input: CommitInput } …
+#[serde(tag = "id", content = "input", rename_all = "kebab-case")]
+pub enum ActionInput { Init, /* Commit(CommitInput), … */ }
 ```
 
 `RepoState`는 열린 폴더와 저장소 여부를 함께 담는다(`folder`, `repo: Option<RepoPath>`). 그래서 저장소가 아닌 폴더에서만 쓸 수 있는 init도 같은 `available`로 판단한다.
@@ -148,7 +152,7 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 ## 프론트와 백엔드 계약
 - Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `undo_last`.
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
-- 액션 입력은 화면에서 `ActionInput`(필드 이름 → 문자열)으로 보내고, core가 `serde_json::Value`로 바꿔 `Action`에 넘긴다. `Value`는 재귀 타입이라 specta rc.25가 바인딩으로 내보내지 못한다.
+- 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
 - 타입은 Rust에서 정의하고 `tauri-specta`로 TS 바인딩을 생성한다. 프론트에서 타입을 손으로 쓰지 않는다.
 - 이벤트: `repo-changed { repo, kinds }`, `op-progress { op_id, percent, message }`.
@@ -194,7 +198,7 @@ features/history/render/                 그리기: Renderer 인터페이스 하
 1. `docs/spec.md` 용어표에 행 추가(id, 쉬운 이름, 원래 이름, 설명, 위험도).
 2. `src/glossary/ko.ts`와 `en.ts`에 같은 항목 추가.
 3. 필요하면 `crates/git`의 `GitOp`에 변형 추가 + `CliBackend` 매핑 + 파서 테스트.
-4. `crates/core/actions/<id>.rs`에 `Action` 구현, 레지스트리에 등록. 조회 기능이면 Action 대신 `core::query`에 메서드와 `core::view` 타입을 추가한다(D-010).
+4. `core::view::ActionInput`에 변형을 더하고(입력이 있으면 `<Id>Input` 구조체), `crates/core/actions/<id>.rs`에 `Action` 구현, 레지스트리에 등록. 조회 기능이면 Action 대신 `core::query`에 메서드와 `core::view` 타입을 추가한다(D-010).
 5. 기본 버튼·메뉴는 자동. 전용 UI가 필요하면 `src/features/<id>/`.
 6. 테스트: 임시 저장소에서 실행 → 결과 확인 → 되돌리기 확인.
 

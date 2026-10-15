@@ -191,16 +191,46 @@ fn init_through_core() {
     assert_eq!(metas.len(), 1);
     assert_eq!(metas[0].id, "init");
 
-    let result = core
-        .execute(dir.path(), "init", &ActionInput::new(), None)
-        .unwrap();
+    let result = core.execute(dir.path(), &ActionInput::Init, None).unwrap();
     let ActionResult::RepoCreated { repo } = result;
     assert!(!repo.path.is_empty());
     assert_eq!(git.calls().len(), 1);
 
     // 이미 저장소가 된 폴더에서는 다시 할 수 없다.
     let err = core
-        .execute(dir.path(), "init", &ActionInput::new(), None)
+        .execute(dir.path(), &ActionInput::Init, None)
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::AlreadyRepo);
+}
+
+#[test]
+fn action_input_tags_match_registry() {
+    // 새 변형을 더하면 이 match가 컴파일되지 않아 아래 목록을 고치게 된다.
+    fn every_variant(input: &ActionInput) {
+        match input {
+            ActionInput::Init => {}
+        }
+    }
+    let samples = [ActionInput::Init];
+    samples.iter().for_each(every_variant);
+
+    for input in &samples {
+        let json = serde_json::to_value(input).unwrap();
+        assert_eq!(
+            json["id"],
+            input.action_id(),
+            "serde 태그와 action_id가 다르다"
+        );
+    }
+    let mut tags: Vec<_> = samples.iter().map(ActionInput::action_id).collect();
+    let mut registered: Vec<_> = higit_core::actions::all_metas()
+        .iter()
+        .map(|m| m.id)
+        .collect();
+    tags.sort();
+    registered.sort();
+    assert_eq!(
+        tags, registered,
+        "등록된 액션과 입력 변형이 일대일이어야 한다"
+    );
 }

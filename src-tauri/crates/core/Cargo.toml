@@ -10,9 +10,9 @@ publish = false
 git = { path = "../git" }
 platform = { path = "../platform" }
 serde = { workspace = true }
-serde_json = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+serde_json = { workspace = true }
 tempfile = { workspace = true }

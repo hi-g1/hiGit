@@ -1,6 +1,6 @@
 use git::{GitOp, RepoPath};
-use serde_json::Value;
 
+use crate::view::ActionInput;
 use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
     UnavailableReason,
@@ -18,7 +18,6 @@ impl InitAction {
                 id: "init",
                 glossary_id: "init",
                 risk: Risk::Safe,
-                input_schema: Vec::new(),
             },
         }
     }
@@ -42,7 +41,8 @@ impl Action for InitAction {
         }
     }
 
-    fn execute(&self, ctx: &ExecCtx<'_>, _input: &Value) -> Result<Outcome> {
+    fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
+        let ActionInput::Init = input;
         let folder = &ctx.state.folder;
         ctx.git.run(&RepoPath::new(folder), &GitOp::Init)?;
         let repo = ctx.git.discover(folder)?.ok_or(CoreError::NotARepo)?;

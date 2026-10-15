@@ -31,7 +31,7 @@ const emptyLog: LogPage = { commits: [], hasMore: false };
 beforeEach(() => {
   vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0" });
   vi.mocked(api.listActions).mockResolvedValue([
-    { id: "init", glossaryId: "init", risk: "safe", inputSchema: [] },
+    { id: "init", glossaryId: "init", risk: "safe" },
   ]);
   vi.mocked(api.status).mockResolvedValue(emptyStatus);
   vi.mocked(api.log).mockResolvedValue(emptyLog);
@@ -104,7 +104,7 @@ describe("홈에서 폴더 열기", () => {
     const init = await screen.findByRole("button", { name: "관리 시작" });
     await user.click(init);
 
-    expect(api.executeAction).toHaveBeenCalledWith("/home/me/새 폴더", "init");
+    expect(api.executeAction).toHaveBeenCalledWith("/home/me/새 폴더", { id: "init" });
     expect(await screen.findByRole("heading", { name: "새 폴더" })).toBeInTheDocument();
     expect(await screen.findByText("마지막 저장 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
     expect(await screen.findByText("아직 저장한 기록이 없어요.")).toBeInTheDocument();

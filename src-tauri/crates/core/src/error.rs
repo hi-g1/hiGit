@@ -29,6 +29,10 @@ pub enum CoreError {
     #[error("지금은 쓸 수 없는 액션입니다")]
     Unavailable(UnavailableReason),
 
+    /// 화면이 액션과 맞지 않는 입력 변형을 보냈다(화면 버그).
+    #[error("액션에 맞지 않는 입력입니다: {0}")]
+    InputMismatch(&'static str),
+
     #[error("미리보기를 먼저 확인해야 합니다")]
     PreviewRequired,
 

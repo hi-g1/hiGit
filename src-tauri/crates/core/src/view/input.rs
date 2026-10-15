@@ -1,0 +1,23 @@
+//! 액션 입력(D-020). 액션마다 입력 구조체를 두고, 화면은 태그 붙은 enum으로 보낸다.
+//! TS에서는 `{ id: "init" } | { id: "commit"; input: CommitInput }` 같은 판별 유니온이 된다.
+//!
+//! 새 액션을 추가하면 변형 하나와 [`ActionInput::action_id`]의 줄 하나를 더한다.
+
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(tag = "id", content = "input", rename_all = "kebab-case")]
+pub enum ActionInput {
+    /// 관리 시작. 입력 없음.
+    Init,
+}
+
+impl ActionInput {
+    /// 이 입력이 가리키는 액션 id. serde 태그와 같아야 한다(테스트로 확인).
+    pub fn action_id(&self) -> &'static str {
+        match self {
+            ActionInput::Init => "init",
+        }
+    }
+}

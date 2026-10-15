@@ -63,11 +63,10 @@ pub fn action_list(state: State<'_, AppState>) -> CmdResult<Vec<ActionMetaView>>
 pub async fn action_preview(
     state: State<'_, AppState>,
     folder: String,
-    id: String,
     input: ActionInput,
 ) -> CmdResult<PreviewView> {
     blocking(state, move |core| {
-        core.preview(&PathBuf::from(folder), &id, &input)
+        core.preview(&PathBuf::from(folder), &input)
     })
     .await
 }
@@ -77,12 +76,11 @@ pub async fn action_preview(
 pub async fn action_execute(
     state: State<'_, AppState>,
     folder: String,
-    id: String,
     input: ActionInput,
     preview_token: Option<String>,
 ) -> CmdResult<ActionResult> {
     blocking(state, move |core| {
-        core.execute(&PathBuf::from(folder), &id, &input, preview_token)
+        core.execute(&PathBuf::from(folder), &input, preview_token)
     })
     .await
 }

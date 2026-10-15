@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use git::CliBackend;
+use higit_core::view::ActionInput;
 use higit_core::{ExecCtx, Executor, GitBackend, Outcome, Registry, RepoState, actions};
-use serde_json::json;
 
 #[test]
 fn init_turns_folder_into_repo() {
@@ -28,7 +28,9 @@ fn init_turns_folder_into_repo() {
         git: &git,
         state: &state,
     };
-    let Outcome::RepoCreated(repo) = exec.execute(&ctx, "init", &json!({}), None).unwrap();
+    let Outcome::RepoCreated(repo) = exec
+        .execute(&ctx, "init", &ActionInput::Init, None)
+        .unwrap();
     assert_eq!(
         std::fs::canonicalize(repo.as_path()).unwrap(),
         std::fs::canonicalize(&folder).unwrap()

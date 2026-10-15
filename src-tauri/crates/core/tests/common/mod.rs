@@ -6,10 +6,10 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use git::{Commit, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
+use higit_core::view::ActionInput;
 use higit_core::{
     Action, ActionMeta, Availability, ExecCtx, GitBackend, Outcome, RepoState, Result, Risk,
 };
-use serde_json::Value;
 
 /// 호출을 기록하는 가짜 git. `discover`는 `repo`를 그대로 돌려준다.
 pub struct FakeGit {
@@ -97,7 +97,6 @@ impl FakeAction {
                 id,
                 glossary_id: "commit",
                 risk,
-                input_schema: Vec::new(),
             },
             executed: AtomicUsize::new(0),
         }
@@ -113,7 +112,7 @@ impl Action for FakeAction {
         Availability::Available
     }
 
-    fn execute(&self, ctx: &ExecCtx<'_>, _input: &Value) -> Result<Outcome> {
+    fn execute(&self, ctx: &ExecCtx<'_>, _input: &ActionInput) -> Result<Outcome> {
         self.executed.fetch_add(1, Ordering::SeqCst);
         Ok(Outcome::RepoCreated(RepoPath::new(&ctx.state.folder)))
     }

@@ -3,8 +3,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use serde_json::Value;
-
+use crate::view::ActionInput;
 use crate::{Availability, CoreError, ExecCtx, Outcome, Preview, Registry, Result, Risk};
 
 /// 미리보기를 보여줬다는 증표. 실행 때 한 번만 쓸 수 있다.
@@ -13,7 +12,7 @@ pub struct PreviewToken(pub String);
 
 struct Ticket {
     action_id: &'static str,
-    input: Value,
+    input: ActionInput,
     folder: std::path::PathBuf,
     issued_at: Instant,
 }
@@ -53,7 +52,7 @@ impl Executor {
         &self,
         ctx: &ExecCtx<'_>,
         id: &str,
-        input: &Value,
+        input: &ActionInput,
     ) -> Result<(Preview, PreviewToken)> {
         let action = self.available_action(ctx, id)?;
         let preview = action.preview(ctx, input)?;
@@ -80,7 +79,7 @@ impl Executor {
         &self,
         ctx: &ExecCtx<'_>,
         id: &str,
-        input: &Value,
+        input: &ActionInput,
         token: Option<&PreviewToken>,
     ) -> Result<Outcome> {
         let action = self.available_action(ctx, id)?;
@@ -111,7 +110,7 @@ impl Executor {
         &self,
         ctx: &ExecCtx<'_>,
         action_id: &str,
-        input: &Value,
+        input: &ActionInput,
         token: &PreviewToken,
     ) -> Result<()> {
         let ticket = self
@@ -137,7 +136,6 @@ mod tests {
     use super::*;
     use crate::{Action, ActionMeta, RepoState};
     use git::{Commit, GitBackend, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
-    use serde_json::json;
 
     struct NoGit;
     impl GitBackend for NoGit {
@@ -166,7 +164,7 @@ mod tests {
         fn available(&self, _: &RepoState) -> Availability {
             Availability::Available
         }
-        fn execute(&self, _: &ExecCtx<'_>, _: &Value) -> Result<Outcome> {
+        fn execute(&self, _: &ExecCtx<'_>, _: &ActionInput) -> Result<Outcome> {
             unreachable!()
         }
     }
@@ -178,7 +176,6 @@ mod tests {
                 id,
                 glossary_id: "commit",
                 risk,
-                input_schema: Vec::new(),
             };
             registry.register(Box::new(Noop(meta))).unwrap();
         }
@@ -201,10 +198,10 @@ mod tests {
             state: &state,
         };
         for _ in 0..3 {
-            exec.preview(&ctx, "safe", &json!({})).unwrap();
+            exec.preview(&ctx, "safe", &ActionInput::Init).unwrap();
         }
         assert_eq!(pending(&exec), 0);
-        exec.preview(&ctx, "caution", &json!({})).unwrap();
+        exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
         assert_eq!(pending(&exec), 1);
     }
 
@@ -220,7 +217,7 @@ mod tests {
             state: &state,
         };
         for _ in 0..3 {
-            exec.preview(&ctx, "caution", &json!({})).unwrap();
+            exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
         }
         // 새로 넣을 때마다 만료된 것을 치우므로 마지막 하나만 남는다.
         assert_eq!(pending(&exec), 1);

@@ -57,7 +57,7 @@ export function Home() {
             <p className={styles.folder}>{plainFolder.folder}</p>
             <div>
               <ActionButton
-                actionId="init"
+                input={{ id: "init" }}
                 folder={plainFolder.folder}
                 onDone={(result) => {
                   setPlainFolder(null);

@@ -5,11 +5,11 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use common::{FakeAction, FakeGit, folder_state, repo_state};
+use higit_core::view::ActionInput;
 use higit_core::{
     Action, CoreError, ExecCtx, Executor, Outcome, PreviewToken, Registry, Risk, UnavailableReason,
     actions,
 };
-use serde_json::json;
 
 /// 가짜 액션을 등록하고, 테스트에서 실행 횟수를 볼 수 있게 Arc로 함께 돌려준다.
 struct Shared(Arc<FakeAction>);
@@ -21,7 +21,7 @@ impl Action for Shared {
     fn available(&self, s: &higit_core::RepoState) -> higit_core::Availability {
         self.0.available(s)
     }
-    fn execute(&self, c: &ExecCtx<'_>, i: &serde_json::Value) -> higit_core::Result<Outcome> {
+    fn execute(&self, c: &ExecCtx<'_>, i: &ActionInput) -> higit_core::Result<Outcome> {
         self.0.execute(c, i)
     }
 }
@@ -63,7 +63,9 @@ fn unknown_action_is_rejected() {
         git: &git,
         state: &state,
     };
-    let err = exec.execute(&ctx, "없음", &json!({}), None).unwrap_err();
+    let err = exec
+        .execute(&ctx, "없음", &ActionInput::Init, None)
+        .unwrap_err();
     assert!(matches!(err, CoreError::UnknownAction(_)));
 }
 
@@ -77,8 +79,10 @@ fn safe_and_normal_run_without_preview() {
         state: &state,
     };
 
-    exec.execute(&ctx, "safe", &json!({}), None).unwrap();
-    exec.execute(&ctx, "normal", &json!({}), None).unwrap();
+    exec.execute(&ctx, "safe", &ActionInput::Init, None)
+        .unwrap();
+    exec.execute(&ctx, "normal", &ActionInput::Init, None)
+        .unwrap();
     assert_eq!(actions[0].executed.load(Ordering::SeqCst), 1);
     assert_eq!(actions[1].executed.load(Ordering::SeqCst), 1);
 }
@@ -93,7 +97,7 @@ fn caution_and_danger_are_refused_until_backup_exists() {
         git: &git,
         state: &state,
     };
-    let input = json!({ "n": 1 });
+    let input = ActionInput::Init;
 
     for (i, id) in ["caution", "danger"].into_iter().enumerate() {
         // 미리보기 없이: 거부
@@ -118,21 +122,14 @@ fn preview_token_must_match() {
         git: &git,
         state: &state,
     };
-    let input = json!({ "n": 1 });
+    let input = ActionInput::Init;
     let mismatch = |r: higit_core::Result<Outcome>| matches!(r, Err(CoreError::PreviewMismatch));
 
     // 없는 토큰
     let fake = PreviewToken("p999".into());
     assert!(mismatch(exec.execute(&ctx, "caution", &input, Some(&fake))));
 
-    // 입력이 다름
-    let (_, token) = exec.preview(&ctx, "caution", &input).unwrap();
-    assert!(mismatch(exec.execute(
-        &ctx,
-        "caution",
-        &json!({ "n": 2 }),
-        Some(&token)
-    )));
+    // 입력이 다른 경우는 입력 변형이 둘 이상 생기는 반복 1의 commit 단계에서 되살린다.
 
     // 다른 액션의 토큰
     let (_, token) = exec.preview(&ctx, "other", &input).unwrap();
@@ -177,9 +174,9 @@ fn expired_token_is_rejected() {
         git: &git,
         state: &state,
     };
-    let (_, token) = exec.preview(&ctx, "caution", &json!({})).unwrap();
+    let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
     let err = exec
-        .execute(&ctx, "caution", &json!({}), Some(&token))
+        .execute(&ctx, "caution", &ActionInput::Init, Some(&token))
         .unwrap_err();
     assert!(matches!(err, CoreError::PreviewMismatch));
 }
@@ -196,7 +193,9 @@ fn init_runs_only_outside_repo() {
         git: &git,
         state: &in_repo,
     };
-    let err = exec.execute(&ctx, "init", &json!({}), None).unwrap_err();
+    let err = exec
+        .execute(&ctx, "init", &ActionInput::Init, None)
+        .unwrap_err();
     assert!(matches!(
         err,
         CoreError::Unavailable(UnavailableReason::AlreadyRepo)
@@ -208,7 +207,9 @@ fn init_runs_only_outside_repo() {
         git: &git,
         state: &folder,
     };
-    let outcome = exec.execute(&ctx, "init", &json!({}), None).unwrap();
+    let outcome = exec
+        .execute(&ctx, "init", &ActionInput::Init, None)
+        .unwrap();
     assert_eq!(git.calls(), ["Init /새 폴더"]);
     assert_eq!(
         outcome,

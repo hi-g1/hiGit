@@ -1,13 +1,16 @@
 //! 화면에 보내는 타입(D-019). 바인딩용 derive(serde, specta)는 이 모듈에만 붙인다.
 //! `git` 크레이트 타입은 여기서 옮겨 담고, 화면에 그대로 노출하지 않는다.
 
-use std::collections::BTreeMap;
 use std::path::Path;
+
+mod input;
+
+pub use input::ActionInput;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::{ActionMeta, CoreError, InputKind, Outcome, Risk, UnavailableReason};
+use crate::{ActionMeta, CoreError, Outcome, Risk, UnavailableReason};
 
 /// 앱 시작 시 확인한 환경.
 #[derive(Debug, Clone, Serialize, Type)]
@@ -193,7 +196,6 @@ pub struct ActionMetaView {
     pub id: String,
     pub glossary_id: String,
     pub risk: RiskView,
-    pub input_schema: Vec<InputFieldView>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -203,20 +205,6 @@ pub enum RiskView {
     Normal,
     Caution,
     Danger,
-}
-
-#[derive(Debug, Clone, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct InputFieldView {
-    pub name: String,
-    pub kind: InputKindView,
-    pub required: bool,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum InputKindView {
-    Text,
 }
 
 impl From<&ActionMeta> for ActionMetaView {
@@ -230,24 +218,9 @@ impl From<&ActionMeta> for ActionMetaView {
                 Risk::Caution => RiskView::Caution,
                 Risk::Danger => RiskView::Danger,
             },
-            input_schema: m
-                .input_schema
-                .iter()
-                .map(|f| InputFieldView {
-                    name: f.name.to_string(),
-                    kind: match f.kind {
-                        InputKind::Text => InputKindView::Text,
-                    },
-                    required: f.required,
-                })
-                .collect(),
         }
     }
 }
-
-/// 액션 입력. 키는 `input_schema`의 필드 이름, 값은 입력한 글자.
-/// (`serde_json::Value`는 재귀 타입이라 specta rc.25가 내보내지 못한다.)
-pub type ActionInput = BTreeMap<String, String>;
 
 /// 미리보기와 실행 때 돌려줄 증표.
 #[derive(Debug, Clone, Serialize, Type)]
@@ -314,7 +287,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::PreviewMismatch => ErrorCode::PreviewMismatch,
             CoreError::NotYetSupported => ErrorCode::NotYetSupported,
             CoreError::Git(_) => ErrorCode::GitFailed,
-            CoreError::DuplicateAction(_) => ErrorCode::Internal,
+            CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,
         };
         let detail = e.detail().or_else(|| match code {
             ErrorCode::Internal | ErrorCode::UnknownAction => Some(e.to_string()),

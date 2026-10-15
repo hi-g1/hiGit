@@ -14,8 +14,7 @@ mod state;
 pub mod view;
 
 pub use action::{
-    Action, ActionMeta, Availability, ExecCtx, InputField, InputKind, Outcome, Preview, Risk,
-    UnavailableReason,
+    Action, ActionMeta, Availability, ExecCtx, Outcome, Preview, Risk, UnavailableReason,
 };
 pub use bootstrap::{Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, Result};
