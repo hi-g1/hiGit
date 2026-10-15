@@ -107,11 +107,24 @@ impl ActionInput {
                         },
                     })
                     .collect(),
-                locale: i.locale.clone(),
+                locale: journal_locale(&i.locale),
+            }),
+            // 화면이 준 언어 글자는 길이 제한이 없다. 줄에는 쓰이는 두 값만 남긴다.
+            ActionInput::Merge(i) => ActionInput::Merge(MergeInput {
+                branch: i.branch.clone(),
+                locale: journal_locale(&i.locale),
+            }),
+            ActionInput::Sync(i) => ActionInput::Sync(SyncInput {
+                locale: journal_locale(&i.locale),
             }),
             other => other.clone(),
         }
     }
+}
+
+/// 합친 버전 이름의 언어는 `ko`로 시작하는지만 본다(그 밖은 영어).
+fn journal_locale(locale: &str) -> String {
+    if locale.starts_with("ko") { "ko" } else { "en" }.to_string()
 }
 
 /// 파일 경로 목록. 경로는 바뀐 내용 목록이 준 저장소 기준 경로(구분자 `/`)다.
@@ -235,4 +248,33 @@ pub struct RestoreInput {
 pub struct SyncInput {
     /// 합친 버전 메시지에 쓸 앱 언어("ko", "en").
     pub locale: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn journal_copy_keeps_only_the_two_locales() {
+        let long = "ko-KR".to_string() + &"x".repeat(10_000);
+        let copy = ActionInput::Sync(SyncInput { locale: long }).journal_copy();
+        assert_eq!(
+            copy,
+            ActionInput::Sync(SyncInput {
+                locale: "ko".into()
+            })
+        );
+        let copy = ActionInput::Merge(MergeInput {
+            branch: "main".into(),
+            locale: "아무거나".into(),
+        })
+        .journal_copy();
+        assert_eq!(
+            copy,
+            ActionInput::Merge(MergeInput {
+                branch: "main".into(),
+                locale: "en".into()
+            })
+        );
+    }
 }
