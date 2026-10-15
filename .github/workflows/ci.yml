@@ -31,6 +31,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libssl-dev build-essential libxdo-dev libayatana-appindicator3-dev
+          # git 오류가 한국어 환경에서도 영어로 나오는지 실제로 시험하려고 한국어 번역·로케일을 깐다(D-021).
+          sudo apt-get install -y language-pack-ko
 
       - uses: pnpm/action-setup@v6
 

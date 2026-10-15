@@ -1,5 +1,6 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 use std::sync::Arc;
 
 use crate::{GitError, Result};
@@ -12,6 +13,7 @@ pub(crate) struct Runner {
     configure: ConfigureCommand,
 }
 
+#[derive(Debug)]
 pub(crate) struct GitOutput {
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
@@ -38,35 +40,83 @@ impl Runner {
         Self { git, configure }
     }
 
-    /// `cwd`에서 git을 실행하고, 성공하면 출력을 돌려준다.
+    /// `cwd`에서 git을 실행하고, 성공하면 출력을 돌려준다. stdin은 막는다.
     pub fn run(&self, cwd: Option<&Path>, args: &[&str]) -> Result<GitOutput> {
+        let mut cmd = self.command(cwd, args);
+        cmd.stdin(Stdio::null());
+        let out = cmd.output().map_err(GitError::Spawn)?;
+        finish(args, out)
+    }
+
+    /// `input`을 stdin으로 넘겨 git을 실행한다(예: `--pathspec-from-file=-`).
+    // 저장에 넣기·빼기(반복 1의 7단계)에서 쓴다. 그 전에는 테스트에서만 쓰인다.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn run_with_stdin(
+        &self,
+        cwd: Option<&Path>,
+        args: &[&str],
+        input: &[u8],
+    ) -> Result<GitOutput> {
+        let mut cmd = self.command(cwd, args);
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        // 입력을 다른 스레드에서 써야 큰 입력에서 출력 파이프가 차서 서로 기다리는 일이 없다.
+        let mut stdin = child.stdin.take().expect("stdin은 piped");
+        let input = input.to_vec();
+        let writer = std::thread::spawn(move || stdin.write_all(&input));
+        let out = child.wait_with_output().map_err(GitError::Spawn)?;
+        // git이 입력을 다 읽기 전에 끝나면(인자 오류 등) 쓰기가 실패할 수 있다. 결과는 종료 코드로 판단한다.
+        let _ = writer.join();
+        finish(args, out)
+    }
+
+    fn command(&self, cwd: Option<&Path>, args: &[&str]) -> Command {
         let mut cmd = Command::new(&self.git);
-        // 영어 원문 오류, 프롬프트 없음, 페이저 없음, 읽기 작업이 index 잠금을 잡지 않음.
+        // OS별 설정을 먼저 붙이고, 아래 앱 고정 설정이 마지막에 이기게 한다.
+        (self.configure)(&mut cmd);
+        // 영어 원문 오류(D-021), 프롬프트 없음, 페이저 없음, 읽기 작업이 index 잠금을 잡지 않음.
+        // LANGUAGE는 gettext에서 LC_ALL보다 앞설 수 있어 지운다.
         cmd.env("LC_ALL", "C")
+            .env_remove("LANGUAGE")
             .env("GIT_TERMINAL_PROMPT", "0")
             .env("GIT_PAGER", "cat")
             .env("GIT_OPTIONAL_LOCKS", "0")
             // 한글 파일명을 따옴표·8진수 이스케이프 없이 받는다.
             .args(["-c", "core.quotepath=off", "-c", "color.ui=never"])
-            .args(args)
-            .stdin(Stdio::null());
+            .args(args);
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
-        (self.configure)(&mut cmd);
-
-        let out = cmd.output().map_err(GitError::Spawn)?;
-        if out.status.success() {
-            Ok(GitOutput {
-                stdout: out.stdout,
-                stderr: out.stderr,
-            })
-        } else {
-            Err(GitError::Failed {
-                args: args.iter().map(|a| a.to_string()).collect(),
-                code: out.status.code(),
-                stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
-            })
-        }
+        cmd
     }
+}
+
+fn finish(args: &[&str], out: Output) -> Result<GitOutput> {
+    if out.status.success() {
+        Ok(GitOutput {
+            stdout: out.stdout,
+            stderr: out.stderr,
+        })
+    } else {
+        Err(GitError::Failed {
+            args: args.iter().map(|a| a.to_string()).collect(),
+            code: out.status.code(),
+            stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+        })
+    }
+}
+
+/// 경로 목록을 `--pathspec-from-file=- --pathspec-file-nul`용 stdin 바이트로 만든다.
+/// 명령줄로 넘기지 않으므로 Windows 명령줄 길이 제한(32K)에 걸리지 않는다.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn nul_separated(paths: &[String]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for path in paths {
+        bytes.extend_from_slice(path.as_bytes());
+        bytes.push(0);
+    }
+    bytes
 }

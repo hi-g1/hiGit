@@ -8,7 +8,8 @@ pub use runner::ConfigureCommand;
 use runner::Runner;
 
 use crate::{
-    Commit, GitBackend, GitError, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Result, Status,
+    Commit, FailureKind, GitBackend, GitError, GitOp, GitVersion, LogQuery, OpOutput, RepoPath,
+    Result, Status,
 };
 
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
@@ -41,11 +42,8 @@ impl GitBackend for CliBackend {
                 let top = out.stdout_utf8()?;
                 Ok(Some(RepoPath::new(top.trim_end_matches(['\n', '\r']))))
             }
-            // LC_ALL=C로 실행하므로 영어 원문으로 판별한다. 그 밖의 실패
-            // (예: safe.directory 소유자 검사)는 저장소가 아닌 것으로 숨기지 않는다.
-            Err(GitError::Failed { ref stderr, .. }) if stderr.contains("not a git repository") => {
-                Ok(None)
-            }
+            // 그 밖의 실패(예: safe.directory 소유자 검사)는 저장소가 아닌 것으로 숨기지 않는다.
+            Err(e) if e.kind() == FailureKind::NotARepository => Ok(None),
             Err(e) => Err(e),
         }
     }
@@ -161,6 +159,95 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let missing = RepoPath::new(dir.path().join("없는 폴더"));
         assert!(testutil::backend().run(&missing, &GitOp::Init).is_err());
+    }
+
+    #[test]
+    fn errors_stay_english_in_korean_locale() {
+        // 사용자 환경이 한국어라고 가정한다. 앱 설정(LC_ALL=C, LANGUAGE 지움)이 이겨야 한다.
+        let korean: ConfigureCommand = std::sync::Arc::new(|cmd: &mut std::process::Command| {
+            cmd.env("LANG", "ko_KR.UTF-8")
+                .env("LANGUAGE", "ko")
+                .env("LC_MESSAGES", "ko_KR.UTF-8");
+        });
+        let dir = tempfile::tempdir().unwrap();
+
+        // 대조군: 앱 설정 없이 같은 환경이면 한국어가 나오는지(번역이 설치된 환경인지) 본다.
+        let control = std::process::Command::new("git")
+            .args(["rev-parse", "--show-toplevel"])
+            .current_dir(dir.path())
+            .env_remove("LC_ALL")
+            .env("LANG", "ko_KR.UTF-8")
+            .env("LANGUAGE", "ko")
+            .env("LC_MESSAGES", "ko_KR.UTF-8")
+            .output()
+            .unwrap();
+        let control = String::from_utf8_lossy(&control.stderr);
+        if control.contains("not a git repository") {
+            eprintln!("참고: 이 환경에는 git 한국어 번역이 없어 대조군도 영어입니다.");
+        } else {
+            eprintln!("대조군(한국어 확인됨): {}", control.trim());
+        }
+
+        let backend = CliBackend::new("git", korean);
+        let err = backend
+            .runner
+            .run(Some(dir.path()), &["rev-parse", "--show-toplevel"])
+            .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::NotARepository, "{}", err.detail());
+        assert!(err.detail().contains("not a git repository"));
+        assert_eq!(backend.discover(dir.path()).unwrap(), None);
+    }
+
+    #[test]
+    fn paths_go_through_stdin() {
+        let repo = testutil::init_repo();
+        let names = ["한글 파일.txt", "공백 있는 이름.md", "별*표[1].txt"];
+        for name in names {
+            std::fs::write(repo.path().join(name), "내용").unwrap();
+        }
+        let paths: Vec<String> = names.iter().map(|n| n.to_string()).collect();
+        let backend = testutil::backend();
+        backend
+            .runner
+            .run_with_stdin(
+                Some(repo.path()),
+                &[
+                    "--literal-pathspecs",
+                    "add",
+                    "--pathspec-from-file=-",
+                    "--pathspec-file-nul",
+                ],
+                &runner::nul_separated(&paths),
+            )
+            .unwrap();
+
+        let status = backend.status(&RepoPath::new(repo.path())).unwrap();
+        let mut staged: Vec<_> = status
+            .entries
+            .iter()
+            .filter(|e| e.index == crate::Change::Added)
+            .map(|e| e.path.as_str())
+            .collect();
+        staged.sort();
+        let mut want = names.to_vec();
+        want.sort();
+        assert_eq!(staged, want);
+    }
+
+    #[test]
+    fn large_stdin_does_not_block() {
+        // 파이프 버퍼보다 큰 입력과 출력이 동시에 오가도 멈추지 않아야 한다.
+        let dir = tempfile::tempdir().unwrap();
+        let input = "가".repeat(200_000);
+        let out = testutil::backend()
+            .runner
+            .run_with_stdin(
+                Some(dir.path()),
+                &["hash-object", "--stdin"],
+                input.as_bytes(),
+            )
+            .unwrap();
+        assert_eq!(out.stdout_utf8().unwrap().trim().len(), 40);
     }
 
     #[test]

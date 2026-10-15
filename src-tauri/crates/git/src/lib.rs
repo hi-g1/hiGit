@@ -5,6 +5,7 @@
 mod backend;
 mod cli;
 mod error;
+mod failure;
 mod types;
 
 #[cfg(test)]
@@ -13,6 +14,7 @@ mod testutil;
 pub use backend::GitBackend;
 pub use cli::{CliBackend, ConfigureCommand};
 pub use error::{GitError, Result};
+pub use failure::FailureKind;
 pub use types::{
     BranchInfo, Change, Commit, EntryKind, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status,
     StatusEntry,

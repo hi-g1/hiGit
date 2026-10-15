@@ -1,5 +1,7 @@
 use std::io;
 
+use crate::failure::{self, FailureKind};
+
 pub type Result<T> = std::result::Result<T, GitError>;
 
 #[derive(Debug, thiserror::Error)]
@@ -13,6 +15,8 @@ pub enum GitError {
     Failed {
         args: Vec<String>,
         code: Option<i32>,
+        /// 일부 명령(예: commit의 "nothing to commit")은 실패 이유를 stdout에 쓴다.
+        stdout: String,
         stderr: String,
     },
 
@@ -22,11 +26,25 @@ pub enum GitError {
 }
 
 impl GitError {
+    /// 실패 종류(D-021). git 실행 자체가 안 되었거나 출력이 이상하면 `Other`.
+    pub fn kind(&self) -> FailureKind {
+        match self {
+            GitError::Failed { stdout, stderr, .. } => failure::classify(stdout, stderr),
+            _ => FailureKind::Other,
+        }
+    }
+
     /// 사용자에게 "자세히 보기"로 보여줄 원문.
     pub fn detail(&self) -> String {
         match self {
             GitError::Spawn(e) => e.to_string(),
-            GitError::Failed { stderr, .. } => stderr.clone(),
+            GitError::Failed { stdout, stderr, .. } => {
+                if stderr.trim().is_empty() {
+                    stdout.clone()
+                } else {
+                    stderr.clone()
+                }
+            }
             GitError::Parse(msg) => msg.clone(),
         }
     }
