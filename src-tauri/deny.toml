@@ -1,0 +1,46 @@
+# 의존성 검사(D-038). src-tauri에서 `cargo deny check`. CI의 deny 작업이 매번 돈다.
+
+[graph]
+# Windows 전용 의존성도 한 번에 본다. 그래서 CI 작업은 Ubuntu 하나로 충분하다.
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+all-features = false
+
+[advisories]
+version = 2
+# 관리 중단 경고는 우리가 직접 고른 의존성에서만 실패로 본다.
+unmaintained = "workspace"
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+# publish = false인 우리 crate는 라이선스 필드가 없어도 된다.
+private = { ignore = true }
+confidence-threshold = 0.9
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unlicense",
+    "CC0-1.0",
+    # 파일 단위 약한 copyleft. Tauri가 끌고 오는 cssparser·selectors 등. 고치지 않고 쓰므로 의무가 없다.
+    "MPL-2.0",
+]
+
+[bans]
+# Tauri 트리에 같은 crate의 여러 버전이 많아 실패로 두면 매번 깨진다.
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
