@@ -39,7 +39,7 @@
 │  ├─ features/<action-id>/
 │  ├─ ui/
 │  ├─ glossary/              ko.ts, en.ts  (용어 원본은 docs/spec.md 표)
-│  ├─ lib/                   api.ts(백엔드 호출, invoke는 lib/ 안에서만), events.ts(이벤트 구독), queries.ts(TanStack Query), useRepoWatch.ts, dialog.ts, bindings.ts(생성물)
+│  ├─ lib/                   api.ts(백엔드 호출, invoke는 lib/ 안에서만), events.ts(이벤트 구독), queries.ts(TanStack Query), useRepoWatch.ts, dialog.ts, shortcuts.ts·useShortcut.ts(단축키 표와 판정은 여기만, D-056), bindings.ts(생성물)
 │  ├─ messages/              ko.ts, en.ts 화면 문구(copy-rules.test.ts가 문구 규칙 확인)
 │  └─ styles/tokens.css      docs/design.md 토큰
 └─ src-tauri/               app 크레이트 겸 워크스페이스 루트(D-018)
@@ -62,20 +62,43 @@ Rust 크레이트를 나누면 컴파일 경계가 생겨 의존 방향이 강�
 
 ```rust
 pub trait GitBackend: Send + Sync {
-    fn version(&self) -> Result<GitVersion>;                          // 반복 0. 2.30 이상 확인(D-003). 2.38은 D-036 제안
-    fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 반복 0. 고른 폴더의 저장소 최상위 찾기
-    fn status(&self, repo: &RepoPath) -> Result<Status>;              // 반복 0
-    fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>; // 반복 0
-    fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 반복 1a. 전역 무시 규칙 파일(감시용)
-    fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 반복 1a. 마지막 버전과 지금을 합쳐 비교
-    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 반복 1b에서 구현
-    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;   // 반복 1a까지 Init, Stage, Unstage, Commit. 쓰기 작업은 전부 여기로
-    fn resolve_ref(&self, repo: &RepoPath, r: &str) -> Result<Oid>;   // 반복 2에서 구현(백업 참조)
-    fn update_ref(&self, repo: &RepoPath, name: &str, oid: Oid) -> Result<()>; // 반복 2에서 구현(백업 참조)
+    // 반복 0~1a
+    fn version(&self) -> Result<GitVersion>;                          // 2.30 이상 확인(D-003, D-050)
+    fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;      // 고른 폴더의 저장소 최상위 찾기
+    fn status(&self, repo: &RepoPath) -> Result<Status>;
+    fn log(&self, repo: &RepoPath, query: &LogQuery) -> Result<Vec<Commit>>;
+    fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 전역 무시 규칙 파일(감시용)
+    fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 마지막 버전과 지금을 합쳐 비교
+    // 반복 1b: 브랜치·원격
+    fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 로컬·원격, 원격 HEAD 별칭 뺌
+    fn remotes(&self, repo: &RepoPath) -> Result<Vec<Remote>>;
+    fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>>; // 원격 기본 브랜치
+    fn check_branch_name(&self, name: &str) -> Result<bool>;          // check-ref-format + `-`·HEAD 막기
+    fn current_branch(&self, repo: &RepoPath) -> Result<Option<String>>;
+    // 반복 1b: ref (core가 만든 refs/higit/* 와 되돌리기)
+    fn list_refs(&self, repo: &RepoPath, prefix: &str) -> Result<Vec<RefEntry>>;
+    fn resolve_ref(&self, repo: &RepoPath, name: &str) -> Result<Option<Oid>>;
+    fn update_ref(&self, repo: &RepoPath, name: &str, new: &Oid, expect: &RefExpect) -> Result<()>; // 그사이 바뀌면 실패
+    fn delete_ref(&self, repo: &RepoPath, name: &str, expect: &RefExpect) -> Result<()>;
+    fn git_dir(&self, repo: &RepoPath) -> Result<PathBuf>;             // journal 위치. worktree면 .git/worktrees/<이름>
+    fn write_tree(&self, repo: &RepoPath) -> Result<Option<Oid>>;      // index 트리(되돌리기). 충돌 중이면 None
+    // 반복 1b: 기록 비교 (홈·동기화)
+    fn is_ancestor(&self, repo: &RepoPath, ancestor: &str, descendant: &str) -> Result<bool>;
+    fn count_between(&self, repo: &RepoPath, left: &str, right: &str) -> Result<(u32, u32)>;
+    fn merge_base(&self, repo: &RepoPath, a: &str, b: &str) -> Result<Option<Oid>>;
+    fn merge_check(&self, repo: &RepoPath, base: Option<&str>, ours: &str, theirs: &str) -> Result<MergeCheck>; // 겹침 미리 보기(D-050)
+    // 반복 1b: 맡겨 두기·신뢰
+    fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
+    fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>; // 신뢰 확인용(D-039)
+    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>); // "끄고 열기"의 -c 덮어쓰기
+    // 쓰기 작업은 전부 여기로
+    fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
 }
 ```
 
-- 이 트레이트는 목표 설계다. 코드에는 해당 반복에 필요한 메서드만 구현해 넣는다.
+- 코드에는 해당 반복에 필요한 메서드만 구현해 넣는다. 위는 1b까지 구현한 것이다.
+- `GitOp`(1b까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `StashDropIf`, `Unpark`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ReadTree`, `AddSafeDirectory`.
+- `merge_check`는 git 2.38 이상이면 `merge-tree --write-tree`, 그보다 낮으면 임시 index에 `read-tree -m`으로 겹침만 본다(D-050). 사용자의 index와 작업 폴더는 건드리지 않는다.
 - `LogQuery`는 나중에 확대·축소 단계(버전만 / 합치기까지 / 전체)를 받을 자리를 둔다(D-017 제안).
 
 - `GitOp`는 enum(Init, Commit, Merge, Rebase, Reset …). 새 쓰기 작업은 enum 변형 하나 + `CliBackend` 매핑 하나를 추가한다.
@@ -86,11 +109,19 @@ pub trait GitBackend: Send + Sync {
 
 #### git 실행 규칙 (D-035)
 - 인자는 배열로 넘기고 셸을 거치지 않는다. 문자열을 이어 붙여 명령줄을 만들지 않는다.
-- 리비전 앞에는 `--end-of-options`, 경로 앞에는 `--`. 경로 목록은 위처럼 stdin으로. 리비전은 `crates/git/src/cli/args.rs`의 `push_revs`로만 붙인다. 이 표시는 git 2.34 이상에서 확인한 명령에만 넣고, `checkout`·`reset`·`check-ref-format`에는 넣지 않는다(2.34.1에서 오동작). 넣지 못하는 경우는 core의 이름 검사가 막는다.
+- 리비전 앞에는 `--end-of-options`, 경로 앞에는 `--`. 경로 목록은 위처럼 stdin으로. 리비전은 `crates/git/src/cli/args.rs`의 `push_revs`로만 붙인다(git 크레이트에서 `--end-of-options` 글자는 이 함수에만 있다). 이 표시는 git 2.34 이상에서 확인한 명령(`args::Cmd`)에만 넣고, `checkout`·`reset`·`check-ref-format`에는 넣지 않는다(2.34.1에서 오동작). 넣지 못하는 경우는 core의 이름 검사가 막는다. 새 명령에 리비전을 넘기면 `Cmd`에 변형을 더하고 Ubuntu 22.04 기본 git(2.34.1) CI 작업에서 확인한다.
 - 공통 환경에 `PAGER=cat`, `GIT_EDITOR=:`(편집기를 띄우지 않는 특별 값), `GIT_ALLOW_PROTOCOL=https:ssh:git`도 둔다. 상위 프로세스의 `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE` 등 저장소 위치 변수는 지운다(D-052). 로컬 경로 원격은 테스트에서만 `CliBackend::allow_local_remotes_for_tests()`로 켠다. 조회는 `--no-ext-diff`, `--no-textconv`.
-- 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
+- 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 이름과 원격에서 온 브랜치 이름도 git에 넘기기 전에 core의 `actions/names.rs` 검사를 거친다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
+- 저장소 파일을 읽을 때 심볼릭 링크는 따라가지 않고 링크 대상 글자만 보여준다(D-052). 경로는 저장소 루트 안만 받는다.
 - git 실행 파일은 시작할 때 절대 경로로 한 번 찾아 그 경로만 쓴다.
-- 원격 작업은 `CliBackend::run_network`로만 한다. 사용자가 누른 작업은 10분, 저절로 하는 원격 확인은 60초가 지나면 프로세스 트리째 끝낸다(`ProcessControl`, platform의 `prepare_killable`·`kill_tree`). 로컬 조회·쓰기는 끝내지 않는다(D-066). 사용자가 SSH 명령을 정하지 않았으면 `GIT_SSH_COMMAND=ssh -o BatchMode=yes`(D-023). 백그라운드는 `GCM_INTERACTIVE=never`, `credential.interactive=never`, `SSH_ASKPASS_REQUIRE=never`, `gc.auto=0`.
+- 원격 작업은 `CliBackend::run_network`로만 한다. 로컬 조회·쓰기는 끝내지 않는다(D-066).
+
+| 작업 | 시간 제한 | 끝내는 방법 |
+| --- | --- | --- |
+| 사용자가 누른 원격 작업(fetch·pull·push·sync) | 10분(`NETWORK_TIMEOUT`) | 프로세스 트리째(`ProcessControl`, platform의 `prepare_killable`·`kill_tree`) |
+| 저절로 하는 원격 확인(D-055) | 60초(`BACKGROUND_TIMEOUT`) | 같음. 묻는 창을 띄우지 않는 백그라운드 모드 |
+| 로컬 조회·쓰기 | 없음 | 끝내지 않는다(index를 쓰는 중에 끊으면 깨진다) |
+ 사용자가 SSH 명령을 정하지 않았으면 `GIT_SSH_COMMAND=ssh -o BatchMode=yes`(D-023). 백그라운드는 `GCM_INTERACTIVE=never`, `credential.interactive=never`, `SSH_ASKPASS_REQUIRE=never`, `gc.auto=0`.
 - 믿지 않기로 한 저장소(D-039)는 모든 호출에 실행 설정을 끄는 `-c` 덮어쓰기를 붙인다.
 
 ### Action (crates/core) — 상태를 바꾸는 기능
@@ -122,13 +153,22 @@ pub enum ActionInput { Init, /* Commit(CommitInput), … */ }
 
 ```
 execute(action, input):
+  잠금: 작업 폴더 잠금, 원격 잠금, 또는 둘 다 (아래 "잠금")
   if undo == Irreversible: 프론트가 확인을 받았는지 확인 (확인 토큰)
-  if risk >= Caution: 백업 참조 생성  refs/higit/backup/<timestamp>/<HEAD 이름>
-  before = 되돌리는 데 필요한 상태 (HEAD, 브랜치, 맡겨 둔 stash oid 등. undo 종류가 정함)
+  if risk >= Caution: 백업 ref 생성  refs/higit/backup/<UTC 시각>-<순번>/<이름>. 실패하면 실행하지 않음
+  before = UndoState::capture  (HEAD, 브랜치, 맡긴 stash 해시, index 트리)
   result = action.execute()
-  if undo != Irreversible: journal에 {action, input, before, 백업 참조, 시각} 추가 → 화면에 되돌리기 띄움
+  after  = UndoState::capture
+  journal: is_recorded면 Action 줄, is_barrier면 Barrier 줄, Nothing이면 남기지 않음
   (화면 갱신은 파일 변경 감시가 맡는다. 실행기가 이벤트를 보내지 않는다)
 ```
+
+1b까지 등록한 액션: `init`, `stage`, `unstage`, `commit`, `branch-create`, `switch`, `fetch`, `pull`, `push`, `sync`.
+
+#### 잠금 둘
+- `Core.busy`(작업 폴더): index·작업 폴더를 쓰는 작업. 같은 저장소에서 둘이 겹치면 index.lock이 부딪히므로 나중 것은 `Busy`로 거절한다.
+- `Core.net_busy`(원격): 원격과 통신하는 작업. 원격 확인(fetch)은 이것만 잡아 버전 저장을 막지 않는다. pull·push·sync는 둘 다 잡고, 되돌리기·다시 하기는 작업 폴더 잠금을 잡는다.
+- 잠금은 저장소 경로별 `HashSet`이고, `BusyGuard`가 오류여도 푼다. 프로세스 사이 잠금은 git의 index.lock에 맡긴다.
 
 ### Query (crates/core) — 조회 (D-010)
 
@@ -140,6 +180,7 @@ impl Queries {
     pub fn diff(&self, repo: &Path, r: &view::DiffRequest) -> Result<view::FileDiffView>; // 반복 1a. 경로는 저장소 안만. 링크는 대상만(D-052)
     pub fn branches(&self, repo: &Path) -> Result<view::BranchListView>;        // 반복 1b. 맡긴 파일 수, 기본 브랜치
     pub fn check_branch_name(&self, repo: &Path, name: &str) -> Result<view::BranchNameCheck>; // 반복 1b
+    pub fn home_map(&self, repo: &Path) -> Result<view::HomeMapView>;          // 반복 1b. 홈 두 줄 노선도(D-060)
     pub fn project_summary(&self, repo: &Path) -> Result<view::ProjectSummaryView>; // 시작 화면
 }
 ```
@@ -157,27 +198,40 @@ impl Queries {
 - 화면(`useRepoWatch`)은 작업 폴더 변경이면 변경 사항·비교, `.git` 변경이면 변경 사항·버전 기록·비교를 다시 읽는다(1초에 한 번). 감시가 꺼지면 안내 줄과 "다시 읽기"를 보여주고 창 포커스 새로 고침으로 대신한다(D-025).
 - 알려진 제약: 무시된 폴더에도 감시 등록은 된다(Ubuntu inotify 한도에 걸리면 멈춤으로 떨어짐). `core.excludesFile`이 없을 때 git의 기본 전역 무시 파일은 읽지 않는다.
 
-### 되돌리기와 UndoJournal (crates/core, D-042)
-- 앱이 한 작업 목록을 `.git/higit/journal.jsonl`에 남긴다(저장소마다 따로, 저장소를 옮겨도 따라감).
-- 레지스트리의 Action마다 `undo`를 정한다. 되돌리기는 별도 Action을 새로 만들지 않고 journal 항목과 그 Action의 `undo`로 실행기가 처리한다.
+### 되돌리기와 UndoJournal (crates/core/src/undo, D-042, D-063, D-065)
+- 앱이 한 작업 목록을 `<git 폴더>/higit/journal.jsonl`에 남긴다(저장소마다 따로, 저장소를 옮겨도 따라감. worktree는 자기 git 폴더).
+- 레지스트리의 Action마다 `undo`를 정한다. 되돌리기는 별도 Action을 새로 만들지 않고 journal 항목과 그 Action의 `undo`로 `undo::run`이 처리한다. 명령은 `undo_last`, `redo_last`.
 
 ```rust
 pub enum UndoKind {
-    RestoreRef,      // HEAD·브랜치를 before의 oid로 되돌림. 고친 파일은 그대로(버전 저장, 이 버전으로 돌아가기)
-    RestoreIndex,    // index를 before의 tree로(이번 버전에 넣기·빼기)
+    Nothing,         // 되돌릴 것이 없음. journal에 남기지 않음(원격 확인, 관리 시작)
+    RestoreRef,      // HEAD·브랜치를 before로. 고친 파일은 그대로(버전 저장. 모두 넣고 저장이면 index도)
+    RestoreIndex,    // index를 before의 tree로(이번 버전에 넣기·빼기). 1b는 경계 줄만
     SwitchBack,      // 이전 브랜치로 갈아타고 맡겨 둔 stash를 다시 꺼냄(브랜치 갈아타기)
-    DeleteCreated,   // 만든 ref를 지움(새 브랜치, 태그)
-    Inverse,         // 기록을 바꾸지 않는 반대 동작(원격에 올린 뒤의 되돌리기, revert)
+    DeleteCreated,   // 만든 ref를 지움(새 브랜치)
+    Inverse,         // 기록을 바꾸지 않는 반대 동작(원격에 올린 뒤, revert). 1b는 "되돌릴 수 없음" 안내만
     Irreversible,    // 되돌릴 수 없음. 실행 전 확인(덮어쓰며 올리기, 고친 것 버리기)
 }
 ```
 
-- 되돌리기(Ctrl+Z, 화면 아래 "되돌리기")는 journal 마지막 항목을 꺼내 `undo` 종류대로 되돌리고 항목에 `undone`을 적는다. 다시 하기(Ctrl+Shift+Z)는 `undone` 항목의 input으로 Action을 다시 실행한다.
-- 되돌리기 전에 HEAD가 journal의 결과와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) 되돌리지 않고 "복구" 화면으로 안내한다.
-- 되돌리는 동작도 실행기를 거쳐 백업 ref를 남긴다. 그래서 되돌리기를 잘못 눌러도 살릴 수 있다.
-- 원격에 올린 버전을 바꾸는 되돌리기는 `RestoreRef` 대신 `Inverse`로 떨어지거나 막는다(올린 기록을 몰래 바꾸지 않음).
-- 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 일반 stash 목록과 섞지 않는다.
-- "복구" 화면 = journal + `git reflog` + `refs/higit/backup/*`를 시간순으로 합쳐 보여준다.
+journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
+
+```
+{"v":1,"type":"action","id":…,"at":unix초,"action":"commit","input":{…},"before":UndoState,"after":UndoState,"kind":"restoreRef","sig":…}
+{"v":1,"type":"barrier","at":…,"action":"…","sig":…}     // 이 앞 줄은 되돌리지 않는다(D-065)
+{"v":1,"type":"undo","target":<action id>,"at":…,"sig":…}
+{"v":1,"type":"redo","target":<action id>,"at":…,"sig":…}
+```
+
+- `sig`는 앱 데이터 폴더의 키(`journal.key`)로 만든 HMAC-SHA256이다(D-063). 서명이 맞지 않거나 형식이 이상한 줄은 읽을 때 버린다. 받은 zip 저장소에 남이 만든 줄이 있어도 되돌리기가 그 줄을 따르지 않는다. 4MB를 넘으면 뒤쪽만 읽는다.
+- `UndoState = { head, branch, parked: [(브랜치, stash 해시)], index_tree }`.
+- 되돌리기(Ctrl+Z, 토스트 "되돌리기")는 마지막 경계 뒤의 되돌리지 않은 Action 줄을 `kind`대로 되돌리고 `undo` 줄을 덧붙인다. 다시 하기(Ctrl+Shift+Z)는 같은 버전을 ref로 되살린다(D-065. 버전을 새로 만들지 않는다).
+- 되돌리기 전에 지금 HEAD·브랜치가 줄의 `after`와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) `UndoStale`로 거절한다. 반복 2에서 "복구" 화면으로 안내한다.
+- 되돌리기는 ref를 옮기기 전에 지금 버전을 백업 ref로 남긴다. 백업을 못 쓰면 되돌리지 않는다.
+- 원격에 올린 버전을 바꾸는 되돌리기는 하지 않는다(`UndoPushed`). 올린 기록을 몰래 바꾸지 않는다.
+- 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 브랜치 이름의 `/`는 `%2F`로 적는다(D-064). 일반 stash 목록과 섞지 않는다(만든 뒤 `StashDropIf`로 뺀다).
+- `refs/higit/`를 만드는 코드는 core의 `undo`·`parked`·`actions/switch` 모듈에만 둔다.
+- "복구" 화면(반복 2) = journal + `git reflog` + `refs/higit/backup/*`를 시간순으로 합쳐 보여준다.
 
 ### HostingProvider (crates/hosting)
 
@@ -194,7 +248,7 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 ## 보안 (D-034)
 | 공격자나 사고 | 노리는 것 | 주된 대책 |
 | --- | --- | --- |
-| 악성 저장소를 복제하거나 받은 zip을 연다 | 저장소 설정, 서브모듈, 심볼릭 링크로 명령 실행 | 최소 Git 버전(D-036), 신뢰 확인(D-039), 위험한 설정 끄기 |
+| 악성 저장소를 복제하거나 받은 zip을 연다 | 저장소 설정, 서브모듈, 심볼릭 링크로 명령 실행 | Git 보안 수정 기준 안내(D-050), 신뢰 확인(D-039, D-067), 위험한 설정 끄기 |
 | 이상한 브랜치 이름이나 파일 이름 | git 옵션으로 해석되게 만들기 | `--end-of-options`와 `--`, 이름 검사(D-035) |
 | 저장소 파일 내용에 섞인 HTML이나 스크립트 | 웹뷰에서 실행되어 IPC 호출 | 이스케이프, CSP, 좁은 capability(D-037) |
 | 같은 PC의 다른 사용자나 악성 프로그램 | 토큰, 설정 파일 | OS 키체인, 평문 저장 금지(D-040) |
@@ -204,13 +258,13 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 
 - 새 Action과 새 IPC 명령을 만들 때 위 표의 해당 줄을 확인한다. 점검 항목은 `.claude/agents/code-analyst.md` "보안 점검".
 - 웹뷰가 부를 수 있는 앱 명령은 `build.rs`의 `COMMANDS`와 `capabilities/default.json`에 적은 것뿐이다. 새 명령은 `src/commands.rs`, `src/bindings.rs`와 함께 네 곳에 넣고, `src-tauri/tests/security_config.rs`가 네 곳과 CSP 문자열을 확인한다. dev 서버에는 CSP가 없으므로 CSP 확인은 릴리스 실행 파일로 한다.
-- 조회·액션·감시는 `Core::open_project`를 거친 경로만 받는다(`core::access::OpenedRepos`, 아니면 `NotOpened`). 시작 화면 상태 요약은 최근 목록의 경로도 받는다. 신뢰 확인(D-039)이 생기면 신뢰한 뒤에만 열린 것으로 기록한다.
+- 조회·액션·감시는 `Core::open_project`를 거친 경로만 받는다(`core::access::OpenedRepos`, 아니면 `NotOpened`). 시작 화면 상태 요약은 최근 목록의 경로도 받는다. 신뢰 확인(D-039, `core::trust`)을 거쳐 신뢰하거나 "끄고 열기"를 고른 뒤에만 열린 것으로 기록한다. 실행 설정(hooks 포함, D-067)이 있는 저장소는 `NeedsTrust`를 돌려주고, 신뢰하기 전에는 그 저장소에서 status 같은 git 명령을 돌리지 않는다. 소유자가 다른 폴더(dubious ownership)는 사용자가 고를 때만 그 폴더 하나를 `safe.directory`에 더한다.
 - 입력 상한: 경로 4096바이트, 경로 목록 10만 개, 버전 메시지 1MB, 이름 255바이트, 버전 기록 한 번에 500개.
 - IPC 명령 인자는 serde 타입으로 받고 길이와 형식을 검사한다. 파일 경로는 저장소 루트 기준 상대 경로만 받아 백엔드가 정규화하고, 루트 밖이면 거부한다. 심볼릭 링크는 따라가지 않는다.
 
 ## 프론트와 백엔드 계약
 - 프로젝트 열기는 한 곳: 앱을 켤 때 열기, 최근 목록, 폴더 고르기, 프로젝트 메뉴는 모두 `project_open` 명령 → `Core::open_project` 하나를 거친다(D-032). 저장소 신뢰 확인은 그 함수 안에 넣는다. 화면은 `useOpenProject` 훅 하나로 연다.
-- Tauri 명령 이름은 `<영역>_<동사>`: `app_status`, `repo_open`(1b에서 `project_open`으로 바뀜), `recent_list`·`recent_remove`·`query_project_summary`(1b), `repo_watch`, `repo_unwatch`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `query_diff`, `query_branches`·`query_branch_name`·`app_open_git_download`(1b), `undo_last`·`redo_last`(1b).
+- Tauri 명령 이름은 `<영역>_<동사>`. 1b까지: `app_status`, `app_open_git_download`, `project_open`, `project_trust`, `project_allow_owner`, `recent_list`, `recent_remove`, `query_project_summary`, `action_list`, `action_preview`, `action_execute`, `query_status`, `query_log`, `query_diff`, `query_branches`, `query_branch_name`, `query_home_map`, `undo_last`, `redo_last`, `repo_watch`, `repo_unwatch`.
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
