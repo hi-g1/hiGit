@@ -2,6 +2,7 @@
 
 mod commit;
 mod init;
+pub(crate) mod names;
 pub(crate) mod paths;
 mod stage;
 
