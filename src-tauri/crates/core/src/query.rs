@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use git::{GitBackend, RepoPath};
 
-use crate::view::{CommitRow, LogPage, LogQuery, StatusView};
+use crate::view::{CommitRow, DiffRequest, FileDiffView, LogPage, LogQuery, StatusView};
 use crate::{CoreError, Result};
 
 /// 조회(D-010). 미리보기·위험도·백업이 없으므로 실행기와 레지스트리를 거치지 않는다.
@@ -18,6 +18,11 @@ impl Queries {
 
     pub fn status(&self, repo: &Path) -> Result<StatusView> {
         Ok(self.git.status(&repo_path(repo)?)?.into())
+    }
+
+    /// 파일 하나를 마지막 저장과 비교한다(넣은 것과 안 넣은 것을 합쳐서).
+    pub fn diff(&self, repo: &Path, request: &DiffRequest) -> Result<FileDiffView> {
+        Ok(self.git.diff(&repo_path(repo)?, &request.into())?.into())
     }
 
     pub fn log(&self, repo: &Path, query: LogQuery) -> Result<LogPage> {

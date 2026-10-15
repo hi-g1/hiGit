@@ -13,6 +13,7 @@ export const commands = {
 	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
 	queryStatus: (repo: string) => __TAURI_INVOKE<StatusView>("query_status", { repo }),
 	queryLog: (repo: string, query: LogQuery) => __TAURI_INVOKE<LogPage>("query_log", { repo, query }),
+	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 };
 
 /* Types */
@@ -70,7 +71,28 @@ export type CommitRow = {
 	authorTime: number,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "gitFailed" | "internal";
+/**  줄 하나. 줄 번호는 화면에 바로 쓰도록 core가 계산한다. */
+export type DiffLineView = {
+	kind: LineKindView,
+	text: string,
+	/**  마지막 저장 쪽 줄 번호. 추가된 줄은 null. */
+	oldLine: number | null,
+	/**  지금 쪽 줄 번호. 지운 줄은 null. */
+	newLine: number | null,
+	noNewlineAtEnd: boolean,
+};
+
+/**  비교할 파일. 바뀐 내용 목록의 항목에서 만든다. */
+export type DiffRequest = {
+	path: string,
+	origPath: string | null,
+	/**  아직 추적하지 않는 새 파일이면 true. */
+	untracked: boolean,
+};
+
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "notYetSupported" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | 
+/**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
+"gitFailed" | "internal";
 
 /**  화면에 보내는 오류. 문구는 화면이 `code`로 고르고, `detail`은 "자세히 보기"의 원문이다. */
 export type ErrorView = {
@@ -78,11 +100,24 @@ export type ErrorView = {
 	detail: string | null,
 };
 
+export type FileDiffView = {
+	binary: boolean,
+	truncated: boolean,
+	hunks: HunkView[],
+};
+
 /**  사용자가 고른 폴더. 저장소가 아니면 `repo`가 비어 있다. */
 export type FolderInfo = {
 	folder: string,
 	repo: RepoInfo | null,
 };
+
+export type HunkView = {
+	section: string,
+	lines: DiffLineView[],
+};
+
+export type LineKindView = "context" | "added" | "removed";
 
 export type LogPage = {
 	commits: CommitRow[],

@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use higit_core::Core;
 use higit_core::view::{
-    ActionInput, ActionMetaView, ActionResult, AppStatus, ErrorCode, ErrorView, FolderInfo,
-    LogPage, LogQuery, PreviewView, StatusView,
+    ActionInput, ActionMetaView, ActionResult, AppStatus, DiffRequest, ErrorCode, ErrorView,
+    FileDiffView, FolderInfo, LogPage, LogQuery, PreviewView, StatusView,
 };
 use tauri::State;
 
@@ -103,6 +103,19 @@ pub async fn query_log(
 ) -> CmdResult<LogPage> {
     blocking(state, move |core| {
         core.queries().log(&PathBuf::from(repo), query)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn query_diff(
+    state: State<'_, AppState>,
+    repo: String,
+    request: DiffRequest,
+) -> CmdResult<FileDiffView> {
+    blocking(state, move |core| {
+        core.queries().diff(&PathBuf::from(repo), &request)
     })
     .await
 }

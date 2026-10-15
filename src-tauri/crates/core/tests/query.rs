@@ -234,3 +234,90 @@ fn action_input_tags_match_registry() {
         "등록된 액션과 입력 변형이 일대일이어야 한다"
     );
 }
+
+#[test]
+fn diff_lines_get_line_numbers() {
+    use git::{DiffLine, FileDiff, Hunk, LineKind};
+    use higit_core::view::{DiffRequest, LineKindView};
+    let line = |kind, text: &str| DiffLine {
+        kind,
+        text: text.into(),
+        no_newline_at_end: false,
+    };
+    let (core, git) = core_with(FakeGit::new());
+    *git.file_diff.lock().unwrap() = FileDiff {
+        binary: false,
+        truncated: false,
+        hunks: vec![Hunk {
+            old_start: 10,
+            old_len: 3,
+            new_start: 10,
+            new_len: 3,
+            section: String::new(),
+            lines: vec![
+                line(LineKind::Context, "가"),
+                line(LineKind::Removed, "나"),
+                line(LineKind::Added, "나나"),
+                line(LineKind::Context, "다"),
+            ],
+        }],
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let view = core
+        .queries()
+        .diff(
+            dir.path(),
+            &DiffRequest {
+                path: "a.txt".into(),
+                orig_path: None,
+                untracked: false,
+            },
+        )
+        .unwrap();
+    let numbers: Vec<_> = view.hunks[0]
+        .lines
+        .iter()
+        .map(|l| (l.kind, l.old_line, l.new_line))
+        .collect();
+    assert_eq!(
+        numbers,
+        [
+            (LineKindView::Context, Some(10), Some(10)),
+            (LineKindView::Removed, Some(11), None),
+            (LineKindView::Added, None, Some(11)),
+            (LineKindView::Context, Some(12), Some(12)),
+        ]
+    );
+}
+
+#[test]
+fn git_failures_map_to_error_codes() {
+    let failed = |stderr: &str| {
+        CoreError::Git(git::GitError::Failed {
+            args: vec![],
+            code: Some(1),
+            stdout: String::new(),
+            stderr: stderr.into(),
+        })
+    };
+    let cases = [
+        (
+            "hint: Updates were rejected because",
+            ErrorCode::PushRejected,
+        ),
+        (
+            "Host key verification failed.",
+            ErrorCode::SshHostUnverified,
+        ),
+        (
+            "git@github.com: Permission denied (publickey).",
+            ErrorCode::SshAuthFailed,
+        ),
+        ("fatal: 처음 보는 오류", ErrorCode::GitFailed),
+    ];
+    for (stderr, code) in cases {
+        let view = ErrorView::from(&failed(stderr));
+        assert_eq!(view.code, code, "{stderr}");
+        assert_eq!(view.detail.as_deref(), Some(stderr));
+    }
+}

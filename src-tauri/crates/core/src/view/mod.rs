@@ -3,8 +3,10 @@
 
 use std::path::Path;
 
+mod diff;
 mod input;
 
+pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::ActionInput;
 
 use serde::{Deserialize, Serialize};
@@ -268,8 +270,44 @@ pub enum ErrorCode {
     PreviewRequired,
     PreviewMismatch,
     NotYetSupported,
+    // 아래는 git 실패 종류(D-021)
+    NothingToCommit,
+    IdentityMissing,
+    InvalidBranchName,
+    BranchExists,
+    WouldOverwrite,
+    NotFastForward,
+    PushRejected,
+    NoUpstream,
+    SshHostUnverified,
+    SshAuthFailed,
+    HttpAuthFailed,
+    RemoteUnreachable,
+    /// 분류하지 못한 git 실패. 원문은 "자세히 보기".
     GitFailed,
     Internal,
+}
+
+impl From<git::FailureKind> for ErrorCode {
+    fn from(kind: git::FailureKind) -> Self {
+        use git::FailureKind as F;
+        match kind {
+            F::NothingToCommit => ErrorCode::NothingToCommit,
+            F::IdentityMissing => ErrorCode::IdentityMissing,
+            F::InvalidRefName => ErrorCode::InvalidBranchName,
+            F::BranchExists => ErrorCode::BranchExists,
+            F::WouldOverwrite => ErrorCode::WouldOverwrite,
+            F::NotFastForward => ErrorCode::NotFastForward,
+            F::PushRejected => ErrorCode::PushRejected,
+            F::NoUpstream => ErrorCode::NoUpstream,
+            F::SshHostUnverified => ErrorCode::SshHostUnverified,
+            F::SshAuthFailed => ErrorCode::SshAuthFailed,
+            F::HttpAuthFailed => ErrorCode::HttpAuthFailed,
+            F::RemoteUnreachable => ErrorCode::RemoteUnreachable,
+            F::NotARepository => ErrorCode::NotARepo,
+            F::Other => ErrorCode::GitFailed,
+        }
+    }
 }
 
 impl From<&CoreError> for ErrorView {
@@ -286,7 +324,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::PreviewRequired => ErrorCode::PreviewRequired,
             CoreError::PreviewMismatch => ErrorCode::PreviewMismatch,
             CoreError::NotYetSupported => ErrorCode::NotYetSupported,
-            CoreError::Git(_) => ErrorCode::GitFailed,
+            CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) => ErrorCode::Internal,
         };
         let detail = e.detail().or_else(|| match code {

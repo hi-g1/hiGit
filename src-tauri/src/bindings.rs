@@ -22,6 +22,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::action_execute,
             commands::query_status,
             commands::query_log,
+            commands::query_diff,
         ])
 }
 

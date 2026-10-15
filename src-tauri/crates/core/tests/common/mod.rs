@@ -19,6 +19,7 @@ pub struct FakeGit {
     pub status: Mutex<Status>,
     /// 최근 것부터.
     pub commits: Mutex<Vec<Commit>>,
+    pub file_diff: Mutex<FileDiff>,
 }
 
 impl FakeGit {
@@ -32,6 +33,7 @@ impl FakeGit {
                 entries: Vec::new(),
             }),
             commits: Mutex::new(Vec::new()),
+            file_diff: Mutex::new(FileDiff::default()),
         }
     }
 
@@ -73,7 +75,7 @@ impl GitBackend for FakeGit {
     }
 
     fn diff(&self, _repo: &RepoPath, _target: &DiffTarget) -> git::Result<FileDiff> {
-        Ok(FileDiff::default())
+        Ok(self.file_diff.lock().unwrap().clone())
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {
