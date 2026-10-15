@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use git::{GitBackend, RepoPath};
 
-use crate::Result;
 use crate::view::{CommitRow, LogPage, LogQuery, StatusView};
+use crate::{CoreError, Result};
 
 /// 조회(D-010). 미리보기·위험도·백업이 없으므로 실행기와 레지스트리를 거치지 않는다.
 pub struct Queries {
@@ -17,13 +17,13 @@ impl Queries {
     }
 
     pub fn status(&self, repo: &Path) -> Result<StatusView> {
-        Ok(self.git.status(&RepoPath::new(repo))?.into())
+        Ok(self.git.status(&repo_path(repo)?)?.into())
     }
 
     pub fn log(&self, repo: &Path, query: LogQuery) -> Result<LogPage> {
         // 하나 더 받아서 다음 쪽이 있는지 안다.
         let mut commits = self.git.log(
-            &RepoPath::new(repo),
+            &repo_path(repo)?,
             &git::LogQuery {
                 skip: query.skip,
                 limit: query.limit.saturating_add(1),
@@ -37,4 +37,11 @@ impl Queries {
             has_more,
         })
     }
+}
+
+/// 화면이 보낸 경로를 폴더 열기 때와 같은 형식으로 정규화한다.
+fn repo_path(path: &Path) -> Result<RepoPath> {
+    platform::normalize_repo_path(path)
+        .map(RepoPath::new)
+        .map_err(CoreError::FolderNotFound)
 }

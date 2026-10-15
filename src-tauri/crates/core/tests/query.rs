@@ -92,7 +92,8 @@ fn status_is_mapped_for_screen() {
         ],
     };
 
-    let view = core.queries().status("/repo".as_ref()).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let view = core.queries().status(dir.path()).unwrap();
     assert_eq!(view.branch.name.as_deref(), Some("main"));
     assert!(view.branch.has_commits);
     let kinds: Vec<_> = view
@@ -118,10 +119,11 @@ fn status_is_mapped_for_screen() {
 fn log_pages_know_if_more_exist() {
     let (core, git) = core_with(FakeGit::new());
     *git.commits.lock().unwrap() = (1..=5).rev().map(commit).collect();
+    let dir = tempfile::tempdir().unwrap();
 
     let first = core
         .queries()
-        .log("/repo".as_ref(), LogQuery { skip: 0, limit: 2 })
+        .log(dir.path(), LogQuery { skip: 0, limit: 2 })
         .unwrap();
     let summaries: Vec<_> = first.commits.iter().map(|c| c.summary.as_str()).collect();
     assert_eq!(summaries, ["저장 5", "저장 4"]);
@@ -129,16 +131,24 @@ fn log_pages_know_if_more_exist() {
 
     let last = core
         .queries()
-        .log("/repo".as_ref(), LogQuery { skip: 4, limit: 2 })
+        .log(dir.path(), LogQuery { skip: 4, limit: 2 })
         .unwrap();
     assert_eq!(last.commits.len(), 1);
     assert!(!last.has_more);
 
     let exact = core
         .queries()
-        .log("/repo".as_ref(), LogQuery { skip: 0, limit: 5 })
+        .log(dir.path(), LogQuery { skip: 0, limit: 5 })
         .unwrap();
     assert!(!exact.has_more);
+}
+
+#[test]
+fn queries_reject_missing_folder() {
+    let dir = tempfile::tempdir().unwrap();
+    let (core, _) = core_with(FakeGit::new());
+    let err = core.queries().status(&dir.path().join("없음")).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::FolderNotFound);
 }
 
 #[test]

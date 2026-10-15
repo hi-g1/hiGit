@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
 import type { RepoInfo } from "../../lib/api";
-import { useLog, useStatus } from "../../lib/queries";
+import { HISTORY_LIMIT, useLog, useStatus } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
@@ -47,7 +47,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
             ))}
         </Panel>
 
-        <Panel title={<Term id="log" />} aside={log.data?.hasMore ? m.moreCommits : undefined}>
+        <Panel title={<Term id="log" />} aside={log.data?.hasMore ? m.moreCommits(HISTORY_LIMIT) : undefined}>
           {log.isPending && <EmptyState>{m.loading}</EmptyState>}
           {log.error && <ErrorNotice error={log.error} />}
           {log.data &&

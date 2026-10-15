@@ -10,7 +10,7 @@ export const en: Messages = {
   notARepo: "This folder is not managed with Git yet.",
   noChanges: "No files changed since the last save.",
   noCommits: "Nothing has been saved yet.",
-  moreCommits: "Showing the latest 200 only.",
+  moreCommits: (limit: number) => `Showing the latest ${limit} only.`,
   renamedFrom: (path: string) => `Renamed from ${path}`,
   errors: {
     gitMissing: "Git is not installed. Install Git and start the app again.",

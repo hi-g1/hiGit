@@ -59,15 +59,20 @@ impl Executor {
         let preview = action.preview(ctx, input)?;
 
         let token = format!("p{}", self.next.fetch_add(1, Ordering::Relaxed));
-        self.tickets.lock().unwrap().insert(
-            token.clone(),
-            Ticket {
-                action_id: action.meta().id,
-                input: input.clone(),
-                folder: ctx.state.folder.clone(),
-                issued_at: Instant::now(),
-            },
-        );
+        // 토큰은 실행 때 검사하는 caution 이상만 보관한다. 보관할 때 만료된 것을 치운다.
+        if action.meta().risk >= Risk::Caution {
+            let mut tickets = self.tickets.lock().unwrap();
+            tickets.retain(|_, t| t.issued_at.elapsed() < self.ttl);
+            tickets.insert(
+                token.clone(),
+                Ticket {
+                    action_id: action.meta().id,
+                    input: input.clone(),
+                    folder: ctx.state.folder.clone(),
+                    issued_at: Instant::now(),
+                },
+            );
+        }
         Ok((preview, PreviewToken(token)))
     }
 
@@ -124,5 +129,100 @@ impl Executor {
         } else {
             Err(CoreError::PreviewMismatch)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Action, ActionMeta, RepoState};
+    use git::{Commit, GitBackend, GitOp, GitVersion, LogQuery, OpOutput, RepoPath, Status};
+    use serde_json::json;
+
+    struct NoGit;
+    impl GitBackend for NoGit {
+        fn version(&self) -> git::Result<GitVersion> {
+            unreachable!()
+        }
+        fn discover(&self, _: &std::path::Path) -> git::Result<Option<RepoPath>> {
+            unreachable!()
+        }
+        fn status(&self, _: &RepoPath) -> git::Result<Status> {
+            unreachable!()
+        }
+        fn log(&self, _: &RepoPath, _: &LogQuery) -> git::Result<Vec<Commit>> {
+            unreachable!()
+        }
+        fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
+            unreachable!()
+        }
+    }
+
+    struct Noop(ActionMeta);
+    impl Action for Noop {
+        fn meta(&self) -> &ActionMeta {
+            &self.0
+        }
+        fn available(&self, _: &RepoState) -> Availability {
+            Availability::Available
+        }
+        fn execute(&self, _: &ExecCtx<'_>, _: &Value) -> Result<Outcome> {
+            unreachable!()
+        }
+    }
+
+    fn executor(ttl: Duration) -> Executor {
+        let mut registry = Registry::new();
+        for (id, risk) in [("safe", Risk::Safe), ("caution", Risk::Caution)] {
+            let meta = ActionMeta {
+                id,
+                glossary_id: "commit",
+                risk,
+                input_schema: Vec::new(),
+            };
+            registry.register(Box::new(Noop(meta))).unwrap();
+        }
+        Executor::with_ttl(registry, ttl)
+    }
+
+    fn pending(exec: &Executor) -> usize {
+        exec.tickets.lock().unwrap().len()
+    }
+
+    #[test]
+    fn safe_previews_are_not_kept() {
+        let exec = executor(Executor::DEFAULT_TTL);
+        let state = RepoState {
+            folder: "/p".into(),
+            repo: None,
+        };
+        let ctx = ExecCtx {
+            git: &NoGit,
+            state: &state,
+        };
+        for _ in 0..3 {
+            exec.preview(&ctx, "safe", &json!({})).unwrap();
+        }
+        assert_eq!(pending(&exec), 0);
+        exec.preview(&ctx, "caution", &json!({})).unwrap();
+        assert_eq!(pending(&exec), 1);
+    }
+
+    #[test]
+    fn expired_previews_are_cleared() {
+        let exec = executor(Duration::ZERO);
+        let state = RepoState {
+            folder: "/p".into(),
+            repo: None,
+        };
+        let ctx = ExecCtx {
+            git: &NoGit,
+            state: &state,
+        };
+        for _ in 0..3 {
+            exec.preview(&ctx, "caution", &json!({})).unwrap();
+        }
+        // 새로 넣을 때마다 만료된 것을 치우므로 마지막 하나만 남는다.
+        assert_eq!(pending(&exec), 1);
     }
 }
