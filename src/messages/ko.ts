@@ -135,6 +135,13 @@ export const ko = {
   synced: (sent: number, received: number) => `${t("sync")}했어요 · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
+  /** 동기화 버튼 이름 뒤에 붙는다(D-080). 첫 진행 알림 전에는 초가 없다. */
+  syncRunning: (secs: number | null) => (secs === null ? "중" : `중 · ${secs}초`),
+  cancel: "취소",
+  noResponse: (secs: number) => `응답 없음 · ${secs}초`,
+  forceStop: "강제로 멈추기",
+  forceStopTitle: "강제로 멈출까요?",
+  forceStopDetail: "하던 작업이 반쯤 남을 수 있어요.",
   hereNow: "지금 여기",
   startTitle: "프로젝트",
   lastPlace: (when: string) => `마지막으로 하던 곳 · ${when}`,

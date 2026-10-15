@@ -24,6 +24,7 @@ vi.mock("./lib/dialog", () => ({ pickFolder: vi.fn() }));
 vi.mock("./lib/events", () => ({
   onRepoChanged: vi.fn(async () => () => {}),
   onWatchStatus: vi.fn(async () => () => {}),
+  onOpProgress: vi.fn(async () => () => {}),
 }));
 
 import { App } from "./App";

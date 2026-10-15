@@ -47,6 +47,11 @@
   font-weight: var(--font-weight-regular);
 }
 
+.noResponse {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .overlap {
   color: var(--deleted);
   font-size: var(--font-size-sm);

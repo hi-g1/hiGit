@@ -1,14 +1,16 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api, type BranchView } from "../../lib/api";
+import { ApiError, api, type BranchView } from "../../lib/api";
 import { formatRelative } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
+import { Button } from "../../ui/Button";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
+import { CANCEL_AFTER_SECS, NO_RESPONSE_SECS, REMOTE_ACTIONS, useProgress } from "../progress/useProgress";
 import styles from "./SyncButton.module.css";
 import { useSyncStore } from "./syncStore";
+import { useSync } from "./useSync";
 
 type Props = {
   repo: string;
@@ -22,38 +24,26 @@ type Props = {
 /**
  * 동기화 버튼(D-045). 가져온 다음 올린다. 받을 것·보낼 것 수를 옅게 붙인다. Ctrl+Shift+S.
  * 겹치면 합치지 않고 버튼 옆에 "겹친 파일 N개"를 남긴다(D-048).
+ * 도는 동안 "동기화 중 · N초", 3초 뒤 "취소", 30초 동안 출력이 없으면 "응답 없음 · N초"(D-080).
  */
 export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Props) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
-  const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
-  const { overlap, fetchFailedAt, set } = useSyncStore();
-
-  const sync = useMutation({
-    mutationFn: () => api.executeAction(repo, { id: "sync", input: { locale } }),
-    onMutate: () => set({ paused: false, error: null }),
-    onSuccess: (result) => {
-      if (result.kind !== "synced") return;
-      // 겹쳐서 합치기를 시작했으면 충돌 해결 화면이 이어받는다(D-069). 겹친 글자는 남기지 않는다.
-      set({ overlap: result.mergeStarted ? [] : result.overlap, fetchFailedAt: null });
-      if (result.overlap.length === 0) show(m.synced(result.sent, result.received));
-    },
-    onError: (e) => set({ error: e }),
-    onSettled: () => {
-      for (const key of [["status", repo], ["log", repo], ["branches", repo], ["mergeState", repo], ["homeMap", repo]]) {
-        void queryClient.invalidateQueries({ queryKey: key });
-      }
-    },
-  });
-  useShortcut(
-    "sync",
-    () => {
-      if (!sync.isPending) sync.mutate();
-    },
-    shortcut,
-  );
+  const { overlap, fetchFailedAt } = useSyncStore();
+  const sync = useSync(repo);
+  useShortcut("sync", sync.run, shortcut);
   const now = useNow(30_000);
+  const tick = useProgress(repo);
+  const progress = sync.running && tick && REMOTE_ACTIONS.has(tick.action) ? tick : null;
+
+  const cancel = async () => {
+    try {
+      await api.cancelAction(repo);
+    } catch (e) {
+      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+    }
+  };
 
   const ahead = branch.upstream ? branch.ahead : 0;
   const behind = branch.upstream ? branch.behind : 0;
@@ -68,15 +58,29 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
       <button
         type="button"
         className={`${styles.button} ${primary ? styles.primary : ""}`}
-        disabled={sync.isPending}
-        aria-busy={sync.isPending}
+        disabled={sync.running}
+        aria-busy={sync.running}
         aria-keyshortcuts="Control+Shift+S"
-        onClick={() => sync.mutate()}
+        onClick={sync.run}
       >
         <Term id="sync" focusable={false} />
-        {ahead > 0 && <span className={styles.count}>↑{ahead}</span>}
-        {behind > 0 && <span className={styles.count}>↓{behind}</span>}
+        {sync.running ? (
+          <span className={styles.count}>{m.syncRunning(progress?.elapsedSecs ?? null)}</span>
+        ) : (
+          <>
+            {ahead > 0 && <span className={styles.count}>↑{ahead}</span>}
+            {behind > 0 && <span className={styles.count}>↓{behind}</span>}
+          </>
+        )}
       </button>
+      {progress && progress.idleSecs >= NO_RESPONSE_SECS && (
+        <span className={styles.noResponse}>{m.noResponse(progress.idleSecs)}</span>
+      )}
+      {progress && progress.elapsedSecs >= CANCEL_AFTER_SECS && (
+        <Button variant="text" onClick={() => void cancel()}>
+          {m.cancel}
+        </Button>
+      )}
       {fetchFailedAt !== null && (
         <span
           className={styles.failed}

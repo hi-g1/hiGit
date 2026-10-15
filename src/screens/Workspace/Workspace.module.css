@@ -77,7 +77,3 @@
   font-weight: var(--font-weight-bold);
 }
 
-.syncError {
-  padding: var(--space-2) var(--space-4);
-  border-bottom: var(--border-width) solid var(--border);
-}

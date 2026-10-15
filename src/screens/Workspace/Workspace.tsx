@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { StuckNotice } from "../../features/progress/StuckNotice";
+import { useProgressEvents } from "../../features/progress/useProgress";
 import { CompareFooter } from "../../features/stash/CompareFooter";
 import { SyncButton } from "../../features/sync/SyncButton";
-import { useSyncStore } from "../../features/sync/syncStore";
+import { SyncNotice } from "../../features/sync/SyncNotice";
 import { useAutoFetch } from "../../features/sync/useAutoFetch";
 import { useUndo } from "../../features/undo/useUndo";
 import type { RepoInfo, StatusView } from "../../lib/api";
@@ -38,7 +40,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const hasRemote = (useBranches(repo.path).data?.remotes.length ?? 0) > 0;
   // 원격 확인은 저절로(D-045, D-055). 원격이 없으면 하지 않는다.
   useAutoFetch(repo.path, hasRemote);
-  const syncError = useSyncStore((s) => s.error);
+  // 오래 걸리는 작업의 진행(D-080).
+  useProgressEvents();
   // 합치는 중이면 홈·기록 대신 충돌 해결 화면(D-069). 앱을 켜자마자 합치는 중이어도 같다.
   const conflict = useConflictState(repo.path).data;
   const merging = conflict?.active === true;
@@ -65,11 +68,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           </Button>
         </div>
       )}
-      {syncError !== null && syncError !== undefined && (
-        <div className={styles.syncError}>
-          <ErrorNotice error={syncError} />
-        </div>
-      )}
+      <StuckNotice repo={repo.path} />
+      <SyncNotice repo={repo.path} />
       {conflict?.otherOperation && (
         <div className={styles.watchNotice} role="status">
           <span>{m.otherOperation}</span>
