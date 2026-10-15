@@ -59,7 +59,7 @@ pub struct StatusView {
     pub files: Vec<ChangedFile>,
 }
 
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchView {
     /// 현재 갈래 이름. 특정 저장을 직접 보고 있으면 `null`.
@@ -430,4 +430,16 @@ impl From<crate::recent::RecentEntry> for RecentProject {
             last_opened_at: e.last_opened_at,
         }
     }
+}
+
+/// 시작 화면의 프로젝트 상태 요약(D-031). 문장은 화면(messages)이 만든다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectSummaryView {
+    pub branch: BranchView,
+    /// 충돌 파일을 포함한 바뀐 파일 수.
+    pub changed_files: u32,
+    pub conflicted_files: u32,
+    /// 마지막 버전. 저장한 버전이 없으면 null.
+    pub last_commit: Option<CommitRow>,
 }

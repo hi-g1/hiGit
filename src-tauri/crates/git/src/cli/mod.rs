@@ -390,6 +390,24 @@ mod tests {
     }
 
     #[test]
+    fn every_call_disables_optional_locks() {
+        // 조회가 index를 쓰지 않아야 다른 작업과 index.lock이 부딪히지 않는다(감시 되먹임도 막음).
+        // git 별칭으로 자식 셸의 환경 변수를 읽는다(Git for Windows도 sh를 함께 깐다).
+        let out = testutil::backend()
+            .runner
+            .run(
+                None,
+                &[
+                    "-c",
+                    "alias.envcheck=!printf %s \"$GIT_OPTIONAL_LOCKS\"",
+                    "envcheck",
+                ],
+            )
+            .unwrap();
+        assert_eq!(out.stdout_utf8().unwrap(), "0");
+    }
+
+    #[test]
     fn missing_git_is_spawn_error() {
         let backend = CliBackend::new("/없는/git", std::sync::Arc::new(|_| {}));
         assert!(matches!(backend.version(), Err(GitError::Spawn(_))));

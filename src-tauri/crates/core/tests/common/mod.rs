@@ -24,6 +24,7 @@ pub struct FakeGit {
     pub hold: AtomicBool,
     /// run에 들어왔는지.
     pub entered: AtomicBool,
+    pub log_calls: AtomicUsize,
 }
 
 impl FakeGit {
@@ -40,6 +41,7 @@ impl FakeGit {
             file_diff: Mutex::new(FileDiff::default()),
             hold: AtomicBool::new(false),
             entered: AtomicBool::new(false),
+            log_calls: AtomicUsize::new(0),
         }
     }
 
@@ -69,6 +71,7 @@ impl GitBackend for FakeGit {
     }
 
     fn log(&self, _repo: &RepoPath, query: &LogQuery) -> git::Result<Vec<Commit>> {
+        self.log_calls.fetch_add(1, Ordering::SeqCst);
         Ok(self
             .commits
             .lock()
