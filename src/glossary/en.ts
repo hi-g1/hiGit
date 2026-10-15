@@ -86,6 +86,24 @@ export const en: Glossary = {
     command: null,
     description: "A state where two branches changed the same place differently and you choose which to keep",
   },
+  ours: {
+    friendly: "Your branch",
+    gitName: "ours",
+    command: null,
+    description: "Your current branch's side while merging",
+  },
+  theirs: {
+    friendly: "Incoming branch",
+    gitName: "theirs",
+    command: null,
+    description: "The side being brought in while merging",
+  },
+  base: {
+    friendly: "Original code",
+    gitName: "base",
+    command: null,
+    description: "The code before the two branches split",
+  },
   stash: {
     friendly: "Set aside",
     gitName: "stash",
@@ -171,7 +189,7 @@ export const en: Glossary = {
     description: "Who last changed each line, and when",
   },
   reflog: {
-    friendly: "Recover",
+    friendly: "Activity",
     gitName: "reflog",
     command: "git reflog",
     description: "Retrace recent work to bring back deleted versions or branches",
@@ -193,5 +211,11 @@ export const en: Glossary = {
     gitName: ".gitignore",
     command: null,
     description: "Rules for files not to include in versions",
+  },
+  lock: {
+    friendly: "Clear stuck work",
+    gitName: "index.lock",
+    command: null,
+    description: "Remove lock files left by Git work that was cut off. Only when no Git is running.",
   },
 };

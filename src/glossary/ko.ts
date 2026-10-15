@@ -87,6 +87,24 @@ export const ko: Glossary = {
     command: null,
     description: "두 브랜치가 같은 곳을 다르게 고쳐서 어느 쪽을 남길지 정해야 하는 상태",
   },
+  ours: {
+    friendly: "내 브랜치",
+    gitName: "ours",
+    command: null,
+    description: "합치는 중 지금 브랜치 쪽 내용",
+  },
+  theirs: {
+    friendly: "합칠 브랜치",
+    gitName: "theirs",
+    command: null,
+    description: "합치는 중 가져오는 쪽 내용",
+  },
+  base: {
+    friendly: "고치기 전 원래 코드",
+    gitName: "base",
+    command: null,
+    description: "두 브랜치가 갈라지기 전의 코드",
+  },
   stash: {
     friendly: "임시 보관",
     gitName: "stash",
@@ -100,7 +118,7 @@ export const ko: Glossary = {
     description: "브랜치를 바꿀 때 고친 파일을 그 브랜치에 두었다가 돌아오면 꺼내기",
   },
   discard: {
-    friendly: "변경 취소",
+    friendly: "고친 것 버리기",
     gitName: "restore",
     command: "git restore",
     description: "아직 버전으로 저장하지 않은 변경을 버리고 마지막 버전으로 돌아가기",
@@ -172,7 +190,7 @@ export const ko: Glossary = {
     description: "각 줄을 마지막으로 바꾼 사람과 날짜",
   },
   reflog: {
-    friendly: "복구",
+    friendly: "작업 내역",
     gitName: "reflog",
     command: "git reflog",
     description: "최근 작업을 되짚어 지운 버전이나 브랜치를 되살리기",
@@ -194,5 +212,11 @@ export const ko: Glossary = {
     gitName: ".gitignore",
     command: null,
     description: "버전에 넣지 않을 파일 규칙",
+  },
+  lock: {
+    friendly: "멈춘 작업 정리",
+    gitName: "index.lock",
+    command: null,
+    description: "중간에 끊긴 Git 작업이 남긴 잠금 파일 지우기. 실행 중인 Git이 없을 때만 해요.",
   },
 };

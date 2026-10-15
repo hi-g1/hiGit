@@ -14,6 +14,9 @@ export const TERM_IDS = [
   "log",
   "merge",
   "conflict",
+  "ours",
+  "theirs",
+  "base",
   "stash",
   "park",
   "discard",
@@ -32,6 +35,7 @@ export const TERM_IDS = [
   "force-push",
   "remote",
   "ignore",
+  "lock",
 ] as const;
 
 export type TermId = (typeof TERM_IDS)[number];

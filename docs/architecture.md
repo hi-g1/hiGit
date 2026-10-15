@@ -228,12 +228,12 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 - `sig`는 앱 데이터 폴더의 키(`journal.key`)로 만든 HMAC-SHA256이다(D-063). 서명이 맞지 않거나 형식이 이상한 줄은 읽을 때 버린다. 받은 zip 저장소에 남이 만든 줄이 있어도 되돌리기가 그 줄을 따르지 않는다. 4MB를 넘으면 뒤쪽만 읽는다.
 - `UndoState = { head, branch, parked: [(브랜치, stash 해시)], index_tree }`.
 - 되돌리기(Ctrl+Z, 토스트 "되돌리기")는 마지막 경계 뒤의 되돌리지 않은 Action 줄을 `kind`대로 되돌리고 `undo` 줄을 덧붙인다. 다시 하기(Ctrl+Shift+Z)는 같은 버전을 ref로 되살린다(D-065. 버전을 새로 만들지 않는다).
-- 되돌리기 전에 지금 HEAD·브랜치가 줄의 `after`와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) `UndoStale`로 거절한다. 반복 2에서 "복구" 화면으로 안내한다.
+- 되돌리기 전에 지금 HEAD·브랜치가 줄의 `after`와 같은지 확인한다. 다르면(앱 밖에서 git을 썼음) `UndoStale`로 거절한다. 반복 2에서 "작업 내역" 화면으로 안내한다.
 - 되돌리기는 ref를 옮기기 전에 지금 버전을 백업 ref로 남긴다. 백업을 못 쓰면 되돌리지 않는다.
 - 원격에 올린 버전을 바꾸는 되돌리기는 하지 않는다(`UndoPushed`). 올린 기록을 몰래 바꾸지 않는다.
 - 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 브랜치 이름의 `/`는 `%2F`로 적는다(D-064). 일반 stash 목록과 섞지 않는다(만든 뒤 `StashDropIf`로 뺀다).
 - `refs/higit/`를 만드는 코드는 core의 `undo`·`parked`·`actions/switch` 모듈에만 둔다.
-- "복구" 화면(반복 2) = journal + `git reflog` + `refs/higit/backup/*`를 시간순으로 합쳐 보여준다.
+- "작업 내역" 화면(반복 2, D-085) = journal + `git reflog` + `refs/higit/backup/*`를 시간순으로 합쳐 보여준다.
 
 ### HostingProvider (crates/hosting)
 
