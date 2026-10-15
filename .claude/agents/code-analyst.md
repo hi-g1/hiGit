@@ -42,7 +42,10 @@ effort: high
 - [ ] 비밀: 토큰·주소 속 비밀번호가 로그, 오류, Debug, 명령줄, 주소에 들어가지 않는다(D-040)
 - [ ] 화면: `innerHTML`·`dangerouslySetInnerHTML`·`eval` 없음, 저장소에서 온 글자는 그대로 그린다
 - [ ] 지우거나 덮어쓰는 일: 백업 ref와 journal을 먼저 남긴다
-- [ ] `refs/higit/`를 만드는 코드는 core의 `undo`·`parked`·`actions/switch`에만 있다. journal 줄은 서명하고 읽을 때 검증한다(D-063)
+- [ ] `refs/higit/` 이름 문자열은 core의 `undo`·`parked`에만 있다(`rg '"refs/higit' src-tauri/crates/core/src`). 맡긴 ref는 `parked::ref_name`으로만 이름을 만들고, 쓰거나 지우는 곳은 `actions/{switch, stash, conflict, recover_parked}`뿐이다. 백업 ref는 `undo::backup` 함수로만 만든다. journal 줄은 서명하고 읽을 때 검증한다(D-063)
+- [ ] 비밀 파일 검사(D-077)의 원문(파일 내용, 찾은 값)이 로그·오류 detail·화면 밖으로 나가지 않는다. 로그 줄에는 git 원문을 쓰지 않는다(D-078)
+- [ ] 이벤트 페이로드(`op-progress` 등)에 파일 이름·원격 주소가 없다(D-080)
+- [ ] 잠금 파일 지우기는 `locks::remove`로만, git 폴더 안 일반 파일 `*.lock`만, 링크를 따라가지 않는다(D-081). 프로세스 조회·종료는 `crates/platform`에만
 - [ ] `Command::new`는 `crates/git/src/cli/runner.rs`와 `crates/platform`에만 있다. 원격 작업은 `run_network`(시간 제한, 백그라운드면 묻는 창 끄기, D-066)
 - [ ] 신뢰하지 않은 저장소(`NeedsTrust`)에서 status 같은 git 명령을 돌리지 않고 열린 목록에 넣지 않는다. 새 실행 설정 키가 `trust.rs` 목록에 있다(D-039, D-067)
 - [ ] `unsafe`, 테스트 밖 `unwrap`·`expect`·`panic!`이 새로 생기지 않았다(D-038)
