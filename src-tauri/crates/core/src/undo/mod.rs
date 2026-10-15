@@ -66,7 +66,8 @@ impl UndoKind {
 pub struct UndoState {
     pub head: Option<String>,
     pub branch: Option<String>,
-    /// (브랜치, 맡긴 stash 해시). 맡겨 두는 갈아타기가 채운다.
+    /// (브랜치, 맡긴 stash 해시). 지금은 아무도 채우지 않는다(맡긴 ref는 갈아타기가 직접 다룬다).
+    /// 이 값이 든 옛 줄을 읽을 수 있게 남겨 두고 읽을 때 검사한다.
     #[serde(default)]
     pub parked: Vec<(String, String)>,
     /// index 트리. "모두 넣고 저장"을 되돌릴 때 index도 돌린다(D-062).
