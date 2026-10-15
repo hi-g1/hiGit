@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use notify::event::ModifyKind;
 use notify::{EventKind, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, Debouncer, RecommendedCache, new_debouncer};
 
@@ -102,8 +103,13 @@ impl RepoWatcher {
                     if matches!(event.event.kind, EventKind::Access(_)) {
                         continue;
                     }
+                    // 이름 바꿈(옮겨 들어옴)은 수정이 아니라 생김으로 본다.
+                    let modify = matches!(
+                        event.event.kind,
+                        EventKind::Modify(kind) if !matches!(kind, ModifyKind::Name(_))
+                    );
                     for path in &event.event.paths {
-                        match classify(&handler_root, &rules, path, path.is_dir()) {
+                        match classify(&handler_root, &rules, path, path.is_dir(), modify) {
                             Kind::Worktree => changes.worktree = true,
                             Kind::GitignoreChanged => {
                                 changes.worktree = true;
@@ -254,6 +260,29 @@ mod tests {
         let events = collect(&rx, Duration::from_millis(1500));
         assert!(!events.is_empty());
         assert!(events.len() <= 2, "{events:?}");
+    }
+
+    #[test]
+    fn folder_moved_in_is_reported() {
+        let dir = repo();
+        let outside = tempfile::tempdir().unwrap();
+        let folder = outside.path().join("새 폴더");
+        fs::create_dir(&folder).unwrap();
+        fs::write(folder.join("a.txt"), "x").unwrap();
+        let (_w, rx) = start(dir.path());
+        // 같은 파일 시스템 안에서 옮겨야 rename이 된다. 다르면 복사로 대신한다.
+        let target = dir.path().join("새 폴더");
+        if fs::rename(&folder, &target).is_err() {
+            fs::create_dir(&target).unwrap();
+            fs::write(target.join("a.txt"), "x").unwrap();
+        }
+        let events = collect(&rx, Duration::from_secs(2));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, WatchEvent::Changed(c) if c.worktree)),
+            "{events:?}"
+        );
     }
 
     #[test]

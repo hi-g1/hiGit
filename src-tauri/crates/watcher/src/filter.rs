@@ -91,10 +91,18 @@ impl IgnoreRules {
     }
 }
 
-/// `is_dir`: 지금 그 경로가 폴더인지. 폴더 자체의 "수정" 알림은 버린다.
-/// Windows는 안의 파일이 바뀌면 폴더에도 늦게 알림을 보내는데, 파일 알림이 따로 오므로 필요 없다.
-pub(crate) fn classify(root: &Path, rules: &IgnoreRules, path: &Path, is_dir: bool) -> Kind {
-    if is_dir {
+/// `is_dir`: 지금 그 경로가 폴더인지. `modify`: 알림이 "수정"(이름 바꿈 제외)인지.
+/// 폴더 자체의 수정 알림은 버린다. Windows는 안의 파일이 바뀌면 폴더에도 늦게 알림을 보내는데,
+/// 파일 알림이 따로 오므로 필요 없다. 폴더가 생기거나 옮겨 들어온 알림은 버리지 않는다
+/// (파일이 든 폴더를 옮겨 넣으면 안쪽 파일 알림이 오지 않는다).
+pub(crate) fn classify(
+    root: &Path,
+    rules: &IgnoreRules,
+    path: &Path,
+    is_dir: bool,
+    modify: bool,
+) -> Kind {
+    if is_dir && modify {
         return Kind::Skip;
     }
     let Ok(rel) = path.strip_prefix(root) else {
@@ -113,7 +121,7 @@ pub(crate) fn classify(root: &Path, rules: &IgnoreRules, path: &Path, is_dir: bo
     if path.file_name().is_some_and(|n| n == ".gitignore") {
         return Kind::GitignoreChanged;
     }
-    if rules.is_ignored(path, false) {
+    if rules.is_ignored(path, is_dir) {
         Kind::Skip
     } else {
         Kind::Worktree
@@ -141,7 +149,7 @@ mod tests {
         let dir = setup();
         let root = dir.path();
         let rules = IgnoreRules::load(root, &[]);
-        let k = |p: &str| classify(root, &rules, &root.join(p), false);
+        let k = |p: &str| classify(root, &rules, &root.join(p), false, true);
         assert_eq!(k(".git/HEAD"), Kind::Git);
         assert_eq!(k(".git/index"), Kind::Git);
         assert_eq!(k(".git/refs/heads/main"), Kind::Git);
@@ -159,7 +167,7 @@ mod tests {
         let extra = root.join("global-ignore");
         fs::write(&extra, "*.tmp\n").unwrap();
         let rules = IgnoreRules::load(root, &[extra]);
-        let k = |p: &str| classify(root, &rules, &root.join(p), false);
+        let k = |p: &str| classify(root, &rules, &root.join(p), false, true);
         assert_eq!(k("src/한글 파일.txt"), Kind::Worktree);
         assert_eq!(k("node_modules/react/index.js"), Kind::Skip);
         assert_eq!(k("debug.log"), Kind::Skip);
@@ -181,10 +189,13 @@ mod tests {
         let dir = setup();
         let rules = IgnoreRules::load(dir.path(), &[]);
         assert_eq!(
-            classify(dir.path(), &rules, Path::new("/다른/곳"), false),
+            classify(dir.path(), &rules, Path::new("/다른/곳"), false, true),
             Kind::Skip
         );
-        assert_eq!(classify(dir.path(), &rules, dir.path(), false), Kind::Skip);
+        assert_eq!(
+            classify(dir.path(), &rules, dir.path(), true, true),
+            Kind::Skip
+        );
     }
 
     #[test]
@@ -192,11 +203,23 @@ mod tests {
         let dir = setup();
         let root = dir.path();
         let rules = IgnoreRules::load(root, &[]);
-        // .git/refs/heads 폴더 자체의 수정 알림이 "브랜치 바뀜"으로 잘못 읽히면 안 된다.
+        // 폴더 자체의 수정 알림은 버린다. .git/refs/heads 폴더 수정이 "브랜치 바뀜"으로 읽히면 안 된다.
         assert_eq!(
-            classify(root, &rules, &root.join(".git/refs/heads"), true),
+            classify(root, &rules, &root.join(".git/refs/heads"), true, true),
             Kind::Skip
         );
-        assert_eq!(classify(root, &rules, &root.join("sub"), true), Kind::Skip);
+        assert_eq!(
+            classify(root, &rules, &root.join("sub"), true, true),
+            Kind::Skip
+        );
+        // 폴더가 생기거나 옮겨 들어오면 알린다. 무시된 폴더는 여전히 거른다.
+        assert_eq!(
+            classify(root, &rules, &root.join("sub"), true, false),
+            Kind::Worktree
+        );
+        assert_eq!(
+            classify(root, &rules, &root.join("node_modules"), true, false),
+            Kind::Skip
+        );
     }
 }
