@@ -62,9 +62,15 @@ pub(crate) fn stale(
 }
 
 /// 잠금 파일 하나를 지운다. 지우기 직전에 다시 본다: 링크가 아닌 일반 파일, 이름이 `.lock`으로
-/// 끝남, 실제 위치가 git 폴더 안. 다른 프로그램이 쥐고 있어 못 지우면(Windows) `Busy`.
+/// 끝남, 실제 위치가 git 폴더 안, 여전히 60초 넘게 그대로. 그사이 새로 쓰였거나 다른 프로그램이
+/// 쥐고 있어 못 지우면(Windows) `Busy`.
 pub(crate) fn remove(lock: &LockFile, roots: &[&Path]) -> crate::Result<()> {
-    let is_file = std::fs::symlink_metadata(&lock.path).is_ok_and(|m| m.file_type().is_file());
+    let meta = std::fs::symlink_metadata(&lock.path);
+    let is_file = meta.as_ref().is_ok_and(|m| m.file_type().is_file());
+    let still_old = meta.as_ref().is_ok_and(|m| {
+        m.modified()
+            .is_ok_and(|t| t.elapsed().is_ok_and(|age| age >= STALE_AFTER))
+    });
     let named = lock
         .path
         .file_name()
@@ -81,6 +87,9 @@ pub(crate) fn remove(lock: &LockFile, roots: &[&Path]) -> crate::Result<()> {
         });
     if !(is_file && named && inside) {
         return Err(crate::CoreError::InvalidInput("지울 수 없는 파일이에요"));
+    }
+    if !still_old {
+        return Err(crate::CoreError::Busy);
     }
     std::fs::remove_file(&lock.path).map_err(|_| crate::CoreError::Busy)
 }
@@ -218,14 +227,7 @@ mod tests {
     fn a_fresh_lock_among_old_ones_means_work_is_running() {
         let dir = git_dir();
         let d = dir.path();
-        std::fs::write(d.join("index.lock"), "").unwrap();
-        let old = SystemTime::now() - STALE_AFTER - Duration::from_secs(5);
-        std::fs::File::options()
-            .write(true)
-            .open(d.join("index.lock"))
-            .unwrap()
-            .set_modified(old)
-            .unwrap();
+        make_old(&d.join("index.lock"));
         assert_eq!(
             names(&stale(d, d, SystemTime::now(), || false)),
             vec!["index.lock"]
@@ -234,11 +236,25 @@ mod tests {
         assert!(stale(d, d, SystemTime::now(), || false).is_empty());
     }
 
+    fn make_old(path: &Path) {
+        std::fs::write(path, "").unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(SystemTime::now() - STALE_AFTER - Duration::from_secs(5))
+            .unwrap();
+    }
+
     #[test]
     fn remove_checks_the_file_again() {
         let dir = git_dir();
         let d = dir.path();
+        // 그사이 새로 쓰인 잠금은 지우지 않는다.
         std::fs::write(d.join("index.lock"), "").unwrap();
+        let fresh = find(d, d).pop().unwrap();
+        assert!(matches!(remove(&fresh, &[d]), Err(crate::CoreError::Busy)));
+        make_old(&d.join("index.lock"));
         let lock = find(d, d).pop().unwrap();
         // git 폴더 밖이라고 하면 지우지 않는다.
         let other = tempfile::tempdir().unwrap();
