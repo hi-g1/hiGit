@@ -42,6 +42,8 @@ pub struct Core {
     pub(crate) opened: Arc<OpenedRepos>,
     /// 저장소 신뢰 기록(D-039).
     trust: Arc<TrustStore>,
+    /// 로그 파일(D-078). 앱 데이터 폴더를 못 쓰면 남기지 않는다.
+    logger: crate::log::Logger,
     /// 신뢰 확인을 물은 경로. 신뢰·주인 허용 명령은 core가 물은 경로만 받는다(D-037).
     asked: Mutex<Vec<(PathBuf, Ask)>>,
 }
@@ -117,6 +119,9 @@ pub fn init() -> Result<Core> {
     };
     let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
+    if let Some(dir) = &data_dir {
+        core.logger = crate::log::Logger::open(dir);
+    }
     // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063).
     if let Some(dir) = &data_dir {
         core.executor
@@ -167,6 +172,7 @@ impl Core {
             opened,
             trust,
             asked: Mutex::new(Vec::new()),
+            logger: crate::log::Logger::disabled(),
         })
     }
 
@@ -356,9 +362,11 @@ impl Core {
             _ => Locks::Worktree,
         };
         let background = matches!(input, ActionInput::Fetch(i) if i.background);
-        let outcome = self.with_locks_by(folder, locks, background, |executor, ctx| {
+        let result = self.with_locks_by(folder, locks, background, |executor, ctx| {
             executor.execute(ctx, input.action_id(), input, token.as_ref())
-        })?;
+        });
+        self.logger.action("execute", input.action_id(), &result);
+        let outcome = result?;
         if let crate::Outcome::RepoCreated(repo) = &outcome {
             self.opened.insert(repo.as_path());
             self.recent.touch(repo.as_path());
@@ -368,14 +376,21 @@ impl Core {
 
     /// 마지막 작업을 되돌린다(Ctrl+Z, D-042).
     pub fn undo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
-        self.with_repo_lock(folder, |executor, ctx| executor.undo(ctx))
-            .map(Into::into)
+        let result = self.with_repo_lock(folder, |executor, ctx| executor.undo(ctx));
+        self.logger.action("undo", "last", &result);
+        result.map(Into::into)
     }
 
     /// 되돌린 작업을 다시 한다(Ctrl+Shift+Z, Ctrl+Y).
     pub fn redo(&self, folder: &Path) -> Result<crate::view::UndoResult> {
-        self.with_repo_lock(folder, |executor, ctx| executor.redo(ctx))
-            .map(Into::into)
+        let result = self.with_repo_lock(folder, |executor, ctx| executor.redo(ctx));
+        self.logger.action("redo", "last", &result);
+        result.map(Into::into)
+    }
+
+    /// 로그 폴더(D-078). 로그를 남기지 않으면 `None`.
+    pub fn log_dir(&self) -> Option<&Path> {
+        self.logger.dir()
     }
 
     fn with_repo_lock<T>(

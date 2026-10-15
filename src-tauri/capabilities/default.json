@@ -9,6 +9,7 @@
     "dialog:allow-open",
     "allow-app-status",
     "allow-app-open-git-download",
+    "allow-app-open-log-folder",
     "allow-project-open",
     "allow-project-trust",
     "allow-project-allow-owner",

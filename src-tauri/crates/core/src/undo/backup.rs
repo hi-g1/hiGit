@@ -47,7 +47,7 @@ pub(crate) fn backup_oid(
 }
 
 /// unix 초 → `20261015T093000Z`. 날짜 계산은 Howard Hinnant의 civil_from_days.
-fn utc_stamp(secs: u64) -> String {
+pub(crate) fn utc_stamp(secs: u64) -> String {
     let days = (secs / 86_400) as i64;
     let rem = secs % 86_400;
     let (h, m, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);

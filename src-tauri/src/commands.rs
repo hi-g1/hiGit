@@ -59,6 +59,24 @@ pub fn app_open_git_download(app: AppHandle, state: State<'_, AppState>) -> CmdR
         })
 }
 
+/// 로그 폴더를 파일 관리자로 연다(D-078). 위치는 core가 정하고 화면은 넘기지 않는다.
+#[tauri::command]
+#[specta::specta]
+pub fn app_open_log_folder(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let core = core(&state)?;
+    let dir = core.log_dir().ok_or(ErrorView {
+        code: ErrorCode::Internal,
+        detail: None,
+    })?;
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| ErrorView {
+            code: ErrorCode::Internal,
+            detail: Some(e.to_string()),
+        })
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn project_open(

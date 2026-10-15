@@ -12,6 +12,7 @@ mod bootstrap;
 mod error;
 mod executor;
 pub mod git_security;
+pub mod log;
 pub(crate) mod parked;
 mod query;
 pub mod recent;

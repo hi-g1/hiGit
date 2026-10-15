@@ -9,6 +9,8 @@ export const commands = {
 	appStatus: () => __TAURI_INVOKE<AppStatus>("app_status"),
 	/**  Git 내려받기 페이지를 기본 브라우저로 연다(D-053). 주소는 core가 정하고 화면은 넘기지 않는다. */
 	appOpenGitDownload: () => __TAURI_INVOKE<null>("app_open_git_download"),
+	/**  로그 폴더를 파일 관리자로 연다(D-078). 위치는 core가 정하고 화면은 넘기지 않는다. */
+	appOpenLogFolder: () => __TAURI_INVOKE<null>("app_open_log_folder"),
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
 	/**  신뢰 확인에서 고른 결과로 연다(D-039). */
 	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),

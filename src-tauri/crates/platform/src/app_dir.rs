@@ -38,6 +38,19 @@ pub fn write_private_file(path: &std::path::Path, bytes: &[u8]) -> io::Result<()
     std::fs::rename(&tmp, path)
 }
 
+/// 다른 사용자가 읽지 못하게 덧붙여 쓸 파일을 연다(로그 파일, D-078). 없으면 만든다.
+/// Linux: 새로 만들 때 권한 0600. Windows: 사용자 앱 데이터 폴더의 기본 권한을 따른다.
+pub fn open_private_append(path: &std::path::Path) -> io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.append(true).create(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)
+}
+
 /// 사용자 홈 폴더. 오류 원문에서 개인 경로를 가릴 때 쓴다(D-040).
 pub fn home_dir() -> Option<PathBuf> {
     dirs::home_dir()
@@ -60,6 +73,26 @@ fn resolve_data_dir(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn private_append_is_owner_only() {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a.log");
+        open_private_append(&path)
+            .unwrap()
+            .write_all(b"1\n")
+            .unwrap();
+        open_private_append(&path)
+            .unwrap()
+            .write_all(b"2\n")
+            .unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "1\n2\n");
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
 
     #[test]
     fn default_location_joins_app_id() {

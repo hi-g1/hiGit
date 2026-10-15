@@ -4,6 +4,7 @@
 const COMMANDS: &[&str] = &[
     "app_status",
     "app_open_git_download",
+    "app_open_log_folder",
     "project_open",
     "project_trust",
     "project_allow_owner",

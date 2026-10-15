@@ -17,6 +17,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             commands::app_status,
             commands::app_open_git_download,
+            commands::app_open_log_folder,
             commands::project_open,
             commands::project_trust,
             commands::project_allow_owner,
