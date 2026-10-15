@@ -44,3 +44,15 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 파일 감시를 쓸 수 없을 때만 보이는 안내 줄 */
+.watchNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

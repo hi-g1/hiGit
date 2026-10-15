@@ -4,8 +4,10 @@ import { HistoryList } from "../../features/history/HistoryList";
 import { toHistoryRows } from "../../features/history/model";
 import type { RepoInfo } from "../../lib/api";
 import { HISTORY_LIMIT, useLog, useStatus } from "../../lib/queries";
+import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
+import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { ChangedFiles } from "./ChangedFiles";
@@ -20,12 +22,21 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   const selectedPath = useRepoStore((s) => s.selectedPath);
   const status = useStatus(repo.path);
   const log = useLog(repo.path);
+  const watch = useRepoWatch(repo.path);
   // 고른 파일이 목록에서 사라지면(버전으로 저장됨 등) 비교를 닫는다.
   const selected = status.data?.files.find((f) => f.path === selectedPath);
 
   return (
     <div className={styles.workspace}>
       <TopBar repo={repo} status={status.data} />
+      {watch.active === false && (
+        <div className={styles.watchNotice} role="status">
+          <span>{m.errors.watchUnavailable}</span>
+          <Button variant="secondary" onClick={watch.reload}>
+            {m.reload}
+          </Button>
+        </div>
+      )}
       <div className={tab === "changes" ? styles.twoPane : styles.onePane}>
         <section className={styles.left}>
           <LeftTabs changeCount={status.data?.files.length} />

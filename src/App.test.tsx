@@ -12,9 +12,16 @@ vi.mock("./lib/api", async (importOriginal) => ({
     executeAction: vi.fn(),
     status: vi.fn(),
     log: vi.fn(),
+    diff: vi.fn(),
+    watch: vi.fn(async () => null),
+    unwatch: vi.fn(async () => null),
   },
 }));
 vi.mock("./lib/dialog", () => ({ pickFolder: vi.fn() }));
+vi.mock("./lib/events", () => ({
+  onRepoChanged: vi.fn(async () => () => {}),
+  onWatchStatus: vi.fn(async () => () => {}),
+}));
 
 import { App } from "./App";
 import { ApiError, api, type LogPage, type StatusView } from "./lib/api";
@@ -35,6 +42,8 @@ beforeEach(() => {
   ]);
   vi.mocked(api.status).mockResolvedValue(emptyStatus);
   vi.mocked(api.log).mockResolvedValue(emptyLog);
+  vi.mocked(api.watch).mockResolvedValue(null);
+  vi.mocked(api.unwatch).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -119,6 +128,26 @@ describe("홈에서 폴더 열기", () => {
     expect(await screen.findByText("마지막 버전 이후 바뀐 파일이 없어요.")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "버전 기록" }));
     expect(await screen.findByText("아직 저장한 버전이 없어요.")).toBeInTheDocument();
+  });
+
+  it("파일 감시를 쓸 수 없으면 안내 줄과 다시 읽기 버튼", async () => {
+    vi.mocked(pickFolder).mockResolvedValue(repo.path);
+    vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
+    vi.mocked(api.watch).mockRejectedValue(new ApiError({ code: "watchUnavailable", detail: "inotify" }));
+
+    const user = await openFolder();
+    expect(await screen.findByText("파일 변경을 자동으로 알아채지 못해요. 창으로 돌아오면 다시 읽어요.")).toBeInTheDocument();
+    const calls = vi.mocked(api.status).mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "다시 읽기" }));
+    await vi.waitFor(() => expect(vi.mocked(api.status).mock.calls.length).toBeGreaterThan(calls));
+  });
+
+  it("파일 감시가 켜져 있으면 안내 줄도 다시 읽기 버튼도 없다", async () => {
+    vi.mocked(pickFolder).mockResolvedValue(repo.path);
+    vi.mocked(api.openFolder).mockResolvedValue({ folder: repo.path, repo });
+    await openFolder();
+    expect(await screen.findByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "다시 읽기" })).not.toBeInTheDocument();
   });
 
   it("버전 관리 시작이 실패하면 이유와 원문을 보여준다", async () => {
