@@ -69,6 +69,11 @@ effort: high
 - [ ] helper(`github/helper.rs`)는 `get`이고 `protocol=https`·`host=github.com`(포트 없음)·사용자 이름 없음을 확인한 **뒤에만** 키체인을 읽고, 그 밖에는 아무것도 쓰지 않고 0으로 끝난다. `main.rs`의 `--git-credential` 분기가 어떤 플러그인·로그보다 먼저다
 - [ ] `hosting`이 `git`·`platform`·`core`를 모른다(`cargo tree -p hosting`). 서버가 준 URL을 열거나 따라가지 않는다(`verification_uri`는 상수 비교만, 리디렉트는 `api_base` 아래만). `app_open_hosting_page`는 주소를 인자로 받지 않는다
 - [ ] 복제(D-115): 주소는 `validate_clone_url`(https·ssh·`git@host:path`), 대상은 부모가 링크·`.git` 안이 아니고 없거나 빈 폴더, 실패 때 지우는 것은 이번 실행이 만든 대상 하나(`remove_created_target`)뿐
+- [ ] 반복 4b 원격 ref 쓰기(D-128·D-130·D-131): `rg -- "--force" src-tauri/crates/git/src`가 `cli/refpush.rs`의 `--force-with-lease=<ref>:<값>` 꼴뿐이다(빈 기대 값은 `PushNewRef`만). `+` refspec이 없다
+- [ ] 전역 설정 쓰기: `rg "\-\-global" src-tauri/crates --type rust`에서 쓰는 곳은 git의 `cli/identity.rs`(`user.name`·`user.email`)와 기존 `AddSafeDirectory`(사용자가 고를 때만)뿐이고 `cli/network.rs`는 읽기만이다. `GlobalOp`을 부르는 액션은 `identity-set`뿐이다. 이름·이메일이 로그·오류 detail·토스트에 없다
+- [ ] `Irreversible` 액션이 정확히 `discard`·`clear-lock`·`force-push`·`remote-branch-delete`·`remote-branch-rename`이고 모두 확인 토큰(입력 전체에 묶임)과 화면 `ConfirmDialog`(또는 전용 확인 창)를 거친다. `PublishedRule::Allow`는 앱 설정을 읽는 호출부(`published_rule`)에서만 만든다. 원격 기본 브랜치는 어떤 원격 쓰기에서도 거절된다
+- [ ] `settings.json`에 비밀·저장소 경로가 없다. `publish`는 화면이 이름·설명·공개 여부만 보내고 주소는 core가 만든다. 공개는 `acknowledgePublic` 없이는 거절된다
+- [ ] 반복 4b 새 명령 7개(`settings_get`, `settings_set`, `query_identity`, `query_force_push_plan`, `query_remote_branch_plan`, `query_publish_draft`, `query_github_repos`)가 네 곳에 있다
 - [ ] 반복 4 새 명령 11개(`app_open_hosting_page`, `github_*` 5개, `query_clone_defaults`, `query_hosting_context`, `query_pr_list`, `query_pr_detail`, `query_pr_draft`)가 네 곳에 있고 `async` + `blocking()`이다. `rg "invoke|fetch\(" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 비어 있다
 
 ## 보고 형식
