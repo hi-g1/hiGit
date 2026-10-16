@@ -75,6 +75,8 @@ export const SHORTCUTS = {
   },
   fontSmaller: { keys: [ctrl("Minus"), ctrl("NumpadSubtract")], label: "Ctrl+-", scope: "global", inTextField: "app" },
   fontReset: { keys: [ctrl("Digit0"), ctrl("Numpad0")], label: "Ctrl+0", scope: "global", inTextField: "app" },
+  /** 단축키 표 열기·닫기(D-198). 입력칸 안에서도 */
+  shortcutHelp: { keys: [ctrl("Slash")], label: "Ctrl+/", scope: "global", inTextField: "app" },
   /** 파일 목록에서 다음·이전 파일 */
   nextFile: { keys: [plain("ArrowDown")], label: "↓", scope: "fileList", inTextField: "native" },
   prevFile: { keys: [plain("ArrowUp")], label: "↑", scope: "fileList", inTextField: "native" },

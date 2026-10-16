@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { getTerm, type TermId } from "../glossary";
+import { SHORTCUTS, type ShortcutId } from "../lib/shortcuts";
 import { useUiStore } from "../state/uiStore";
+import { Kbd } from "./Kbd";
 import styles from "./Term.module.css";
 import { Tooltip } from "./Tooltip";
 
@@ -19,7 +21,16 @@ export function useTermLabel(id: TermId): string {
  * 용어 툴팁(원래 이름 · 명령 · 설명)을 다른 부품(체크 상자 등)에 씌운다. 설정 "용어 설명 보기"를 끄면
  * 툴팁 없이 그대로 돌려준다(D-140).
  */
-export function TermTooltip({ id, children }: { id: TermId; children: ReactElement }) {
+export function TermTooltip({
+  id,
+  shortcut,
+  children,
+}: {
+  id: TermId;
+  /** 툴팁 맨 아래에 보일 단축키(D-198). 용어 설명을 꺼도 단축키만은 보인다. */
+  shortcut?: ShortcutId;
+  children: ReactElement;
+}) {
   const termDisplay = useUiStore((s) => s.termDisplay);
   const locale = useUiStore((s) => s.locale);
   const termHelp = useUiStore((s) => s.termHelp);
@@ -27,7 +38,8 @@ export function TermTooltip({ id, children }: { id: TermId; children: ReactEleme
   const heading = termDisplay === "git" ? term.friendly : term.gitName;
   // English에서 화면 이름과 원래 이름이 같으면("Push"·"push") 이름 줄을 뺀다(D-139).
   const showHeading = term.friendly.toLowerCase() !== term.gitName.toLowerCase();
-  if (!termHelp) return children;
+  const keys = shortcut && <Kbd>{SHORTCUTS[shortcut].label}</Kbd>;
+  if (!termHelp) return keys ? <Tooltip content={keys}>{children}</Tooltip> : children;
 
   return (
     <Tooltip
@@ -37,6 +49,7 @@ export function TermTooltip({ id, children }: { id: TermId; children: ReactEleme
           {showHeading && <span className={styles.heading}>{heading}</span>}
           {term.command !== null && <code className={styles.command}>{term.command}</code>}
           <span className={styles.description}>{term.description}</span>
+          {keys}
         </span>
       }
     >
@@ -52,6 +65,8 @@ type TermProps = {
    * 툴팁은 호버로 뜬다.
    */
   focusable?: boolean;
+  /** 툴팁에 보일 단축키(D-198). */
+  shortcut?: ShortcutId;
 };
 
 /**
@@ -60,11 +75,11 @@ type TermProps = {
  * "Git 원래 이름으로 보기"에서는 본문과 툴팁 첫 줄이 서로 바뀐다.
  * "용어 설명 보기"를 끄면 툴팁이 없으므로 포커스도 받지 않는다.
  */
-export function Term({ id, focusable = true }: TermProps) {
+export function Term({ id, focusable = true, shortcut }: TermProps) {
   const label = useTermLabel(id);
   const termHelp = useUiStore((s) => s.termHelp);
   return (
-    <TermTooltip id={id}>
+    <TermTooltip id={id} shortcut={shortcut}>
       <span className={styles.term} tabIndex={focusable && termHelp ? 0 : undefined}>
         {label}
       </span>

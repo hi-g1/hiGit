@@ -11,6 +11,8 @@ import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { api } from "./lib/api";
 import { useAppStatus } from "./lib/queries";
 import { useDisplaySync } from "./lib/useDisplaySync";
+import { ShortcutsDialog } from "./features/shortcuts/ShortcutsDialog";
+import { useShortcutsStore } from "./features/shortcuts/shortcutsStore";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
@@ -79,6 +81,9 @@ function Screens() {
   // Ctrl+Shift+O: 어디서나 복제(D-115)
   const openClone = useCloneStore((s) => s.openClone);
   useShortcut("clone", openClone, gitReady);
+  // Ctrl+/: 단축키 표(D-198). 열린 동안은 표가 직접 닫는다(모달이 전역 단축키를 쉬게 한다).
+  const setShortcutsOpen = useShortcutsStore((s) => s.setOpen);
+  useShortcut("shortcutHelp", () => setShortcutsOpen(true));
   // 마지막 프로젝트를 여는 동안은 빈 바탕(시작 화면이 잠깐 보였다 사라지지 않게)
   const ready = useStartup();
   if (!ready) return null;
@@ -88,6 +93,7 @@ function Screens() {
       <TrustDialog />
       <SettingsDialog />
       <CloneDialog />
+      <ShortcutsDialog />
     </>
   );
 }

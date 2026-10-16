@@ -4,9 +4,12 @@ import { FONT_STEPS } from "../../lib/fontScale";
 import { useAppSettings } from "../../lib/queries";
 import { changeSettings } from "../../lib/settingsSave";
 import { useMessages } from "../../messages";
+import { Button } from "../../ui/Button";
 import { Checkbox } from "../../ui/Checkbox";
 import { Choice } from "../../ui/Choice";
 import { IdentityForm } from "../identity/IdentityForm";
+import { useShortcutsStore } from "../shortcuts/shortcutsStore";
+import { useSettingsStore } from "./settingsStore";
 import { EmailCheckLine } from "./EmailCheckLine";
 import styles from "./SettingsDialog.module.css";
 
@@ -18,6 +21,8 @@ export function GeneralSection() {
   const m = useMessages();
   const client = useQueryClient();
   const settings = useAppSettings().data ?? DEFAULT_SETTINGS;
+  const closeSettings = useSettingsStore((s) => s.close);
+  const openShortcuts = useShortcutsStore((s) => s.setOpen);
   return (
     <section className={styles.section} aria-labelledby="settings-general">
       <h3 id="settings-general" className={styles.sectionTitle}>
@@ -59,6 +64,18 @@ export function GeneralSection() {
           onChange={(e) => changeSettings(client, { termHelp: e.currentTarget.checked })}
         />
       </label>
+      <div className={styles.field}>
+        <Button
+          variant="text"
+          onClick={() => {
+            // 설정을 닫고 단축키 표를 연다(대화상자를 겹치지 않게).
+            closeSettings();
+            openShortcuts(true);
+          }}
+        >
+          {m.showShortcuts}
+        </Button>
+      </div>
     </section>
   );
 }

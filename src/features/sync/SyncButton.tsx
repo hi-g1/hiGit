@@ -1,9 +1,11 @@
 import { ProgressCount } from "../progress/ProgressCount";
 import { api, type BranchView } from "../../lib/api";
 import { formatExact, formatTime } from "../../lib/time";
+import { SHORTCUTS } from "../../lib/shortcuts";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
+import { Kbd } from "../../ui/Kbd";
 import { useTermLabel } from "../../ui/Term";
 import { useUiStore } from "../../state/uiStore";
 import { Tooltip } from "../../ui/Tooltip";
@@ -60,7 +62,14 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
           {m.overlapFiles(overlap.length)}
         </span>
       )}
-      <Tooltip content={branch.upstream ? m.syncPlan(ahead, behind) : m.syncFirstPush}>
+      <Tooltip
+        content={
+          <span className={styles.tip}>
+            {branch.upstream ? m.syncPlan(ahead, behind) : m.syncFirstPush}
+            <Kbd>{SHORTCUTS.sync.label}</Kbd>
+          </span>
+        }
+      >
         <button
           type="button"
           className={`${styles.button} ${primary ? styles.primary : ""}`}

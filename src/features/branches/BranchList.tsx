@@ -11,10 +11,13 @@ import {
   useStatus,
 } from "../../lib/queries";
 import { formatTime } from "../../lib/time";
+import { SHORTCUTS } from "../../lib/shortcuts";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
+import { Kbd } from "../../ui/Kbd";
+import { Tooltip } from "../../ui/Tooltip";
 import { TermTooltip, useTermLabel } from "../../ui/Term";
 import { useMergeAction } from "../merge/useMergeAction";
 import { PrSlot } from "../pr/PrSlot";
@@ -52,6 +55,7 @@ export function BranchList({ repo, current, onDone, children }: Props) {
   const [asking, setAsking] = useState<{ target: SwitchTarget; files: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sw = useSwitch(repo, onDone);
+  const m = useMessages();
   useShortcut("branches", () => setOpen((o) => !o));
   const stopAsking = () => {
     setAsking(null);
@@ -79,11 +83,20 @@ export function BranchList({ repo, current, onDone, children }: Props) {
           if (!o) setRenaming(null);
         }}
       >
-        <Popover.Trigger asChild>
-          <button ref={triggerRef} type="button" className={styles.trigger} aria-keyshortcuts="Control+B">
-            {children}
-          </button>
-        </Popover.Trigger>
+        <Tooltip
+          content={
+            <span className={styles.tip}>
+              {m.shortcutName.branches}
+              <Kbd>{SHORTCUTS.branches.label}</Kbd>
+            </span>
+          }
+        >
+          <Popover.Trigger asChild>
+            <button ref={triggerRef} type="button" className={styles.trigger} aria-keyshortcuts="Control+B">
+              {children}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
         <Popover.Portal>
           <Popover.Content
             className={styles.panel}

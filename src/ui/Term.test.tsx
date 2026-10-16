@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { useUiStore } from "../state/uiStore";
-import { Term } from "./Term";
+import { Term, TermTooltip } from "./Term";
 
 describe("Term", () => {
   it("본문에 쉬운 이름을 보여준다", () => {
@@ -34,6 +34,23 @@ describe("Term", () => {
     expect(screen.getByText("버전 기록")).toHaveFocus();
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("git log");
+  });
+
+  it("단축키가 있으면 툴팁 맨 아래에, 용어 설명을 꺼도 단축키는 보인다(D-198)", async () => {
+    const { unmount } = render(<Term id="log" shortcut="history" />);
+    act(() => screen.getByText("버전 기록").focus());
+    expect((await screen.findAllByText("Ctrl+H")).length).toBeGreaterThan(0);
+    unmount();
+    act(() => useUiStore.setState({ termHelp: false }));
+    render(
+      <TermTooltip id="log" shortcut="history">
+        <button type="button">단추</button>
+      </TermTooltip>,
+    );
+    act(() => screen.getByRole("button", { name: "단추" }).focus());
+    expect((await screen.findAllByText("Ctrl+H")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("git log")).not.toBeInTheDocument();
+    act(() => useUiStore.setState({ termHelp: true }));
   });
 
   it("명령이 없는 용어는 명령 줄을 생략한다", async () => {

@@ -52,6 +52,13 @@
   font-size: var(--font-size-sm);
 }
 
+/* 툴팁: 할 일과 단축키(D-197, D-198) */
+.tip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* 마지막 원격 확인 시각(D-197) */
 .checked {
   color: var(--text-muted);

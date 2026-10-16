@@ -15,6 +15,20 @@ describe("단축키 표", () => {
     expect(new Set(all).size).toBe(all.length);
   });
 
+  it("단축키 표 Ctrl+/는 한글 자판에서도 물리 키로 받는다(D-198)", () => {
+    expect(matches("shortcutHelp", key("Slash", { ctrlKey: true }))).toBe(true);
+    expect(SHORTCUTS.shortcutHelp.inTextField).toBe("app");
+  });
+
+  it("모든 단축키에 두 언어 이름이 있다", async () => {
+    const { ko } = await import("../messages/ko");
+    const { en } = await import("../messages/en");
+    for (const id of Object.keys(SHORTCUTS) as ShortcutId[]) {
+      expect(ko.shortcutName[id], id).toBeTruthy();
+      expect(en.shortcutName[id], id).toBeTruthy();
+    }
+  });
+
   it("웹뷰·OS가 쓰는 키와 겹치지 않는다", () => {
     const reserved = new Set(RESERVED.map(combo));
     expect(used.filter((c) => reserved.has(c))).toEqual([]);

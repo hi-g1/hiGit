@@ -5,6 +5,7 @@ import { ko as glossary } from "../glossary/ko";
 import type { TermId } from "../glossary/types";
 import type { LastVersion, ShortCase, StatusCase } from "../features/start/summary";
 import type { ErrorCode, ChangeKind, RecoverySource, SecretRule } from "../lib/api";
+import type { ShortcutId } from "../lib/shortcuts";
 import { josa } from "./josa";
 
 /** 버전 기록 노선도 행의 읽기 이름에 들어가는 것. 저장소 글자는 부르는 쪽이 자른다. */
@@ -194,6 +195,39 @@ export const ko = {
   synced: (sent: number, received: number) => `${t("sync")}했어요 · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
+  shortcutsTitle: "단축키",
+  showShortcuts: "단축키 보기",
+  shortcutGroup: {
+    global: "어디서나",
+    field: "버전 이름 칸에서",
+    fileList: "파일 목록에서",
+    conflict: `${t("conflict")} 해결`,
+    history: t("log"),
+  },
+  shortcutName: {
+    commit: t("commit"),
+    openFolder: "폴더 열기",
+    clone: t("clone"),
+    undo: "되돌리기",
+    redo: "다시 하기",
+    branches: `${t("branch")} 목록`,
+    sync: t("sync"),
+    history: t("log"),
+    activity: t("reflog"),
+    chooseOurs: `내 ${t("branch")}`,
+    chooseTheirs: `합칠 ${t("branch")}`,
+    chooseBoth: "둘 다",
+    nextHunk: "다음 곳",
+    prevHunk: "이전 곳",
+    zoomIn: "노선도 늘리기",
+    zoomOut: "노선도 줄이기",
+    fontLarger: "글자 크게",
+    fontSmaller: "글자 작게",
+    fontReset: "글자 보통",
+    shortcutHelp: "단축키 보기",
+    nextFile: "다음 파일",
+    prevFile: "이전 파일",
+  } satisfies Record<ShortcutId, string>,
   syncPlan: (ahead: number, behind: number) =>
     ahead === 0 && behind === 0
       ? "주고받을 버전 없음"

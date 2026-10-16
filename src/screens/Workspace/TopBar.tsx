@@ -94,7 +94,7 @@ export function TopBar({
             aria-keyshortcuts="Control+H"
             onClick={toggleHistory}
           >
-            <Term id="log" focusable={false} />
+            <Term id="log" focusable={false} shortcut="history" />
           </button>
         )}
         {!merging && (
@@ -105,7 +105,7 @@ export function TopBar({
             aria-keyshortcuts="Control+Shift+H"
             onClick={toggleActivity}
           >
-            <Term id="reflog" focusable={false} />
+            <Term id="reflog" focusable={false} shortcut="activity" />
           </button>
         )}
         <button type="button" className={styles.textButton} onClick={() => openSettings()}>
