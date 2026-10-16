@@ -63,7 +63,11 @@ fn capability_has_no_broad_permissions() {
         .collect();
     for p in &perms {
         assert!(
-            !(p.starts_with("fs:") || p.starts_with("shell:") || p.starts_with("opener:")),
+            !(p.starts_with("fs:")
+                || p.starts_with("shell:")
+                || p.starts_with("opener:")
+                || p.starts_with("window-state:")
+                || p.starts_with("single-instance:")),
             "{p}"
         );
         assert_ne!(*p, "core:default");
@@ -154,4 +158,14 @@ fn credential_helper_and_single_instance_come_first() {
         "첫 플러그인: {}",
         &lib[first..first + 60]
     );
+}
+
+#[test]
+fn window_minimum_size_matches_the_fit_rule() {
+    // 창 기억(D-217)이 되살린 크기를 고칠 때 쓰는 최소 크기와 같다.
+    let conf = json("tauri.conf.json");
+    let window = &conf["app"]["windows"][0];
+    assert_eq!(window["minWidth"], 800);
+    assert_eq!(window["minHeight"], 560);
+    assert!(read("src/window_fit.rs").contains("MIN_LOGICAL: (u32, u32) = (800, 560)"));
 }

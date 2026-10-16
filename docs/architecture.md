@@ -474,7 +474,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 | 폴더 우클릭 "Git으로 관리"(D-214) | `HKCU\Software\Classes\Directory\shell\higit` (+ `Directory\Background\shell`) 등록, 명령 `"<exe>" -- "%V"`, 관리자 권한 불필요, Windows 11은 "더 많은 옵션 표시" 안 | `~/.local/share/nautilus/scripts/<항목 이름>` 스크립트(파일 앱 오른쪽 클릭의 "스크립트") |
 | 실행 인자(D-213) | `higit.exe -- "<경로>"`(`--` 없이 위치 인자도 받음) | `higit -- "<경로>"` |
 | 파일 열기·폴더에서 보기(D-216) | opener 플러그인(`reveal_item_in_dir`, `open_path`), 실행 판정은 확장자·앞 바이트 | 같음, 실행 판정에 실행 권한 비트(`platform::is_executable`) 더함 |
-| 창 크기·위치(D-217) | `tauri-plugin-window-state`(크기·위치·최대화) | 같음 |
+| 창 크기·위치(D-217) | `tauri-plugin-window-state`(크기·위치·최대화, VISIBLE 뺌, 웹뷰 권한 없음). 되살린 뒤 `setup`에서 `window_fit::apply`가 한 번 고침(절반 넘게 밖이면 주 모니터 가운데, 작업 영역보다 크면 줄이고 800×560×배율보다 작으면 늘림, 넘치면 안으로) | 같음(Wayland는 위치를 못 읽고 정해 크기·최대화만) |
 | 설치 파일(D-220) | 사용자 단위 NSIS(한국어·English, PATH 안 넣음, 지울 때 우클릭 키 지움) | deb(`depends: git`)·AppImage(`libfuse2` 필요) |
 | 단일 인스턴스 | `tauri-plugin-single-instance` | 같음 |
 | git 찾기 | PATH → `C:\Program Files\Git\cmd\git.exe` | PATH |

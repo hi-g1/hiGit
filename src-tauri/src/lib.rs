@@ -5,6 +5,7 @@
 
 pub mod bindings;
 mod commands;
+mod window_fit;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -69,9 +70,26 @@ pub fn run() {
                 let _ = app.emit(bindings::OPEN_FOLDER_EVENT, ());
             }
         }))
+        // 창 크기·위치·최대화를 기억한다(D-217). 숨긴 창을 먼저 보이지 않게 VISIBLE은 뺀다. 웹뷰 권한은 주지 않는다.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED,
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
+            // 되살린 창이 화면 밖이거나 너무 크고 작으면 한 번 고친다(창을 보이기 전).
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    window_fit::apply(&window);
+                }
+            }
             // 창은 숨긴 채 만들고 화면이 첫 렌더 뒤 `app_ready`로 보인다. 그래도 안 보이면 스스로 보인다.
             let fallback = app.handle().clone();
             std::thread::spawn(move || {
