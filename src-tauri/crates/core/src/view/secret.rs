@@ -30,6 +30,10 @@ pub enum SecretRule {
     ApiKey,
     /// 50MB 이상
     LargeFile,
+    /// 새 압축 파일(.zip 등, 비밀이 아니어도 한 번 알린다, D-158)
+    Archive,
+    /// 새 실행 파일(.exe, ELF 등)
+    Executable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]

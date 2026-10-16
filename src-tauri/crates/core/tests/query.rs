@@ -845,6 +845,52 @@ mod secrets {
         assert_eq!(view.findings[0].line, Some(1));
     }
 
+    fn rules(core: &Core, dir: &Path, stage_all: bool) -> Vec<(String, SecretRule)> {
+        let mut found: Vec<(String, SecretRule)> = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all })
+            .unwrap()
+            .findings
+            .into_iter()
+            .map(|f| (f.path, f.rule))
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        found
+    }
+
+    #[test]
+    fn new_archives_and_executables_are_noticed_once() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        // 이미 추적 중인 압축 파일을 고친 것은 알리지 않는다.
+        std::fs::write(dir.join("fixture.zip"), b"PK\x03\x04old").unwrap();
+        git(dir, &["add", "fixture.zip"]);
+        git(dir, &["commit", "-q", "-m", "자료"]);
+        std::fs::write(dir.join("fixture.zip"), b"PK\x03\x04new").unwrap();
+        std::fs::write(dir.join("home.zip"), b"PK\x03\x04data").unwrap();
+        std::fs::write(dir.join("tool"), b"\x7fELF\x02\x01\x01").unwrap();
+        std::fs::write(dir.join("보고서.docx"), b"PK\x03\x04doc").unwrap();
+        // 이름만 압축 파일인 글자 파일의 비밀은 놓치지 않는다(비밀 규칙이 이긴다).
+        let token = format!("ghp_{}", "Q7".repeat(18));
+        std::fs::write(dir.join("notes.zip"), format!("token = {token}\n")).unwrap();
+        let core = opened(dir);
+        assert_eq!(
+            rules(&core, dir, true),
+            [
+                ("home.zip".to_string(), SecretRule::Archive),
+                ("notes.zip".to_string(), SecretRule::GithubToken),
+                ("tool".to_string(), SecretRule::Executable),
+            ]
+        );
+        // 넣은 새 파일도 같다(인덱스 쪽).
+        git(dir, &["add", "home.zip"]);
+        assert_eq!(
+            rules(&core, dir, false),
+            [("home.zip".to_string(), SecretRule::Archive)]
+        );
+    }
+
     #[test]
     fn links_are_not_read() {
         let repo = tempfile::tempdir().unwrap();

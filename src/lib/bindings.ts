@@ -1020,7 +1020,11 @@ export type SecretRule =
 /**  `-----BEGIN … PRIVATE KEY-----` */
 "privateKey" | "githubToken" | "awsKey" | "slackToken" | "apiKey" | 
 /**  50MB 이상 */
-"largeFile";
+"largeFile" | 
+/**  새 압축 파일(.zip 등, 비밀이 아니어도 한 번 알린다, D-158) */
+"archive" | 
+/**  새 실행 파일(.exe, ELF 등) */
+"executable";
 
 /**  한쪽 파일의 모양. */
 export type SideState = { kind: "text" } | { kind: "binary" } | 

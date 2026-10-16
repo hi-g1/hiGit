@@ -574,6 +574,12 @@ impl Queries {
         };
         let targets = &targets[..targets.len().min(MAX_FILES)];
 
+        // 압축·실행 알림은 새 파일에만(이미 추적 중인 자료를 고칠 때마다 알리지 않게, D-158).
+        let new_paths: std::collections::HashSet<&str> = targets
+            .iter()
+            .filter(|t| t.index == Change::Added || t.kind == git::EntryKind::Untracked)
+            .map(|t| t.path.as_str())
+            .collect();
         // (경로, 크기, 앞부분)
         let mut files: Vec<(String, u64, Vec<u8>)> = Vec::new();
         if from_index {
@@ -613,12 +619,23 @@ impl Queries {
         }
 
         for (path, size, head) in files {
+            // 비밀 이름 → 큰 파일 → 압축·실행 → 내용 순. 압축·실행은 머리가 맞을 때만 내용 검사를 건너뛴다.
+            let kind = new_paths
+                .contains(path.as_str())
+                .then(|| crate::secrets::kind_rule(&path, &head))
+                .flatten();
+            let content =
+                || crate::secrets::content_rule(&head).map(|(rule, line)| (rule, Some(line)));
             let finding = if let Some(rule) = crate::secrets::name_rule(&path) {
                 Some((rule, None))
             } else if size >= crate::secrets::LARGE_BYTES {
                 Some((SecretRule::LargeFile, None))
+            } else if let Some((rule, true)) = kind {
+                Some((rule, None))
+            } else if let Some(found) = content() {
+                Some(found)
             } else {
-                crate::secrets::content_rule(&head).map(|(rule, line)| (rule, Some(line)))
+                kind.map(|(rule, _)| (rule, None))
             };
             if let Some((rule, line)) = finding {
                 view.findings.push(SecretFinding { path, rule, line });

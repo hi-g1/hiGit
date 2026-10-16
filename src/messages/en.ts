@@ -88,6 +88,7 @@ export const en: Messages = {
   mergeAborted: "Stopped merging",
   otherOperation: "Work started in another tool is paused.",
   secretTitle: (n: number) => `${n} file${n === 1 ? "" : "s"} that look like keys or passwords`,
+  heavyTitle: (n: number) => `${n} archive or executable file${n === 1 ? "" : "s"}`,
   secretRule: {
     envFile: "Environment file",
     sshKey: "SSH key",
@@ -99,6 +100,8 @@ export const en: Messages = {
     slackToken: "Slack token",
     apiKey: "API key",
     largeFile: "File over 50MB",
+    archive: "Archive",
+    executable: "Executable",
   } satisfies Record<SecretRule, string>,
   moreFiles: (n: number) => `${n} more`,
   addToIgnore: `Add to ${t("ignore").toLowerCase()}`,

@@ -110,6 +110,7 @@ export const ko = {
   otherOperation: "다른 도구에서 시작한 작업이 멈춰 있어요.",
   // 비밀 파일 알림 줄(D-077)
   secretTitle: (n: number) => `키나 비밀번호로 보이는 파일 ${n}개`,
+  heavyTitle: (n: number) => `압축·실행 파일 ${n}개`,
   secretRule: {
     envFile: "환경 설정 파일",
     sshKey: "SSH 키",
@@ -121,6 +122,8 @@ export const ko = {
     slackToken: "Slack 토큰",
     apiKey: "API 키",
     largeFile: "50MB 넘는 파일",
+    archive: "압축 파일",
+    executable: "실행 파일",
   } satisfies Record<SecretRule, string>,
   moreFiles: (n: number) => `외 ${n}개`,
   addToIgnore: `${t("ignore")}에 추가`,

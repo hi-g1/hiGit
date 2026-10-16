@@ -7,6 +7,9 @@ import styles from "./SecretNotice.module.css";
 /** 한 번에 보여 줄 파일 수. 나머지는 개수로만 센다. */
 const SHOWN = 3;
 
+/** 비밀은 아니지만 같은 알림 줄에 한 번 알리는 규칙(D-158). */
+const HEAVY = new Set(["archive", "executable"]);
+
 type Props = {
   findings: SecretFinding[];
   files: ChangedFile[];
@@ -20,7 +23,8 @@ type Props = {
 
 /**
  * 버전 저장 전 비밀 파일 알림 줄(D-077). 확인 창이 아니라 이름 칸 아래 줄이다.
- * 경로와 규칙 이름만 보여주고, 걸린 글자는 core가 보내지 않는다.
+ * 경로와 규칙 이름만 보여주고, 걸린 글자는 core가 보내지 않는다. 새 압축·실행 파일도 같은 줄에 알리되(D-158)
+ * 제목은 비밀 수와 압축·실행 수를 따로 센다.
  */
 export function SecretNotice({ findings, files, onUnstage, onIgnore, onSaveAnyway, busy }: Props) {
   const m = useMessages();
@@ -31,9 +35,12 @@ export function SecretNotice({ findings, files, onUnstage, onIgnore, onSaveAnywa
     const change = fileOf(p)?.change;
     return change === "untracked" || change === "added";
   });
+  const heavy = findings.filter((f) => HEAVY.has(f.rule)).length;
+  const secret = findings.length - heavy;
+  const title = [secret > 0 ? m.secretTitle(secret) : null, heavy > 0 ? m.heavyTitle(heavy) : null].filter(Boolean).join(" · ");
   return (
     <div className={styles.notice} role="status">
-      <p className={styles.title}>{m.secretTitle(findings.length)}</p>
+      <p className={styles.title}>{title}</p>
       <ul className={styles.files}>
         {findings.slice(0, SHOWN).map((f) => (
           <li key={f.path}>
