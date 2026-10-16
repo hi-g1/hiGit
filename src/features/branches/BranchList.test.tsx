@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,9 @@ vi.mock("../../lib/api", async (importOriginal) => ({
 
 import { AppProviders, createQueryClient } from "../../App";
 import { api, type BranchListView, type BranchRow } from "../../lib/api";
+import { ApiError } from "../../lib/api";
+import { ko } from "../../messages/ko";
+import { useToastStore } from "../../ui/toastStore";
 import { BranchList } from "./BranchList";
 
 const row = (name: string, over: Partial<BranchRow> = {}): BranchRow => ({
@@ -133,5 +136,71 @@ describe("브랜치 목록", () => {
     const input = await screen.findByLabelText("찾기 또는 새로 만들기");
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
     expect(api.executeAction).not.toHaveBeenCalled();
+  });
+
+  describe("이름 바꾸기·지우기", () => {
+    async function openMenu(name: string) {
+      await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+      await userEvent.click(await screen.findByRole("button", { name: `${name} 메뉴` }));
+    }
+
+    it("로컬 줄마다 메뉴가 있고, 지우기는 확인 없이 branch-delete", async () => {
+      const onDone = show();
+      vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchDeleted", name: "결제 수정" });
+      await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+      for (const name of ["로그인 기능", "main", "결제 수정"]) {
+        expect(await screen.findByRole("button", { name: `${name} 메뉴` })).toBeInTheDocument();
+      }
+      await userEvent.click(screen.getByRole("button", { name: "결제 수정 메뉴" }));
+      await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 지우기" }));
+      expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-delete", input: { name: "결제 수정" } });
+      await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchDeleted("결제 수정")));
+    });
+
+    it("지금 브랜치와 기본 브랜치는 지우기가 흐리고 아무것도 하지 않는다", async () => {
+      show();
+      await openMenu("main");
+      const item = await screen.findByRole("menuitem", { name: "브랜치 지우기" });
+      expect(item).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(item);
+      expect(api.executeAction).not.toHaveBeenCalled();
+    });
+
+    it("이름 바꾸기: 줄이 입력칸이 되고 Enter로 branch-rename, Esc는 그만두기만", async () => {
+      const onDone = show();
+      vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchRenamed", from: "결제 수정", to: "결제" });
+      await openMenu("결제 수정");
+      await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 이름 바꾸기" }));
+      const field = await screen.findByRole("textbox", { name: "결제 수정 메뉴" });
+      expect(field).toHaveValue("결제 수정");
+      await userEvent.clear(field);
+      await userEvent.type(field, "결제");
+      fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+      expect(api.executeAction).not.toHaveBeenCalled();
+      await waitFor(() => expect(api.checkBranchName).toHaveBeenCalledWith("/repo", "결제"));
+      await waitFor(() => {
+        fireEvent.keyDown(field, { key: "Enter" });
+        expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-rename", input: { from: "결제 수정", to: "결제" } });
+      });
+      await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchRenamed("결제")));
+    });
+
+    it("이름 바꾸기 중 Esc는 목록을 닫지 않는다", async () => {
+      show();
+      await openMenu("결제 수정");
+      await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 이름 바꾸기" }));
+      const field = await screen.findByRole("textbox", { name: "결제 수정 메뉴" });
+      await userEvent.type(field, "{Escape}");
+      await waitFor(() => expect(screen.queryByRole("textbox", { name: "결제 수정 메뉴" })).not.toBeInTheDocument());
+      expect(screen.getByRole("listbox")).toBeInTheDocument();
+    });
+
+    it("core 오류는 토스트로", async () => {
+      show();
+      vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "branchProtected", detail: null }));
+      await openMenu("결제 수정");
+      await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 지우기" }));
+      await waitFor(() => expect(useToastStore.getState().toast?.text).toBe(ko.errors.branchProtected));
+    });
   });
 });

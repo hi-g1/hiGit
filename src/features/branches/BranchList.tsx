@@ -13,6 +13,7 @@ import { useMergeAction } from "../merge/useMergeAction";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./BranchList.module.css";
 import { branchColor } from "./color";
+import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
 
 type Props = {
@@ -33,11 +34,16 @@ type Choice = { kind: "switch"; item: ListItem } | { kind: "create"; name: strin
  */
 export function BranchList({ repo, current, onDone, children }: Props) {
   const [open, setOpen] = useState(false);
+  // 이름을 바꾸는 줄(로컬 브랜치 이름). Esc는 목록을 닫지 않고 이름 바꾸기만 그만둔다.
+  const [renaming, setRenaming] = useState<string | null>(null);
   useShortcut("branches", () => setOpen((o) => !o));
   return (
     <Popover.Root
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setRenaming(null);
+      }}
     >
       <Popover.Trigger asChild>
         <button type="button" className={styles.trigger} aria-keyshortcuts="Control+B">
@@ -45,15 +51,40 @@ export function BranchList({ repo, current, onDone, children }: Props) {
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.panel} align="start" sideOffset={6}>
-          {open && <Panel repo={repo} current={current} onDone={onDone} close={() => setOpen(false)} />}
+        <Popover.Content
+          className={styles.panel}
+          align="start"
+          sideOffset={6}
+          onEscapeKeyDown={(e) => {
+            if (renaming !== null) {
+              e.preventDefault();
+              setRenaming(null);
+            }
+          }}
+        >
+          {open && (
+            <Panel
+              repo={repo}
+              current={current}
+              onDone={onDone}
+              close={() => setOpen(false)}
+              renaming={renaming}
+              setRenaming={setRenaming}
+            />
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );
 }
 
-function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { close: () => void }) {
+type PanelProps = Omit<Props, "children"> & {
+  close: () => void;
+  renaming: string | null;
+  setRenaming: (name: string | null) => void;
+};
+
+function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelProps) {
   const m = useMessages();
   const branches = useBranches(repo);
   const [query, setQuery] = useState("");
@@ -109,6 +140,24 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
     }
   };
 
+  // 이름 바꾸기·지우기(D-103). 확인 창 없이 하고 토스트의 되돌리기로 되돌린다.
+  const edit = async (input: ActionInput, done: string) => {
+    setPending(true);
+    try {
+      await api.executeAction(repo, input);
+      setRenaming(null);
+      onDone(done);
+    } catch (e) {
+      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+    } finally {
+      setPending(false);
+      invalidateLog(queryClient, repo);
+      for (const key of ["status", "branches", "homeMap", "recovery", "mergeHint"]) {
+        void queryClient.invalidateQueries({ queryKey: [key, repo] });
+      }
+    }
+  };
+
   // 꺼내다 겹친 맡긴 파일을 충돌 해결 화면에서 푼다(D-083). 겹치지 않게 됐으면 바로 꺼낸다.
   const resolveParked = async (branch: string) => {
     setPending(true);
@@ -159,7 +208,21 @@ function Panel({ repo, current, onDone, close }: Omit<Props, "children"> & { clo
         }}
         onKeyDown={onKeyDown}
       />
-      {view && <List view={view} choices={choices} query={query} active={active} onPick={(c) => void run(c)} />}
+      {view && (
+        <List
+          view={view}
+          choices={choices}
+          query={query}
+          active={active}
+          onPick={(c) => void run(c)}
+          repo={repo}
+          renaming={renaming}
+          pending={pending}
+          onRenameStart={setRenaming}
+          onRename={(from, to) => void edit({ id: "branch-rename", input: { from, to } }, m.branchRenamed(to))}
+          onDelete={(name) => void edit({ id: "branch-delete", input: { name } }, m.branchDeleted(name))}
+        />
+      )}
       {!query.trim() && view?.local.some((b) => b.isHead && b.parkBlocked) && current !== null && (
         <div className={styles.mergeInto}>
           <Button disabled={pending} onClick={() => void resolveParked(current)}>
@@ -203,12 +266,24 @@ function List({
   query,
   active,
   onPick,
+  repo,
+  renaming,
+  pending,
+  onRenameStart,
+  onRename,
+  onDelete,
 }: {
   view: BranchListView;
   choices: Choice[];
   query: string;
   active: number;
   onPick: (c: Choice) => void;
+  repo: string;
+  renaming: string | null;
+  pending: boolean;
+  onRenameStart: (name: string) => void;
+  onRename: (from: string, to: string) => void;
+  onDelete: (name: string) => void;
 }) {
   const m = useMessages();
   const branchLabel = useTermLabel("branch");
@@ -240,8 +315,21 @@ function List({
             : !searching && c.kind === "switch" && first && c.item.name === first.name && c.item.remote === first.remote
               ? m.recentSection
               : null;
+        const local = c.kind === "switch" && c.item.remote === null ? c.item : null;
+        if (local && renaming === local.name) {
+          return (
+            <li key={`/${local.name}`} role="presentation">
+              {header && <p className={styles.section}>{header}</p>}
+              <RenameField repo={repo} from={local.name} pending={pending} onSubmit={(to) => onRename(local.name, to)} />
+            </li>
+          );
+        }
         return (
-          <li key={c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`} role="presentation">
+          <li
+            key={c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`}
+            role="presentation"
+            className={local ? `${styles.rowWrap} ${i === active ? styles.activeWrap : ""}` : undefined}
+          >
             {header && <p className={styles.section}>{header}</p>}
             <button
               type="button"
@@ -263,6 +351,9 @@ function List({
                 </>
               )}
             </button>
+            {local && (
+              <BranchRowMenu row={local.row} onRename={() => onRenameStart(local.name)} onDelete={() => onDelete(local.name)} />
+            )}
           </li>
         );
       })}
@@ -274,6 +365,46 @@ function List({
           </li>
         ))}
     </ul>
+  );
+}
+
+/** 줄 안의 이름 입력칸(D-103). Enter로 바꾸고 Esc는 목록이 받아 그만둔다. 한글 조합 중 Enter는 무시. */
+function RenameField({
+  repo,
+  from,
+  pending,
+  onSubmit,
+}: {
+  repo: string;
+  from: string;
+  pending: boolean;
+  onSubmit: (to: string) => void;
+}) {
+  const m = useMessages();
+  const [draft, setDraft] = useState(from);
+  const name = draft.trim();
+  const debounced = useDebounced(name, 300);
+  // 대소문자만 바꾸는 것은 같은 브랜치라 "같은 이름 있음"으로 막지 않는다.
+  const check = useBranchNameCheck(repo, debounced.toLowerCase() === from.toLowerCase() ? "" : debounced);
+  const problem = check.data && !check.data.ok ? check.data.problem : null;
+  const ready = name !== "" && name !== from && debounced === name && !check.isFetching && problem === null && !pending;
+  return (
+    <>
+      <input
+        className={styles.renameField}
+        value={draft}
+        aria-label={m.branchRowMenu(from)}
+        autoFocus
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+          e.preventDefault();
+          if (ready) onSubmit(name);
+        }}
+      />
+      {problem !== null && <p className={styles.renameHint}>{problem === "exists" ? m.sameBranchName : m.badBranchName}</p>}
+    </>
   );
 }
 

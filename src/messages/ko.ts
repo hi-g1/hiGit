@@ -150,6 +150,9 @@ export const ko = {
   // 브랜치 이름이 영어일 수 있어 조사는 용어("브랜치") 뒤에 붙인다.
   switchedTo: (branch: string) => `${branch} ${josa(t("branch"), "으로/로")} 갈아탔어요`,
   createdBranch: (branch: string) => `${branch} ${josa(t("branch"), "을/를")} 만들었어요`,
+  branchRowMenu: (name: string) => `${name} 메뉴`,
+  branchDeleted: (name: string) => `${name} ${josa(t("branch"), "을/를")} 지웠어요`,
+  branchRenamed: (name: string) => `${josa(name, "으로/로")} 이름을 바꿨어요`,
   trustTitle: "이 프로젝트에는 열 때 실행되는 설정이 있어요.",
   trustOpen: "믿고 열기",
   trustDisable: "끄고 열기",
