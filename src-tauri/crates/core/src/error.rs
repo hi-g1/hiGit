@@ -78,6 +78,10 @@ pub enum CoreError {
     #[error("고친 파일이 겹쳐 가져가지 않았습니다")]
     CarryBlocked(String),
 
+    /// 고정 한도(프로젝트 10개, 브랜치 10개, D-203).
+    #[error("더 고정할 수 없습니다")]
+    PinLimit,
+
     /// 같은 이름(대소문자 무시)의 브랜치가 있다.
     #[error("같은 이름의 브랜치가 있습니다")]
     BranchExists,

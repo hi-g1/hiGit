@@ -229,6 +229,15 @@ fn github_service(data_dir: Option<&Path>) -> crate::github::GitHubService {
     )
 }
 
+fn pin_error(e: crate::recent::PinError) -> CoreError {
+    use crate::recent::PinError;
+    match e {
+        PinError::Limit => CoreError::PinLimit,
+        PinError::NotListed => CoreError::InvalidInput("최근 목록에 없는 프로젝트예요"),
+        PinError::TooLong => CoreError::InvalidInput("브랜치 이름이 너무 길어요"),
+    }
+}
+
 impl Core {
     /// **테스트 전용.** GitHub 연결 서비스를 바꾼다(가짜 전송·메모리 키체인).
     #[doc(hidden)]
@@ -692,6 +701,19 @@ impl Core {
 
     pub fn remove_recent(&self, path: &Path) {
         self.recent.remove(path);
+    }
+
+    /// 최근 목록의 프로젝트를 고정하거나 푼다(D-203).
+    pub fn pin_project(&self, path: &Path, pinned: bool) -> Result<()> {
+        self.recent.pin(path, pinned).map_err(pin_error)
+    }
+
+    /// 열린 저장소의 로컬 브랜치를 고정하거나 푼다. 고정은 지금 있는 브랜치만 받는다.
+    pub fn pin_branch(&self, repo: &Path, branch: &str, pinned: bool) -> Result<()> {
+        let root = self.queries.local_branch_exists(repo, branch, pinned)?;
+        self.recent
+            .pin_branch(root.as_path(), branch, pinned)
+            .map_err(pin_error)
     }
 
     pub fn action_metas(&self) -> Vec<ActionMetaView> {

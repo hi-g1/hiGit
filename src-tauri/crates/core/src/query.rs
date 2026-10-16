@@ -563,6 +563,26 @@ impl Queries {
         Ok(view)
     }
 
+    /// 열린 저장소의 경로. `need`면 그 로컬 브랜치가 있어야 한다(고정, D-203).
+    pub(crate) fn local_branch_exists(
+        &self,
+        repo: &Path,
+        branch: &str,
+        need: bool,
+    ) -> Result<RepoPath> {
+        let root = self.opened_repo(repo)?;
+        crate::actions::names::validate_ref_like(branch)?;
+        if need
+            && self
+                .git
+                .resolve_ref(&root, &format!("refs/heads/{branch}"))?
+                .is_none()
+        {
+            return Err(CoreError::InvalidInput("없는 브랜치예요"));
+        }
+        Ok(root)
+    }
+
     /// 화면이 보낸 저장소 경로를 정규화하고, 열린 프로젝트인지 확인한다.
     fn opened_repo(&self, path: &Path) -> Result<RepoPath> {
         let repo = repo_path(path)?;

@@ -34,6 +34,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::project_allow_owner,
             commands::recent_list,
             commands::recent_remove,
+            commands::recent_pin,
+            commands::recent_pin_branch,
             commands::action_list,
             commands::action_preview,
             commands::action_execute,

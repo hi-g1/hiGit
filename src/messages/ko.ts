@@ -689,6 +689,7 @@ export const ko = {
     stagedChanges: `이번 버전에 넣은 파일이 있어요. 먼저 ${josa(t("commit"), "을/를")} 하거나 파일을 빼 주세요.`,
     operationInProgress: `${josa(t("merge"), "을/를")} 마치거나 그만둔 뒤에 할 수 있어요.`,
     parkBlocked: "두고 간 파일을 원래대로 꺼내지 못했어요. 파일은 안전하게 남아 있어요.",
+    pinLimit: "더 고정할 수 없어요. 고정 하나를 풀어 주세요.",
     carryBlocked: `겹치는 파일이 있어 ${josa(t("branch"), "을/를")} 바꾸지 않았어요. 고친 파일은 그대로예요.`,
     needsTrust: "믿고 열지 정해야 해요.",
     dubiousOwnership: "폴더 주인이 다른 사용자예요.",

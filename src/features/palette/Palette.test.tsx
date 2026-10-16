@@ -51,7 +51,7 @@ function show({ repo = "/repo" as string | null, files = 2, onDone = vi.fn() } =
   vi.mocked(api.listActions).mockResolvedValue(meta as ActionMetaView[]);
   vi.mocked(api.status).mockResolvedValue(status(files));
   vi.mocked(api.branches).mockResolvedValue(branches);
-  vi.mocked(api.recentProjects).mockResolvedValue([{ path: "/home/me/blog", name: "blog", lastOpenedAt: 1 }]);
+  vi.mocked(api.recentProjects).mockResolvedValue([{ path: "/home/me/blog", name: "blog", lastOpenedAt: 1 , pinned: false, pinnedBranches: []}]);
   render(
     <AppProviders client={createQueryClient()}>
       <Palette repo={repo} onDone={onDone} />

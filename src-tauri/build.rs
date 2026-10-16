@@ -21,6 +21,8 @@ const COMMANDS: &[&str] = &[
     "project_allow_owner",
     "recent_list",
     "recent_remove",
+    "recent_pin",
+    "recent_pin_branch",
     "action_list",
     "action_preview",
     "action_execute",

@@ -228,7 +228,7 @@ describe("홈에서 폴더 열기", () => {
 });
 
 describe("앱을 켤 때", () => {
-  const last = { path: repo.path, name: "내 프로젝트", lastOpenedAt: 1_700_000_000 };
+  const last = { path: repo.path, name: "내 프로젝트", lastOpenedAt: 1_700_000_000 , pinned: false, pinnedBranches: []};
 
   it("마지막 프로젝트를 바로 연다", async () => {
     vi.mocked(api.recentProjects).mockResolvedValue([last]);

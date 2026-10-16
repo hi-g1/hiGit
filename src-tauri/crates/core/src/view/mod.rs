@@ -742,6 +742,7 @@ pub enum ErrorCode {
     OperationInProgress,
     ParkBlocked,
     CarryBlocked,
+    PinLimit,
     NeedsTrust,
     NoRemote,
     WatchUnavailable,
@@ -924,6 +925,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NoRemote => ErrorCode::NoRemote,
             CoreError::ParkBlocked(_) => ErrorCode::ParkBlocked,
             CoreError::CarryBlocked(_) => ErrorCode::CarryBlocked,
+            CoreError::PinLimit => ErrorCode::PinLimit,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,
@@ -1092,6 +1094,10 @@ pub struct RecentProject {
     /// 마지막으로 연 시각(unix 초).
     #[specta(type = u32)]
     pub last_opened_at: i64,
+    /// 고정(D-203).
+    pub pinned: bool,
+    /// 고정한 브랜치 이름. 화면이 지금 브랜치 목록에 있는 것만 보인다.
+    pub pinned_branches: Vec<String>,
 }
 
 impl From<crate::recent::RecentEntry> for RecentProject {
@@ -1100,6 +1106,8 @@ impl From<crate::recent::RecentEntry> for RecentProject {
             path: e.path,
             name: e.name,
             last_opened_at: e.last_opened_at,
+            pinned: e.pinned,
+            pinned_branches: e.pinned_branches,
         }
     }
 }

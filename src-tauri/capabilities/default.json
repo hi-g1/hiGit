@@ -26,6 +26,8 @@
     "allow-project-allow-owner",
     "allow-recent-list",
     "allow-recent-remove",
+    "allow-recent-pin",
+    "allow-recent-pin-branch",
     "allow-action-list",
     "allow-action-preview",
     "allow-action-execute",

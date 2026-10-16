@@ -179,6 +179,10 @@ export const api = {
   allowFolderOwner: (path: string) => call(commands.projectAllowOwner(path)),
   recentProjects: () => call(commands.recentList()),
   removeRecent: (path: string) => call(commands.recentRemove(path)),
+  /** 최근 목록의 프로젝트 고정(D-203). */
+  pinProject: (path: string, pinned: boolean) => call(commands.recentPin(path, pinned)),
+  /** 열린 저장소의 브랜치 고정(D-203). */
+  pinBranch: (repo: string, branch: string, pinned: boolean) => call(commands.recentPinBranch(repo, branch, pinned)),
   projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),
   /** 열린 저장소의 호스팅 정보(네트워크 없음). */
   hostingContext: (repo: string) => call(commands.queryHostingContext(repo)),

@@ -38,6 +38,8 @@ const project = (name: string, minutesAgo: number) => ({
   path: `/home/me/${name}`,
   name,
   lastOpenedAt: now - minutesAgo * 60,
+  pinned: false,
+  pinnedBranches: [] as string[],
 });
 const summary = (over: Partial<ProjectSummaryView> = {}, branch: Partial<ProjectSummaryView["branch"]> = {}) => ({
   branch: { name: "main", hasCommits: true, upstream: "origin/main", ahead: 0, behind: 0, ...branch },

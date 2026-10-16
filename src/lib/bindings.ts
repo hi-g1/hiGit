@@ -45,6 +45,10 @@ export const commands = {
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
 	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
+	/**  최근 목록의 프로젝트 고정(D-203). */
+	recentPin: (path: string, pinned: boolean) => __TAURI_INVOKE<null>("recent_pin", { path, pinned }),
+	/**  열린 저장소의 브랜치 고정(D-203). 고정은 지금 있는 로컬 브랜치만. */
+	recentPinBranch: (repo: string, branch: string, pinned: boolean) => __TAURI_INVOKE<null>("recent_pin_branch", { repo, branch, pinned }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
 	actionPreview: (folder: string, input: ActionInput_Deserialize) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
 	actionExecute: (folder: string, input: ActionInput_Deserialize, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
@@ -664,7 +668,7 @@ export type EmailCheckView = {
 	state: EmailCheckState,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "pinLimit" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
 "rewrotePublished" | 
 /**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */
@@ -1294,6 +1298,10 @@ export type RecentProject = {
 	name: string,
 	/**  마지막으로 연 시각(unix 초). */
 	lastOpenedAt: number,
+	/**  고정(D-203). */
+	pinned: boolean,
+	/**  고정한 브랜치 이름. 화면이 지금 브랜치 목록에 있는 것만 보인다. */
+	pinnedBranches: string[],
 };
 
 export type RecoveryItem = {

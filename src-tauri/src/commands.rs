@@ -266,6 +266,28 @@ pub fn recent_remove(state: State<'_, AppState>, path: String) -> CmdResult<()> 
     Ok(())
 }
 
+/// 최근 목록의 프로젝트 고정(D-203).
+#[tauri::command]
+#[specta::specta]
+pub fn recent_pin(state: State<'_, AppState>, path: String, pinned: bool) -> CmdResult<()> {
+    Ok(core(&state)?.pin_project(&PathBuf::from(path), pinned)?)
+}
+
+/// 열린 저장소의 브랜치 고정(D-203). 고정은 지금 있는 로컬 브랜치만.
+#[tauri::command]
+#[specta::specta]
+pub async fn recent_pin_branch(
+    state: State<'_, AppState>,
+    repo: String,
+    branch: String,
+    pinned: bool,
+) -> CmdResult<()> {
+    blocking(state, move |core| {
+        core.pin_branch(&PathBuf::from(repo), &branch, pinned)
+    })
+    .await
+}
+
 /// 열린 저장소의 호스팅 정보(네트워크 없음).
 #[tauri::command]
 #[specta::specta]

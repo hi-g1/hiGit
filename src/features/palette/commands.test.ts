@@ -23,8 +23,8 @@ const input = (over: Partial<PaletteInput> = {}): PaletteInput => ({
     { name: "원격기능", remote: "origin" },
   ],
   recent: [
-    { path: "/home/me/blog", name: "blog", lastOpenedAt: 1 },
-    { path: "/repo", name: "repo", lastOpenedAt: 2 },
+    { path: "/home/me/blog", name: "blog", lastOpenedAt: 1 , pinned: false, pinnedBranches: []},
+    { path: "/repo", name: "repo", lastOpenedAt: 2 , pinned: false, pinnedBranches: []},
   ],
   repoPath: "/repo",
   ...over,

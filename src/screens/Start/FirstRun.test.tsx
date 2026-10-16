@@ -84,7 +84,7 @@ describe("처음 실행 패널(D-126, start-first.png)", () => {
   });
 
   it("최근 프로젝트가 있으면 보이지 않는다", async () => {
-    vi.mocked(api.recentProjects).mockResolvedValue([{ path: "/home/me/blog", name: "blog", lastOpenedAt: 1_700_000_000 }]);
+    vi.mocked(api.recentProjects).mockResolvedValue([{ path: "/home/me/blog", name: "blog", lastOpenedAt: 1_700_000_000 , pinned: false, pinnedBranches: []}]);
     vi.mocked(api.projectSummary).mockResolvedValue({
       branch: { name: "main", hasCommits: false, upstream: null, ahead: 0, behind: 0 },
       changedFiles: 0,
