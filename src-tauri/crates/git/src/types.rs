@@ -510,6 +510,35 @@ pub enum GitOp {
         set_upstream: bool,
         auth: AuthMode,
     },
+    /// 덮어쓰며 올리기(D-128). 원격 `branch`가 `expect`일 때만 `src`로 바꾼다. 값 있는 lease만 쓰고
+    /// `--force` 단독이나 `+` refspec은 쓰지 않는다. 이름은 core가 검사한 것.
+    PushForce {
+        remote: String,
+        branch: String,
+        src: Oid,
+        expect: Oid,
+        auth: AuthMode,
+    },
+    /// 원격 브랜치 지우기(D-130). 원격이 `expect`일 때만. 이미 없으면 git은 `(stale info)`로 거절한다.
+    PushDelete {
+        remote: String,
+        branch: String,
+        expect: Oid,
+        auth: AuthMode,
+    },
+    /// 원격에 새 브랜치를 만든다(이름 바꾸기). 그 이름이 원격에 없을 때만(빈 lease).
+    PushNewRef {
+        remote: String,
+        branch: String,
+        oid: Oid,
+        auth: AuthMode,
+    },
+    /// 태그 하나를 올린다(D-131). 강제하지 않는다(같은 이름이 다른 버전이면 거절).
+    PushTag {
+        remote: String,
+        name: String,
+        auth: AuthMode,
+    },
 }
 
 /// 전역(없으면 시스템) git의 이름·이메일(D-125). 저장소 설정은 섞지 않는다. 앞뒤 공백은 뺀다.

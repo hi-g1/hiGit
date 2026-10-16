@@ -344,6 +344,23 @@ mod tests {
         fn remote_head(&self, _: &RepoPath, _: &str) -> git::Result<Option<String>> {
             unreachable!()
         }
+        fn ls_remote(
+            &self,
+            _: &RepoPath,
+            _: &str,
+            _: &str,
+            _: git::AuthMode,
+        ) -> git::Result<Option<git::Oid>> {
+            unreachable!()
+        }
+        fn ls_remote_head(
+            &self,
+            _: &RepoPath,
+            _: &str,
+            _: git::AuthMode,
+        ) -> git::Result<Option<String>> {
+            unreachable!()
+        }
         fn check_branch_name(&self, _: &str) -> git::Result<bool> {
             unreachable!()
         }

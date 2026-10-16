@@ -36,6 +36,9 @@ pub use park::safe_relative;
 mod park_tests;
 #[cfg(test)]
 mod ref_tests;
+mod refpush;
+#[cfg(test)]
+mod refpush_tests;
 mod refs;
 #[cfg(test)]
 mod remote_tests;
@@ -64,10 +67,10 @@ use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffKind, DiffTarget,
-    FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry,
-    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RemoteUrls,
-    RepoPath, Result, StashEntry, Status, TagRef,
+    AuthMode, BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffKind,
+    DiffTarget, FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery,
+    IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote,
+    RemoteUrls, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 취소 깃발의 주인(D-117). 취소 단추·강제로 멈추기는 사람이 시킨 작업의 깃발만 켠다.
@@ -542,6 +545,25 @@ impl GitBackend for CliBackend {
             Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
             Err(e) => Err(e),
         }
+    }
+
+    fn ls_remote(
+        &self,
+        repo: &RepoPath,
+        remote: &str,
+        refname: &str,
+        auth: AuthMode,
+    ) -> Result<Option<Oid>> {
+        self.ls_remote_impl(repo, remote, refname, auth)
+    }
+
+    fn ls_remote_head(
+        &self,
+        repo: &RepoPath,
+        remote: &str,
+        auth: AuthMode,
+    ) -> Result<Option<String>> {
+        self.ls_remote_head_impl(repo, remote, auth)
     }
 
     fn check_branch_name(&self, name: &str) -> Result<bool> {
@@ -1128,14 +1150,7 @@ impl GitBackend for CliBackend {
                 set_upstream,
                 auth,
             } => {
-                // 태그·서브모듈·서명은 저장소 설정(push.followTags 등)을 따르지 않는다.
-                let mut args = vec![
-                    "push",
-                    "--progress",
-                    "--no-follow-tags",
-                    "--no-recurse-submodules",
-                    "--no-signed",
-                ];
+                let mut args = refpush::push_prefix();
                 if *set_upstream {
                     args.push("-u");
                 }
@@ -1151,6 +1166,26 @@ impl GitBackend for CliBackend {
                 }
                 self.run_network(repo, &args, NetMode::Foreground, *auth)?
             }
+            GitOp::PushForce {
+                remote,
+                branch,
+                src,
+                expect,
+                auth,
+            } => self.push_force(repo, remote, branch, src, expect, *auth)?,
+            GitOp::PushDelete {
+                remote,
+                branch,
+                expect,
+                auth,
+            } => self.push_delete(repo, remote, branch, expect, *auth)?,
+            GitOp::PushNewRef {
+                remote,
+                branch,
+                oid,
+                auth,
+            } => self.push_new_ref(repo, remote, branch, oid, *auth)?,
+            GitOp::PushTag { remote, name, auth } => self.push_tag(repo, remote, name, *auth)?,
             GitOp::SwitchTrack {
                 local,
                 remote_branch,

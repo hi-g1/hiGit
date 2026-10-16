@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff,
-    GitIdentity, GitOp, GitVersion, GlobalOp, GraphLogQuery, IndexEntry, LogQuery, MergeCheck,
-    MergeSegment, Oid, OpOutput, RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RemoteUrls,
-    RepoPath, Result, StashEntry, Status, TagRef,
+    AuthMode, BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget,
+    FileDiff, GitIdentity, GitOp, GitVersion, GlobalOp, GraphLogQuery, IndexEntry, LogQuery,
+    MergeCheck, MergeSegment, Oid, OpOutput, RebaseState, RefEntry, RefExpect, ReflogEntry, Remote,
+    RemoteUrls, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -81,6 +81,24 @@ pub trait GitBackend: Send + Sync {
 
     /// 원격의 기본 브랜치 이름(`refs/remotes/<원격>/HEAD`가 가리키는 것). 없으면 `None`.
     fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>>;
+
+    /// 원격에 지금 있는 ref 하나의 버전(`ls-remote`, 네트워크). `refname`은 `refs/heads/main` 같은 전체 이름이고
+    /// 정확히 같은 줄만 본다. 없으면 `None`.
+    fn ls_remote(
+        &self,
+        repo: &RepoPath,
+        remote: &str,
+        refname: &str,
+        auth: AuthMode,
+    ) -> Result<Option<Oid>>;
+
+    /// 서버가 알려 주는 기본 브랜치 이름(`ls-remote --symref <원격> HEAD`, 네트워크). 모르면 `None`.
+    fn ls_remote_head(
+        &self,
+        repo: &RepoPath,
+        remote: &str,
+        auth: AuthMode,
+    ) -> Result<Option<String>>;
 
     /// 새 브랜치 이름으로 쓸 수 있는지. git 규칙에 더해 `-`로 시작하는 이름과 `HEAD`를 막는다.
     fn check_branch_name(&self, name: &str) -> Result<bool>;

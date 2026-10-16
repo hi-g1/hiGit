@@ -32,6 +32,10 @@ pub struct FakeGit {
     pub remotes: Mutex<Vec<Remote>>,
     pub refs: Mutex<Vec<RefEntry>>,
     pub remote_heads: Mutex<Vec<(String, String)>>,
+    /// `ls_remote`가 볼 원격의 ref: (원격, 전체 ref 이름, 버전).
+    pub server_refs: Mutex<Vec<(String, String, git::Oid)>>,
+    /// `ls_remote_head`가 돌려줄 서버 기본 브랜치: (원격, 브랜치).
+    pub server_heads: Mutex<Vec<(String, String)>>,
     pub merge_check: Mutex<MergeCheck>,
     pub parked_paths: Mutex<Vec<String>>,
     pub local_config: Mutex<Vec<(String, String)>>,
@@ -76,6 +80,8 @@ impl FakeGit {
             remotes: Mutex::new(Vec::new()),
             refs: Mutex::new(Vec::new()),
             remote_heads: Mutex::new(Vec::new()),
+            server_refs: Mutex::new(Vec::new()),
+            server_heads: Mutex::new(Vec::new()),
             merge_check: Mutex::new(MergeCheck::Clean),
             parked_paths: Mutex::new(Vec::new()),
             local_config: Mutex::new(Vec::new()),
@@ -260,6 +266,37 @@ impl GitBackend for FakeGit {
             .filter(|r| r.name.starts_with(prefix))
             .cloned()
             .collect())
+    }
+
+    fn ls_remote(
+        &self,
+        _repo: &RepoPath,
+        remote: &str,
+        refname: &str,
+        _auth: git::AuthMode,
+    ) -> git::Result<Option<git::Oid>> {
+        Ok(self
+            .server_refs
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(r, name, _)| r == remote && name == refname)
+            .map(|(_, _, oid)| oid.clone()))
+    }
+
+    fn ls_remote_head(
+        &self,
+        _repo: &RepoPath,
+        remote: &str,
+        _auth: git::AuthMode,
+    ) -> git::Result<Option<String>> {
+        Ok(self
+            .server_heads
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(r, _)| r == remote)
+            .map(|(_, b)| b.clone()))
     }
 
     fn remote_head(&self, _repo: &RepoPath, remote: &str) -> git::Result<Option<String>> {
