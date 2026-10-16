@@ -539,6 +539,13 @@ pub enum GitOp {
         name: String,
         auth: AuthMode,
     },
+    /// 원격 태그 하나를 지운다(D-182). 원격 태그가 `expect`(로컬 태그 값)일 때만.
+    PushDeleteTag {
+        remote: String,
+        name: String,
+        expect: Oid,
+        auth: AuthMode,
+    },
     /// 원격을 더한다(`remote add`, D-132). 주소는 core가 검사해 만든 값만.
     RemoteAdd { name: String, url: String },
 }

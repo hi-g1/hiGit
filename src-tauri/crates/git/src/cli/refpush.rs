@@ -64,6 +64,20 @@ impl CliBackend {
         self.push_ref(repo, Some(&lease), remote, &refspec, auth)
     }
 
+    /// 원격 태그가 `expect`일 때만 지운다(D-182).
+    pub(super) fn push_delete_tag(
+        &self,
+        repo: &RepoPath,
+        remote: &str,
+        name: &str,
+        expect: &Oid,
+        auth: AuthMode,
+    ) -> Result<GitOutput> {
+        let lease = format!("--force-with-lease=refs/tags/{name}:{expect}");
+        let refspec = format!(":refs/tags/{name}");
+        self.push_ref(repo, Some(&lease), remote, &refspec, auth)
+    }
+
     /// 태그 하나를 올린다. 강제하지 않는다.
     pub(super) fn push_tag(
         &self,

@@ -619,6 +619,7 @@ export const ko = {
     remoteRefExists: `${t("remote")}에 같은 이름이 다른 버전으로 있어요.`,
     remoteRefMissing: `${t("remote")}에 그 ${josa(t("branch"), "이/가")} 없어요.`,
     remoteNameTaken: `${t("remote")}에 같은 이름의 ${josa(t("branch"), "이/가")} 이미 있어요.`,
+    remoteTagDiffers: `${t("remote")}의 같은 이름 ${josa(t("tag"), "은/는")} 다른 버전이에요.`,
     noUpstream: `아직 ${t("remote")}에 올린 적이 없는 ${josa(t("branch"), "이에요/예요")}.`,
     sshHostUnverified: "처음 접속하는 서버라 확인이 필요해요. 터미널에서 한 번 접속해 서버를 등록해 주세요.",
     sshAuthFailed: "SSH 인증에 실패했어요. 키가 등록되어 있는지 확인하고, 키에 비밀번호가 있으면 ssh-agent에 올려 주세요.",

@@ -47,9 +47,9 @@ pub use input::{
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
     HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCommentInput,
     PrCreateInput, PrMergeInput, PrNumberInput, PublishInput, RemoteBranchInput,
-    RemoteBranchRenameInput, RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput,
-    SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput, TakeOutSource,
-    Visibility,
+    RemoteBranchRenameInput, RemoteTagInput, RestoreInput, RewriteInput, RewriteKindInput,
+    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput,
+    TakeOutSource, Visibility,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -566,6 +566,9 @@ pub enum ActionResult {
         owner: String,
         name: String,
     },
+    RemoteTagDeleted {
+        name: String,
+    },
     ParkedRecovered {
         count: u32,
     },
@@ -663,6 +666,7 @@ impl From<Outcome> for ActionResult {
             Outcome::PrClosed { number } => ActionResult::PrClosed { number },
             Outcome::PrReopened { number } => ActionResult::PrReopened { number },
             Outcome::Forked { owner, name } => ActionResult::Forked { owner, name },
+            Outcome::RemoteTagDeleted { name } => ActionResult::RemoteTagDeleted { name },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
             Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },
@@ -785,6 +789,8 @@ pub enum ErrorCode {
     RemoteRefMissing,
     /// 원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔).
     RemoteNameTaken,
+    /// 원격의 같은 이름 태그가 다른 버전이다(D-182).
+    RemoteTagDiffers,
     NoUpstream,
     SshHostUnverified,
     SshAuthFailed,
@@ -889,6 +895,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NothingToOverwrite => ErrorCode::NothingToOverwrite,
             CoreError::RemoteBranchProtected => ErrorCode::RemoteBranchProtected,
             CoreError::RemoteNameTaken => ErrorCode::RemoteNameTaken,
+            CoreError::RemoteTagDiffers => ErrorCode::RemoteTagDiffers,
             CoreError::PublishHasRemote => ErrorCode::PublishHasRemote,
             CoreError::PublishNoVersions => ErrorCode::PublishNoVersions,
             CoreError::RemoteRenamePartial(_) => ErrorCode::RemoteRenamePartial,

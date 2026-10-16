@@ -222,6 +222,12 @@
     "undo": "nothing"
   },
   {
+    "id": "remote-tag-delete",
+    "glossaryId": "remote-tag-delete",
+    "risk": "danger",
+    "undo": "irreversible"
+  },
+  {
     "id": "identity-set",
     "glossaryId": "identity",
     "risk": "normal",

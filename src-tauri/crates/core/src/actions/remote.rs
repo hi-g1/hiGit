@@ -321,6 +321,35 @@ impl Net<'_> {
         )
     }
 
+    /// 원격 태그를 `expect`일 때만 지운다(D-182).
+    pub(crate) fn push_delete_tag(
+        &self,
+        remote: &str,
+        name: &str,
+        expect: &Oid,
+    ) -> Result<OpOutput> {
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
+        self.run(
+            auth,
+            &GitOp::PushDeleteTag {
+                remote: remote.to_string(),
+                name: name.to_string(),
+                expect: expect.clone(),
+                auth,
+            },
+        )
+    }
+
+    /// 서버에 지금 있는 ref 하나(전체 이름, `ls-remote`). 없으면 `None`.
+    pub(crate) fn server_ref(&self, remote: &str, refname: &str) -> Result<Option<Oid>> {
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
+        Ok(self.git.ls_remote(self.repo, remote, refname, auth)?)
+    }
+
     /// 서버에 지금 있는 브랜치 끝(`ls-remote`). 없으면 `None`.
     pub(crate) fn server_branch(&self, remote: &str, branch: &str) -> Result<Option<Oid>> {
         let auth = self

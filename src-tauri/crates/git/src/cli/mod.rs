@@ -1207,6 +1207,12 @@ impl GitBackend for CliBackend {
                 auth,
             } => self.push_new_ref(repo, remote, branch, oid, *auth)?,
             GitOp::PushTag { remote, name, auth } => self.push_tag(repo, remote, name, *auth)?,
+            GitOp::PushDeleteTag {
+                remote,
+                name,
+                expect,
+                auth,
+            } => self.push_delete_tag(repo, remote, name, expect, *auth)?,
             GitOp::RemoteAdd { name, url } => {
                 let mut args = vec!["remote", "add"];
                 push_revs(&mut args, Cmd::RemoteAdd, self.git_version(), &[name, url]);

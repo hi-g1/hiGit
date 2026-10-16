@@ -110,7 +110,7 @@ export const commands = {
 /* Constants */
 export const OP_PROGRESS_EVENT = "op-progress" as const;
 
-export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename","tag-push","fork"] as const;
+export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename","tag-push","fork","remote-tag-delete"] as const;
 
 export const REPO_CHANGED_EVENT = "repo-changed" as const;
 
@@ -134,6 +134,8 @@ export type ActionInput_Deserialize =
 { id: "pr-close"; input: PrNumberInput } | { id: "pr-reopen"; input: PrNumberInput } | 
 /**  대상 GitHub 저장소를 내 계정에 포크하고 지금 브랜치를 그리로 올린다(D-181). 입력 없음. */
 ({ id: "fork" }) & { input?: never } | 
+/**  원격 태그 하나를 지운다(D-182, 확인 필요). */
+{ id: "remote-tag-delete"; input: RemoteTagInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -202,6 +204,8 @@ export type ActionInput_Serialize =
 { id: "pr-close"; input: PrNumberInput } | { id: "pr-reopen"; input: PrNumberInput } | 
 /**  대상 GitHub 저장소를 내 계정에 포크하고 지금 브랜치를 그리로 올린다(D-181). 입력 없음. */
 ({ id: "fork" }) & { input?: never } | 
+/**  원격 태그 하나를 지운다(D-182, 확인 필요). */
+{ id: "remote-tag-delete"; input: RemoteTagInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -289,7 +293,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "prCommented"; number: number } | { kind: "prMerged"; number: number } | { kind: "prClosed"; number: number } | { kind: "prReopened"; number: number } | { kind: "forked"; owner: string; name: string } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "prCommented"; number: number } | { kind: "prMerged"; number: number } | { kind: "prClosed"; number: number } | { kind: "prReopened"; number: number } | { kind: "forked"; owner: string; name: string } | { kind: "remoteTagDeleted"; name: string } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -666,7 +670,9 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  지우려는 원격 브랜치가 없다. */
 "remoteRefMissing" | 
 /**  원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔). */
-"remoteNameTaken" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+"remoteNameTaken" | 
+/**  원격의 같은 이름 태그가 다른 버전이다(D-182). */
+"remoteTagDiffers" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186). */
 "privateEmailBlocked" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
@@ -1283,6 +1289,12 @@ export type RemoteBranchRenameInput = {
 	from: string,
 	to: string,
 	expectTip: string,
+};
+
+/**  원격 태그 지우기(D-182). `expect`는 확인 창이 본 로컬 태그 값(가벼운 태그는 버전, 주석 태그는 태그 객체). */
+export type RemoteTagInput = {
+	name: string,
+	expect: string,
 };
 
 /**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */

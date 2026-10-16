@@ -24,6 +24,8 @@ pub enum ActionInput {
     PrReopen(PrNumberInput),
     /// 대상 GitHub 저장소를 내 계정에 포크하고 지금 브랜치를 그리로 올린다(D-181). 입력 없음.
     Fork,
+    /// 원격 태그 하나를 지운다(D-182, 확인 필요).
+    RemoteTagDelete(RemoteTagInput),
     /// 전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다.
     IdentitySet(IdentityInput),
     Stage(PathsInput),
@@ -99,6 +101,7 @@ impl ActionInput {
             ActionInput::PrClose(_) => "pr-close",
             ActionInput::PrReopen(_) => "pr-reopen",
             ActionInput::Fork => "fork",
+            ActionInput::RemoteTagDelete(_) => "remote-tag-delete",
             ActionInput::IdentitySet(_) => "identity-set",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
@@ -276,6 +279,14 @@ pub struct PrMergeInput {
     pub number: u32,
     pub method: crate::view::MergeMethodView,
     pub expect_head: String,
+}
+
+/// 원격 태그 지우기(D-182). `expect`는 확인 창이 본 로컬 태그 값(가벼운 태그는 버전, 주석 태그는 태그 객체).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteTagInput {
+    pub name: String,
+    pub expect: String,
 }
 
 /// 검토 요청 번호 하나(닫기·다시 열기).

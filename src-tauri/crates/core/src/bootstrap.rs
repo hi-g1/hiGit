@@ -72,7 +72,7 @@ struct Running {
 }
 
 /// 원격 작업. 언제든 취소할 수 있고 진행 알림이 오래 없으면 "응답 없음"이다. 화면도 이 목록을 바인딩으로 받는다.
-pub const REMOTE_ACTIONS: [&str; 10] = [
+pub const REMOTE_ACTIONS: [&str; 11] = [
     "fetch",
     "pull",
     "push",
@@ -83,6 +83,7 @@ pub const REMOTE_ACTIONS: [&str; 10] = [
     "remote-branch-rename",
     "tag-push",
     "fork",
+    "remote-tag-delete",
 ];
 
 /// 복제 대상 경로의 최대 글자 수(Windows 260자 한도 안에서 저장소 안 파일 자리를 남긴다).
@@ -742,6 +743,7 @@ impl Core {
             | "pr-merge"
             | "pr-close"
             | "pr-reopen"
+            | "remote-tag-delete"
             | "force-push"
             | "remote-branch-delete"
             | "tag-push" => Locks::Network,

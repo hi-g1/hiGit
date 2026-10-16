@@ -12,6 +12,7 @@ describe("원격 작업 목록", () => {
       "push",
       "remote-branch-delete",
       "remote-branch-rename",
+      "remote-tag-delete",
       "sync",
       "tag-push",
     ]);

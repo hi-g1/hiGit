@@ -253,6 +253,7 @@ fn action_input_tags_match_registry() {
             | ActionInput::PrClose(_)
             | ActionInput::PrReopen(_)
             | ActionInput::Fork
+            | ActionInput::RemoteTagDelete(_)
             | ActionInput::IdentitySet(_)
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
@@ -318,6 +319,10 @@ fn action_input_tags_match_registry() {
         ActionInput::PrClose(higit_core::view::PrNumberInput { number: 1 }),
         ActionInput::PrReopen(higit_core::view::PrNumberInput { number: 1 }),
         ActionInput::Fork,
+        ActionInput::RemoteTagDelete(higit_core::view::RemoteTagInput {
+            name: "v1".into(),
+            expect: "a".repeat(40),
+        }),
         ActionInput::IdentitySet(higit_core::view::IdentityInput {
             name: "이름".into(),
             email: "a@example.com".into(),

@@ -371,6 +371,7 @@ fn registered_actions_match_spec_risk() {
             ("pr-close", "pr-close", Risk::Normal),
             ("pr-reopen", "pr", Risk::Safe),
             ("fork", "fork", Risk::Normal),
+            ("remote-tag-delete", "remote-tag-delete", Risk::Danger),
             ("identity-set", "identity", Risk::Normal),
             ("force-push", "force-push", Risk::Danger),
             ("remote-branch-delete", "remote-branch-delete", Risk::Danger),
@@ -400,7 +401,8 @@ fn irreversible_actions_are_the_confirmed_few() {
             "force-push",
             "pr-merge",
             "remote-branch-delete",
-            "remote-branch-rename"
+            "remote-branch-rename",
+            "remote-tag-delete"
         ]
     );
 }

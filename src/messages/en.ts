@@ -580,6 +580,7 @@ export const en: Messages = {
     remoteRefExists: `The ${t("remote").toLowerCase()} already has this name on a different version.`,
     remoteRefMissing: `That ${t("branch").toLowerCase()} is not on the ${t("remote").toLowerCase()}.`,
     remoteNameTaken: `The ${t("remote").toLowerCase()} already has a ${t("branch").toLowerCase()} with that name.`,
+    remoteTagDiffers: `The ${t("tag").toLowerCase()} with the same name on the ${t("remote").toLowerCase()} is a different version.`,
     noUpstream: `This ${t("branch").toLowerCase()} has never been uploaded to the ${t("remote").toLowerCase()}.`,
     sshHostUnverified: "This server is new. Connect once from a terminal to trust it.",
     sshAuthFailed: "SSH authentication failed. Check that your key is registered, and add it to ssh-agent if it has a passphrase.",

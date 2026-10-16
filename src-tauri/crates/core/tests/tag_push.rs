@@ -116,3 +116,108 @@ fn needs_a_remote() {
         ErrorCode::NoRemote
     );
 }
+
+/// 원격 태그 지우기(`remote-tag-delete`, D-182). 확인 토큰이 필요하고 로컬 태그는 그대로다.
+mod remote_tag_delete {
+    use super::*;
+    use higit_core::view::RemoteTagInput;
+
+    fn setup() -> (tempfile::TempDir, tempfile::TempDir) {
+        let remote = tempfile::tempdir().unwrap();
+        git(remote.path(), &["init", "-q", "--bare", "-b", "main"]);
+        let mine = tempfile::tempdir().unwrap();
+        let dir = mine.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        commit(dir, "a.txt");
+        git(
+            dir,
+            &["remote", "add", "origin", &remote.path().to_string_lossy()],
+        );
+        git(dir, &["push", "-q", "-u", "origin", "main"]);
+        git(dir, &["tag", "v1"]);
+        git(dir, &["tag", "-a", "-m", "주석", "v2"]);
+        git(dir, &["push", "-q", "origin", "v1", "v2"]);
+        (remote, mine)
+    }
+
+    fn input(dir: &Path, name: &str) -> ActionInput {
+        ActionInput::RemoteTagDelete(RemoteTagInput {
+            name: name.into(),
+            expect: git(dir, &["rev-parse", &format!("refs/tags/{name}")]),
+        })
+    }
+
+    fn confirmed(core: &Core, dir: &Path, input: &ActionInput) -> higit_core::Result<ActionResult> {
+        let token = core.preview(dir, input).unwrap().token;
+        core.execute(dir, input, Some(token))
+    }
+
+    #[test]
+    fn deletes_only_the_remote_tag_after_confirmation() {
+        let (remote, mine) = setup();
+        let dir = mine.path();
+        let core = core(dir);
+        let err = core.execute(dir, &input(dir, "v1"), None).unwrap_err();
+        assert_eq!(code(&err), ErrorCode::PreviewRequired);
+        assert_eq!(
+            confirmed(&core, dir, &input(dir, "v1")).unwrap(),
+            ActionResult::RemoteTagDeleted { name: "v1".into() }
+        );
+        // 주석 태그도 태그 객체 값으로 지운다.
+        confirmed(&core, dir, &input(dir, "v2")).unwrap();
+        assert!(remote_tags(remote.path()).is_empty());
+        // 내 컴퓨터의 태그는 그대로라 다시 올릴 수 있다.
+        assert!(git(dir, &["tag", "--list"]).contains("v1"));
+        push_tag(&core, dir, "v1").unwrap();
+        assert!(remote_tags(remote.path()).contains("v1"));
+    }
+
+    #[test]
+    fn refuses_when_the_remote_differs_or_is_gone() {
+        let (remote, mine) = setup();
+        let dir = mine.path();
+        let core = core(dir);
+        // 원격에 없음.
+        git(remote.path(), &["tag", "-d", "v1"]);
+        let err = confirmed(&core, dir, &input(dir, "v1")).unwrap_err();
+        assert_eq!(code(&err), ErrorCode::RemoteRefMissing);
+        // 원격의 같은 이름이 다른 버전.
+        let other = tempfile::tempdir().unwrap();
+        git(other.path(), &["init", "-q", "-b", "main"]);
+        commit(other.path(), "x.txt");
+        git(
+            other.path(),
+            &[
+                "push",
+                "-q",
+                "-f",
+                &remote.path().to_string_lossy(),
+                "HEAD:refs/tags/v2",
+            ],
+        );
+        let before = remote_tags(remote.path());
+        let err = confirmed(&core, dir, &input(dir, "v2")).unwrap_err();
+        assert_eq!(code(&err), ErrorCode::RemoteTagDiffers);
+        assert_eq!(remote_tags(remote.path()), before);
+        // 로컬 값과 다른 expect·이상한 이름은 원격에 닿기 전에 막힌다.
+        let stale = ActionInput::RemoteTagDelete(RemoteTagInput {
+            name: "v2".into(),
+            expect: "0".repeat(40),
+        });
+        assert_eq!(
+            code(&confirmed(&core, dir, &stale).unwrap_err()),
+            ErrorCode::InvalidInput
+        );
+        for bad in ["-x", "a b"] {
+            let odd = ActionInput::RemoteTagDelete(RemoteTagInput {
+                name: bad.into(),
+                expect: "0".repeat(40),
+            });
+            assert_eq!(
+                code(&confirmed(&core, dir, &odd).unwrap_err()),
+                ErrorCode::InvalidInput,
+                "{bad}"
+            );
+        }
+    }
+}

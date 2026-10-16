@@ -230,6 +230,53 @@ fn tag_push_never_moves_an_existing_tag() {
 }
 
 #[test]
+fn tag_delete_needs_the_expected_value() {
+    let s = setup();
+    testutil::git(s.mine.path(), &["tag", "v1"]);
+    testutil::git(s.mine.path(), &["tag", "-a", "-m", "주석", "v2"]);
+    testutil::git(s.mine.path(), &["push", "-q", "origin", "v1", "v2"]);
+    // ref 값 그대로(주석 태그는 태그 객체).
+    let local = |name: &str| {
+        Oid::parse(&testutil::git(
+            s.mine.path(),
+            &["rev-parse", &format!("refs/tags/{name}")],
+        ))
+        .unwrap()
+    };
+    let delete = |name: &str, expect: Oid| GitOp::PushDeleteTag {
+        remote: "origin".into(),
+        name: name.into(),
+        expect,
+        auth: AUTH,
+    };
+    // 다른 값이면 지우지 않는다(남이 바꿔 둔 태그).
+    let other = Oid::parse(&"0".repeat(40)).unwrap();
+    let err = backend().run(&s.repo(), &delete("v1", other)).unwrap_err();
+    assert_eq!(kind(&err), FailureKind::LeaseStale, "{}", err.detail());
+    assert!(
+        !args(&err)
+            .iter()
+            .any(|a| a == "--force" || a.starts_with('+'))
+    );
+    assert!(s.remote_ref("refs/tags/v1").is_some());
+    // 같은 값이면 그 태그만 지운다. 주석 태그는 태그 객체 값으로.
+    backend()
+        .run(&s.repo(), &delete("v1", local("v1")))
+        .unwrap();
+    backend()
+        .run(&s.repo(), &delete("v2", local("v2")))
+        .unwrap();
+    assert_eq!(s.remote_ref("refs/tags/v1"), None);
+    assert_eq!(s.remote_ref("refs/tags/v2"), None);
+    assert!(s.remote_ref("refs/heads/main").is_some());
+    // 없는 태그는 lease가 어긋난다.
+    let err = backend()
+        .run(&s.repo(), &delete("v1", local("v1")))
+        .unwrap_err();
+    assert_eq!(kind(&err), FailureKind::LeaseStale, "{}", err.detail());
+}
+
+#[test]
 fn ls_remote_reads_one_exact_ref() {
     let s = setup();
     let b = backend();
