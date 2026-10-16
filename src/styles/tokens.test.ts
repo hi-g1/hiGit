@@ -32,6 +32,6 @@ describe("크기 토큰", () => {
 
   it("px는 선·그림자 토큰에만 남는다", () => {
     const px = tokens(/^--/).filter(([, v]) => /\dpx/.test(v)).map(([n]) => n);
-    expect(px.sort()).toEqual(["--border-width", "--selected-bar", "--shadow-float"]);
+    expect(px.sort()).toEqual(["--border-width", "--focus-offset", "--focus-offset-inset", "--focus-width", "--selected-bar", "--shadow-float"]);
   });
 });

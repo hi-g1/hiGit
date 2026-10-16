@@ -14,11 +14,6 @@
   content: "";
 }
 
-.splitter:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
-}
-
 .splitter:hover,
 :global(:root[data-resizing]) .splitter {
   background: var(--border-strong);

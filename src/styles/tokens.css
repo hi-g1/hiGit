@@ -73,6 +73,11 @@
   --row-height: 2rem;
   --row-height-two: 3.25rem; /* 두 줄 행(고친 파일 줄) */
   --selected-bar: 2px;
+
+  /* 포커스 테두리: 모든 컨트롤이 같은 --accent 2px(D-159). 목록·줄 안쪽은 안으로 */
+  --focus-width: 2px;
+  --focus-offset: 1px;
+  --focus-offset-inset: -2px;
   --shadow-float: 0 4px 16px rgb(0 0 0 / 8%);
 
   /* 대화상자 뒤 바탕 */

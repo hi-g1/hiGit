@@ -1,8 +1,6 @@
 /* 용어 글자에는 표시를 하지 않는다(D-140). 툴팁만 뜬다 */
 .term:focus-visible {
   border-radius: var(--radius-control);
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .tip {

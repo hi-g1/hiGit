@@ -16,11 +16,6 @@
   background: var(--surface-hover);
 }
 
-.trigger:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .name {
   max-width: 20rem;
   overflow: hidden;

@@ -3,8 +3,3 @@
   position: absolute;
   border-radius: 50%;
 }
-
-.tip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
-}

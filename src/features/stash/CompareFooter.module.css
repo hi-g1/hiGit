@@ -24,11 +24,6 @@
   cursor: pointer;
 }
 
-.discard:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .discard:hover:not(:disabled) {
   color: var(--deleted);
 }

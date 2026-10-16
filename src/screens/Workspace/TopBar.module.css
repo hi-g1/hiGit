@@ -78,11 +78,6 @@
   color: var(--text);
 }
 
-.textButton:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
 .on {
   color: var(--text);
   font-weight: var(--font-weight-bold);

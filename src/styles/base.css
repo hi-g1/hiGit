@@ -42,6 +42,12 @@ samp {
   font-weight: var(--font-weight-regular);
 }
 
+/* 포커스 테두리는 여기 한 곳(D-159). 부품은 안쪽으로 그릴 때만 --focus-offset-inset을 준다 */
+:focus-visible {
+  outline: var(--focus-width) solid var(--accent);
+  outline-offset: var(--focus-offset);
+}
+
 button,
 input,
 textarea,

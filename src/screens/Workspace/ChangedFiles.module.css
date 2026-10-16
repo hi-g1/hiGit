@@ -69,8 +69,7 @@
 }
 
 .pick:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: var(--focus-offset-inset);
 }
 
 /* 선택한 행: 왼쪽 2px 파랑 막대(design.md "목록 행") */

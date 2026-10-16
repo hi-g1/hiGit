@@ -98,13 +98,6 @@
   white-space: nowrap;
 }
 
-.scopeButton:focus-visible,
-.here:focus-visible,
-.zoomButton:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 /* 단계 이름과 행 수는 스크린 리더에만 읽힌다 */
 .status {
   position: absolute;
