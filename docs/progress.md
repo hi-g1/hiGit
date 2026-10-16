@@ -3,10 +3,10 @@
 이 파일만 읽고 이어서 할 수 있게 단계마다 갱신한다.
 
 ## 지금
-- 반복: **다듬기**(계획 011, 사용자 결정 D-138~D-145, 근거 `docs/research/polish.md`). 반복 4b는 010-H2까지 하고 멈춤(다듬기 뒤 010-H4부터, H3은 앞당겨 끝남).
-- 단계: 011-P19 끝(설정 "고급", 로딩 300ms, 포커스 테두리 하나, `ui/Truncate`, Tab 순서·스크롤 막대 시험)
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: progress after polish P19
-- 다음 할 일: push 뒤 CI 확인 → 011-P20 문서 갱신·`p20-*.png` 재촬영·code-analyst 반복 끝 점검 → 010-H4 나머지(noreplyEmail)
+- 반복: **4b**(계획 010, 검토 R1~R17과 011 "010에 미치는 영향" 절을 따름). 다듬기(계획 011)는 2026-10-16 끝.
+- 단계: **다듬기(011) 끝**. 4b로 돌아와 010-H4 나머지(`noreplyEmail`, e4cc67b)까지 끝
+- 마지막 커밋: (이 갱신과 같은 커밋) docs: progress after polish wrap-up
+- 다음 할 일: push 뒤 CI 확인 → 010-H5 처음 실행 패널(start-first.png, `IdentityForm`과 "GitHub 주소로 채우기"는 이미 있음) → H6(역 메뉴 가드 시험만) → H7a…
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 4b(010-H2까지) → **다듬기**(2026-10-16 사용자 추가) → 4b 나머지 → 4c → **UX 다듬기**(계획 012, 2026-10-16 사용자 추가) → 5.
@@ -229,14 +229,16 @@
 - [x] 011-P17b 파일 줄 오른쪽 메뉴(경로 복사·이 파일 고친 것 버리기, 메뉴 키·Shift+F10, 버리기 흐름은 `useDiscardFlow`로 비교 칸 아래 줄과 공유)
 - [x] 011-P18 압축·실행 파일 알림(새 파일만, 문서·패키지 zip 제외, MZ는 확장자나 PE 머리, 이름만 맞으면 내용 검사 먼저)
 - [x] 011-P19 디테일: 설정 "고급"(Git 위치·로그 폴더), `useDelayedFlag` 300ms와 `<Loading>`, 전역 `:focus-visible`과 `--focus-*`, `ui/Truncate`(잘렸을 때만 툴팁, 경로는 앞 말줄임), Workspace Tab 순서 시험, 스크롤 막대 규칙 시험
-- [ ] 011-P20 마무리·재촬영·점검
+- [x] 011-P20 마무리: 문서(design·spec·architecture "화면 배율과 설정 시작"·roadmap·code-analyst 점검 줄), `p20-*.png` 재촬영, 반복 끝 점검(위반 2건: 남은 말줄임 자리·비교 칸 경로 `title` → a9512cf. 참고 고침: identity 오류 인자 가리기 dd382be, 링크를 따라가지 않는 열기 b55a039, 줄 바꿈 끈 접힌 줄 함수 이름 d0beb24)
+  - 점검 참고로 남긴 것(반복 5 보안 묶음에서 다시 봄): 한글 조합 Enter·Esc·방향키 판정 일부가 `src/lib` 밖(`IdentityForm`, `CloneDialog`, `PullRequests`, `Activity`, `Rewrite`, `BranchList`), `settingsSave` 저장 실패 알림 없음(의도), `display.rs`가 환경 변수를 이어받아 gsettings 실행(사용자 환경이라 낮음).
 
 ## 반복 4b 단계 (계획 010, 검토 반영 순서)
 - [x] 계획 0dcaa22(planner + code-analyst 검토 17건 반영)
 - [x] 010-H1 결정·용어
 - [x] 010-H2 앱 설정(`core::settings`, 쓰기 실패는 메모리, `ExecCtx::new`로 시험 생성부 정리)
 - [x] 010-H3 전역 이름·이메일(git, 다듬기에서 앞당김 152d586)
-- [ ] 010-H4 identity-set·query_identity(다듬기에서 앞당김 9b245af, 남은 것: `noreplyEmail`) / 010-H5 처음 실행 패널(설정 "일반"의 이름·이메일 줄과 `IdentityForm`은 이미 있음)
+- [x] 010-H4 identity-set·query_identity(다듬기에서 앞당김 9b245af, `noreplyEmail`과 "GitHub 주소로 채우기" e4cc67b)
+- [ ] 010-H5 처음 실행 패널(설정 "일반"의 이름·이메일 줄과 `IdentityForm`은 이미 있음)
 - [ ] 010-H6 공용 확인 대화상자 / 010-H7a 원격 ref 실패 분류 / 010-H7b lease push·ref 삭제·태그·ls-remote
 - [ ] 010-H8 D-097 완화·rewrote 표식 / 010-H9 force-push / 010-H10 고급 설정·덮어쓰며 올리기 화면
 - [ ] 010-H11 원격 브랜치 지우기·이름 바꾸기 / 010-H12 tag-push / 010-H13 원격 브랜치 메뉴·태그 올리기 화면
@@ -249,6 +251,9 @@
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
+- **다듬기 끝 그림(P20)**: `docs/research/img/polish/p20-*.png`(P9와 같은 컴퓨터·창 1200×780, 데모 저장소, 이름·이메일은 데모 값). `p20-home.png`(파일 줄 두 줄·체크·접힌 줄·줄 바꿈), `p20-home-dark.png`, `p20-home-800-xlarge.png`(800×600 "아주 크게"), `p20-log.png`(역 메뉴), `p20-branches.png`, `p20-settings.png`·`p20-settings-advanced.png`(일반의 이름과 이메일, 고급, 정보), `p20-diff-nowrap.png`(줄 바꿈 끔), `p20-archive.png`(압축 파일 알림), `p20-home-en.png`(English, 긴 파일 이름 말줄임).
+  - 코드 글꼴에 한글 글자가 없어 비교 칸의 한글이 넓게 벌어져 보인다. UX 다듬기(계획 012) "코드 글꼴" 항목에서 다룬다.
+  - 동기화 옆 주황 점은 데모 원격이 로컬 폴더라 원격 확인이 막힌 표시다(실제 원격에서는 없음).
 - **칸 나눔선(D-164)**: 홈·충돌 화면·"이때 파일 보기"에서 선을 끌 때 커서가 좌우 화살표로 바뀌고 선이 진해지는지, 끄는 동안 글자가 선택되지 않는지, 더블클릭하면 기본 폭, Tab으로 닿아 ←·→, 창을 줄이면 50%로 맞춰지는지, 껐다 켜도 폭이 남는지(두 OS).
 - **브랜드 아이콘(D-163)**: Windows 작업 표시줄(16·24·32·48px, 100%·150% 배율)과 Ubuntu 앱 목록(설치한 .deb/AppImage)에서 아이콘이 흐리지 않은지. 이 컴퓨터에서는 창을 앞으로 가져오거나 앱을 설치하지 않아(사용자 창·설정을 건드리지 않으려고) 생성된 16·24·32·48px 파일을 1:1·8배로 늘린 그림만 만들었다(`docs/research/img/brand/icon-sizes.png`). 로고는 `logo-start(-dark).png`, `logo-settings(-dark).png`.
 - 이 컴퓨터는 OS 언어가 English(`LANG=en_US.UTF-8`)라 "시스템 따라가기"에서 앱이 English로 나온다(D-139대로). 한국어로 보려면 설정 → 언어 → 한국어.
