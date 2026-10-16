@@ -205,6 +205,38 @@ fn server_hook_refusal_is_remote_refused() {
     assert_eq!(err.kind(), FailureKind::RemoteRefused, "{}", err.detail());
 }
 
+/// GitHub의 비공개 이메일 거절(GH007) 문구를 hook으로 흉내 내면 `PrivateEmailBlocked`다(D-186).
+#[cfg(unix)]
+#[test]
+fn private_email_refusal_is_its_own_kind() {
+    use std::os::unix::fs::PermissionsExt;
+    let s = setup();
+    let hook = s._remote.path().join("hooks").join("pre-receive");
+    std::fs::write(
+        &hook,
+        "#!/bin/sh\necho 'error: GH007: Your push would publish a private email address.' >&2\nexit 1\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    commit(s.mine.path(), "c.txt", "내 것\n");
+    let err = backend()
+        .run(
+            &RepoPath::new(s.mine.path()),
+            &GitOp::Push {
+                target: None,
+                set_upstream: false,
+                auth: AuthMode::UserDefault,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(
+        err.kind(),
+        FailureKind::PrivateEmailBlocked,
+        "{}",
+        err.detail()
+    );
+}
+
 #[test]
 fn unreachable_remote_is_classified() {
     let repo = testutil::init_repo();

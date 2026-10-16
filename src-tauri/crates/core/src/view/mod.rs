@@ -763,6 +763,8 @@ pub enum ErrorCode {
     HttpForbidden,
     RemoteNotFound,
     GithubWorkflowScope,
+    /// GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186).
+    PrivateEmailBlocked,
     /// 복제할 폴더가 이미 있고 비어 있지 않다.
     CloneTargetExists,
     CloneUrlInvalid,
@@ -797,6 +799,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::PushRejected => ErrorCode::PushRejected,
             F::LeaseStale => ErrorCode::RemoteMoved,
             F::RemoteRefused => ErrorCode::RemoteRefused,
+            F::PrivateEmailBlocked => ErrorCode::PrivateEmailBlocked,
             F::RemoteRefExists => ErrorCode::RemoteRefExists,
             F::RemoteRefMissing => ErrorCode::RemoteRefMissing,
             F::NoUpstream => ErrorCode::NoUpstream,

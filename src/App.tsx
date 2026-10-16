@@ -29,7 +29,11 @@ export function createQueryClient() {
 }
 
 /** 오류 줄마다 붙는 공용 해결 단추(D-126). */
-const ERROR_ACTIONS: ErrorActions = { identityMissing: <IdentityFix />, githubWorkflowScope: <WorkflowFix /> };
+const ERROR_ACTIONS: ErrorActions = {
+  identityMissing: <IdentityFix />,
+  privateEmailBlocked: <IdentityFix />,
+  githubWorkflowScope: <WorkflowFix />,
+};
 
 export function AppProviders({ children, client }: { children: ReactNode; client?: QueryClient }) {
   const [queryClient] = useState(() => client ?? createQueryClient());

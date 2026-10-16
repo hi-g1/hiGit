@@ -590,6 +590,7 @@ export const ko = {
     httpForbidden: `${t("remote")}에 접근할 권한이 없어요.`,
     remoteNotFound: `${josa(t("remote"), "을/를")} 찾지 못했어요. 주소와 권한을 확인해 주세요.`,
     githubWorkflowScope: `.github/workflows 폴더를 바꾼 버전은 GitHub 연결로 ${t("push")}할 수 없어요.`,
+    privateEmailBlocked: "GitHub가 비공개 이메일이 든 버전을 막았어요. 이메일을 GitHub 주소로 바꾸고 그 버전을 다시 저장해 주세요.",
     cloneTargetExists: "같은 이름의 폴더가 이미 있어요. 다른 이름을 써 주세요.",
     cloneUrlInvalid: "이 주소로는 복제할 수 없어요. https나 ssh 주소를 써 주세요.",
     cloneNameInvalid: "폴더 이름으로 쓸 수 없는 글자가 있어요.",

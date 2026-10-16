@@ -621,6 +621,8 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 "remoteRefMissing" | 
 /**  원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔). */
 "remoteNameTaken" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+/**  GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186). */
+"privateEmailBlocked" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
 "cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */

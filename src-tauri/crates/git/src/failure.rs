@@ -25,6 +25,8 @@ pub enum FailureKind {
     LeaseStale,
     /// 서버가 받기를 거절했다(보호 브랜치, hook, 지금 브랜치 지우기 등).
     RemoteRefused,
+    /// GitHub가 비공개 이메일이 든 버전의 올리기를 막았다(GH007, D-186).
+    PrivateEmailBlocked,
     /// 원격에 같은 이름의 태그·브랜치가 다른 버전으로 이미 있다.
     RemoteRefExists,
     /// 지우려는 원격 ref가 없다.
@@ -151,6 +153,11 @@ const RULES: &[(FailureKind, &[&str])] = &[
     (
         FailureKind::RemoteRefMissing,
         &["remote ref does not exist"],
+    ),
+    // GH007은 "[remote rejected]"와 함께 오므로 일반 서버 거절보다 먼저 본다.
+    (
+        FailureKind::PrivateEmailBlocked,
+        &["GH007", "push declined due to email privacy restrictions"],
     ),
     (
         FailureKind::RemoteRefused,
@@ -335,6 +342,10 @@ mod tests {
             (
                 " ! [remote rejected] main (refusing to delete the current branch: refs/heads/main)\n",
                 FailureKind::RemoteRefused,
+            ),
+            (
+                "remote: error: GH007: Your push would publish a private email address.\nremote: You can make your email public or disable this protection by visiting:\n ! [remote rejected] main -> main (push declined due to email privacy restrictions)\nerror: failed to push some refs to 'https://github.com/o/r.git'\n",
+                FailureKind::PrivateEmailBlocked,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];
