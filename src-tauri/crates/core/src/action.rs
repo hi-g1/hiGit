@@ -106,6 +106,10 @@ pub enum Outcome {
         short_oid: String,
         summary: String,
     },
+    /// 지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수.
+    Reset {
+        dropped: u32,
+    },
     /// 앱이 시작한 작업이 충돌·hook으로 멈췄다(표식이 남아 있다, D-101).
     OperationConflicts {
         context: crate::view::ConflictContext,

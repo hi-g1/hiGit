@@ -142,5 +142,11 @@
     "glossaryId": "cherry-pick",
     "risk": "normal",
     "undo": "restoreTree"
+  },
+  {
+    "id": "reset",
+    "glossaryId": "reset",
+    "risk": "danger",
+    "undo": "restoreTree"
   }
 ]

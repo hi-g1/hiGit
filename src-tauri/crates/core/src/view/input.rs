@@ -48,6 +48,8 @@ pub enum ActionInput {
     Revert(OidInput),
     /// 다른 브랜치의 버전 하나를 지금 브랜치로 복사한다.
     CherryPick(OidInput),
+    /// 지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐).
+    Reset(OidInput),
 }
 
 impl ActionInput {
@@ -78,6 +80,7 @@ impl ActionInput {
             ActionInput::Amend(_) => "amend",
             ActionInput::Revert(_) => "revert",
             ActionInput::CherryPick(_) => "cherry-pick",
+            ActionInput::Reset(_) => "reset",
         }
     }
 

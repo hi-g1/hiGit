@@ -432,6 +432,10 @@ pub enum ActionResult {
         short_oid: String,
         summary: String,
     },
+    /// 지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수.
+    Reset {
+        dropped: u32,
+    },
     /// 복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등).
     OperationConflicts {
         context: ConflictContext,
@@ -507,6 +511,7 @@ impl From<Outcome> for ActionResult {
                 ActionResult::Reverted { short_oid, summary }
             }
             Outcome::Picked { short_oid, summary } => ActionResult::Picked { short_oid, summary },
+            Outcome::Reset { dropped } => ActionResult::Reset { dropped },
             Outcome::OperationConflicts { context, paths } => {
                 ActionResult::OperationConflicts { context, paths }
             }

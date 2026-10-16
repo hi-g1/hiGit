@@ -14,6 +14,7 @@ pub(crate) mod paths;
 mod pick;
 mod recover_parked;
 mod remote;
+mod reset;
 mod restore;
 mod stage;
 pub(crate) mod stash;
@@ -31,6 +32,7 @@ pub use merge::{MergeAction, MergeIntoAction};
 pub use pick::PickAction;
 pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
+pub use reset::ResetAction;
 pub use restore::RestoreAction;
 pub use stage::PathsAction;
 pub use stash::StashAction;
@@ -94,6 +96,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(AmendAction::new()))?;
     registry.register(Box::new(PickAction::revert()))?;
     registry.register(Box::new(PickAction::cherry_pick()))?;
+    registry.register(Box::new(ResetAction::new()))?;
     Ok(())
 }
 

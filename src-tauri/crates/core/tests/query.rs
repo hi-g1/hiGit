@@ -268,7 +268,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Sync(_)
             | ActionInput::Amend(_)
             | ActionInput::Revert(_)
-            | ActionInput::CherryPick(_) => {}
+            | ActionInput::CherryPick(_)
+            | ActionInput::Reset(_) => {}
         }
     }
     let paths = PathsInput {
@@ -330,6 +331,9 @@ fn action_input_tags_match_registry() {
             oid: "a".repeat(40),
         }),
         ActionInput::CherryPick(higit_core::view::OidInput {
+            oid: "a".repeat(40),
+        }),
+        ActionInput::Reset(higit_core::view::OidInput {
             oid: "a".repeat(40),
         }),
     ];

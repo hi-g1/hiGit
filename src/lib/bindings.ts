@@ -95,7 +95,9 @@ export type ActionInput =
 /**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
 { id: "revert"; input: OidInput } | 
 /**  다른 브랜치의 버전 하나를 지금 브랜치로 복사한다. */
-{ id: "cherry-pick"; input: OidInput };
+{ id: "cherry-pick"; input: OidInput } | 
+/**  지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐). */
+{ id: "reset"; input: OidInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -110,6 +112,8 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 { kind: "reverted"; shortOid: string; summary: string } | 
 /**  고른 버전을 지금 브랜치로 복사했다. */
 { kind: "picked"; shortOid: string; summary: string } | 
+/**  지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수. */
+{ kind: "reset"; dropped: number } | 
 /**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
 { kind: "operationConflicts"; context: ConflictContext; paths: string[] } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
