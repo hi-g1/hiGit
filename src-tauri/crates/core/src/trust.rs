@@ -255,7 +255,8 @@ fn host_or_path(value: &str, home: Option<&str>) -> Option<String> {
         return None;
     }
     let authority = if let Some((_, rest)) = value.split_once("://") {
-        Some(rest.split(['/', '?', '#']).next().unwrap_or(""))
+        // `\`도 끊는다: `https://evil.example\@github.com/`을 github.com으로 보이지 않게.
+        Some(rest.split(['/', '?', '#', '\\']).next().unwrap_or(""))
     } else {
         // `host:path`(scp 형식). `C:\…`처럼 한 글자 앞 콜론은 Windows 경로다.
         value
@@ -475,6 +476,13 @@ mod tests {
         assert_eq!(
             item("remote.origin.uploadpack", "touch /tmp/x"),
             ("remote.origin.uploadpack".into(), None)
+        );
+        assert_eq!(
+            item(
+                "remote.origin.pushurl",
+                "https://evil.example\\@github.com/x.git"
+            ),
+            ("remote.origin.pushurl".into(), Some("evil.example".into()))
         );
         assert_eq!(
             item("remote.origin.proxy", "http://\u{202e}evil.example"),
