@@ -141,6 +141,8 @@ async function call<T>(promise: Promise<T>): Promise<T> {
 }
 
 export const api = {
+  /** 첫 렌더를 마쳤다: 숨겨 둔 창을 보인다(D-190). */
+  appReady: () => call(commands.appReady()),
   appStatus: () => call(commands.appStatus()),
   /** Git 내려받기 페이지를 기본 브라우저로 연다. 주소는 백엔드가 정한다. */
   openGitDownload: () => call(commands.appOpenGitDownload()),

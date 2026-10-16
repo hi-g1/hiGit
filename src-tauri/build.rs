@@ -7,6 +7,7 @@ const COMMANDS: &[&str] = &[
     "app_open_log_folder",
     "app_open_hosting_page",
     "app_display_hints",
+    "app_ready",
     "settings_get",
     "settings_set",
     "query_identity",

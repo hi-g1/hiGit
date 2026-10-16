@@ -19,7 +19,9 @@
         "height": 780,
         "minWidth": 800,
         "minHeight": 560,
-        "zoomHotkeysEnabled": false
+        "zoomHotkeysEnabled": false,
+        "visible": false,
+        "backgroundColor": "#fafaf9"
       }
     ],
     "security": {

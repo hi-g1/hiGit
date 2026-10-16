@@ -88,6 +88,18 @@ pub async fn app_open_hosting_page(
         })
 }
 
+/// 화면이 첫 렌더를 마쳤다(D-190). 숨겨 둔 창을 보이고 포커스를 준다. 이미 보이면 아무것도 하지 않고
+/// 앱 상태를 바꾸지 않는다.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_ready(window: tauri::WebviewWindow) -> CmdResult<()> {
+    if !window.is_visible().unwrap_or(true) {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    Ok(())
+}
+
 /// OS 글자 크기·배율·다크(D-147). 저장소를 받지 않는 읽기이고 Core 없이 돈다(Git이 없어도 쓴다).
 #[tauri::command]
 #[specta::specta]

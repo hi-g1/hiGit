@@ -18,6 +18,11 @@ export const commands = {
 	appOpenHostingPage: (folder: string | null, page: HostingPage) => __TAURI_INVOKE<null>("app_open_hosting_page", { folder, page }),
 	/**  OS 글자 크기·배율·다크(D-147). 저장소를 받지 않는 읽기이고 Core 없이 돈다(Git이 없어도 쓴다). */
 	appDisplayHints: () => __TAURI_INVOKE<DisplayHintsView>("app_display_hints"),
+	/**
+	 *  화면이 첫 렌더를 마쳤다(D-190). 숨겨 둔 창을 보이고 포커스를 준다. 이미 보이면 아무것도 하지 않고
+	 *  앱 상태를 바꾸지 않는다.
+	 */
+	appReady: () => __TAURI_INVOKE<null>("app_ready"),
 	/**  앱 설정(D-127). */
 	settingsGet: () => __TAURI_INVOKE<AppSettingsView>("settings_get"),
 	/**  앱 설정의 알려진 칸만 바꾼다. */

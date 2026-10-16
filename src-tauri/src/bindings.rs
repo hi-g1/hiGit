@@ -20,6 +20,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::app_open_log_folder,
             commands::app_open_hosting_page,
             commands::app_display_hints,
+            commands::app_ready,
             commands::settings_get,
             commands::settings_set,
             commands::query_identity,

@@ -12,6 +12,7 @@
     "allow-app-open-log-folder",
     "allow-app-open-hosting-page",
     "allow-app-display-hints",
+    "allow-app-ready",
     "allow-settings-get",
     "allow-settings-set",
     "allow-query-identity",

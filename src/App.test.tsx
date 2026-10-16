@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./lib/api")>()),
   api: {
+    appReady: vi.fn(async () => null),
     appStatus: vi.fn(),
     openProject: vi.fn(),
     recentProjects: vi.fn(async () => []),
@@ -77,6 +78,12 @@ async function openFolder() {
 }
 
 describe("홈에서 폴더 열기", () => {
+  it("첫 렌더 뒤 숨겨 둔 창을 보이게 한 번 알린다(D-190)", async () => {
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.43.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+    render(<App />);
+    await vi.waitFor(() => expect(api.appReady).toHaveBeenCalledTimes(1));
+  });
+
   it("저장소를 열면 변경 사항과 버전 기록이 보인다", async () => {
     vi.mocked(pickFolder).mockResolvedValue(repo.path);
     vi.mocked(api.openProject).mockResolvedValue({ kind: "opened", repo });

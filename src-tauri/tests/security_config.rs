@@ -39,6 +39,8 @@ fn webview_zoom_stays_off() {
     assert!(!windows.is_empty());
     for w in windows {
         assert_eq!(w["zoomHotkeysEnabled"], serde_json::Value::Bool(false));
+        // 첫 그림 전 흰 화면을 보이지 않게 숨긴 채 만든다(D-190). 화면이 `app_ready`로 보인다.
+        assert_eq!(w["visible"], serde_json::Value::Bool(false));
     }
     let cap = json("capabilities/default.json");
     for p in cap["permissions"].as_array().unwrap() {

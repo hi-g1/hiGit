@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
 import { CloneDialog } from "./features/clone/CloneDialog";
@@ -9,6 +9,7 @@ import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
 import { useFontShortcuts } from "./features/settings/useFontShortcuts";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
+import { api } from "./lib/api";
 import { useAppStatus } from "./lib/queries";
 import { useDisplaySync } from "./lib/useDisplaySync";
 import { useShortcut } from "./lib/useShortcut";
@@ -53,6 +54,14 @@ export function AppProviders({ children, client }: { children: ReactNode; client
 
 /** 라우터 없이 열린 저장소가 있으면 작업 공간, 없으면 홈. `client`는 시작 때 설정을 미리 읽은 것(main.tsx). */
 export function App({ client }: { client?: QueryClient }) {
+  // 첫 렌더를 커밋한 뒤 숨겨 둔 창을 보인다(D-190). 숨긴 창에서 rAF가 멈출 수 있어 effect로 한다.
+  useEffect(() => {
+    try {
+      void api.appReady().catch(() => undefined);
+    } catch {
+      // 창을 보이지 못해도 Rust가 3초 뒤 스스로 보인다.
+    }
+  }, []);
   return (
     <AppProviders client={client}>
       <DisplaySync />
