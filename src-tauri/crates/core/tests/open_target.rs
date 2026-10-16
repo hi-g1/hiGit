@@ -75,6 +75,9 @@ fn paths_outside_or_inside_git_are_refused() {
         ".git/config",
         ".GIT/HEAD",
         "sub/.git/config",
+        // 앞 폴더가 없어도 뒤의 막는 구성요소로 거절한다(없음으로 끝나지 않는다).
+        "없는/.git/config",
+        "없는/../secret.txt",
         "",
     ] {
         for purpose in [Purpose::Open, Purpose::Reveal] {

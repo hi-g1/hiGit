@@ -136,9 +136,9 @@ pub(crate) fn resolve(root: &Path, rel: &str, purpose: Purpose) -> Result<PathBu
     {
         return Err(refused("absolute"));
     }
-    let mut path = root.to_path_buf();
+    // 구성요소를 모두 먼저 본다(없는 앞 폴더에서 "없음"으로 끝나 뒤의 장치 이름을 놓치지 않게).
     let parts: Vec<&str> = rel.split(['/', '\\']).collect();
-    for (i, part) in parts.iter().enumerate() {
+    for part in &parts {
         let bad = part.is_empty()
             || *part == "."
             || *part == ".."
@@ -147,6 +147,9 @@ pub(crate) fn resolve(root: &Path, rel: &str, purpose: Purpose) -> Result<PathBu
         if bad {
             return Err(refused("component"));
         }
+    }
+    let mut path = root.to_path_buf();
+    for (i, part) in parts.iter().enumerate() {
         path.push(part);
         // 구성요소마다 링크를 본다(저장소 밖을 가리키는 링크, 링크인 중간 폴더).
         let meta = match std::fs::symlink_metadata(&path) {
