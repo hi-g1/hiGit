@@ -1,8 +1,19 @@
-//! `HostingProvider` 트레이트와 GitHub 구현. 반복 4에서 채운다.
+//! `HostingProvider` 트레이트와 GitHub 구현(반복 4).
 //!
-//! 다른 내부 크레이트에 의존하지 않는다.
+//! 다른 내부 크레이트에 의존하지 않는다. 네트워크는 [`HttpTransport`] 뒤에 두어
+//! 시험은 가짜 전송으로 돈다. 토큰은 `SecretString`으로만 다룬다(D-040).
 
 #![forbid(unsafe_code)]
+
+mod config;
+mod error;
+mod http;
+mod remote;
+
+pub use config::{GITHUB_API_BASE, GITHUB_SCOPE, GITHUB_WEB_BASE, GitHubConfig, valid_client_id};
+pub use error::{DETAIL_MAX_CHARS, HostingError, HostingErrorKind, ValidationKind};
+pub use http::{HttpRequest, HttpResponse, HttpTransport, Method, TransportError};
+pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
 
 #[cfg(test)]
 mod tests {
