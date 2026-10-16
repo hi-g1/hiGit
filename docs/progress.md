@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G16 끝 (복제 대화상자, 시작 화면 단추, 어디서나 Ctrl+Shift+O)
-- 마지막 커밋: (이 갱신과 같은 커밋) features: clone dialog, Ctrl+Shift+O and start screen entry
-- 다음 할 일: G17 검토 요청 화면 → G18 새 검토 요청 → G19 브랜치 목록 "검토 요청" → G20 마무리 (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G17 끝 (검토 요청 화면: 목록·보기·더 보기·상세 펼침, 상단 바 "검토 요청")
+- 마지막 커밋: (이 갱신과 같은 커밋) screens: pull request list and detail
+- 다음 할 일: G18 새 검토 요청 대화상자 → G19 브랜치 목록 "검토 요청" → G20 마무리 (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -189,7 +189,8 @@
 - [x] G14 `ui/DialogFrame`(부제 선택, 폭 narrow/wide, 키 차단, `composing`)·`lib/copy`, 역 메뉴 대화상자 4개가 사용
 - [x] G15 `features/settings`(SettingsDialog·GitHubSection·ConnectPanel·settingsStore), `features/github/useConnect`(간격 연쇄·창 포커스 때 한 번·닫으면 취소), `useGitHubStatus`, 시작 화면·상단 바 "설정", 원격 없고 미연결이면 "GitHub 연결"
 - [x] G16 `features/clone`(CloneDialog·cloneStore·suggestName·joinPath), 단축키 표 `clone`(PLANNED에서 이동), 시작 화면 `<Term clone>` Ctrl+Shift+O, 진행·3초 뒤 취소, 성공하면 프로젝트 열기
-- [ ] G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
+- [x] G17 `screens/PullRequests`(listbox, 열림·닫힘·전체, 더 보기, 줄 아래 상세: 시험 결과·겹침·뒤처짐·GitHub에서 열기), `features/pr`(model·PrRow), `view: "pr"`·`selectedPr`, `useHostingContext`·`usePrPages`(60초)·`usePrDetail`·`usePrForBranch`
+- [ ] G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 
 ## 다음 반복
 - [ ] 반복 4b: 설정과 GitHub 넓히기

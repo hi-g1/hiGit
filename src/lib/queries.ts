@@ -1,6 +1,14 @@
 // 서버 상태(TanStack Query). 화면은 이 훅으로 백엔드를 읽는다.
 import { type InfiniteData, type QueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { api, type ApiError, type DiffRequest, type LogPage, type LogScope } from "./api";
+import {
+  api,
+  type ApiError,
+  type DiffRequest,
+  type LogPage,
+  type LogScope,
+  type PrListView,
+  type PrStateFilterView,
+} from "./api";
 import { limiter } from "./limit";
 
 export const HISTORY_LIMIT = 200;
@@ -42,6 +50,52 @@ export function useCloneDefaults() {
     queryKey: queryKeys.cloneDefaults,
     queryFn: api.cloneDefaults,
     staleTime: Infinity,
+  });
+}
+
+/** 열린 저장소의 호스팅 정보(네트워크 없음). */
+export function useHostingContext(repo: string, enabled = true) {
+  return useQuery<Awaited<ReturnType<typeof api.hostingContext>>, ApiError>({
+    queryKey: queryKeys.hostingContext(repo),
+    queryFn: () => api.hostingContext(repo),
+    enabled,
+  });
+}
+
+/** 검토 요청 목록(쪽마다 "더 보기", D-118). 화면이 열려 있을 때만, 60초 동안 새로 읽지 않는다. */
+export function usePrPages(repo: string, state: PrStateFilterView, enabled: boolean) {
+  return useInfiniteQuery<
+    PrListView,
+    ApiError,
+    InfiniteData<PrListView, number>,
+    ReturnType<typeof queryKeys.prList>,
+    number
+  >({
+    queryKey: queryKeys.prList(repo, state, null),
+    queryFn: ({ pageParam }) => api.prList(repo, { state, branch: null, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+/** 한 브랜치의 검토 요청(브랜치 목록, D-071). 목록이 열릴 때만, 5분 동안 새로 읽지 않는다. */
+export function usePrForBranch(repo: string, branch: string | null, enabled: boolean) {
+  return useQuery<PrListView, ApiError>({
+    queryKey: queryKeys.prList(repo, "all", branch),
+    queryFn: () => api.prList(repo, { state: "all", branch, page: 1 }),
+    staleTime: 5 * 60_000,
+    enabled: enabled && branch !== null,
+  });
+}
+
+export function usePrDetail(repo: string, number: number | null) {
+  return useQuery<Awaited<ReturnType<typeof api.prDetail>>, ApiError>({
+    queryKey: queryKeys.prDetail(repo, number ?? 0),
+    queryFn: () => api.prDetail(repo, number ?? 0),
+    enabled: number !== null,
+    staleTime: 60_000,
   });
 }
 

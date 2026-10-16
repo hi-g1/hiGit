@@ -3,7 +3,7 @@ import { branchColor } from "../../features/branches/color";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { SyncButton } from "../../features/sync/SyncButton";
 import type { RepoInfo, StatusView } from "../../lib/api";
-import { useBranches, useGitHubStatus } from "../../lib/queries";
+import { useBranches, useGitHubStatus, useHostingContext } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -34,6 +34,9 @@ export function TopBar({
   const defaultBranch = branches?.defaultBranch ?? null;
   const hasRemote = (branches?.remotes.length ?? 0) > 0;
   const github = useGitHubStatus().data;
+  const hosting = useHostingContext(repo.path, hasRemote).data;
+  const showPr = hasRemote && hosting?.provider === "github" && !merging;
+  const togglePr = () => setView(view === "pr" ? "home" : "pr");
   const openSettings = useSettingsStore((s) => s.openSettings);
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
@@ -63,6 +66,16 @@ export function TopBar({
       {branches && !hasRemote && github?.configured && !github.connected && !merging && (
         <button type="button" className={styles.textButton} onClick={() => openSettings(true)}>
           {m.settings.connect}
+        </button>
+      )}
+      {showPr && (
+        <button
+          type="button"
+          className={`${styles.textButton} ${view === "pr" ? styles.on : ""}`}
+          aria-pressed={view === "pr"}
+          onClick={togglePr}
+        >
+          <Term id="pr" focusable={false} />
         </button>
       )}
       {!merging && (

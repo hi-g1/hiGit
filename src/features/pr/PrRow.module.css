@@ -1,0 +1,85 @@
+/* 검토 요청 줄(design.md "검토 요청 화면"). 높이 56px, 아래 선. */
+.row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--surface-hover);
+}
+
+.selected {
+  border-left-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.top,
+.bottom {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.number {
+  flex: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.bottom {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.branches {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current {
+  color: var(--text);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  cursor: default;
+}
+
+.line {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.conflicts {
+  color: var(--deleted);
+}

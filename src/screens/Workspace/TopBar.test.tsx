@@ -8,10 +8,21 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   api: {
     branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: "main", orphanParked: [], remotes: [] })),
     githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false })),
+    hostingContext: vi.fn(async () => ({
+      provider: "github",
+      repo: "octo/hello",
+      configured: true,
+      connected: false,
+      branch: "main",
+      head: "main",
+      base: "main",
+      isDefaultBranch: true,
+    })),
   },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
+import { api } from "../../lib/api";
 import type { StatusView } from "../../lib/api";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { useRepoStore } from "../../state/repoStore";
@@ -68,5 +79,25 @@ describe("TopBar", () => {
     expect(spacer).toBeGreaterThan(0);
     const right = [...header.children].slice(spacer + 1);
     expect(right.length).toBeLessThanOrEqual(5);
+  });
+
+  it("GitHub 원격이면 검토 요청 단추, 오른쪽은 다섯 개", async () => {
+    vi.mocked(api.branches).mockResolvedValue({
+      local: [],
+      remote: [],
+      defaultBranch: "main",
+      orphanParked: [],
+      remotes: [{ name: "origin", url: "https://github.com/octo/hello.git" }],
+    } as unknown as Awaited<ReturnType<typeof api.branches>>);
+    const { container } = render(<TopBar repo={repo} status={status({ upstream: "origin/main" })} />);
+    const pr = await screen.findByRole("button", { name: "검토 요청" });
+    expect(screen.queryByRole("button", { name: "GitHub 연결" })).toBeNull();
+    await userEvent.click(pr);
+    expect(useRepoStore.getState().view).toBe("pr");
+    expect(pr).toHaveAttribute("aria-pressed", "true");
+    const header = container.querySelector("header")!;
+    const spacer = [...header.children].findIndex((el) => String(el.className).includes("spacer"));
+    expect([...header.children].slice(spacer + 1).length).toBeLessThanOrEqual(5);
+    act(() => useRepoStore.setState({ view: "home" }));
   });
 });

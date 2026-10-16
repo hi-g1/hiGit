@@ -4,8 +4,9 @@ import type { RepoInfo } from "../lib/api";
 /** 마지막 프로젝트를 열지 못해 시작 화면에 온 까닭(D-032). */
 export type StartNotice = { kind: "lastMissing" | "lastNotRepo"; name: string };
 
-/** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085), 기록 정리(D-106). */
-export type WorkspaceView = "home" | "history" | "activity" | "rewrite";
+/** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085), 기록 정리(D-106),
+ * 검토 요청(D-112). */
+export type WorkspaceView = "home" | "history" | "activity" | "rewrite" | "pr";
 
 type RepoState = {
   /** 작업 공간에 열린 저장소. 없으면 홈 화면. */
@@ -20,6 +21,8 @@ type RepoState = {
   selectFirstChange: boolean;
   /** 기록 정리 화면에서 고친다: 고른 버전(새 것부터). */
   rewriteOids: readonly string[];
+  /** 검토 요청 화면에서 고른(펼친) 요청 번호. */
+  selectedPr: number | null;
   openRepo: (repo: RepoInfo) => void;
   closeRepo: () => void;
   setView: (view: WorkspaceView) => void;
@@ -29,6 +32,9 @@ type RepoState = {
   setSelectFirstChange: (on: boolean) => void;
   /** 고른 버전으로 기록 정리 화면을 연다. */
   openRewrite: (oids: readonly string[]) => void;
+  /** 검토 요청 화면을 열고 그 요청을 고른다. */
+  openPr: (number: number | null) => void;
+  selectPr: (number: number | null) => void;
 };
 
 export const useRepoStore = create<RepoState>()((set) => ({
@@ -39,8 +45,9 @@ export const useRepoStore = create<RepoState>()((set) => ({
   startNotice: null,
   selectFirstChange: false,
   rewriteOids: [],
+  selectedPr: null,
   openRepo: (repo) =>
-    set({ repo, view: "home", selectedPath: null, pendingInit: null, startNotice: null }),
+    set({ repo, view: "home", selectedPath: null, pendingInit: null, startNotice: null, selectedPr: null }),
   closeRepo: () => set({ repo: null, selectedPath: null, startNotice: null }),
   setView: (view) => set({ view }),
   selectPath: (selectedPath) => set({ selectedPath }),
@@ -48,4 +55,6 @@ export const useRepoStore = create<RepoState>()((set) => ({
   setStartNotice: (startNotice) => set({ startNotice }),
   setSelectFirstChange: (selectFirstChange) => set({ selectFirstChange }),
   openRewrite: (rewriteOids) => set({ rewriteOids, view: "rewrite" }),
+  openPr: (selectedPr) => set({ selectedPr, view: "pr" }),
+  selectPr: (selectedPr) => set({ selectedPr }),
 }));

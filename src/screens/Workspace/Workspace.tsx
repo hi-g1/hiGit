@@ -21,6 +21,7 @@ import { Activity } from "../Activity/Activity";
 import { Conflict } from "../Conflict/Conflict";
 import { Rewrite } from "../Rewrite/Rewrite";
 import { History } from "../History/History";
+import { PullRequests } from "../PullRequests/PullRequests";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
 import { TopBar } from "./TopBar";
@@ -82,6 +83,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         <History repo={repo.path} onDone={notifyDone} otherOperation={conflict?.otherOperation ?? false} />
       ) : view === "activity" ? (
         <Activity repo={repo.path} onDone={notifyDone} />
+      ) : view === "pr" ? (
+        <PullRequests repo={repo.path} />
       ) : (
         <>
         <HomeMap repo={repo.path} onDone={notifyDone} />

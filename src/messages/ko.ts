@@ -338,6 +338,27 @@ export const ko = {
   noCommits: "아직 저장한 버전이 없어요.",
   moreCommits: (limit: number) => `최근 ${limit}개만 보여요.`,
   renamedFrom: (path: string) => `${path}에서 이름 바꿈`,
+  // 검토 요청(D-112, D-113)
+  pr: {
+    open: "열림",
+    closed: "닫힘",
+    merged: "합쳐짐",
+    all: "전체",
+    filter: "보기",
+    currentBranch: "지금 브랜치",
+    connectToSee: `GitHub에 연결하면 ${josa(t("pr"), "을/를")} 볼 수 있어요`,
+    empty: `${josa(t("pr"), "이/가")} 없어요`,
+    checks: (success: number, failed: number, pending: number) =>
+      `성공 ${success} · 실패 ${failed} · 진행 ${pending}`,
+    partial: "일부만",
+    conflicts: "겹침 있음",
+    behind: "뒤처짐",
+    blocked: "막힘",
+    openOnGithub: "GitHub에서 열기",
+    more: "더 보기",
+    reconnect: "다시 연결",
+    newPr: `새 ${t("pr")}`,
+  },
   // 복제(D-115)
   clone: {
     url: "주소",
