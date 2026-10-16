@@ -14,6 +14,7 @@ import { useDisplaySync } from "./lib/useDisplaySync";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
+import { WorkflowFix } from "./features/github/WorkflowFix";
 import { ErrorActionsContext, type ErrorActions } from "./ui/errorActions";
 import { ToastHost } from "./ui/Toast";
 
@@ -28,7 +29,7 @@ export function createQueryClient() {
 }
 
 /** 오류 줄마다 붙는 공용 해결 단추(D-126). */
-const ERROR_ACTIONS: ErrorActions = { identityMissing: <IdentityFix /> };
+const ERROR_ACTIONS: ErrorActions = { identityMissing: <IdentityFix />, githubWorkflowScope: <WorkflowFix /> };
 
 export function AppProviders({ children, client }: { children: ReactNode; client?: QueryClient }) {
   const [queryClient] = useState(() => client ?? createQueryClient());

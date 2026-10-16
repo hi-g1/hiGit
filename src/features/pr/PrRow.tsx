@@ -63,6 +63,14 @@ function PrDetail({ repo, number }: { repo: string; number: number }) {
           {data.checks.partial && ` · ${m.pr.partial}`}
         </p>
       )}
+      {data?.reviews ? (
+        <p className={styles.line}>
+          <Term id="review" focusable={false} /> {m.pr.reviews(data.reviews.approved, data.reviews.changesRequested)} ·{" "}
+          {m.pr.comments(data.comments)}
+        </p>
+      ) : (
+        data && <p className={styles.line}>{m.pr.comments(data.comments)}</p>
+      )}
       {data?.mergeable === "conflicts" && <p className={`${styles.line} ${styles.conflicts}`}>{m.pr.conflicts}</p>}
       {data?.mergeable === "behind" && <p className={styles.line}>{m.pr.behind}</p>}
       {data?.mergeable === "blocked" && <p className={styles.line}>{m.pr.blocked}</p>}

@@ -12,13 +12,14 @@ export function SettingsDialog() {
   const m = useMessages();
   const open = useSettingsStore((s) => s.open);
   const connect = useSettingsStore((s) => s.connect);
+  const workflow = useSettingsStore((s) => s.workflow);
   const close = useSettingsStore((s) => s.close);
   if (!open) return null;
   return (
     <DialogFrame title={m.settings.title} onClose={close} size="wide">
       <div className={styles.sections}>
         <GeneralSection />
-        <GitHubSection autoConnect={connect} />
+        <GitHubSection autoConnect={connect} workflow={workflow} />
         <AdvancedSection />
         <InfoSection />
       </div>
