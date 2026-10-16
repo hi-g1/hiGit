@@ -19,6 +19,7 @@ const COMMANDS: &[&str] = &[
     "project_open",
     "project_trust",
     "project_reask_trust",
+    "app_take_launch_folder",
     "project_allow_owner",
     "recent_list",
     "recent_remove",

@@ -407,6 +407,7 @@ export const en: Messages = {
   },
   projectMenu: "Project menu",
   lastMissing: (name: string) => `Couldn't find ${name}, the project you opened last.`,
+  launchMissing: "Couldn't find the folder you tried to open.",
   lastNotRepo: (name: string) => `${name}, the project you opened last, is not under version control.`,
   reload: "Reload",
   detached: "Viewing a specific version",

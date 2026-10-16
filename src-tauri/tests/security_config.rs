@@ -135,3 +135,23 @@ fn commands_match_in_all_four_places() {
     assert_eq!(manifest_commands(), defined, "build.rs");
     assert_eq!(capability_commands(), defined, "capabilities/default.json");
 }
+
+#[test]
+fn credential_helper_and_single_instance_come_first() {
+    // git이 helper로 부른 실행은 창·플러그인보다 먼저 갈라진다(D-111). 단일 인스턴스가 그 실행을 기존 창으로
+    // 넘기지 않게 한다(D-213).
+    let main = read("src/main.rs");
+    let helper = main
+        .find("--git-credential")
+        .expect("main.rs의 helper 분기");
+    let run = main.find("app_lib::run()").expect("main.rs의 run()");
+    assert!(helper < run, "helper 분기가 run()보다 앞");
+    // 첫 플러그인은 단일 인스턴스(두 번째 실행이 다른 플러그인을 띄우기 전에 끝난다).
+    let lib = read("src/lib.rs");
+    let first = lib.find(".plugin(").expect("lib.rs의 플러그인");
+    assert!(
+        lib[first..].starts_with(".plugin(tauri_plugin_single_instance::init("),
+        "첫 플러그인: {}",
+        &lib[first..first + 60]
+    );
+}

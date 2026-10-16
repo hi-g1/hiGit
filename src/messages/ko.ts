@@ -439,6 +439,7 @@ export const ko = {
   },
   projectMenu: "프로젝트 메뉴",
   lastMissing: (name: string) => `마지막으로 연 ${name} 폴더를 찾지 못했어요.`,
+  launchMissing: "열려던 폴더를 찾지 못했어요.",
   lastNotRepo: (name: string) => `마지막으로 연 ${name} 폴더는 버전 관리를 하지 않는 폴더예요.`,
   reload: "다시 읽기",
   detached: "특정 버전을 보는 중",

@@ -18,6 +18,7 @@ pub mod github;
 mod guard;
 mod history;
 pub mod image;
+pub mod launch;
 mod locks;
 pub mod log;
 mod marker;

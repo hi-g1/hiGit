@@ -32,6 +32,7 @@ higit-core = { path = "crates/core" }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-plugin-opener = { workspace = true }
+tauri-plugin-single-instance = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true }
 specta-typescript = { workspace = true }
@@ -59,6 +60,8 @@ tauri-build = { version = "2.7", features = [] }
 tauri-plugin-dialog = "2.8"
 # 외부 링크를 Rust에서만 연다. 웹뷰에는 opener 권한을 주지 않는다(D-037).
 tauri-plugin-opener = "2"
+# 이미 켜진 앱이 있으면 두 번째 실행의 인자를 그 창으로 넘긴다(D-213). Windows는 창 메시지, Linux는 D-Bus.
+tauri-plugin-single-instance = "2.5"
 which = "8.0"
 dirs = "7.0"
 dunce = "1.0"

@@ -1706,7 +1706,7 @@
 ## D-213 실행 인자와 단일 인스턴스 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-17
-- 결정: `tauri-plugin-single-instance`를 첫 플러그인으로 등록한다(`--git-credential` 분기 뒤). 인자 해석은 core 순수 함수 `launch::parse_args(args, cwd) -> Option<PathBuf>`: 첫 인자는 실행 파일, `--`가 나오면 그 뒤 첫 인자가 경로, 그 전에는 `-`로 시작하는 인자를 건너뛰고 첫 위치 인자를 경로로 본다. `--git-credential`이 있으면 `None`. 상대 경로는 그 실행의 현재 폴더 기준. 끝에 붙은 `"`는 떼어 낸다. 4096바이트·NUL 거절. 첫 실행의 경로는 `AppState`가 들고 `app_take_launch_folder`(한 번만 줌)로 화면이 가져가 마지막 프로젝트 대신 `project_open(path, "picked")`으로 연다. 두 번째 실행은 Rust 콜백이 창을 보이고 이벤트 `open-folder { path }`를 보낸다. 화면은 도는 작업·열린 확인 창이 끝난 뒤 연다. 경로가 없으면 시작 화면 알림 "열려던 폴더를 찾지 못했어요."
+- 결정: `tauri-plugin-single-instance`를 첫 플러그인으로 등록한다(`--git-credential` 분기 뒤). 인자 해석은 core 순수 함수 `launch::parse_args(args, cwd) -> Option<PathBuf>`: 첫 인자는 실행 파일, `--`가 나오면 그 뒤 첫 인자가 경로, 그 전에는 `-`로 시작하는 인자를 건너뛰고 첫 위치 인자를 경로로 본다. `--git-credential`이 있으면 `None`. 상대 경로는 그 실행의 현재 폴더 기준. 끝에 붙은 `"`는 떼어 낸다. 4096바이트·NUL 거절. 첫 실행의 경로는 `AppState`가 들고 `app_take_launch_folder`(한 번만 줌)로 화면이 가져가 마지막 프로젝트 대신 `project_open(path, "picked")`으로 연다. 두 번째 실행은 Rust 콜백이 창을 보이고 경로를 같은 자리에 둔 뒤 이벤트 `open-folder`(페이로드 없음)를 보내, 화면이 `app_take_launch_folder`로 가져간다(여러 번 오면 마지막 것만, 이벤트를 놓쳐도 시작 때 가져감). 화면은 도는 작업·열린 확인 창이 끝난 뒤 연다. 경로가 없으면 시작 화면 알림 "열려던 폴더를 찾지 못했어요."
 - 이유: spec "진입점"의 우클릭·명령줄과 "이미 실행 중이면 그 창에서". 열기는 늘 `open_project` 한 곳이라 신뢰 확인을 건너뛸 길이 없다(계획 014 C5).
 - 대안: 새 `OpenHow::Launch`, 경로를 이벤트로만.
 - 영향: D-032.

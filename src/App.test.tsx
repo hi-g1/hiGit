@@ -9,6 +9,7 @@ vi.mock("./lib/api", async (importOriginal) => ({
     appStatus: vi.fn(),
     openProject: vi.fn(),
     recentProjects: vi.fn(async () => []),
+    takeLaunchFolder: vi.fn(async () => null),
     listActions: vi.fn(),
     previewAction: vi.fn(),
     executeAction: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock("./lib/events", async (importOriginal) => ({
   onRepoChanged: vi.fn(async () => () => {}),
   onWatchStatus: vi.fn(async () => () => {}),
   onOpProgress: vi.fn(async () => () => {}),
+  onOpenFolder: vi.fn(async () => () => {}),
 }));
 
 import { App } from "./App";
@@ -53,6 +55,7 @@ beforeEach(() => {
   vi.mocked(api.watch).mockResolvedValue(null);
   vi.mocked(api.unwatch).mockResolvedValue(null);
   vi.mocked(api.recentProjects).mockResolvedValue([]);
+  vi.mocked(api.takeLaunchFolder).mockResolvedValue(null);
 });
 
 afterEach(() => {

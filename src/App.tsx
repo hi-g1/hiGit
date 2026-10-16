@@ -4,6 +4,7 @@ import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
 import { CloneDialog } from "./features/clone/CloneDialog";
 import { useCloneStore } from "./features/clone/cloneStore";
+import { useLaunchRequests } from "./features/open-project/useLaunchRequests";
 import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
 import { useFontShortcuts } from "./features/settings/useFontShortcuts";
@@ -86,6 +87,8 @@ function Screens() {
   useShortcut("shortcutHelp", () => setShortcutsOpen(true));
   // 마지막 프로젝트를 여는 동안은 빈 바탕(시작 화면이 잠깐 보였다 사라지지 않게)
   const ready = useStartup();
+  // 이미 켜진 이 앱에 두 번째 실행이 넘긴 폴더(D-213)
+  useLaunchRequests(ready && gitReady);
   if (!ready) return null;
   return (
     <>

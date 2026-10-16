@@ -241,6 +241,13 @@ pub async fn project_trust(
     .await
 }
 
+/// 실행 인자로 받은 열 폴더를 한 번만 준다(D-213). 화면은 그 경로를 `project_open(path, "picked")`으로 연다.
+#[tauri::command]
+#[specta::specta]
+pub fn app_take_launch_folder(launch: State<'_, crate::LaunchState>) -> CmdResult<Option<String>> {
+    Ok(launch.take().map(|p| p.to_string_lossy().into_owned()))
+}
+
 /// 끄고 연 저장소의 신뢰 확인을 다시 띄운다("믿고 다시 열기", D-212). 열린 저장소만.
 #[tauri::command]
 #[specta::specta]

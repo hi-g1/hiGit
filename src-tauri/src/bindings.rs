@@ -32,6 +32,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::project_open,
             commands::project_trust,
             commands::project_reask_trust,
+            commands::app_take_launch_folder,
             commands::project_allow_owner,
             commands::recent_list,
             commands::recent_remove,
@@ -87,6 +88,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .constant("REPO_CHANGED_EVENT", REPO_CHANGED_EVENT)
         .constant("WATCH_STATUS_EVENT", WATCH_STATUS_EVENT)
         .constant("OP_PROGRESS_EVENT", OP_PROGRESS_EVENT)
+        .constant("OPEN_FOLDER_EVENT", OPEN_FOLDER_EVENT)
         .constant("REMOTE_ACTIONS", higit_core::REMOTE_ACTIONS)
 }
 
@@ -96,6 +98,8 @@ pub const REPO_CHANGED_EVENT: &str = "repo-changed";
 pub const WATCH_STATUS_EVENT: &str = "watch-status";
 /// 오래 걸리는 작업이 도는 동안 1초마다(페이로드: `OpProgress`, D-080).
 pub const OP_PROGRESS_EVENT: &str = "op-progress";
+/// 이미 켜진 앱에 두 번째 실행이 폴더를 넘겼을 때(페이로드 없음, D-213). 화면은 `app_take_launch_folder`로 가져간다.
+pub const OPEN_FOLDER_EVENT: &str = "open-folder";
 
 const HEADER: &str =
     "// 이 파일은 생성물입니다. 고치지 말고 `cargo run -p app --bin gen-bindings`로 다시 만드세요.";

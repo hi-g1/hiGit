@@ -43,6 +43,8 @@ export const commands = {
 	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),
 	/**  끄고 연 저장소의 신뢰 확인을 다시 띄운다("믿고 다시 열기", D-212). 열린 저장소만. */
 	projectReaskTrust: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_reask_trust", { path }),
+	/**  실행 인자로 받은 열 폴더를 한 번만 준다(D-213). 화면은 그 경로를 `project_open(path, "picked")`으로 연다. */
+	appTakeLaunchFolder: () => __TAURI_INVOKE<string | null>("app_take_launch_folder"),
 	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
@@ -127,6 +129,8 @@ export const commands = {
 };
 
 /* Constants */
+export const OPEN_FOLDER_EVENT = "open-folder" as const;
+
 export const OP_PROGRESS_EVENT = "op-progress" as const;
 
 export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename","tag-push","fork","remote-tag-delete"] as const;

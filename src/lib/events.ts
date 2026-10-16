@@ -1,6 +1,7 @@
 // 백엔드 이벤트 구독. 화면은 Tauri의 listen을 직접 쓰지 않고 이 파일만 쓴다.
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
+  OPEN_FOLDER_EVENT,
   OP_PROGRESS_EVENT,
   REPO_CHANGED_EVENT,
   WATCH_STATUS_EVENT,
@@ -26,4 +27,9 @@ export function onWatchStatus(handler: (event: WatchStatus) => void): Promise<Un
 /** 오래 걸리는 작업이 도는 동안 1초마다 불린다(D-080). */
 export function onOpProgress(handler: (event: OpProgress) => void): Promise<UnlistenFn> {
   return listen<OpProgress>(OP_PROGRESS_EVENT, (e) => handler(e.payload));
+}
+
+/** 이미 켜진 앱에 두 번째 실행이 폴더를 넘겼을 때(D-213). 경로는 `api.takeLaunchFolder`로 가져간다. */
+export function onOpenFolder(handler: () => void): Promise<UnlistenFn> {
+  return listen(OPEN_FOLDER_EVENT, () => handler());
 }

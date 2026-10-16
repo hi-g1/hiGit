@@ -24,6 +24,7 @@
     "allow-project-open",
     "allow-project-trust",
     "allow-project-reask-trust",
+    "allow-app-take-launch-folder",
     "allow-project-allow-owner",
     "allow-recent-list",
     "allow-recent-remove",

@@ -120,7 +120,11 @@ export function Start() {
         <UndoKeyNotice />
         {startNotice && (
           <p className={styles.notice} role="status">
-            {startNotice.kind === "lastMissing" ? m.lastMissing(startNotice.name) : m.lastNotRepo(startNotice.name)}
+            {startNotice.kind === "launchMissing"
+              ? m.launchMissing
+              : startNotice.kind === "lastMissing"
+                ? m.lastMissing(startNotice.name)
+                : m.lastNotRepo(startNotice.name)}
           </p>
         )}
         {appStatus.error && <ErrorNotice error={appStatus.error} />}

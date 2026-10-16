@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { RepoInfo } from "../lib/api";
 
-/** 마지막 프로젝트를 열지 못해 시작 화면에 온 까닭(D-032). */
-export type StartNotice = { kind: "lastMissing" | "lastNotRepo"; name: string };
+/** 마지막 프로젝트나 실행 인자의 폴더(D-213)를 열지 못해 시작 화면에 온 까닭(D-032). */
+export type StartNotice = { kind: "lastMissing" | "lastNotRepo" | "launchMissing"; name: string };
 
 /** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085), 기록 정리(D-106),
  * 검토 요청(D-112). */

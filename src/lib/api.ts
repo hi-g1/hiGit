@@ -184,6 +184,8 @@ export const api = {
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */
   trustProject: (path: string, choice: TrustChoice) => call(commands.projectTrust(path, choice)),
+  /** 실행 인자로 받은 열 폴더(한 번만 준다, D-213). */
+  takeLaunchFolder: () => call(commands.appTakeLaunchFolder()),
   /** 끄고 연 저장소의 신뢰 확인을 다시 띄운다(D-212). */
   reaskTrust: (path: string) => call(commands.projectReaskTrust(path)),
   /** 주인이 다른 폴더를 믿기로 하고 연다(D-039). useOpenProject만 부른다. */

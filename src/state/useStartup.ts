@@ -1,5 +1,6 @@
-// 앱을 켤 때 마지막 프로젝트를 바로 연다(D-032). 한 번만 돈다.
+// 앱을 켤 때 실행 인자의 폴더(D-213), 없으면 마지막 프로젝트를 바로 연다(D-032). 한 번만 돈다.
 import { useEffect, useRef, useState } from "react";
+import { useOpenLaunched } from "../features/open-project/useLaunchRequests";
 import { useOpenProject } from "../features/open-project/useOpenProject";
 import { api } from "../lib/api";
 import { useAppStatus } from "../lib/queries";
@@ -9,6 +10,7 @@ import { useRepoStore } from "./repoStore";
 export function useStartup(): boolean {
   const appStatus = useAppStatus();
   const project = useOpenProject();
+  const openLaunched = useOpenLaunched();
   const setStartNotice = useRepoStore((s) => s.setStartNotice);
   const [done, setDone] = useState(false);
   const started = useRef(false);
@@ -19,6 +21,11 @@ export function useStartup(): boolean {
     started.current = true;
     void (async () => {
       try {
+        const launched = await api.takeLaunchFolder();
+        if (launched !== null) {
+          await openLaunched(launched);
+          return;
+        }
         const [last] = await api.recentProjects();
         if (!last) return;
         const result = await project.open(last.path, "recent");
@@ -30,7 +37,7 @@ export function useStartup(): boolean {
         setDone(true);
       }
     })();
-  }, [appStatus.isPending, appStatus.isError, project, setStartNotice]);
+  }, [appStatus.isPending, appStatus.isError, project, openLaunched, setStartNotice]);
 
   return done || appStatus.isError;
 }
