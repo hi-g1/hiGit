@@ -1,4 +1,5 @@
 //! 합치기 마치기·그만두기(D-069, D-070). 충돌 파일을 덮어쓰기 전에 작업 폴더 내용을 백업한다.
+//! 앱이 시작한 복사·되돌리기가 멈춘 것도 같은 화면에서 마치거나 그만둔다(D-101).
 
 use std::collections::HashSet;
 
@@ -6,6 +7,7 @@ use git::GitOp;
 
 use super::{paths, repo_of};
 use crate::conflict::{ConflictPath, Context, Pick, assemble, conflict_paths, load_file};
+use crate::operation::{self, OpKind, OpMarker};
 use crate::view::{ActionInput, ConflictFileKind, FileChoice, HunkChoice, SideState};
 use crate::{
     Action, ActionMeta, Availability, CoreError, ExecCtx, Outcome, RepoState, Result, Risk,
@@ -44,9 +46,14 @@ impl ConflictAction {
     }
 }
 
-/// 다른 도구가 시작한 리베이스·cherry-pick·revert 중이면 앱이 끝내지 않는다.
-fn refuse_other_operation(git: &dyn git::GitBackend, repo: &git::RepoPath) -> Result<()> {
-    if crate::conflict::other_operation(&git.git_dir(repo)?).is_some() {
+/// 다른 도구가 시작한 리베이스·cherry-pick·revert 중이면 앱이 끝내지 않는다. 앱이 시작해 서명한
+/// 표식과 git 상태가 맞는 작업만 통과한다(D-102).
+fn refuse_other_operation(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    key: &crate::undo::JournalKey,
+) -> Result<()> {
+    if crate::conflict::foreign_operation(git, repo, key)?.is_some() {
         return Err(CoreError::OperationInProgress);
     }
     Ok(())
@@ -109,11 +116,12 @@ impl Action for ConflictAction {
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
-        refuse_other_operation(git, repo)?;
+        refuse_other_operation(git, repo, ctx.key)?;
         let Some(context) = crate::conflict::context(git, repo, ctx.key)? else {
             return Err(CoreError::InvalidInput("합치는 중이 아니에요"));
         };
-        let conflicts = conflict_paths(git.index_entries(repo)?, context.flipped());
+        let flip = context.flipped();
+        let conflicts = conflict_paths(git.index_entries(repo)?, flip);
         match (self.meta.id, input, context) {
             ("conflict-abort", ActionInput::ConflictAbort, Context::Merge) => {
                 back_up_conflicts(git, repo, &conflicts)?;
@@ -128,19 +136,66 @@ impl Action for ConflictAction {
                 crate::parked::clear_marker(&git.git_dir(repo)?);
                 Ok(Outcome::ConflictAborted)
             }
+            ("conflict-abort", ActionInput::ConflictAbort, Context::Operation(op))
+                if op.kind != OpKind::Rebase =>
+            {
+                back_up_conflicts(git, repo, &conflicts)?;
+                git.run(
+                    repo,
+                    &GitOp::OperationAbort {
+                        kind: op.kind.git(),
+                    },
+                )?;
+                operation::clear(&git.git_dir(repo)?);
+                Ok(Outcome::ConflictAborted)
+            }
+            ("conflict-finish", ActionInput::ConflictFinish(input), Context::Operation(op))
+                if op.kind != OpKind::Rebase =>
+            {
+                write_resolutions(git, repo, &conflicts, input, flip)?;
+                finish_pick(git, repo, &op)?;
+                Ok(Outcome::ConflictFinished)
+            }
             ("conflict-finish", ActionInput::ConflictFinish(input), Context::Merge) => {
-                write_resolutions(git, repo, &conflicts, input)?;
+                write_resolutions(git, repo, &conflicts, input, flip)?;
                 commit_merge(git, repo, &input.locale)?;
                 Ok(Outcome::ConflictFinished)
             }
             ("conflict-finish", ActionInput::ConflictFinish(input), Context::Unpark(marker)) => {
-                write_resolutions(git, repo, &conflicts, input)?;
+                write_resolutions(git, repo, &conflicts, input, flip)?;
                 finish_unpark(git, repo, &marker)?;
                 Ok(Outcome::ParkedResolved)
             }
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }
     }
+}
+
+/// 복사·되돌리기를 이어서 새 버전을 만들고 표식을 지운다. 해결한 결과가 지금과 같으면 그 버전은
+/// 건너뛰고 `NoChange`. hook이 막으면 해결한 것은 남아 다시 마치면 이어진다.
+fn finish_pick(git: &dyn git::GitBackend, repo: &git::RepoPath, op: &OpMarker) -> Result<()> {
+    // `--continue`는 표식 서명과 git 상태가 둘 다 맞을 때만 부른다(D-102).
+    if !operation::verify_state(git, repo, op)? {
+        return Err(CoreError::ConflictChanged);
+    }
+    let kind = op.kind.git();
+    let git_dir = git.git_dir(repo)?;
+    if let Err(e) = git.run(repo, &GitOp::OperationContinue { kind }) {
+        let staged = git
+            .status(repo)?
+            .entries
+            .iter()
+            .any(|e| !matches!(e.index, git::Change::Unmodified | git::Change::Untracked));
+        let unmerged = git.index_entries(repo)?.iter().any(|e| e.stage > 0);
+        if operation::verify_state(git, repo, op)? && !staged && !unmerged {
+            git.run(repo, &GitOp::OperationSkip { kind })?;
+            operation::clear(&git_dir);
+            return Err(CoreError::NoChange);
+        }
+        return Err(e.into());
+    }
+    operation::clear(&git_dir);
+    Ok(())
 }
 
 /// 꺼내다 겹친 맡긴 파일을 마친다: 넣은 상태로 남은 것을 모두 고친 파일로 돌리고, 맡긴 ref는
@@ -186,6 +241,7 @@ fn write_resolutions(
     repo: &git::RepoPath,
     conflicts: &[ConflictPath],
     input: &crate::view::ConflictFinishInput,
+    flip: bool,
 ) -> Result<()> {
     // 입력 검사: 상한, 경로 형식, 같은 경로 두 번.
     if input.resolutions.len() > MAX_FILES {
@@ -259,13 +315,14 @@ fn write_resolutions(
                     path: c.path.clone(),
                 }
             }
+            // `ours`는 git의 stage 2다. 쪽을 뒤집은 맥락(기록 정리)에서는 화면의 내 쪽이 stage 3.
             (FileChoice::Ours, _, _) => GitOp::ResolveSide {
                 path: c.path.clone(),
-                ours: true,
+                ours: !flip,
             },
             (FileChoice::Theirs, _, _) => GitOp::ResolveSide {
                 path: c.path.clone(),
-                ours: false,
+                ours: flip,
             },
         };
         writes.push(op);
