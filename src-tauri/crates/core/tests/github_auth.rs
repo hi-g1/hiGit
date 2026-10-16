@@ -103,6 +103,25 @@ fn helper_only_when_every_condition_holds() {
 }
 
 #[test]
+fn setting_off_never_uses_the_helper() {
+    let f = fixture("https://github.com/octo/hello.git", Some(true));
+    f.core.set_settings(&higit_core::view::AppSettingsPatch {
+        git_helper: Some(false),
+        ..Default::default()
+    });
+    fetch(&f, false).unwrap();
+    assert!(!used_helper(&f.git));
+    fetch(&f, true).unwrap();
+    assert!(!used_helper(&f.git));
+    f.core.set_settings(&higit_core::view::AppSettingsPatch {
+        git_helper: Some(true),
+        ..Default::default()
+    });
+    fetch(&f, false).unwrap();
+    assert!(used_helper(&f.git));
+}
+
+#[test]
 fn local_transport_settings_turn_helper_off() {
     for key in [
         "http.sslverify",

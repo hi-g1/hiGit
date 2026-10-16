@@ -39,6 +39,8 @@ pub struct AppSettings {
     pub workspace_pane: Option<f32>,
     pub conflict_pane: Option<f32>,
     pub files_pane: Option<f32>,
+    /// "올리기와 가져오기에 이 연결 쓰기"(D-187). 끄면 git에 hiGit 로그인을 붙이지 않는다.
+    pub git_helper: bool,
 }
 
 impl Default for AppSettings {
@@ -53,6 +55,7 @@ impl Default for AppSettings {
             workspace_pane: None,
             conflict_pane: None,
             files_pane: None,
+            git_helper: true,
         }
     }
 }
@@ -82,6 +85,8 @@ struct SettingsFile {
     conflict_pane: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     files_pane: Option<f32>,
+    #[serde(default = "yes")]
+    git_helper: bool,
 }
 
 impl From<AppSettings> for SettingsFile {
@@ -97,6 +102,7 @@ impl From<AppSettings> for SettingsFile {
             workspace_pane: s.workspace_pane,
             conflict_pane: s.conflict_pane,
             files_pane: s.files_pane,
+            git_helper: s.git_helper,
         }
     }
 }
@@ -113,6 +119,7 @@ impl From<SettingsFile> for AppSettings {
             workspace_pane: pane(f.workspace_pane),
             conflict_pane: pane(f.conflict_pane),
             files_pane: pane(f.files_pane),
+            git_helper: f.git_helper,
         }
     }
 }
@@ -159,6 +166,7 @@ impl SettingsStore {
             workspace_pane: pane(patch.workspace_pane).or(current.workspace_pane),
             conflict_pane: pane(patch.conflict_pane).or(current.conflict_pane),
             files_pane: pane(patch.files_pane).or(current.files_pane),
+            git_helper: patch.git_helper.unwrap_or(current.git_helper),
         };
         if next != *current {
             *current = next;
@@ -194,6 +202,7 @@ impl From<AppSettings> for AppSettingsView {
             workspace_pane: s.workspace_pane,
             conflict_pane: s.conflict_pane,
             files_pane: s.files_pane,
+            git_helper: s.git_helper,
         }
     }
 }

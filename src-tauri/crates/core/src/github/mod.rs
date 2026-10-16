@@ -458,7 +458,8 @@ impl GitHubService {
         }
     }
 
-    /// 원격 하나의 인증 방식(D-111). git이 실제로 쓸 받기·올리기 주소가 **모두**
+    /// 원격 하나의 인증 방식(D-111). 설정 "올리기와 가져오기에 이 연결 쓰기"가 꺼졌으면(`use_helper`
+    /// 거짓, D-187) 늘 `UserDefault`. 켜졌으면 git이 실제로 쓸 받기·올리기 주소가 **모두**
     /// `https://github.com/…`이고, 저장소 로컬·워크트리 설정에 `http.*`·`remote.*.proxy`가 없고,
     /// 이번 실행에 키체인에서 토큰을 읽었거나 썼을 때만 `Helper`. 사람이 시킨 작업은 연결된
     /// 토큰을 키체인에서 읽어 보고(잠금 해제 창이 뜰 수 있다), 저절로 하는 확인은 읽지 않는다.
@@ -468,8 +469,12 @@ impl GitHubService {
         repo: &git::RepoPath,
         remote: &str,
         background: bool,
+        use_helper: bool,
     ) -> git::AuthMode {
         use git::AuthMode;
+        if !use_helper {
+            return AuthMode::UserDefault;
+        }
         let Ok(urls) = git.remote_urls(repo, remote) else {
             return AuthMode::UserDefault;
         };

@@ -45,3 +45,22 @@ fn default_core_keeps_settings_in_memory() {
         .allow_published_rewrite
     );
 }
+
+#[test]
+fn git_helper_is_on_by_default_and_for_old_files() {
+    let dir = tempfile::tempdir().unwrap();
+    // 칸이 없는 옛 파일은 켜짐으로 읽는다(D-187).
+    std::fs::write(
+        dir.path().join("settings.json"),
+        br#"{"v":1,"allow_published_rewrite":false}"#,
+    )
+    .unwrap();
+    let first = core(dir.path());
+    assert!(first.settings().git_helper);
+    let off = first.set_settings(&AppSettingsPatch {
+        git_helper: Some(false),
+        ..AppSettingsPatch::default()
+    });
+    assert!(!off.git_helper);
+    assert!(!core(dir.path()).settings().git_helper);
+}

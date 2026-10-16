@@ -50,6 +50,8 @@ pub struct AppSettingsView {
     pub workspace_pane: Option<f32>,
     pub conflict_pane: Option<f32>,
     pub files_pane: Option<f32>,
+    /// "올리기와 가져오기에 이 연결 쓰기"(D-187).
+    pub git_helper: bool,
 }
 
 /// 바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형·참거짓·칸 폭 숫자뿐이다.
@@ -75,6 +77,8 @@ pub struct AppSettingsPatch {
     pub conflict_pane: Option<f32>,
     #[serde(default)]
     pub files_pane: Option<f32>,
+    #[serde(default)]
+    pub git_helper: Option<bool>,
 }
 
 /// 화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다.

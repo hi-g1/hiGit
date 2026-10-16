@@ -288,6 +288,7 @@ export type AppSettingsPatch = {
 	workspacePane?: number | null,
 	conflictPane?: number | null,
 	filesPane?: number | null,
+	gitHelper?: boolean | null,
 };
 
 export type AppSettingsView = {
@@ -304,6 +305,8 @@ export type AppSettingsView = {
 	workspacePane: number | null,
 	conflictPane: number | null,
 	filesPane: number | null,
+	/**  "올리기와 가져오기에 이 연결 쓰기"(D-187). */
+	gitHelper: boolean,
 };
 
 /**  앱 시작 시 확인한 환경. */

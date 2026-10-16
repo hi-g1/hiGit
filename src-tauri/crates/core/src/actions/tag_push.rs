@@ -63,6 +63,7 @@ impl Action for TagPushAction {
             repo,
             github: ctx.github,
             background: false,
+            use_helper: ctx.settings.git_helper,
         };
         net.push_tag(&remote, &name)?;
         Ok(Outcome::TagPushed { name })

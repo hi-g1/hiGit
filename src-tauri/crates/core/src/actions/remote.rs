@@ -89,6 +89,7 @@ impl Action for RemoteAction {
             repo,
             github: ctx.github,
             background,
+            use_helper: ctx.settings.git_helper,
         };
         match (self.meta.id, input) {
             ("fetch", ActionInput::Fetch(i)) => {
@@ -208,13 +209,19 @@ pub(crate) struct Net<'a> {
     pub(crate) github: &'a crate::github::GitHubService,
     /// 저절로 하는 원격 확인.
     pub(crate) background: bool,
+    /// 설정 "올리기와 가져오기에 이 연결 쓰기"(D-187). 모든 `auth_for` 호출에 넘긴다.
+    pub(crate) use_helper: bool,
 }
 
 impl Net<'_> {
     fn fetch(&self, remote: &str) -> Result<()> {
-        let auth = self
-            .github
-            .auth_for(self.git, self.repo, remote, self.background);
+        let auth = self.github.auth_for(
+            self.git,
+            self.repo,
+            remote,
+            self.background,
+            self.use_helper,
+        );
         self.run(
             auth,
             &GitOp::Fetch {
@@ -227,7 +234,9 @@ impl Net<'_> {
     }
 
     fn push(&self, (remote, branch): (String, String), set_upstream: bool) -> Result<OpOutput> {
-        let auth = self.github.auth_for(self.git, self.repo, &remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, &remote, false, self.use_helper);
         self.run(
             auth,
             &GitOp::Push {
@@ -246,7 +255,9 @@ impl Net<'_> {
         src: &Oid,
         expect: &Oid,
     ) -> Result<OpOutput> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         self.run(
             auth,
             &GitOp::PushForce {
@@ -261,7 +272,9 @@ impl Net<'_> {
 
     /// 태그 하나를 올린다(D-131). 강제하지 않는다.
     pub(crate) fn push_tag(&self, remote: &str, name: &str) -> Result<OpOutput> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         self.run(
             auth,
             &GitOp::PushTag {
@@ -274,7 +287,9 @@ impl Net<'_> {
 
     /// 원격 브랜치를 `expect`일 때만 지운다(D-130).
     pub(crate) fn push_delete(&self, remote: &str, branch: &str, expect: &Oid) -> Result<OpOutput> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         self.run(
             auth,
             &GitOp::PushDelete {
@@ -288,7 +303,9 @@ impl Net<'_> {
 
     /// 원격에 그 이름이 없을 때만 새 브랜치를 만든다(D-130).
     pub(crate) fn push_new_ref(&self, remote: &str, branch: &str, oid: &Oid) -> Result<OpOutput> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         self.run(
             auth,
             &GitOp::PushNewRef {
@@ -302,7 +319,9 @@ impl Net<'_> {
 
     /// 서버에 지금 있는 브랜치 끝(`ls-remote`). 없으면 `None`.
     pub(crate) fn server_branch(&self, remote: &str, branch: &str) -> Result<Option<Oid>> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         Ok(self
             .git
             .ls_remote(self.repo, remote, &format!("refs/heads/{branch}"), auth)?)
@@ -310,7 +329,9 @@ impl Net<'_> {
 
     /// 서버가 알려 주는 원격 기본 브랜치(`ls-remote --symref`).
     pub(crate) fn server_head(&self, remote: &str) -> Result<Option<String>> {
-        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, false, self.use_helper);
         Ok(self.git.ls_remote_head(self.repo, remote, auth)?)
     }
 

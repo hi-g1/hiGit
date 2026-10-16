@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: AppSettingsView = {
   workspacePane: null,
   conflictPane: null,
   filesPane: null,
+  gitHelper: true,
 };
 
 /**

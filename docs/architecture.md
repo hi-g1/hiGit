@@ -372,7 +372,7 @@ pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, �
 
 ### GitHub 연결 (core::github, D-109·D-111·D-121)
 - `GitHubService`: 상태(`github.json`만 읽음), device flow(간격 안 폴링은 네트워크 없음, 만료는 시작 시각 + `expires_in`), 승인되면 `current_user` → 키체인(`platform::Keychain`, 서비스 `dev.higit.desktop`, 계정 `github.com`) → `github.json` 순으로 저장, 키체인을 못 쓰면 이번 실행에만 메모리. 401은 그 토큰 세대일 때만 연결을 지운다. `call(|provider, token| …)`이 토큰 읽기와 401 처리를 한 곳에서 한다.
-- `auth_for(git, repo, remote, background)`: 받기·올리기 주소가 모두 사용자 정보 없는 `https://github.com/…`, 저장소 로컬·워크트리 설정에 `http.*`·`remote.*.proxy` 없음, 이번 실행에 키체인에서 읽었거나 쓴 토큰(저절로 하는 확인은 키체인을 새로 읽지 않음)일 때만 `AuthMode::Helper`.
+- `auth_for(git, repo, remote, background, use_helper)`: 설정 "올리기와 가져오기에 이 연결 쓰기"(`settings.json`의 `gitHelper`, 기본 켬, D-187)가 꺼졌으면 늘 `UserDefault`. 값은 `ExecCtx.settings`에서 `Net.use_helper`로 오고 모든 원격 호출(저절로 하는 확인 포함)이 같은 값을 넘긴다. 켜졌으면 받기·올리기 주소가 모두 사용자 정보 없는 `https://github.com/…`, 저장소 로컬·워크트리 설정에 `http.*`·`remote.*.proxy` 없음, 이번 실행에 키체인에서 읽었거나 쓴 토큰(저절로 하는 확인은 키체인을 새로 읽지 않음)일 때만 `AuthMode::Helper`.
 - helper(`git_credential_main`): `main`이 첫 인자 `--git-credential`이면 창·플러그인보다 먼저 갈라진다. `get`이고 `protocol=https`·`host=github.com`·사용자 이름 없음일 때만 키체인을 읽어 표준 출력으로 답한다(입력 8KB·64줄, 10초).
 - 검토 요청 대상(`github::pr::pr_target`): 지금 브랜치 upstream의 원격(없으면 하나뿐·origin)의 올리기 주소가 github.com일 때만. head는 upstream 원격 브랜치 이름.
 

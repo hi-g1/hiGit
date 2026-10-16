@@ -110,6 +110,7 @@ impl Action for RemoteBranchAction {
             repo,
             github: ctx.github,
             background: false,
+            use_helper: ctx.settings.git_helper,
         };
         match (self.meta.id, input) {
             ("remote-branch-delete", ActionInput::RemoteBranchDelete(i)) => {

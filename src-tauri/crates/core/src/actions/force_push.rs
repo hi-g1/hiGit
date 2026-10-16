@@ -104,6 +104,7 @@ impl Action for ForcePushAction {
             repo,
             github: ctx.github,
             background: false,
+            use_helper: ctx.settings.git_helper,
         };
         // 서버가 알려 주는 기본 브랜치도 막는다. 읽지 못하면 막는 쪽으로(계획 010 검토 "바뀐 결정" ①).
         match net.server_head(&remote)? {
