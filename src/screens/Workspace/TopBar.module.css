@@ -25,10 +25,7 @@
 }
 
 .branchName {
-  overflow: hidden;
   color: var(--text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 왼쪽 묶음: 프로젝트 메뉴, 선, 브랜치 */

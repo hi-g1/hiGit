@@ -11,6 +11,7 @@ import {
 import { isExtendClick, listKey } from "../../lib/listKeys";
 import { formatTime } from "../../lib/time";
 import { Time } from "../../ui/Time";
+import { Truncate } from "../../ui/Truncate";
 import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -27,6 +28,10 @@ import { scrollToRow, visibleRows } from "./useWindow";
 /** 저장소에서 온 글자를 읽기 이름에 넣을 때의 길이. */
 const MAX_SPOKEN = 200;
 const spoken = (text: string) => (text.length > MAX_SPOKEN ? `${text.slice(0, MAX_SPOKEN)}…` : text);
+
+/** 잘렸을 때 툴팁에 보일 이름 줄 전체: 이름 · 안 올림 · 태그 · 브랜치 */
+const nameLine = (node: RouteNode, notPushed: string) =>
+  [node.summary, ...(node.unpushed ? [notPushed] : []), ...node.tags, ...node.branches].join(" · ");
 
 type Props = {
   nodes: readonly RouteNode[];
@@ -291,7 +296,7 @@ export function RouteList({
                 <span className={styles.fold}>{m.routeFold(node.count)}</span>
               ) : (
                 <>
-                  <span className={styles.name}>
+                  <Truncate className={styles.name} full={nameLine(node, m.notPushedMark)}>
                     <bdi className={styles.summary}>{node.summary}</bdi>
                     {node.unpushed && <span className={styles.mark}> · {m.notPushedMark}</span>}
                     {node.tags.map((t) => (
@@ -307,7 +312,7 @@ export function RouteList({
                         <bdi>{b}</bdi>
                       </span>
                     ))}
-                  </span>
+                  </Truncate>
                   <bdi className={styles.author}>{node.author}</bdi>
                   <span className={styles.date}>
                     <Time at={node.time} now={now} />

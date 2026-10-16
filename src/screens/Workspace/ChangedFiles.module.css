@@ -14,16 +14,11 @@
   font-size: var(--font-size-md);
 }
 
-/* 폴더는 앞을 줄여 끝 쪽(파일에 가까운 폴더)이 보이게 한다 */
+/* 폴더가 없어도 두 줄 높이를 지킨다 */
 .dir {
   min-height: calc(var(--font-size-sm) * var(--line-height));
-  overflow: hidden;
   color: var(--text-muted);
   font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  direction: rtl;
-  text-align: left;
 }
 
 .kind {

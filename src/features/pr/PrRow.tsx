@@ -7,6 +7,7 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { branchLine, stateLabel } from "./model";
 import styles from "./PrRow.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /** 검토 요청 줄 하나(D-112). 저장소 글자(제목·브랜치·작성자)는 React 글자로만 그린다. */
 export function PrRow({
@@ -34,7 +35,7 @@ export function PrRow({
     >
       <div className={styles.top}>
         <span className={styles.number}>#{row.number}</span>
-        <bdi className={styles.title}>{row.title}</bdi>
+        <Truncate className={styles.title}>{row.title}</Truncate>
         <span className={styles.state}>{label ?? <Term id="pr-draft" focusable={false} />}</span>
       </div>
       <div className={styles.bottom}>

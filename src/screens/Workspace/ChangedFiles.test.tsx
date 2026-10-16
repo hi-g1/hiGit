@@ -45,7 +45,8 @@ describe("ChangedFiles", () => {
     expect(names?.children[0]?.textContent).toBe("010-settings-github-more.md");
     expect(names?.children[1]?.textContent).toBe("docs/plans");
     expect(kind?.textContent).toBe("고침");
-    expect(names).toHaveAttribute("title", "docs/plans/010-settings-github-more.md");
+    // 전체 경로는 잘렸을 때만 툴팁으로 보인다(title을 쓰지 않는다).
+    expect(row.querySelector("[title]")).toBeNull();
     // 최상위 파일은 폴더 줄이 비어 있다(높이는 같다).
     const top = screen.getByRole("button", { name: /README\.md/ });
     expect(top.children[0]?.children[1]?.textContent).toBe("");

@@ -1,0 +1,13 @@
+.text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 경로: 앞쪽을 줄인다. 글은 안쪽 bdi가 왼쪽→오른쪽으로 둔다. */
+.start {
+  direction: rtl;
+  text-align: left;
+}

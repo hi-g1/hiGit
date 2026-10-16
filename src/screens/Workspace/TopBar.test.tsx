@@ -38,12 +38,16 @@ const status = (branch: Partial<StatusView["branch"]>): StatusView => ({
 });
 
 describe("TopBar", () => {
-  it("프로젝트 이름과 브랜치를 보여준다", () => {
+  it("프로젝트 이름과 브랜치를 보여준다", async () => {
+    const user = userEvent.setup();
     render(<TopBar repo={repo} status={status({})} />);
     expect(screen.getByRole("heading", { name: "내 프로젝트" })).toBeInTheDocument();
-    // 프로젝트 이름은 프로젝트 메뉴 단추이고, 경로는 툴팁이다.
-    expect(screen.getByRole("button", { name: "프로젝트 메뉴: 내 프로젝트" })).toHaveAttribute("title", repo.path);
     expect(screen.getByRole("button", { name: /main/ })).toHaveAttribute("aria-keyshortcuts", "Control+B");
+    // 프로젝트 이름은 프로젝트 메뉴 단추이고, 경로는 툴팁이다.
+    const project = screen.getByRole("button", { name: "프로젝트 메뉴: 내 프로젝트" });
+    expect(project).not.toHaveAttribute("title");
+    await user.hover(project);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(repo.path);
   });
 
   it("오른쪽 버전 기록 단추는 Ctrl+H이고 누르면 화면을 바꾼다", async () => {

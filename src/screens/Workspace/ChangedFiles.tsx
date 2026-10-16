@@ -13,6 +13,7 @@ import rowStyles from "../../ui/ListRow.module.css";
 import { TermTooltip, useTermLabel } from "../../ui/Term";
 import styles from "./ChangedFiles.module.css";
 import { FileRowMenu } from "./FileRowMenu";
+import { Truncate, TruncateGroup } from "../../ui/Truncate";
 
 /** 이름 바꿈을 빼려면 원래 경로도 함께 되돌려야 한다. */
 function pathsOf(file: ChangedFile): string[] {
@@ -138,13 +139,17 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
                 }}
               >
                 {/* 위 파일 이름, 아래 폴더(--text-muted), 오른쪽 상태 글자(D-143, r-home.png) */}
-                <span className={styles.names} title={file.path}>
-                  <span className={`${rowStyles.mono} ${styles.name}`}>{name}</span>
-                  {/* 바깥은 오른쪽부터 채워 앞쪽이 잘리고, 글자는 bdi로 왼쪽→오른쪽 그대로 */}
-                  <span className={styles.dir}>
-                    <bdi>{file.origPath ? m.renamedFrom(file.origPath) : dir}</bdi>
+                {/* 이름은 끝을, 폴더는 앞을 줄인다. 어느 쪽이 잘려도 전체 경로를 툴팁으로 */}
+                <TruncateGroup full={file.path}>
+                  <span className={styles.names}>
+                    <Truncate tip={false} className={`${rowStyles.mono} ${styles.name}`}>
+                      {name}
+                    </Truncate>
+                    <Truncate tip={false} from={file.origPath ? "end" : "start"} className={styles.dir}>
+                      {file.origPath ? m.renamedFrom(file.origPath) : dir}
+                    </Truncate>
                   </span>
-                </span>
+                </TruncateGroup>
                 <span className={`${styles.kind} ${styles[file.change]}`}>{m.changeKind[file.change]}</span>
               </button>
             </li>

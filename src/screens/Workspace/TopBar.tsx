@@ -10,6 +10,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { Term } from "../../ui/Term";
 import { ProjectMenu } from "./ProjectMenu";
 import styles from "./TopBar.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /**
  * 상단 바(D-045). 왼쪽: 프로젝트 메뉴, 브랜치 단추(누르거나 Ctrl+B면 브랜치 목록).
@@ -50,11 +51,11 @@ export function TopBar({
       <div className={styles.left}>
         <ProjectMenu repo={repo} />
         <span className={styles.divider} aria-hidden="true" />
-        {branch && merging && <span className={styles.branchName}>{branch.name ?? m.detached}</span>}
+        {branch && merging && <Truncate className={styles.branchName}>{branch.name ?? m.detached}</Truncate>}
         {branch && !merging && (
           <BranchList repo={repo.path} current={branch.name} onDone={onDone}>
             {branch.name && <span className={styles.dot} style={{ background: branchColor(branch.name, defaultBranch) }} />}
-            <span className={styles.branchName}>{branch.name ?? m.detached}</span>
+            <Truncate className={styles.branchName}>{branch.name ?? m.detached}</Truncate>
             <span aria-hidden="true">▾</span>
           </BranchList>
         )}

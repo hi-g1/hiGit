@@ -11,13 +11,19 @@ type TooltipProps = {
   children: ReactElement;
   /** 뜨기까지의 지연. 용어 툴팁만 더 길다(D-154). */
   delay?: number;
+  /** 열림을 바깥에서 정할 때(Truncate) */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  triggerRef?: (el: HTMLElement | null) => void;
 };
 
-export function Tooltip({ content, children, delay = TOOLTIP_DELAY_MS }: TooltipProps) {
+export function Tooltip({ content, children, delay = TOOLTIP_DELAY_MS, open, onOpenChange, triggerRef }: TooltipProps) {
   return (
     <RadixTooltip.Provider delayDuration={delay}>
-      <RadixTooltip.Root>
-        <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+      <RadixTooltip.Root open={open} onOpenChange={onOpenChange}>
+        <RadixTooltip.Trigger asChild ref={triggerRef}>
+          {children}
+        </RadixTooltip.Trigger>
         <RadixTooltip.Portal>
           <RadixTooltip.Content className={styles.content} side="top" sideOffset={6} collisionPadding={8}>
             {content}

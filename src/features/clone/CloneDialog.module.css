@@ -33,15 +33,9 @@
 /* 긴 경로는 앞쪽을 줄인다(끝의 폴더 이름이 보이게). */
 .parent {
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
   color: var(--text);
-  direction: rtl;
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .target {

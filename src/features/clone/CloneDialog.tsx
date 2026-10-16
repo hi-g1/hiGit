@@ -15,6 +15,7 @@ import { useSettingsStore } from "../settings/settingsStore";
 import { useCloneStore } from "./cloneStore";
 import { joinPath, suggestName } from "./name";
 import styles from "./CloneDialog.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /** 복제 대화상자(D-115). 열린 동안만 그린다. */
 export function CloneDialog() {
@@ -102,10 +103,9 @@ function CloneForm() {
       </label>
       <div className={styles.row}>
         <span className={styles.label}>{m.clone.saveIn}</span>
-        <span className={styles.parent} title={parent}>
-          {/* 앞쪽을 줄이려고 바깥은 오른쪽부터 쓰고, 경로 글자는 왼쪽부터(앞의 / 가 뒤로 가지 않게). */}
-          <bdi dir="ltr">{parent}</bdi>
-        </span>
+        <Truncate from="start" className={styles.parent}>
+          {parent}
+        </Truncate>
         <Button
           variant="text"
           disabled={running}
