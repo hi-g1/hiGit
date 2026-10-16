@@ -153,22 +153,26 @@ mod tests {
 
     #[test]
     fn kill_tree_ends_grandchildren() {
+        use std::io::{BufRead, Read};
         let git = crate::find_git().unwrap();
         let mut cmd = Command::new(git);
-        // git 별칭이 sh를 띄우고 sh가 sleep을 띄운다(손자). 출력 파이프를 손자가 쥔다.
-        cmd.args(["-c", "alias.slow=!sleep 30", "slow"])
+        // git 별칭이 sh를 띄우고 sh가 sleep을 띄운다(손자). 출력 파이프를 손자가 쥔다. sleep을 먼저 띄운 뒤
+        // "ready"를 써서, 느린 러너에서도 끝내기 전에 손자가 이미 있게 한다(고정 대기는 Windows CI에서 모자랐다).
+        cmd.args(["-c", "alias.slow=!sleep 30 & echo ready; wait", "slow"])
             .stdout(std::process::Stdio::piped());
         configure_child(&mut cmd);
         prepare_killable(&mut cmd);
         let mut child = cmd.spawn().unwrap();
-        let mut out = child.stdout.take().unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(300));
+        let mut out = std::io::BufReader::new(child.stdout.take().unwrap());
+        let mut line = String::new();
+        out.read_line(&mut line).unwrap();
+        assert_eq!(line.trim(), "ready");
         let start = std::time::Instant::now();
         kill_tree(&mut child);
         let _ = child.wait();
         // 손자까지 끝나야 파이프가 닫혀 읽기가 바로 끝난다.
         let mut buf = Vec::new();
-        std::io::Read::read_to_end(&mut out, &mut buf).unwrap();
+        out.read_to_end(&mut buf).unwrap();
         assert!(start.elapsed() < std::time::Duration::from_secs(10));
     }
 
