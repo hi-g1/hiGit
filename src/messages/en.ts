@@ -424,6 +424,11 @@ export const en: Messages = {
   },
   publish: {
     subtitle: (branch: string, versions: number) => `${branch} · ${versions} ${t("commit").toLowerCase()}${versions === 1 ? "" : "s"}`,
+    where: "Create in",
+    mine: (login: string) => (login ? `My account · ${login}` : "My account"),
+    otherOrg: "Another organization",
+    orgName: "Organization name",
+    orgHint: "Use letters, numbers or -",
     name: "Repository name",
     nameHint: "Use letters, numbers, ., _ or -",
     description: "Description",

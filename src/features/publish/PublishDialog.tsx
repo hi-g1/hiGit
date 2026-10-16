@@ -12,10 +12,16 @@ import { CANCEL_AFTER_SECS, useProgress } from "../progress/useProgress";
 import styles from "./PublishDialog.module.css";
 import { useSettingsStore } from "../settings/settingsStore";
 import { usePublishStore } from "./publishStore";
+import { useOwners } from "./useOwners";
 
 /** GitHub 저장소 이름 모양. 화면은 바로 안내만 하고 최종 검사는 core가 한다. */
 const NAME = /^[A-Za-z0-9._-]{1,100}$/;
 const nameOk = (name: string) => NAME.test(name) && name !== "." && name !== "..";
+/** GitHub 계정·조직 이름 모양(영문·숫자·-, 1~39자, -로 시작·끝나지 않음). core가 최종 검사한다. */
+const ownerOk = (owner: string) => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(owner);
+const ME = "";
+// 조직 이름에는 ":"가 없어 겹치지 않는다.
+const OTHER = ":other";
 
 /**
  * GitHub에 올리기 대화상자(D-132, design.md "GitHub에 올리기 대화상자"). 이름·설명·공개 여부만 보내고
@@ -43,6 +49,12 @@ function Dialog({ repo }: { repo: string }) {
   const [phase, setPhase] = useState<"idle" | "creating" | "pushing">("idle");
   const [created, setCreated] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  // 만들 곳(D-184): 내 계정(빈 값), 목록에서 찾은 조직, 또는 "다른 조직" 입력.
+  const owners = useOwners(true);
+  const [where, setWhere] = useState(ME);
+  const [otherOrg, setOtherOrg] = useState("");
+  const org = where === OTHER ? otherOrg.trim() : where;
+  const orgReady = org === ME || ownerOk(org);
   const keepPrivate = useRef<HTMLButtonElement>(null);
   const shownName = name ?? draft?.suggestedName ?? "";
   const busy = phase !== "idle";
@@ -81,7 +93,13 @@ function Dialog({ repo }: { repo: string }) {
     try {
       await api.executeAction(repo, {
         id: "publish",
-        input: { name: shownName.trim(), description: description.trim() || null, visibility, acknowledgePublic },
+        input: {
+          name: shownName.trim(),
+          description: description.trim() || null,
+          visibility,
+          acknowledgePublic,
+          ...(org === ME ? {} : { owner: org }),
+        },
       });
       setCreated(true);
     } catch (e) {
@@ -92,7 +110,7 @@ function Dialog({ repo }: { repo: string }) {
     await push();
   };
   const submit = () => {
-    if (busy || !nameOk(shownName.trim()) || created) return;
+    if (busy || !nameOk(shownName.trim()) || !orgReady || created) return;
     if (visibility === "public") {
       setConfirmPublic(true);
       setTimeout(() => keepPrivate.current?.focus(), 0);
@@ -105,10 +123,50 @@ function Dialog({ repo }: { repo: string }) {
   return (
     <DialogFrame
       title={<Term id="publish" focusable={false} />}
-      subtitle={draft?.branch ? <span className={styles.code}>{m.publish.subtitle(draft.branch, draft.versions)}</span> : undefined}
+      subtitle={
+        draft?.branch ? (
+          <span className={styles.code}>
+            {m.publish.subtitle(draft.branch, draft.versions)}
+            {org !== ME && orgReady && shownName.trim() !== "" && ` · ${org}/${shownName.trim()}`}
+          </span>
+        ) : undefined
+      }
       onClose={() => !busy && close()}
       size="wide"
     >
+      <label className={styles.field}>
+        <span>{m.publish.where}</span>
+        <select
+          className={`${styles.input} ${styles.code}`}
+          value={where}
+          disabled={busy || created}
+          onChange={(e) => setWhere(e.target.value)}
+        >
+          <option value={ME}>{m.publish.mine(draft?.login ?? "")}</option>
+          {owners.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+          <option value={OTHER}>{m.publish.otherOrg}</option>
+        </select>
+      </label>
+      {where === OTHER && (
+        <label className={styles.field}>
+          <span>{m.publish.orgName}</span>
+          <input
+            className={`${styles.input} ${styles.code}`}
+            value={otherOrg}
+            spellCheck={false}
+            disabled={busy || created}
+            onChange={(e) => setOtherOrg(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || composing(e)) e.preventDefault();
+            }}
+          />
+        </label>
+      )}
+      {where === OTHER && otherOrg.trim() !== "" && !orgReady && <p className={styles.hint}>{m.publish.orgHint}</p>}
       <label className={styles.field}>
         <span>{m.publish.name}</span>
         <input
@@ -206,7 +264,7 @@ function Dialog({ repo }: { repo: string }) {
         <Button variant="text" disabled={busy} onClick={close}>
           {m.close}
         </Button>
-        <Button variant="primary" disabled={busy || created || !nameOk(shownName.trim())} onClick={submit}>
+        <Button variant="primary" disabled={busy || created || !nameOk(shownName.trim()) || !orgReady} onClick={submit}>
           <Term id="publish" focusable={false} />
         </Button>
       </div>

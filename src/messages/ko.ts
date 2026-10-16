@@ -462,6 +462,11 @@ export const ko = {
   // GitHub에 올리기(D-132)
   publish: {
     subtitle: (branch: string, versions: number) => `${branch} · ${t("commit")} ${versions}개`,
+    where: "만들 곳",
+    mine: (login: string) => (login ? `내 계정 · ${login}` : "내 계정"),
+    otherOrg: "다른 조직",
+    orgName: "조직 이름",
+    orgHint: "영문·숫자·- 로 된 조직 이름을 써 주세요",
     name: "저장소 이름",
     nameHint: "영문·숫자·.·_·- 로 이름을 정해 주세요",
     description: "설명",
