@@ -29,9 +29,9 @@ effort: high
 - [ ] git 출력 파싱이 기계용 형식(`--porcelain`, `-z`, `%x00`)만 쓴다. 한글 파일명 테스트가 있다.
 - [ ] `cfg(windows)` / `cfg(target_os = "linux")` 분기가 `crates/platform` 밖에 없다.
 - [ ] CSS에 토큰 대신 색 값을 직접 쓴 곳이 없다(`rg "#[0-9a-fA-F]{3,6}" src --glob '!**/tokens.css'`).
-- [ ] 단축키와 목록 조작 키 판정은 `src/lib`(`shortcuts.ts`, `listKeys.ts`, `wheelZoom.ts`)에만 있다(`rg "e\.code ===|ctrlKey" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 `ApiError.code` 비교 말고는 비어 있음, D-056).
+- [ ] 단축키와 목록 조작 키 판정은 `src/lib`(`shortcuts.ts`, `listKeys.ts`, `cardKeys.ts`, `wheelZoom.ts`)에만 있다(`rg "e\.code ===|ctrlKey" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 `ApiError.code` 비교 말고는 비어 있음, D-056).
 - [ ] 노선도·그래프 옆 글자에 `--graph-*` 색을 쓰지 않는다(D-031). 브랜치 색은 `branchColor` 하나로 정한다(노선도는 `render/palette.ts`가 색 키를 바꾼다).
-- [ ] 노선도 배치(`features/history/layout/`)는 DOM(`document`, `window`)을 쓰지 않는다. 홈·시작 화면·버전 기록이 같은 배치 함수(`buildRoute`)를 쓴다(D-090). 역 메뉴 항목은 `menu/items.ts` 표에만 있고 화면이 git을 직접 부르지 않는다.
+- [ ] 노선도 배치(`features/history/layout/`)는 DOM(`document`, `window`)을 쓰지 않는다. 홈·시작 화면·버전 기록이 같은 배치 함수(`buildRoute`)를 쓴다(D-090). 역 메뉴 항목은 `menu/items.tsx` 표에만 있고 화면이 git을 직접 부르지 않는다. 역 메뉴 항목의 `actionId`는 `action-meta.json`에서 `irreversible`이 아니다(확인 창 없이 바로 하므로, `items.test.ts` 가드).
 - [ ] 새 기능에 테스트가 있고 `cargo test --workspace`, `pnpm test`가 통과한다.
 
 ### 3. 보안 점검 (D-034~D-041, `docs/architecture.md` "보안")
@@ -43,7 +43,7 @@ effort: high
 - [ ] 비밀: 토큰·주소 속 비밀번호가 로그, 오류, Debug, 명령줄, 주소에 들어가지 않는다(D-040)
 - [ ] 화면: `innerHTML`·`dangerouslySetInnerHTML`·`eval` 없음, 저장소에서 온 글자는 그대로 그린다
 - [ ] 지우거나 덮어쓰는 일: 백업 ref와 journal을 먼저 남긴다
-- [ ] `refs/higit/` 이름 문자열은 core의 `undo`·`parked`에만 있다(`rg '"refs/higit' src-tauri/crates/core/src`). 맡긴 ref는 `parked::ref_name`으로만 이름을 만들고, 쓰거나 지우는 곳은 `actions/{switch, stash, conflict, recover_parked}`뿐이다. 백업 ref는 `undo::backup` 함수로만 만든다. journal 줄은 서명하고 읽을 때 검증한다(D-063)
+- [ ] `refs/higit/` 이름 문자열은 core의 `undo`·`parked`에만 있다(`rg '"refs/higit' src-tauri/crates/core/src`). 맡긴 ref는 `parked::ref_name`으로만 이름을 만들고, 쓰거나 지우는 곳은 `parked`(`retire_to_backup`·`move_ref`)와 `actions/{switch, stash, conflict, recover_parked}`뿐이다(브랜치 지우기·이름 바꾸기와 그 되돌리기는 `parked` 함수를 부른다). 백업 ref는 `undo::backup` 함수로만 만든다. journal 줄은 서명하고 읽을 때 검증한다(D-063)
 - [ ] 비밀 파일 검사(D-077)의 원문(파일 내용, 찾은 값)이 로그·오류 detail·화면 밖으로 나가지 않는다. 로그 줄에는 git 원문을 쓰지 않는다(D-078)
 - [ ] 이벤트 페이로드(`op-progress` 등)에 파일 이름·원격 주소가 없다(D-080)
 - [ ] 잠금 파일 지우기는 `locks::remove`로만, git 폴더 안 일반 파일 `*.lock`만, 링크를 따라가지 않는다(D-081). 프로세스 조회·종료는 `crates/platform`에만
@@ -51,6 +51,13 @@ effort: high
 - [ ] 신뢰하지 않은 저장소(`NeedsTrust`)에서 status 같은 git 명령을 돌리지 않고 열린 목록에 넣지 않는다. 새 실행 설정 키가 `trust.rs` 목록에 있다(D-039, D-067)
 - [ ] `unsafe`, 테스트 밖 `unwrap`·`expect`·`panic!`이 새로 생기지 않았다(D-038)
 - [ ] 새 의존성: 필요성, 관리 상태, `cargo-deny` 통과
+- [ ] 기록을 바꾸는 액션(되돌리기·복사·돌아가기·고치기·기록 정리·태그·새 브랜치의 `from`)이 화면이 준 해시를 `core::guard`(`verified_commit`, `rewrite_chain`, `expect_head`)로 다시 확인한다(D-099). 해시는 `Oid`로만 명령줄에 닿는다
+- [ ] 올린 버전을 바꾸거나 빼는 길(고치기·돌아가기·기록 정리와 그 다시 하기)이 `guard::refuse_published`·`is_published`를 거친다. 판정하지 못하면(`None`) 거절한다(D-097)
+- [ ] 셸을 거치는 곳은 기록 정리의 상수 편집기 명령(`GIT_SEQUENCE_EDITOR='printf %s "$HIGIT_TODO" >'`)뿐이고 사용자 데이터는 `HIGIT_*` 환경 변수 값에만 든다. 할 일 목록에 `exec`·`break`·`label`·`reset`·`merge`·`update-ref` 줄이 없다(D-100)
+- [ ] `OperationContinue`·`OperationSkip`·`OperationAbort`는 서명한 표식(`operation::current`/`read`) + `verify_state` 뒤에만, 기록 정리의 이어가기는 `verify_todo`까지 통과한 뒤에만 부른다(D-102). 조회는 표식을 지우지 않는다
+- [ ] 표식(`core::marker`)은 journal 키로 서명하고 git 폴더 실제 경로에 묶는다. 서명 없는 옛 형식·다른 키·다른 저장소에서 복사한 표식은 읽지 않는다. 키가 이번 실행만의 것(`is_persistent` 거짓)이면 멈춘 작업을 바로 그만둔다
+- [ ] 꺼내기(`take-out`)는 stash 모양 버전의 경로가 모두 안전할 때만 한다(`parked::refuse_unsafe`). 서명이 맞지 않는 journal 줄은 되살리기·새 브랜치로·reflog 가리기에 쓰지 않는다(D-085)
+- [ ] 새 IPC 명령(`query_rewrite_plan`·`query_commit_detail`)이 네 곳에 있고 읽기 전용이며 열린 저장소만 받는다
 
 ## 보고 형식
 ```

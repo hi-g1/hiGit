@@ -75,6 +75,8 @@ pub trait GitBackend: Send + Sync {
     fn commit_messages(&self, repo: &RepoPath, oids: &[Oid]) -> Result<Vec<CommitMessage>>; // 3: 전체 메시지 100개까지(해시는 stdin, 1MB·10초)
     fn check_tag_name(&self, name: &str) -> Result<bool>; // 3: check-ref-format refs/tags/<이름>, `-` 시작 금지(D-104)
     fn commit_files(&self, repo: &RepoPath, oid: &Oid) -> Result<CommitFiles>; // 3: 그 버전에서 바뀐 파일(diff-tree -z --name-status, 첫 부모나 빈 트리와) 500개까지. diff의 DiffKind::Commit은 같은 기준으로 한 파일(D-105)
+    fn rebase_state(&self, repo: &RepoPath) -> Result<Option<RebaseState>>; // 3: 멈춘 기록 정리(rebase-merge/의 head-name·onto·orig-head·남은 할 일·한 일, edit 멈춤인지)
+    fn has_identity(&self, repo: &RepoPath) -> Result<bool>; // 3: git var GIT_COMMITTER_IDENT가 되는지(이름·이메일)
     fn excludes_file(&self, repo: &RepoPath) -> Result<Option<PathBuf>>; // 전역 무시 규칙 파일(감시용)
     fn diff(&self, repo: &RepoPath, target: &DiffTarget) -> Result<FileDiff>; // 마지막 버전과 지금을 합쳐 비교
     // 반복 1b: 브랜치·원격
@@ -136,13 +138,14 @@ pub trait GitBackend: Send + Sync {
 - 새 브랜치·태그 이름은 `check-ref-format`으로 검사하고 `-`로 시작하면 막는다. 원격 이름과 원격에서 온 브랜치 이름도 git에 넘기기 전에 core의 `actions/names.rs` 검사를 거친다. 원격 주소는 `https://`, `ssh://`, `git@host:path`만.
 - 저장소 파일을 읽을 때 심볼릭 링크는 따라가지 않고 링크 대상 글자만 보여준다(D-052). 경로는 저장소 루트 안만 받는다.
 - git 실행 파일은 시작할 때 절대 경로로 한 번 찾아 그 경로만 쓴다.
-- 원격 작업은 `CliBackend::run_network`로만 한다. hook·서명이 오래 붙잡을 수 있는 로컬 쓰기(`Commit`·`Merge`·`Revert`)는 `run_local_watched`로 돌려 진행 알림과 사람이 확인한 강제 멈춤만 받는다. 그 밖의 로컬 조회·쓰기는 끝내지 않는다(D-066, D-080).
+- 원격 작업은 `CliBackend::run_network`로만 한다. hook·서명이 오래 붙잡을 수 있는 로컬 쓰기(`Commit`·`Merge`·`Revert`, 반복 3의 `Amend`·`CherryPickStart`·`RevertStart`·`RewriteHistory`·`OperationContinue`·`OperationSkip`)는 `run_local_watched`로 돌려 진행 알림과 사람이 확인한 강제 멈춤만 받는다. 그 밖의 로컬 조회·쓰기는 끝내지 않는다(D-066, D-080).
+- 셸을 거치는 곳은 하나뿐이다: 기록 정리에서 git이 상수 편집기 명령 `GIT_SEQUENCE_EDITOR='printf %s "$HIGIT_TODO" >'`을 셸로 부른다. 사용자 데이터는 명령에 들어가지 않고 환경 변수 `HIGIT_TODO`(검증한 해시와 `pick`·`fixup`·`edit`·`drop`만)에만 든다(D-100, D-035의 예외). 할 일 목록에 `exec` 줄은 없다.
 
 | 작업 | 시간 제한 | 끝내는 방법 |
 | --- | --- | --- |
 | 사용자가 누른 원격 작업(fetch·pull·push·sync) | 처음부터 10분(`NETWORK_TIMEOUT`). 첫 출력 뒤 90초 동안 출력이 없으면 멈춤(`STALL`, `Stalled`). 연결 전(인증 창 대기)에는 10분 제한만. 동기화 버튼의 "취소"(`Cancelled`) | 프로세스 트리째(`ProcessControl`). 멈춤·취소는 먼저 정상 종료(`terminate_tree`), 2초 뒤 강제(`kill_tree`). 10분 제한은 바로 `kill_tree` |
 | 저절로 하는 원격 확인(D-055) | 60초(`BACKGROUND_TIMEOUT`). 진행 알림·취소 없음 | 같음. 묻는 창을 띄우지 않는 백그라운드 모드 |
-| 로컬 쓰기 `Commit`·`Merge`·`Revert` | 없음. 60초가 지나면 화면이 "응답 없음 · 강제로 멈추기"를 보이고 확인을 받는다(D-080) | 사람이 확인할 때만 멈춤·취소와 같은 방법 |
+| 로컬 쓰기 `Commit`·`Merge`·`Revert`·`Amend`·`CherryPickStart`·`RevertStart`·`RewriteHistory`·이어가기 | 없음. 60초가 지나면 화면이 "응답 없음 · 강제로 멈추기"를 보이고 확인을 받는다(D-080) | 사람이 확인할 때만 멈춤·취소와 같은 방법 |
 | 그 밖의 로컬 조회·쓰기 | 없음 | 끝내지 않는다(index를 쓰는 중에 끊으면 깨진다). 남은 잠금 파일은 "멈춘 작업 정리"(D-081) |
 
 - 사용자가 SSH 명령을 정하지 않았으면 `GIT_SSH_COMMAND=ssh -o BatchMode=yes`(D-023). 백그라운드는 `GCM_INTERACTIVE=never`, `credential.interactive=never`, `SSH_ASKPASS_REQUIRE=never`, `gc.auto=0`.
@@ -155,7 +158,7 @@ pub trait Action: Send + Sync {
     fn meta(&self) -> &ActionMeta;                       // id, risk, glossary_id, 단축키
     fn available(&self, state: &RepoState) -> Availability; // 지금 쓸 수 있나, 아니면 쉬운 이유
     fn preview(&self, ctx: &ExecCtx, input: &ActionInput) -> Result<Preview>; // 무엇이 바뀌나
-    fn execute(&self, ctx: &ExecCtx, input: &ActionInput) -> Result<Outcome>; // ExecCtx = { git, state }
+    fn execute(&self, ctx: &ExecCtx, input: &ActionInput) -> Result<Outcome>; // ExecCtx = { git, state, key(표식 서명) }
 }
 
 pub struct ActionMeta {
@@ -192,7 +195,7 @@ execute(action, input):
 ```
 
 - `moves_head()`가 거짓인 액션(`discard`, `clear-lock`, `take-out`, `recover-parked`, `stash`, `ignore`, `merge-into`, `conflict-abort`)은 실행기가 HEAD 백업을 만들지 않는다(작업 내역에 쓸모없는 줄이 쌓이지 않게, D-072). 지우거나 덮어쓰는 액션은 스스로 그 대상을 백업 ref로 먼저 남긴다(`discard-<브랜치>`, `conflict-files-<브랜치>`, `restore-<브랜치>`, `sync`).
-- 반복 2까지 등록한 액션(`actions::register_all` 순서): `init`, `stage`, `unstage`, `commit`, `ignore`, `merge`, `merge-into`, `conflict-finish`, `conflict-abort`, `stash`, `take-out`, `discard`, `restore`, `clear-lock`, `recover-parked`, `switch`, `branch-create`, `fetch`, `pull`, `push`, `sync`. 반복 3: `amend`(Caution/`RestoreRef`. `require_branch` → `refuse_during_operation` → `expect_head` = 지금 위치 → 지금 위치가 안 올린 버전 → 충돌 없음 → 메시지·넣은 파일이 그대로면 `NoChange`. 메시지는 stdin, 1MB, journal에는 비운 채로), `revert`·`cherry-pick`(Normal/`RestoreTree`, `actions/pick.rs`. `require_branch` → `refuse_during_operation` → 충돌 없음 → `refuse_staged` → `verified_commit`(되돌리기 `HeadAncestor`, 합친 버전은 `-m 1` / 복사 `BranchReachable`, 합친 버전·지금 위치의 조상은 거절) → 신원 확인(`IdentityMissing`) → 표식 쓰기 → 시작. 끝까지 가면 표식을 지우고 `Reverted`·`Picked`. 멈추면 비었으면 건너뛰고 `NoChange`, 키가 이번 실행만의 것이면 그만두고 오류, 아니면 표식을 두고 `OperationConflicts { context, paths }`(journal 없음)), `reset`(Danger/`RestoreTree`, 되돌릴 수 있어 확인 없음. `require_branch` → `refuse_during_operation` → `verified_commit(HeadAncestor)`, 지금 위치와 같으면 거절 → `refuse_published(HEAD, base = 고른 버전)` → 실행기가 `reset` 백업 → `ResetKeep`. 결과 `Reset { dropped }`), `rebase-i`(Danger/`RestoreTree`, `actions/rewrite.rs`. 입력 `RewriteInput { steps }`는 적용 순서(옛 것부터)의 `pick`·`squash`·`drop`과 묶음 맨 아래 카드의 메시지. 입력 검사(50개, 메시지 16KB·전체 24KB, 첫 단계·빼기 뒤 묶기 금지) → `rewrite_chain` 다시 계산, 해시 집합이 구간과 같아야 함 → 순서·메시지 그대로면 `NoChange` → 신원 → 표식(할 일 목록의 해시 모두와 고친 메시지) → `RewriteHistory`(구간 위 버전은 `pick`으로 이어 붙임). `edit` 멈춤은 `rewrite::drive`가 표식의 메시지로 `Amend` 뒤 이어간다. 충돌이면 표식을 두고 `OperationConflicts`, 충돌이 아닌 멈춤(hook 등)이나 이번 실행만의 키면 그만두고 오류. 결과 `Rewritten { kept, dropped, joined }`), `tag`·`tag-delete`(둘 다 용어 `tag`/Safe/`RestoreRef`, HEAD를 바꾸지 않고 `tracked_refs = [refs/tags/<이름>]`. 이름은 앞뒤 공백을 떼고 `validate_ref_like`·`check_tag_name`, 대소문자만 다른 같은 이름도 `TagExists`. 만들기는 `verified_commit(BranchOrActivity)`, 지우기는 태그가 화면이 본 버전을 가리킬 때만, 주석 태그는 `AnnotatedTag`), `branch-delete`(Caution/`RestoreRef`, HEAD를 바꾸지 않음, `tracked_refs = [refs/heads/<이름>]`. 지금 브랜치·기본 브랜치(`query::default_branch`)·다른 작업 폴더가 쓰는 브랜치는 `BranchProtected` → `refuse_during_operation` → 끝 버전 `branch-delete-<이름>` 백업 → `BranchDelete` → 맡긴 ref를 `parked-<이름>` 백업으로(`parked::retire_to_backup`). Ctrl+Z는 ref를 되살리고 같은 이름의 원격 추적 브랜치가 하나뿐이면 다시 잇는다), `branch-rename`(Normal/`Inverse`, `tracked_refs = [옛, 새]`. 새 이름이 다른 브랜치와 대소문자까지 겹치면 `BranchExists`, 대소문자만 바꾸면 `-M`, 합치는 중·unpark 표식이 있으면 거절 → `BranchRename` → upstream이 있었으면 끊음 → 맡긴 ref를 새 이름으로(`parked::move_ref`). 되돌리기는 `undo_branch_rename`이 이름과 맡긴 ref를 되돌리고 `restore_refs`는 건너뛴다. 다시 하기 없음). `branch-create`는 `from`(노선도의 역·작업 내역의 버전)이 있고 지금 위치와 다르면 `verified_commit(BranchOrActivity)` → `refuse_dirty` → `CreateAndSwitchAt`, 다시 하기도 같은 해시에서 만든다. 위험도와 `undo`는 생성물 `src/lib/action-meta.json`에 있다.
+- 등록한 액션 30개(`actions::register_all` 순서). 반복 2까지: `init`, `stage`, `unstage`, `commit`, `ignore`, `merge`, `merge-into`, `conflict-finish`, `conflict-abort`, `stash`, `take-out`, `discard`, `restore`, `clear-lock`, `recover-parked`, `switch`, `branch-create`, `fetch`, `pull`, `push`, `sync`. 반복 3: `amend`(Caution/`RestoreRef`. `require_branch` → `refuse_during_operation` → `expect_head` = 지금 위치 → 지금 위치가 안 올린 버전 → 충돌 없음 → 메시지·넣은 파일이 그대로면 `NoChange`. 메시지는 stdin, 1MB, journal에는 비운 채로), `revert`·`cherry-pick`(Normal/`RestoreTree`, `actions/pick.rs`. `require_branch` → `refuse_during_operation` → 충돌 없음 → `refuse_staged` → `verified_commit`(되돌리기 `HeadAncestor`, 합친 버전은 `-m 1` / 복사 `BranchReachable`, 합친 버전·지금 위치의 조상은 거절) → 신원 확인(`IdentityMissing`) → 표식 쓰기 → 시작. 끝까지 가면 표식을 지우고 `Reverted`·`Picked`. 멈추면 비었으면 건너뛰고 `NoChange`, 키가 이번 실행만의 것이면 그만두고 오류, 아니면 표식을 두고 `OperationConflicts { context, paths }`(journal 없음)), `reset`(Danger/`RestoreTree`, 되돌릴 수 있어 확인 없음. `require_branch` → `refuse_during_operation` → `verified_commit(HeadAncestor)`, 지금 위치와 같으면 거절 → `refuse_published(HEAD, base = 고른 버전)` → 실행기가 `reset` 백업 → `ResetKeep`. 결과 `Reset { dropped }`), `rebase-i`(Danger/`RestoreTree`, `actions/rewrite.rs`. 입력 `RewriteInput { steps }`는 적용 순서(옛 것부터)의 `pick`·`squash`·`drop`과 묶음 맨 아래 카드의 메시지. 입력 검사(50개, 메시지 16KB·전체 24KB, 첫 단계·빼기 뒤 묶기 금지) → `rewrite_chain` 다시 계산, 해시 집합이 구간과 같아야 함 → 순서·메시지 그대로면 `NoChange` → 신원 → 표식(할 일 목록의 해시 모두와 고친 메시지) → `RewriteHistory`(구간 위 버전은 `pick`으로 이어 붙임). `edit` 멈춤은 `rewrite::drive`가 표식의 메시지로 `Amend` 뒤 이어간다. 충돌이면 표식을 두고 `OperationConflicts`, 충돌이 아닌 멈춤(hook 등)이나 이번 실행만의 키면 그만두고 오류. 결과 `Rewritten { kept, dropped, joined }`), `tag`·`tag-delete`(둘 다 용어 `tag`/Safe/`RestoreRef`, HEAD를 바꾸지 않고 `tracked_refs = [refs/tags/<이름>]`. 이름은 앞뒤 공백을 떼고 `validate_ref_like`·`check_tag_name`, 대소문자만 다른 같은 이름도 `TagExists`. 만들기는 `verified_commit(BranchOrActivity)`, 지우기는 태그가 화면이 본 버전을 가리킬 때만, 주석 태그는 `AnnotatedTag`), `branch-delete`(Caution/`RestoreRef`, HEAD를 바꾸지 않음, `tracked_refs = [refs/heads/<이름>]`. 지금 브랜치·기본 브랜치(`query::default_branch`)·다른 작업 폴더가 쓰는 브랜치는 `BranchProtected` → `refuse_during_operation` → 끝 버전 `branch-delete-<이름>` 백업 → `BranchDelete` → 맡긴 ref를 `parked-<이름>` 백업으로(`parked::retire_to_backup`). Ctrl+Z는 ref를 되살리고 같은 이름의 원격 추적 브랜치가 하나뿐이면 다시 잇는다), `branch-rename`(Normal/`Inverse`, `tracked_refs = [옛, 새]`. 새 이름이 다른 브랜치와 대소문자까지 겹치면 `BranchExists`, 대소문자만 바꾸면 `-M`, 합치는 중·unpark 표식이 있으면 거절 → `BranchRename` → upstream이 있었으면 끊음 → 맡긴 ref를 새 이름으로(`parked::move_ref`). 되돌리기는 `undo_branch_rename`이 이름과 맡긴 ref를 되돌리고 `restore_refs`는 건너뛴다. 다시 하기 없음). `branch-create`는 `from`(노선도의 역·작업 내역의 버전)이 있고 지금 위치와 다르면 `verified_commit(BranchOrActivity)` → `refuse_dirty` → `CreateAndSwitchAt`, 다시 하기도 같은 해시에서 만든다. 위험도와 `undo`는 생성물 `src/lib/action-meta.json`에 있다.
 
 #### 잠금 둘
 - `Core.busy`(작업 폴더): index·작업 폴더를 쓰는 작업. 같은 저장소에서 둘이 겹치면 index.lock이 부딪히므로 나중 것은 `Busy`로 거절한다.
@@ -336,6 +339,8 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 | 같은 PC의 다른 사용자나 악성 프로그램 | 토큰, 설정 파일 | OS 키체인, 평문 저장 금지(D-040) |
 | 오염된 의존성 | 빌드 결과물에 코드 심기 | lockfile, cargo-deny, 설치 스크립트 제한(D-038) |
 | 사용자의 실수 | 비밀 파일을 버전에 넣어 올리기 | 버전 저장을 누르면 넣을 파일을 이름·내용 규칙과 50MB 크기로 검사해 저장을 멈추는 알림 줄(D-040, D-077, `core::secrets`, `query_secret_check`). 결과에는 경로·규칙·줄 번호만 |
+| 받은 저장소에 심어 둔 멈춘 작업(`rebase-merge/` 할 일 목록의 `exec`, `CHERRY_PICK_HEAD`, 가짜 `operation.json`) | 앱의 "마치기"로 명령을 실행하게 만들기 | 앱이 시작한 작업만 이어간다: 서명한 표식(journal 키, 저장소 실제 경로에 묶임, D-102) + git 상태 일치(`verify_state`) + 남은 할 일 줄이 모두 `pick`·`fixup`·`drop`·`edit` + 표식의 해시(`verify_todo`)일 때만 `--continue`. 그 밖은 "다른 도구의 작업"으로 안내만 |
+| 올린 기록을 바꾸는 실수 | 다음 동기화가 옛 버전을 다시 들여와 같은 변경이 둘 | 고치기·돌아가기·기록 정리와 그 다시 하기가 모든 원격 추적 브랜치 기준으로 빠질 버전을 확인(판정 못 하면 거절, D-097) |
 | 중간에 끊기는 작업 | 저장소 깨짐, 잠금 파일 남음, 맡긴 파일 유실 | 시간 제한·멈춤 90초·취소, 사람이 확인한 로컬 쓰기 강제 멈춤(D-080), 백업 ref, journal(D-041), 오래된 잠금 정리(D-081), 열 때 끝나지 않은 작업 알림과 남은 맡긴 항목 복구(D-082) |
 
 - 새 Action과 새 IPC 명령을 만들 때 위 표의 해당 줄을 확인한다. 점검 항목은 `.claude/agents/code-analyst.md` "보안 점검".
@@ -343,8 +348,8 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 - 로그 파일에는 코드만 남긴다(D-078, 위 "로그 파일").
 - 웹뷰가 부를 수 있는 앱 명령은 `build.rs`의 `COMMANDS`와 `capabilities/default.json`에 적은 것뿐이다. 새 명령은 `src/commands.rs`, `src/bindings.rs`와 함께 네 곳에 넣고, `src-tauri/tests/security_config.rs`가 네 곳과 CSP 문자열을 확인한다. dev 서버에는 CSP가 없으므로 CSP 확인은 릴리스 실행 파일로 한다.
 - 조회·액션·감시는 `Core::open_project`를 거친 경로만 받는다(`core::access::OpenedRepos`, 아니면 `NotOpened`). 시작 화면 상태 요약은 최근 목록의 경로도 받는다. 신뢰 확인(D-039, `core::trust`)을 거쳐 신뢰하거나 "끄고 열기"를 고른 뒤에만 열린 것으로 기록한다. 실행 설정(hooks 포함, D-067)이 있는 저장소는 `NeedsTrust`를 돌려주고, 신뢰하기 전에는 그 저장소에서 status 같은 git 명령을 돌리지 않는다. 소유자가 다른 폴더(dubious ownership)는 사용자가 고를 때만 그 폴더 하나를 `safe.directory`에 더한다.
-- 입력 상한: 경로 4096바이트, 경로 목록 10만 개, 버전 메시지 1MB, 이름 255바이트(맡긴 ref에 쓰는 브랜치 이름은 200바이트), 버전 기록 한 번에 500개(끝점 해시 201개), 줄 수 조회 한 번에 100개, 제외할 파일 한 번에 200개. 합치기 마치기(`ConflictFinishInput`)는 파일 1000개, 직접 고친 글 하나 1MB, 전체 8MB이고, 경로는 남은 충돌 경로에 있는 것만 받는다.
-- 화면이 돌려보내는 해시·ref 이름(작업 내역의 되살리기·꺼내기, 임시 보관 꺼내기)은 core가 목록을 다시 계산해 그 안에 있을 때만 받는다.
+- 입력 상한: 경로 4096바이트, 경로 목록 10만 개, 버전 메시지 1MB, 이름 255바이트(맡긴 ref에 쓰는 브랜치 이름은 200바이트), 버전 기록 한 번에 500개(끝점 해시 201개), 줄 수 조회 한 번에 100개, 제외할 파일 한 번에 200개. 합치기 마치기(`ConflictFinishInput`)는 파일 1000개, 직접 고친 글 하나 1MB, 전체 8MB이고, 경로는 남은 충돌 경로에 있는 것만 받는다. 반복 3: 기록 정리 50개(구간 위까지 1000개), 고친 메시지 하나 16KB·전체 24KB, 고치기 메시지 1MB, 태그 이름 255바이트, 표식 파일 256KB, 버전 상세 메시지 64KB·파일 500개.
+- 화면이 돌려보내는 해시·ref 이름(작업 내역의 되살리기·꺼내기, 임시 보관 꺼내기)은 core가 목록을 다시 계산해 그 안에 있을 때만 받는다. 반복 3의 액션(되돌리기·복사·돌아가기·고치기·기록 정리·태그·새 브랜치의 시작)이 받는 해시도 `core::guard`가 다시 확인한다(D-099). 꺼내기는 stash 모양 버전의 경로가 모두 안전할 때만 한다.
 - IPC 명령 인자는 serde 타입으로 받고 길이와 형식을 검사한다. 파일 경로는 저장소 루트 기준 상대 경로만 받아 백엔드가 정규화하고, 루트 밖이면 거부한다. 심볼릭 링크는 따라가지 않는다.
 
 ## 프론트와 백엔드 계약
