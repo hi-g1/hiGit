@@ -15,7 +15,7 @@ secrecy = { workspace = true }
 
 # 프로세스 그룹째 끝내기(D-041). unsafe 없는 API라 platform의 forbid(unsafe_code)를 지킨다.
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "1", features = ["process"] }
+rustix = { version = "1", features = ["process", "fs"] }
 
 # OS 키체인 저장소(D-110). Windows 자격 증명 관리자, Linux Secret Service(순수 Rust).
 [target.'cfg(windows)'.dependencies]

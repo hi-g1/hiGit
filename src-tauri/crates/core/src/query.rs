@@ -1200,11 +1200,11 @@ impl Queries {
     }
 }
 
-/// 파일 앞부분(비밀 검사 상한까지).
+/// 파일 앞부분(비밀 검사 상한까지). 링크를 따라가지 않는다(확인과 열기 사이에 링크로 바뀌어도 읽지 않음).
 fn read_head(path: &Path) -> Vec<u8> {
     use std::io::Read;
     let mut buf = Vec::new();
-    if let Ok(file) = std::fs::File::open(path) {
+    if let Ok(file) = platform::open_regular_no_follow(path) {
         let _ = file
             .take(crate::secrets::SCAN_BYTES as u64)
             .read_to_end(&mut buf);

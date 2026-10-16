@@ -261,7 +261,7 @@ fn hook_files(dir: &Path) -> Vec<(String, Vec<u8>)> {
                 format!("link:{}", target.display()).into_bytes()
             } else if kind.is_file() {
                 let mut buf = Vec::new();
-                if let Ok(file) = std::fs::File::open(e.path()) {
+                if let Ok(file) = platform::open_regular_no_follow(&e.path()) {
                     let _ = file.take(HOOK_READ_LIMIT).read_to_end(&mut buf);
                 }
                 buf
