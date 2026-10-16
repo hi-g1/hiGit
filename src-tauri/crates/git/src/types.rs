@@ -166,6 +166,24 @@ pub struct Remote {
     pub url: String,
 }
 
+/// 원격 하나에서 git이 실제로 쓸 주소들(`insteadOf`·`pushInsteadOf`·`pushurl`을 적용한 값).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RemoteUrls {
+    pub fetch: Vec<String>,
+    pub push: Vec<String>,
+}
+
+/// 원격 호출의 인증 방식(D-111). core가 정하고 화면 값이 아니다.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AuthMode {
+    /// 사용자 설정 그대로(GCM, 사용자 helper, SSH 키).
+    #[default]
+    UserDefault,
+    /// 이 호출에서만 사용자 helper를 비우고 hiGit helper(앱 실행 파일 `--git-credential`)를 쓴다.
+    /// helper 경로가 없으면 `UserDefault`처럼 돈다.
+    Helper,
+}
+
 /// index 항목 하나(`ls-files -s`). 충돌 중이면 같은 경로가 stage 1(원래)·2(내 쪽)·3(합칠 쪽)으로 나온다.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexEntry {
@@ -404,6 +422,7 @@ pub enum GitOp {
     Fetch {
         remote: Option<String>,
         background: bool,
+        auth: AuthMode,
     },
     /// `rev`로 앞으로만 감기(`merge --ff-only`). 갈라졌으면 `NotFastForward`.
     MergeFf { rev: String },
@@ -482,6 +501,7 @@ pub enum GitOp {
     Push {
         target: Option<(String, String)>,
         set_upstream: bool,
+        auth: AuthMode,
     },
 }
 

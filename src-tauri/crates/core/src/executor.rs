@@ -335,6 +335,9 @@ mod tests {
         fn remotes(&self, _: &RepoPath) -> git::Result<Vec<git::Remote>> {
             unreachable!()
         }
+        fn remote_urls(&self, _: &RepoPath, _: &str) -> git::Result<git::RemoteUrls> {
+            unreachable!()
+        }
         fn list_refs(&self, _: &RepoPath, _: &str) -> git::Result<Vec<git::RefEntry>> {
             unreachable!()
         }
@@ -424,6 +427,7 @@ mod tests {
         fn request_cancel(&self, _: &RepoPath) {}
         fn clear_cancel(&self, _: &RepoPath) {}
         fn set_observer(&self, _: Option<git::ProgressObserver>) {}
+        fn set_helper_program(&self, _: Option<std::path::PathBuf>) {}
         fn other_git_running(&self) -> bool {
             unreachable!()
         }

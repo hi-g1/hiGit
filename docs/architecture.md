@@ -82,6 +82,8 @@ pub trait GitBackend: Send + Sync {
     // 반복 1b: 브랜치·원격
     fn branches(&self, repo: &RepoPath) -> Result<Vec<Branch>>;       // 로컬·원격, 원격 HEAD 별칭 뺌
     fn remotes(&self, repo: &RepoPath) -> Result<Vec<Remote>>;
+    // 반복 4: git이 실제로 쓸 받기·올리기 주소들(insteadOf·pushInsteadOf·pushurl 적용, `remote get-url --all [--push]`)
+    fn remote_urls(&self, repo: &RepoPath, remote: &str) -> Result<RemoteUrls>;
     fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>>; // 원격 기본 브랜치
     fn check_branch_name(&self, name: &str) -> Result<bool>;          // check-ref-format + `-`·HEAD 막기
     fn current_branch(&self, repo: &RepoPath) -> Result<Option<String>>;
@@ -102,6 +104,7 @@ pub trait GitBackend: Send + Sync {
     fn parked_paths(&self, repo: &RepoPath, oid: &Oid) -> Result<Vec<String>>;
     fn local_config(&self, repo: &RepoPath) -> Result<Vec<(String, String)>>; // local·worktree 범위만. 신뢰 확인용(D-039)
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>); // "끄고 열기"의 -c 덮어쓰기
+    fn set_helper_program(&self, path: Option<PathBuf>); // 반복 4: credential helper로 다시 실행할 앱 실행 파일(D-111)
     // 반복 2: 충돌·임시 보관·작업 내역
     fn reflog(&self, repo: &RepoPath, limit: u32) -> Result<Vec<ReflogEntry>>;   // HEAD reflog, 최근 것부터
     fn stash_list(&self, repo: &RepoPath) -> Result<Vec<StashEntry>>;           // refs/stash 목록
@@ -119,7 +122,7 @@ pub trait GitBackend: Send + Sync {
 ```
 
 - 코드에는 해당 반복에 필요한 메서드만 구현해 넣는다. 위는 반복 2까지 구현한 것이다. 메서드를 더하면 가짜 구현 둘(`executor.rs` 테스트의 `NoGit`, `crates/core/tests/common/mod.rs`의 `FakeGit`)도 함께 고친다.
-- `GitOp`(반복 2까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `DiscardPaths`, `StashDropIf`, `StashDropOid`, `Unpark`, `UnparkKeep`, `UnparkAbort`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ResetKeep`, `ReadTree`, `ResolveFile`, `ResolveDelete`, `ResolveSide`, `SnapshotFiles`, `Revert`, `AddSafeDirectory`. 반복 3: `Amend`(`--cleanup=whitespace`, 메시지는 stdin), `CherryPickStart`·`RevertStart`(멈추면 정리하지 않음, core가 상태를 봄), `OperationContinue`·`OperationSkip`·`OperationAbort`(`OperationKind`: 복사·되돌리기·기록 정리). `TagCreate`(가벼운 태그, `tag.gpgSign=false`)·`TagDelete`, `BranchDelete`·`BranchRename`, `UnsetUpstream`·`SetUpstream`, `CreateAndSwitchAt`(이름은 core가 검사한 뒤 `-c`의 값으로, 해시는 `--end-of-options` 뒤). `RewriteHistory { base, steps }`(`rebase -i`, 할 일 목록은 해시와 `pick`·`fixup`·`edit`·`drop`만, 상수 편집기 명령 `printf %s "$HIGIT_TODO" >`와 환경 변수로 넘기고 `rebase.*` 설정을 고정, D-100). 조회 `rebase_state`(멈춘 정리의 `rebase-merge/`), `has_identity`(`git var GIT_COMMITTER_IDENT`).
+- `GitOp`(반복 2까지): `Init`, `Stage`, `Unstage`, `StageAll`, `Commit`, `CreateAndSwitch`, `Switch`, `SwitchTrack`, `Park`, `DiscardPaths`, `StashDropIf`, `StashDropOid`, `Unpark`, `UnparkKeep`, `UnparkAbort`, `Fetch`, `MergeFf`, `Merge`, `MergeAbort`, `Push`, `ResetSoft`, `ResetKeep`, `ReadTree`, `ResolveFile`, `ResolveDelete`, `ResolveSide`, `SnapshotFiles`, `Revert`, `AddSafeDirectory`. 반복 3: `Amend`(`--cleanup=whitespace`, 메시지는 stdin), `CherryPickStart`·`RevertStart`(멈추면 정리하지 않음, core가 상태를 봄), `OperationContinue`·`OperationSkip`·`OperationAbort`(`OperationKind`: 복사·되돌리기·기록 정리). `TagCreate`(가벼운 태그, `tag.gpgSign=false`)·`TagDelete`, `BranchDelete`·`BranchRename`, `UnsetUpstream`·`SetUpstream`, `CreateAndSwitchAt`(이름은 core가 검사한 뒤 `-c`의 값으로, 해시는 `--end-of-options` 뒤). `RewriteHistory { base, steps }`(`rebase -i`, 할 일 목록은 해시와 `pick`·`fixup`·`edit`·`drop`만, 상수 편집기 명령 `printf %s "$HIGIT_TODO" >`와 환경 변수로 넘기고 `rebase.*` 설정을 고정, D-100). 반복 4: `Fetch`·`Push`에 `auth: AuthMode`(`UserDefault` | `Helper`, core가 정함). `Helper`이고 helper 실행 파일이 있으면 그 호출에만 `-c credential.helper=`와 상수 `-c credential.helper=!"$HIGIT_CREDENTIAL_HELPER" --git-credential`, 환경 변수 `HIGIT_CREDENTIAL_HELPER=<경로>`를 붙인다(D-111). 조회 `rebase_state`(멈춘 정리의 `rebase-merge/`), `has_identity`(`git var GIT_COMMITTER_IDENT`).
 - `merge_check`는 git 2.38 이상이면 `merge-tree --write-tree`, 그보다 낮으면 임시 index에 `read-tree -m`으로 겹침만 본다(D-050). 사용자의 index와 작업 폴더는 건드리지 않는다.
 - `merge_segments`는 임시 폴더에 세 쪽을 쓰고 `merge-file -p --diff3 --marker-size=40`의 표시 줄만 읽는다. 입력 어디에든 길이 40의 표시 같은 줄이 있거나 이진 파일이면 오류로 돌려 화면이 파일 단위 선택으로 떨어진다. 표시 문자는 화면으로 나가지 않는다(D-086).
 - 충돌 해결: `ResolveFile`(블롭을 만들어 index에 넣고 `checkout-index`로 작업 폴더를 사용자 줄바꿈 설정대로 씀, 모드는 100644·100755·120000만), `ResolveDelete`(지우는 쪽), `ResolveSide`(이진·링크·큰 파일을 한쪽 그대로). 덮어쓰기 전 백업은 `SnapshotFiles`(작업 폴더 파일을 stash 모양 커밋으로, index·stash 목록은 그대로).

@@ -46,6 +46,8 @@ pub struct FakeGit {
     pub tags: Mutex<Vec<git::TagRef>>,
     /// `count_unpublished`가 돌려줄 값.
     pub unpublished: Mutex<Option<u32>>,
+    /// `set_helper_program`으로 받은 경로.
+    pub helper: Mutex<Option<std::path::PathBuf>>,
 }
 
 impl FakeGit {
@@ -76,6 +78,7 @@ impl FakeGit {
             git_running: AtomicBool::new(false),
             tags: Mutex::new(Vec::new()),
             unpublished: Mutex::new(Some(0)),
+            helper: Mutex::new(None),
         }
     }
 
@@ -215,6 +218,21 @@ impl GitBackend for FakeGit {
 
     fn remotes(&self, _repo: &RepoPath) -> git::Result<Vec<Remote>> {
         Ok(self.remotes.lock().unwrap().clone())
+    }
+
+    fn remote_urls(&self, _repo: &RepoPath, remote: &str) -> git::Result<git::RemoteUrls> {
+        let urls: Vec<String> = self
+            .remotes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| r.name == remote)
+            .map(|r| r.url.clone())
+            .collect();
+        Ok(git::RemoteUrls {
+            fetch: urls.clone(),
+            push: urls,
+        })
     }
 
     fn list_refs(&self, _repo: &RepoPath, prefix: &str) -> git::Result<Vec<RefEntry>> {
@@ -399,6 +417,10 @@ impl GitBackend for FakeGit {
 
     fn clear_cancel(&self, _repo: &RepoPath) {
         self.cancel_cleared.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn set_helper_program(&self, path: Option<std::path::PathBuf>) {
+        *self.helper.lock().unwrap() = path;
     }
 
     fn set_observer(&self, observer: Option<git::ProgressObserver>) {

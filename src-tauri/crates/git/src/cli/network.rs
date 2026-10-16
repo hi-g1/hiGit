@@ -7,7 +7,12 @@ use std::time::Duration;
 
 use super::CliBackend;
 use super::runner::{EnvChange, GitOutput};
-use crate::{GitError, RepoPath, Result};
+use crate::{AuthMode, GitError, RepoPath, Result};
+
+/// hiGit credential helper의 실행 파일 경로를 넘기는 환경 변수(D-111). 토큰은 넣지 않는다.
+pub const HELPER_ENV: &str = "HIGIT_CREDENTIAL_HELPER";
+/// helper를 부르는 설정. 경로는 환경 변수로만 넘겨 명령 문자열은 상수다(공백·따옴표가 든 경로도 안전).
+const HELPER_CONFIG: &str = "credential.helper=!\"$HIGIT_CREDENTIAL_HELPER\" --git-credential";
 
 /// 사용자가 누른 원격 작업의 시간 제한.
 pub const NETWORK_TIMEOUT: Duration = Duration::from_secs(10 * 60);
@@ -31,10 +36,33 @@ impl CliBackend {
         repo: &RepoPath,
         args: &[&str],
         mode: NetMode,
+        auth: AuthMode,
+    ) -> Result<GitOutput> {
+        self.run_network_input(repo, args, mode, auth, None)
+    }
+
+    /// `run_network`에 표준 입력을 준다(시험이 `credential fill`을 부를 때).
+    pub(crate) fn run_network_input(
+        &self,
+        repo: &RepoPath,
+        args: &[&str],
+        mode: NetMode,
+        auth: AuthMode,
+        stdin: Option<&[u8]>,
     ) -> Result<GitOutput> {
         let dir = Some(repo.as_path());
+        let helper = match auth {
+            AuthMode::Helper => self.helper_program(),
+            AuthMode::UserDefault => None,
+        };
         let mut full: Vec<&str> = Vec::new();
         let mut env: Vec<(&str, EnvChange)> = Vec::new();
+        if let Some(path) = &helper {
+            // 이 호출에서만 사용자 helper 목록을 비우고 hiGit helper 하나를 둔다. 사용자 설정은
+            // 고치지 않는다.
+            full.extend(["-c", "credential.helper=", "-c", HELPER_CONFIG]);
+            env.push((HELPER_ENV, EnvChange::Set(path.as_os_str())));
+        }
         // 사용자가 SSH 명령을 정하지 않았으면 질문 대신 실패하게 한다(D-023).
         if self.user_ssh_command(repo)?.is_none() {
             env.push((
@@ -71,7 +99,7 @@ impl CliBackend {
             dir,
             &full,
             &env,
-            None,
+            stdin,
             &super::runner::Watch {
                 timeout: Some(timeout),
                 stall: Some(STALL),

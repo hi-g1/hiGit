@@ -3,7 +3,7 @@
 //! 동기화 = 원격 확인 → (받을 것이 있으면) 합치기 → (보낼 것이 있으면) 올리기. 합칠 때 겹치면
 //! 합치기를 시작하지 않는다(충돌 해결은 반복 2). 겹침은 작업 폴더를 건드리지 않고 미리 본다.
 
-use git::{GitBackend, GitOp, LogQuery, RepoPath};
+use git::{AuthMode, GitBackend, GitOp, LogQuery, RepoPath};
 
 use super::{names, needs_repo, repo_of};
 use crate::undo::backup;
@@ -92,6 +92,7 @@ impl Action for RemoteAction {
                     &GitOp::Fetch {
                         remote: Some(remote),
                         background: i.background,
+                        auth: AuthMode::UserDefault,
                     },
                 )?;
                 Ok(Outcome::Fetched)
@@ -196,6 +197,7 @@ fn fetch_remote(git: &dyn GitBackend, repo: &RepoPath, remote: &str) -> Result<(
         &GitOp::Fetch {
             remote: Some(remote.to_string()),
             background: false,
+            auth: AuthMode::UserDefault,
         },
     )?;
     Ok(())
@@ -222,6 +224,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
                     &GitOp::Push {
                         target: Some(up.push_target(git)?),
                         set_upstream: false,
+                        auth: AuthMode::UserDefault,
                     },
                 )?;
             }
@@ -237,6 +240,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
                 &GitOp::Push {
                     target: Some((remote, branch)),
                     set_upstream: true,
+                    auth: AuthMode::UserDefault,
                 },
             )?;
             let count = git
@@ -300,6 +304,7 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
             &GitOp::Push {
                 target: Some(up.push_target(git)?),
                 set_upstream: false,
+                auth: AuthMode::UserDefault,
             },
         ) {
             Ok(_) => {

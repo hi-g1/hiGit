@@ -51,7 +51,7 @@ use std::sync::OnceLock;
 
 use args::{Cmd, push_revs};
 
-pub use network::{BACKGROUND_TIMEOUT, NETWORK_TIMEOUT, NetMode};
+pub use network::{BACKGROUND_TIMEOUT, HELPER_ENV, NETWORK_TIMEOUT, NetMode};
 pub use refs::RefExpect;
 use runner::Runner;
 pub use runner::{ConfigureCommand, ProcessControl};
@@ -59,8 +59,8 @@ pub use runner::{ConfigureCommand, ProcessControl};
 use crate::{
     BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffKind, DiffTarget,
     FailureKind, FileDiff, GitBackend, GitError, GitOp, GitVersion, GraphLogQuery, IndexEntry,
-    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RepoPath,
-    Result, StashEntry, Status, TagRef,
+    LogQuery, MergeCheck, MergeSegment, Oid, OpOutput, RefEntry, ReflogEntry, Remote, RemoteUrls,
+    RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 취소 깃발의 주인(D-117). 취소 단추·강제로 멈추기는 사람이 시킨 작업의 깃발만 켠다.
@@ -87,6 +87,8 @@ pub struct CliBackend {
     >,
     /// 오래 걸리는 작업의 진행 알림(저장소, 경과, 마지막 출력 뒤 시간).
     observer: std::sync::Mutex<Option<crate::ProgressObserver>>,
+    /// credential helper로 다시 실행할 앱 실행 파일(D-111).
+    helper: std::sync::Mutex<Option<PathBuf>>,
 }
 
 impl CliBackend {
@@ -98,7 +100,17 @@ impl CliBackend {
             version: OnceLock::new(),
             cancels: std::sync::Mutex::default(),
             observer: std::sync::Mutex::default(),
+            helper: std::sync::Mutex::default(),
         }
+    }
+
+    /// 쓸 수 있는 helper 실행 파일. 지정되지 않았거나 파일이 없으면 `None`.
+    pub(crate) fn helper_program(&self) -> Option<PathBuf> {
+        self.helper
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+            .filter(|path| path.is_file())
     }
 
     /// 이 저장소의 취소 깃발. 사람이 시킨 작업과 저절로 하는 확인은 깃발이 따로다(D-117).
@@ -467,6 +479,28 @@ impl GitBackend for CliBackend {
         }
     }
 
+    fn remote_urls(&self, repo: &RepoPath, remote: &str) -> Result<RemoteUrls> {
+        let read = |push: bool| -> Result<Vec<String>> {
+            let mut args = vec!["remote", "get-url", "--all"];
+            if push {
+                args.push("--push");
+            }
+            push_revs(&mut args, Cmd::RemoteGetUrl, self.git_version(), &[remote]);
+            let out = self.runner.run(Some(repo.as_path()), &args)?;
+            Ok(out
+                .stdout_lossy()
+                .lines()
+                .map(str::trim_end)
+                .filter(|line| !line.is_empty())
+                .map(str::to_owned)
+                .collect())
+        };
+        Ok(RemoteUrls {
+            fetch: read(false)?,
+            push: read(true)?,
+        })
+    }
+
     fn list_refs(&self, repo: &RepoPath, prefix: &str) -> Result<Vec<RefEntry>> {
         if !prefix.starts_with("refs/") {
             return Err(GitError::Parse(format!("ref 접두사: {prefix}")));
@@ -779,6 +813,13 @@ impl GitBackend for CliBackend {
             .any(|p| !before.contains(p) && !after.contains(p))
     }
 
+    fn set_helper_program(&self, path: Option<PathBuf>) {
+        *self
+            .helper
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = path;
+    }
+
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
         self.runner.set_overrides(repo.as_path(), pairs);
     }
@@ -850,7 +891,11 @@ impl GitBackend for CliBackend {
             GitOp::Unpark { oid } => return self.unpark(repo, oid),
             GitOp::UnparkKeep { oid } => return self.unpark_keep(repo, oid),
             GitOp::UnparkAbort { oid } => return self.unpark_abort(repo, oid),
-            GitOp::Fetch { remote, background } => {
+            GitOp::Fetch {
+                remote,
+                background,
+                auth,
+            } => {
                 let mode = if *background {
                     NetMode::Background
                 } else {
@@ -870,7 +915,7 @@ impl GitBackend for CliBackend {
                     Some(r) => push_revs(&mut args, Cmd::Fetch, self.git_version(), &[r]),
                     None => args.push("--all"),
                 }
-                self.run_network(repo, &args, mode)?
+                self.run_network(repo, &args, mode, *auth)?
             }
             GitOp::AddSafeDirectory { path } => {
                 if path.is_empty() || path == "*" || path.starts_with('-') {
@@ -1059,6 +1104,7 @@ impl GitBackend for CliBackend {
             GitOp::Push {
                 target,
                 set_upstream,
+                auth,
             } => {
                 // 태그·서브모듈·서명은 저장소 설정(push.followTags 등)을 따르지 않는다.
                 let mut args = vec![
@@ -1081,7 +1127,7 @@ impl GitBackend for CliBackend {
                         &[remote, &refspec],
                     );
                 }
-                self.run_network(repo, &args, NetMode::Foreground)?
+                self.run_network(repo, &args, NetMode::Foreground, *auth)?
             }
             GitOp::SwitchTrack {
                 local,

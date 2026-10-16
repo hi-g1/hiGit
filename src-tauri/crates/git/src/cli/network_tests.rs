@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use super::network::NetMode;
 use crate::testutil;
-use crate::{FailureKind, RepoPath};
+use crate::{AuthMode, FailureKind, RepoPath};
 
 fn env_in(mode: NetMode, var: &str) -> String {
     let repo = testutil::init_repo();
@@ -14,6 +14,7 @@ fn env_in(mode: NetMode, var: &str) -> String {
             &RepoPath::new(repo.path()),
             &["-c", &alias, "envcheck"],
             mode,
+            AuthMode::UserDefault,
         )
         .unwrap()
         .stdout_utf8()
@@ -49,6 +50,7 @@ fn ssh_batch_mode_unless_user_set_one() {
                 "envcheck",
             ],
             NetMode::Foreground,
+            AuthMode::UserDefault,
         )
         .unwrap();
     assert_eq!(out.stdout_utf8().unwrap(), "");
@@ -66,6 +68,7 @@ fn stuck_git_is_ended_with_its_children() {
             &RepoPath::new(repo.path()),
             &["-c", "alias.slow=!sleep 30", "slow"],
             NetMode::Background,
+            AuthMode::UserDefault,
         )
         .unwrap_err();
     assert_eq!(err.kind(), FailureKind::TimedOut);
@@ -162,12 +165,18 @@ mod watched {
                 &path,
                 &["-c", "alias.slow=!sleep 1", "slow"],
                 NetMode::Foreground,
+                AuthMode::UserDefault,
             )
             .unwrap_err();
         assert_eq!(err.kind(), FailureKind::Cancelled);
         backend.clear_cancel(&path);
         backend
-            .run_network(&path, &["-c", "alias.ok=!true", "ok"], NetMode::Foreground)
+            .run_network(
+                &path,
+                &["-c", "alias.ok=!true", "ok"],
+                NetMode::Foreground,
+                AuthMode::UserDefault,
+            )
             .unwrap();
     }
 
@@ -181,10 +190,10 @@ mod watched {
         // 사람이 취소해도 저절로 하는 확인은 계속된다.
         backend.request_cancel(&path);
         backend
-            .run_network(&path, &ok, NetMode::Background)
+            .run_network(&path, &ok, NetMode::Background, AuthMode::UserDefault)
             .unwrap();
         let err = backend
-            .run_network(&path, &ok, NetMode::Foreground)
+            .run_network(&path, &ok, NetMode::Foreground, AuthMode::UserDefault)
             .unwrap_err();
         assert_eq!(err.kind(), FailureKind::Cancelled);
         backend.clear_cancel(&path);
@@ -194,11 +203,110 @@ mod watched {
             .cancel_flag(&path, crate::cli::CancelScope::Background)
             .store(true, Ordering::SeqCst);
         backend
-            .run_network(&path, &ok, NetMode::Foreground)
+            .run_network(&path, &ok, NetMode::Foreground, AuthMode::UserDefault)
             .unwrap();
         let err = backend
-            .run_network(&path, &ok, NetMode::Background)
+            .run_network(&path, &ok, NetMode::Background, AuthMode::UserDefault)
             .unwrap_err();
         assert_eq!(err.kind(), FailureKind::Cancelled);
+    }
+
+    /// `credential fill`의 표준 출력에서 `password=` 값.
+    fn filled_password(out: &str) -> Option<&str> {
+        out.lines().find_map(|l| l.strip_prefix("password="))
+    }
+
+    /// 인자를 username에 담아 돌려주는 스텁 helper. 경로에 공백·한글·작은따옴표가 들어간다.
+    fn stub_helper(dir: &std::path::Path) -> std::path::PathBuf {
+        let folder = dir.join("a b").join("한글'x");
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("helper");
+        std::fs::write(
+            &path,
+            "#!/bin/sh\necho \"username=$1-$2\"\necho password=stubpw\n",
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        path
+    }
+
+    const FILL_INPUT: &[u8] = b"protocol=https\nhost=github.com\n\n";
+
+    #[test]
+    fn helper_mode_uses_only_the_app_helper() {
+        let repo = testutil::init_repo();
+        let tools = tempfile::tempdir().unwrap();
+        let path = RepoPath::new(repo.path());
+        // 사용자 helper(표식): 시스템·전역 helper를 비운 뒤 저장소 설정에 둔다.
+        testutil::git(repo.path(), &["config", "--add", "credential.helper", ""]);
+        testutil::git(
+            repo.path(),
+            &[
+                "config",
+                "--add",
+                "credential.helper",
+                "!f() { echo username=user; echo password=userpw; }; f",
+            ],
+        );
+        let backend = testutil::backend();
+        backend.set_helper_program(Some(stub_helper(tools.path())));
+
+        let out = backend
+            .run_network_input(
+                &path,
+                &["credential", "fill"],
+                NetMode::Foreground,
+                AuthMode::Helper,
+                Some(FILL_INPUT),
+            )
+            .unwrap()
+            .stdout_lossy();
+        assert_eq!(filled_password(&out), Some("stubpw"), "{out}");
+        assert!(out.contains("username=--git-credential-get"), "{out}");
+
+        // 사용자 기본은 지금처럼 사용자 helper를 부른다.
+        let out = backend
+            .run_network_input(
+                &path,
+                &["credential", "fill"],
+                NetMode::Foreground,
+                AuthMode::UserDefault,
+                Some(FILL_INPUT),
+            )
+            .unwrap()
+            .stdout_lossy();
+        assert_eq!(filled_password(&out), Some("userpw"), "{out}");
+    }
+
+    #[test]
+    fn helper_env_only_in_helper_mode_with_existing_program() {
+        let repo = testutil::init_repo();
+        let tools = tempfile::tempdir().unwrap();
+        let path = RepoPath::new(repo.path());
+        let check = [
+            "-c",
+            "alias.envcheck=!printf %s \"$HIGIT_CREDENTIAL_HELPER\"",
+            "envcheck",
+        ];
+        let run = |backend: &crate::CliBackend, auth| {
+            backend
+                .run_network(&path, &check, NetMode::Foreground, auth)
+                .unwrap()
+                .stdout_lossy()
+        };
+        let backend = testutil::backend();
+        // 지정하지 않았으면 Helper도 사용자 기본처럼 돈다.
+        assert_eq!(run(&backend, AuthMode::Helper), "");
+        let helper = stub_helper(tools.path());
+        backend.set_helper_program(Some(helper.clone()));
+        assert_eq!(run(&backend, AuthMode::UserDefault), "");
+        assert_eq!(run(&backend, AuthMode::Helper), helper.to_string_lossy());
+        // 없는 파일이면 붙이지 않는다.
+        backend.set_helper_program(Some(tools.path().join("없음")));
+        assert_eq!(run(&backend, AuthMode::Helper), "");
     }
 }

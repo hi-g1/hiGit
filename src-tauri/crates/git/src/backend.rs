@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use crate::{
     BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp,
     GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput,
-    RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RepoPath, Result, StashEntry, Status,
-    TagRef,
+    RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RemoteUrls, RepoPath, Result,
+    StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -71,6 +71,10 @@ pub trait GitBackend: Send + Sync {
 
     /// 원격 목록(이름과 주소).
     fn remotes(&self, repo: &RepoPath) -> Result<Vec<Remote>>;
+
+    /// 원격 하나에서 git이 실제로 쓸 받기·올리기 주소들(`remote get-url --all [--push]`).
+    /// 없는 원격은 오류.
+    fn remote_urls(&self, repo: &RepoPath, remote: &str) -> Result<RemoteUrls>;
 
     /// `prefix`(예: `refs/higit/parked/`) 아래 ref 목록.
     fn list_refs(&self, repo: &RepoPath, prefix: &str) -> Result<Vec<RefEntry>>;
@@ -162,6 +166,10 @@ pub trait GitBackend: Send + Sync {
     /// 앱이 띄우지 않은 git 프로세스(다른 도구, 터미널)가 시스템에서 도는지. 알 수 없으면 true.
     /// 잠금 파일을 지워도 되는지 가를 때 쓴다(D-081).
     fn other_git_running(&self) -> bool;
+
+    /// credential helper로 다시 실행할 앱 실행 파일(D-111). `None`이면 `AuthMode::Helper`도
+    /// 사용자 기본으로 돈다.
+    fn set_helper_program(&self, path: Option<PathBuf>);
 
     /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
     fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);

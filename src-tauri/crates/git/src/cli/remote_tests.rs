@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::testutil;
-use crate::{CliBackend, FailureKind, GitBackend, GitOp, RepoPath};
+use crate::{AuthMode, CliBackend, FailureKind, GitBackend, GitOp, RepoPath};
 
 fn commit(dir: &Path, file: &str, text: &str) {
     std::fs::write(dir.join(file), text).unwrap();
@@ -55,6 +55,7 @@ fn fetch_then_fast_forward() {
         &GitOp::Fetch {
             remote: Some("origin".into()),
             background: true,
+            auth: AuthMode::UserDefault,
         },
     )
     .unwrap();
@@ -83,6 +84,7 @@ fn diverged_merge_makes_a_merge_commit_with_message() {
         &GitOp::Fetch {
             remote: None,
             background: false,
+            auth: AuthMode::UserDefault,
         },
     )
     .unwrap();
@@ -123,6 +125,7 @@ fn conflicting_merge_is_classified_and_aborted() {
         &GitOp::Fetch {
             remote: None,
             background: false,
+            auth: AuthMode::UserDefault,
         },
     )
     .unwrap();
@@ -154,6 +157,7 @@ fn push_upstream_and_rejection() {
         &GitOp::Push {
             target: Some(("origin".into(), "기능".into())),
             set_upstream: true,
+            auth: AuthMode::UserDefault,
         },
     )
     .unwrap();
@@ -170,6 +174,7 @@ fn push_upstream_and_rejection() {
             &GitOp::Push {
                 target: None,
                 set_upstream: false,
+                auth: AuthMode::UserDefault,
             },
         )
         .unwrap_err();
@@ -189,6 +194,7 @@ fn unreachable_remote_is_classified() {
             &GitOp::Fetch {
                 remote: Some("origin".into()),
                 background: true,
+                auth: AuthMode::UserDefault,
             },
         )
         .unwrap_err();
@@ -198,4 +204,50 @@ fn unreachable_remote_is_classified() {
         "{}",
         err.detail()
     );
+}
+
+#[test]
+fn remote_urls_apply_instead_of_and_pushurl() {
+    let repo = testutil::init_repo();
+    let p = repo.path();
+    let backend = testutil::backend();
+    let path = RepoPath::new(p);
+    testutil::git(p, &["remote", "add", "origin", "gh:octo/hello.git"]);
+    testutil::git(p, &["config", "url.https://github.com/.insteadOf", "gh:"]);
+    // pushInsteadOf는 바꾸기 전 원래 주소에 맞춘다.
+    testutil::git(
+        p,
+        &["config", "url.ssh://git@example.com/.pushInsteadOf", "gh:"],
+    );
+    let urls = backend.remote_urls(&path, "origin").unwrap();
+    assert_eq!(urls.fetch, ["https://github.com/octo/hello.git"]);
+    assert_eq!(urls.push, ["ssh://git@example.com/octo/hello.git"]);
+
+    // pushurl이 있으면 올리기 주소는 그것이고 여러 개를 모두 준다.
+    testutil::git(
+        p,
+        &[
+            "config",
+            "--add",
+            "remote.origin.pushurl",
+            "https://a.example/x.git",
+        ],
+    );
+    testutil::git(
+        p,
+        &[
+            "config",
+            "--add",
+            "remote.origin.pushurl",
+            "https://b.example/y.git",
+        ],
+    );
+    let urls = backend.remote_urls(&path, "origin").unwrap();
+    assert_eq!(urls.fetch, ["https://github.com/octo/hello.git"]);
+    assert_eq!(
+        urls.push,
+        ["https://a.example/x.git", "https://b.example/y.git"]
+    );
+
+    assert!(backend.remote_urls(&path, "없는원격").is_err());
 }

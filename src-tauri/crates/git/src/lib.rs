@@ -20,15 +20,15 @@ pub type ProgressObserver = std::sync::Arc<
     dyn Fn(&std::path::Path, std::time::Duration, std::time::Duration) + Send + Sync,
 >;
 pub use cli::{
-    BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, NETWORK_TIMEOUT, NetMode, ProcessControl,
-    RefExpect, safe_relative,
+    BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, HELPER_ENV, NETWORK_TIMEOUT, NetMode,
+    ProcessControl, RefExpect, safe_relative,
 };
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{
-    BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitFile, CommitFiles,
+    AuthMode, BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitFile, CommitFiles,
     CommitMessage, CommitStat, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitOp,
     GitVersion, GraphLogQuery, Hunk, IndexEntry, LineKind, LogQuery, MergeCheck, MergeSegment, Oid,
-    OpOutput, OperationKind, RebaseState, RefEntry, ReflogEntry, Remote, RepoPath, RewriteKind,
-    RewriteStep, StashEntry, Status, StatusEntry, TagRef,
+    OpOutput, OperationKind, RebaseState, RefEntry, ReflogEntry, Remote, RemoteUrls, RepoPath,
+    RewriteKind, RewriteStep, StashEntry, Status, StatusEntry, TagRef,
 };
