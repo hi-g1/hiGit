@@ -14,6 +14,7 @@ import { CANCEL_AFTER_SECS, useProgressEvents } from "../progress/useProgress";
 import { useSettingsStore } from "../settings/settingsStore";
 import { useCloneStore } from "./cloneStore";
 import { joinPath, suggestName } from "./name";
+import { RepoList } from "./RepoList";
 import styles from "./CloneDialog.module.css";
 import { Truncate } from "../../ui/Truncate";
 
@@ -38,6 +39,7 @@ function CloneForm() {
   const [acceptOld, setAcceptOld] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [listing, setListing] = useState(false);
   // 진행 알림은 작업 공간이 아니어도(시작 화면) 열린 동안 받는다.
   useProgressEvents();
   const progress = useProgressStore((s) => Object.values(s.byRepo).find((p) => p.action === "clone") ?? null);
@@ -77,11 +79,34 @@ function CloneForm() {
   const needsConnect =
     (code === "httpAuthFailed" || code === "remoteNotFound") && github?.configured === true && !github.connected;
 
+  const connected = github?.connected === true;
+  const showList = connected && listing && !running;
+
   return (
     <DialogFrame title={<Term id="clone" focusable={false} />} onClose={() => !running && close()} size="wide">
+      {connected && (
+        <div className={styles.modes}>
+          <Button variant="text" aria-pressed={!showList} disabled={running} onClick={() => setListing(false)}>
+            {m.clone.url}
+          </Button>
+          <span aria-hidden="true">·</span>
+          <Button variant="text" aria-pressed={showList} disabled={running} onClick={() => setListing(true)}>
+            {m.clone.myRepos}
+          </Button>
+        </div>
+      )}
+      {showList ? (
+        <RepoList
+          onPick={(r) => {
+            changeUrl(`https://github.com/${r.owner}/${r.name}`);
+            setListing(false);
+          }}
+        />
+      ) : (
       <label className={styles.label}>
-        {m.clone.url}
+        {connected ? null : m.clone.url}
         <input
+          aria-label={connected ? m.clone.url : undefined}
           className={styles.field}
           value={url}
           placeholder={m.clone.urlPlaceholder}
@@ -101,6 +126,7 @@ function CloneForm() {
           }}
         />
       </label>
+      )}
       <div className={styles.row}>
         <span className={styles.label}>{m.clone.saveIn}</span>
         <Truncate from="start" className={styles.parent}>

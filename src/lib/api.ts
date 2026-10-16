@@ -22,6 +22,8 @@ export type {
   BranchListView,
   BranchNameCheck,
   BranchRow,
+  GitHubRepoListView,
+  GitHubRepoRowView,
   BranchView,
   ChangeKind,
   ChangedFile,

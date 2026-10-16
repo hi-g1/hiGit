@@ -4,6 +4,7 @@ import {
   api,
   type ApiError,
   type DiffRequest,
+  type GitHubRepoListView,
   type LogPage,
   type LogScope,
   type PrListView,
@@ -43,6 +44,7 @@ export const queryKeys = {
   prList: (repo: string, state: string, branch: string | null) => ["github", "prList", repo, state, branch] as const,
   prDetail: (repo: string, number: number) => ["github", "prDetail", repo, number] as const,
   prDraft: (repo: string) => ["github", "prDraft", repo] as const,
+  githubRepos: ["github", "repos"] as const,
   cloneDefaults: ["cloneDefaults"] as const,
   settings: ["settings"] as const,
   displayHints: ["displayHints"] as const,
@@ -107,6 +109,24 @@ export function usePrPages(repo: string, state: PrStateFilterView, enabled: bool
   >({
     queryKey: queryKeys.prList(repo, state, null),
     queryFn: ({ pageParam }) => api.prList(repo, { state, branch: null, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+/** 복제 대화상자의 내 저장소(D-133, 50개씩 "더 보기"). 목록을 보는 동안만, 60초 동안 새로 읽지 않는다. */
+export function useGithubRepos(enabled: boolean) {
+  return useInfiniteQuery<
+    GitHubRepoListView,
+    ApiError,
+    InfiniteData<GitHubRepoListView, number>,
+    typeof queryKeys.githubRepos,
+    number
+  >({
+    queryKey: queryKeys.githubRepos,
+    queryFn: ({ pageParam }) => api.githubRepos(pageParam),
     initialPageParam: 1,
     getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
     staleTime: 60_000,

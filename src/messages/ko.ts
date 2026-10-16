@@ -402,6 +402,11 @@ export const ko = {
     running: (secs: number) => `${t("clone")} 중 · ${secs}초`,
     cancel: "취소",
     close: "닫기",
+    myRepos: "내 저장소",
+    privateRepo: "비공개",
+    loadingRepos: "불러오는 중",
+    noRepos: "저장소가 없어요",
+    more: "더 보기",
   },
   // 설정과 GitHub 연결(D-109, D-116)
   paneWidth: "칸 폭",

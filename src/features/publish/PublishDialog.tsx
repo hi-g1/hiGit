@@ -49,7 +49,7 @@ function Dialog({ repo }: { repo: string }) {
 
   const refresh = () => {
     invalidateLog(queryClient, repo);
-    for (const key of [queryKeys.branches(repo), queryKeys.status(repo), queryKeys.homeMap(repo), ["github", "context", repo]]) {
+    for (const key of [queryKeys.branches(repo), queryKeys.status(repo), queryKeys.homeMap(repo), queryKeys.hostingContext(repo)]) {
       void queryClient.invalidateQueries({ queryKey: key });
     }
   };
