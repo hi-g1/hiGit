@@ -9,11 +9,13 @@ type TooltipProps = {
   content: ReactNode;
   /** 포커스 가능한 요소 하나. 키보드 포커스에도 툴팁이 뜬다 */
   children: ReactElement;
+  /** 뜨기까지의 지연. 용어 툴팁만 더 길다(D-154). */
+  delay?: number;
 };
 
-export function Tooltip({ content, children }: TooltipProps) {
+export function Tooltip({ content, children, delay = TOOLTIP_DELAY_MS }: TooltipProps) {
   return (
-    <RadixTooltip.Provider delayDuration={TOOLTIP_DELAY_MS}>
+    <RadixTooltip.Provider delayDuration={delay}>
       <RadixTooltip.Root>
         <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
         <RadixTooltip.Portal>

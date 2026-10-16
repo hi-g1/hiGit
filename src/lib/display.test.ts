@@ -9,6 +9,11 @@ describe("화면 설정 적용", () => {
     expect(useUiStore.getState().uiScale).toBeCloseTo(18 / 14);
   });
 
+  it("용어 설명 보기 설정을 스토어에", () => {
+    applyDisplay({ ...DEFAULT_SETTINGS, termHelp: false }, undefined);
+    expect(useUiStore.getState().termHelp).toBe(false);
+  });
+
   it("읽지 못한 값은 기본값(배율 1)", () => {
     applyDisplay(undefined, undefined);
     expect(document.documentElement.style.fontSize).toBe("16px");

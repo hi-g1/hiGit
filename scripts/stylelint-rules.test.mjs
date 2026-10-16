@@ -25,6 +25,19 @@ describe("CSS 단위 린트", () => {
   });
 
   it.each([
+    ["밑줄", ".a { text-decoration: underline; }", "declaration-property-value-disallowed-list"],
+    ["밑줄 줄", ".a { text-decoration-line: underline; }", "declaration-property-value-disallowed-list"],
+    ["점선 테두리", ".a { border-bottom: 1px dotted var(--text-muted); }", "declaration-property-value-disallowed-list"],
+    ["점선 모양", ".a { border-bottom-style: dotted; }", "declaration-property-value-disallowed-list"],
+  ])("%s는 오류", async (_name, code, rule) => {
+    expect(await rules(code)).toContain(rule);
+  });
+
+  it("링크 모양 파일에서만 호버 밑줄을 쓴다", async () => {
+    expect(await rules(".link:hover { text-decoration: underline; }", "src/ui/linkStyle.module.css")).toEqual([]);
+  });
+
+  it.each([
     ["테두리", ".a { border: 1px solid var(--border); }"],
     ["포커스", ".a {\n  outline: 2px solid var(--accent);\n  outline-offset: 2px;\n}"],
     ["안쪽 막대", ".a { box-shadow: inset 2px 0 0 var(--accent); }"],

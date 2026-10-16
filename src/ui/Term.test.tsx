@@ -1,12 +1,10 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { useUiStore } from "../state/uiStore";
 import { Term } from "./Term";
-
-afterEach(() => {
-  act(() => useUiStore.setState({ termDisplay: "friendly", locale: "ko" }));
-});
 
 describe("Term", () => {
   it("본문에 쉬운 이름을 보여준다", () => {
@@ -62,6 +60,32 @@ describe("Term", () => {
   it("버튼 안에서는 따로 포커스되지 않는다", () => {
     render(<Term id="init" focusable={false} />);
     expect(screen.getByText("버전 관리 시작")).not.toHaveAttribute("tabindex");
+  });
+
+  it("글자에는 밑줄·점선·도움말 커서가 없다(D-140)", () => {
+    // jsdom에서는 import.meta.url이 파일 주소가 아니라 저장소 루트(vitest가 도는 곳)에서 읽는다.
+    const css = readFileSync(join(process.cwd(), "src/ui/Term.module.css"), "utf8");
+    const term = css.slice(0, css.indexOf(".tip"));
+    expect(term).not.toMatch(/border-bottom|dotted|underline|cursor: help/);
+  });
+
+  it("용어 툴팁은 600ms 뒤에 뜬다(400ms엔 아직)", async () => {
+    const user = userEvent.setup();
+    render(<Term id="status" />);
+    await user.hover(screen.getByText("변경 사항"));
+    await act(() => new Promise((r) => setTimeout(r, 450)));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("git status");
+  });
+
+  it("용어 설명 보기를 끄면 툴팁도 포커스도 없다", async () => {
+    act(() => useUiStore.setState({ termHelp: false }));
+    const user = userEvent.setup();
+    render(<Term id="log" />);
+    expect(screen.getByText("버전 기록")).not.toHaveAttribute("tabindex");
+    await user.hover(screen.getByText("버전 기록"));
+    await new Promise((r) => setTimeout(r, 700));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   it("영어 용어표를 쓸 수 있다", () => {

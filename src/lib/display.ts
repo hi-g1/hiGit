@@ -18,5 +18,7 @@ export function applyDisplay(settings: AppSettingsView | undefined, hints: Displ
   const s = settings ?? DEFAULT_SETTINGS;
   const scale = computeUiScale(hints ?? DEFAULT_HINTS, s.fontSize);
   document.documentElement.style.fontSize = `${16 * scale}px`;
-  useUiStore.getState().setUiScale(scale);
+  const ui = useUiStore.getState();
+  ui.setUiScale(scale);
+  ui.setTermHelp(s.termHelp);
 }

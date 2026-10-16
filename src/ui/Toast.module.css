@@ -55,7 +55,7 @@
 }
 
 .action:hover {
-  text-decoration: underline;
+  background: var(--primary-hover);
 }
 
 .action:focus-visible {

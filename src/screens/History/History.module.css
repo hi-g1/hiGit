@@ -41,18 +41,22 @@
   cursor: pointer;
 }
 
+/* 범위 단추: 밑줄 없이 고른 것은 굵게, 호버는 바탕(D-140) */
 .scopeButton {
   overflow: hidden;
-  text-decoration: underline;
-  text-decoration-color: var(--border-strong);
-  text-underline-offset: 3px;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-control);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.scopeButton:hover {
+  background: var(--surface-hover);
+}
+
 .scopeButton[aria-pressed="true"] {
   color: var(--text);
-  text-decoration-color: var(--text);
+  font-weight: var(--font-weight-bold);
 }
 
 .spacer {

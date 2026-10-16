@@ -51,6 +51,22 @@ describe("설정 일반 구역", () => {
     expect(setSettings).toHaveBeenCalledWith({ fontSize: "xlarge" });
   });
 
+  it("용어 설명 보기를 끄면 저장된다", async () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.settings, { ...DEFAULTS });
+    render(
+      <AppProviders client={client}>
+        <GeneralSection />
+      </AppProviders>,
+    );
+    const box = screen.getByRole("checkbox", { name: "용어 설명 보기" });
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "용어 설명 보기" })).not.toBeChecked());
+    await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
+    expect(setSettings).toHaveBeenCalledWith({ termHelp: false });
+  });
+
   it("Ctrl+=·Ctrl+−·Ctrl+0이 글자 크기를 한 칸씩 바꾸고 끝에서는 저장하지 않는다", async () => {
     const client = createQueryClient();
     client.setQueryData(queryKeys.settings, { ...DEFAULTS });

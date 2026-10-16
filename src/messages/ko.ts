@@ -394,6 +394,7 @@ export const ko = {
     general: "일반",
     fontSize: "글자 크기",
     fontSizes: { small: "작게", normal: "보통", large: "크게", xlarge: "아주 크게" },
+    termHelp: "용어 설명 보기",
     github: "GitHub",
     notConfigured: "이 앱에는 GitHub 연결이 준비되지 않았어요",
     connect: "GitHub 연결",

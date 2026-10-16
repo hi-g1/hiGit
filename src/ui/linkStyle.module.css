@@ -1,0 +1,10 @@
+/* 문장 속 링크 모양(D-140, D-154). 밑줄은 이 파일에서만, 호버할 때만 쓴다(stylelint가 다른 곳을 막는다) */
+.link {
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
