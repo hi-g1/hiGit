@@ -37,17 +37,18 @@ pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
 };
 pub use hosting::{
-    ChecksView, HostingContextView, HostingProviderView, MergeableView, PrDetailView, PrDraftView,
-    PrListRequest, PrListView, PrRowView, PrStateFilterView, PrStateView, ReviewsView,
+    ChecksView, HostingContextView, HostingProviderView, MergeMethodView, MergeableView,
+    PrCommentView, PrCommentsView, PrDetailView, PrDraftView, PrListRequest, PrListView,
+    PrRepoView, PrRowView, PrStateFilterView, PrStateView, ReviewsView,
 };
 pub use identity::IdentityView;
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
-    HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput,
-    PublishInput, RemoteBranchInput, RemoteBranchRenameInput, RestoreInput, RewriteInput,
-    RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput,
-    TagPushInput, TakeOutInput, TakeOutSource, Visibility,
+    HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCommentInput,
+    PrCreateInput, PublishInput, RemoteBranchInput, RemoteBranchRenameInput, RestoreInput,
+    RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput,
+    TagInput, TagPushInput, TakeOutInput, TakeOutSource, Visibility,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -548,6 +549,9 @@ pub enum ActionResult {
     PrCreated {
         number: u32,
     },
+    PrCommented {
+        number: u32,
+    },
     ParkedRecovered {
         count: u32,
     },
@@ -640,6 +644,7 @@ impl From<Outcome> for ActionResult {
             Outcome::Restored => ActionResult::Restored,
             Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
             Outcome::PrCreated { number } => ActionResult::PrCreated { number },
+            Outcome::PrCommented { number } => ActionResult::PrCommented { number },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
             Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },

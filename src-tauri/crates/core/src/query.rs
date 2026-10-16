@@ -42,6 +42,8 @@ const SLOW_OVERLAP: Duration = Duration::from_secs(1);
 
 /// 검토 요청 목록 한 쪽의 개수.
 const PR_PAGE: u32 = 30;
+/// 댓글 수 상한(쪽 번호 계산이 엉뚱하게 커지지 않게, GitHub 목록은 쪽마다 20개).
+const PR_COMMENTS_MAX: u32 = 100_000;
 /// 새 검토 요청의 대상 브랜치 후보 최대 개수.
 const PR_BASE_OPTIONS: usize = 100;
 
@@ -152,6 +154,52 @@ impl Queries {
             .github
             .call(|provider, token| provider.pr_detail(token, &github, u64::from(number)))?;
         Ok(crate::github::pr::detail(&detail, target.head.as_deref()))
+    }
+
+    /// 검토 요청 화면의 저장소 정보(D-177): 올릴 권한, 허용된 합치기 방법.
+    pub fn pr_repo(&self, repo: &Path) -> Result<crate::view::PrRepoView> {
+        let root = self.opened_repo(repo)?;
+        let (_, github) = self.github_target(&root)?;
+        let info = self
+            .github
+            .call(|provider, token| provider.repo_info(token, &github))?;
+        Ok(crate::github::pr::repo_view(
+            &info,
+            self.github.status().login,
+        ))
+    }
+
+    /// 검토 요청의 최근 댓글 20개(D-178). `total`은 상세가 준 대화 댓글 수로, 마지막 쪽 계산에만 쓴다.
+    pub fn pr_comments(
+        &self,
+        repo: &Path,
+        number: u32,
+        total: u32,
+    ) -> Result<crate::view::PrCommentsView> {
+        let root = self.opened_repo(repo)?;
+        if number == 0 {
+            return Err(CoreError::InvalidInput("검토 요청 번호"));
+        }
+        let (_, github) = self.github_target(&root)?;
+        let total = total.min(PR_COMMENTS_MAX);
+        let (last, prev) = crate::github::pr::comment_pages(total);
+        let per = hosting::COMMENTS_PAGE;
+        let n = u64::from(number);
+        let (older, newest) = self.github.call(|provider, token| {
+            let newest = provider.list_comments(token, &github, n, last, per)?;
+            let older = match prev {
+                Some(page) => provider.list_comments(token, &github, n, page, per)?,
+                None => Vec::new(),
+            };
+            Ok((older, newest))
+        })?;
+        let viewer = self.github.status().login;
+        Ok(crate::github::pr::comments_view(
+            older,
+            newest,
+            total,
+            viewer.as_deref(),
+        ))
     }
 
     /// 새 검토 요청 대화상자의 기본값(D-113). 네트워크 없이 로컬 정보만.

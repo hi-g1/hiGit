@@ -10,10 +10,11 @@ use higit_core::view::{
     ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, EmailCheckView, ErrorCode,
     ErrorView, FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
     HostingContextView, HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView,
-    LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrDetailView, PrDraftView,
-    PrListRequest, PrListView, PreviewView, ProjectOpenResult, ProjectSummaryView,
-    PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView, RewritePlanView, ScopeAdd,
-    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrCommentsView, PrDetailView,
+    PrDraftView, PrListRequest, PrListView, PrRepoView, PreviewView, ProjectOpenResult,
+    ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView,
+    RewritePlanView, ScopeAdd, SecretCheckRequest, SecretCheckView, StashListView, StatusView,
+    TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -276,6 +277,32 @@ pub async fn query_pr_list(
 ) -> CmdResult<PrListView> {
     blocking(state, move |core| {
         core.queries().pr_list(&PathBuf::from(repo), &request)
+    })
+    .await
+}
+
+/// 검토 요청 화면의 저장소 정보(올릴 권한·합치기 방법, D-177).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pr_repo(state: State<'_, AppState>, repo: String) -> CmdResult<PrRepoView> {
+    blocking(state, move |core| {
+        core.queries().pr_repo(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 검토 요청의 최근 댓글(D-178). `total`은 상세의 대화 댓글 수.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pr_comments(
+    state: State<'_, AppState>,
+    repo: String,
+    number: u32,
+    total: u32,
+) -> CmdResult<PrCommentsView> {
+    blocking(state, move |core| {
+        core.queries()
+            .pr_comments(&PathBuf::from(repo), number, total)
     })
     .await
 }

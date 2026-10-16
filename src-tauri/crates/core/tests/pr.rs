@@ -445,3 +445,142 @@ fn pr_create_needs_a_difference_and_a_github_remote() {
         .unwrap_err();
     assert_eq!(code(&err), ErrorCode::NotGithubRemote);
 }
+
+#[test]
+fn repo_info_decides_buttons() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let q = f.core.queries();
+    f.fake.push_json(
+        200,
+        r#"{"permissions":{"push":true},"allow_merge_commit":false,"allow_squash_merge":true,"allow_rebase_merge":true}"#,
+    );
+    f.fake.push_json(200, r#"{"permissions":{"push":false}}"#);
+    f.fake.push_json(
+        200,
+        r#"{"permissions":{"push":true},"allow_merge_commit":false,"allow_squash_merge":false,"allow_rebase_merge":true,"archived":true}"#,
+    );
+    use higit_core::view::MergeMethodView as M;
+    let mine = q.pr_repo(dir.path()).unwrap();
+    assert!(mine.can_push && mine.can_merge && !mine.rebase_only);
+    assert_eq!(mine.merge_methods, vec![M::Squash]);
+    assert_eq!(mine.viewer.as_deref(), Some("octocat"));
+    // 쓰기 권한이 없어 방법 칸이 없으면 합친 버전 만들기 하나(서버가 정함).
+    let theirs = q.pr_repo(dir.path()).unwrap();
+    assert!(!theirs.can_push && theirs.merge_methods == vec![M::Merge]);
+    let rebase = q.pr_repo(dir.path()).unwrap();
+    assert!(rebase.rebase_only && rebase.merge_methods.is_empty() && rebase.archived);
+    assert_eq!(
+        f.fake.requests()[0].url,
+        "https://api.github.com/repos/octo/hello"
+    );
+}
+
+fn comment_json(n: u32) -> String {
+    let items: Vec<String> = (0..n)
+        .map(|i| {
+            format!(
+                r#"{{"id":{i},"user":{{"login":"{}"}},"created_at":"2026-10-01T00:00:00Z","body":"댓글 {i}"}}"#,
+                if i % 2 == 0 { "octocat" } else { "mona" }
+            )
+        })
+        .collect();
+    format!("[{}]", items.join(","))
+}
+
+#[test]
+fn comments_read_the_last_pages() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let q = f.core.queries();
+    // 0개: 첫 쪽 하나.
+    f.fake.push_json(200, "[]");
+    let none = q.pr_comments(dir.path(), 7, 0).unwrap();
+    assert!(none.items.is_empty() && !none.partial);
+    // 20개: 첫 쪽만.
+    f.fake.push_json(200, &comment_json(20));
+    let full = q.pr_comments(dir.path(), 7, 20).unwrap();
+    assert_eq!(full.items.len(), 20);
+    assert!(!full.partial);
+    assert!(full.items[0].mine && !full.items[1].mine);
+    // 45개: 셋째 쪽(5개)과 둘째 쪽(20개)에서 최근 20개.
+    f.fake.push_json(200, &comment_json(5));
+    f.fake.push_json(200, &comment_json(20));
+    let many = q.pr_comments(dir.path(), 7, 45).unwrap();
+    assert_eq!(many.items.len(), 20);
+    assert!(many.partial);
+    assert_eq!(many.items[19].body, "댓글 4");
+    let urls: Vec<String> = f.fake.requests().iter().map(|r| r.url.clone()).collect();
+    let base = "https://api.github.com/repos/octo/hello/issues/7/comments?per_page=20&page=";
+    assert_eq!(
+        urls,
+        vec![
+            format!("{base}1"),
+            format!("{base}1"),
+            format!("{base}3"),
+            format!("{base}2")
+        ]
+    );
+    assert!(q.pr_comments(dir.path(), 0, 3).is_err());
+}
+
+fn comment(number: u32, body: &str) -> higit_core::view::ActionInput {
+    higit_core::view::ActionInput::PrComment(higit_core::view::PrCommentInput {
+        number,
+        body: body.into(),
+    })
+}
+
+#[test]
+fn pr_comment_sends_trimmed_body_once() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    f.fake.push_json(201, r#"{"id":99}"#);
+    let result = f
+        .core
+        .execute(
+            dir.path(),
+            &comment(7, "  좋아요 \"고마워요\" \u{1F600}\n"),
+            None,
+        )
+        .unwrap();
+    assert_eq!(
+        result,
+        higit_core::view::ActionResult::PrCommented { number: 7 }
+    );
+    let reqs = f.fake.requests();
+    assert_eq!(reqs.len(), 1);
+    assert_eq!(
+        reqs[0].url,
+        "https://api.github.com/repos/octo/hello/issues/7/comments"
+    );
+    let body: serde_json::Value = serde_json::from_slice(reqs[0].body.as_ref().unwrap()).unwrap();
+    assert_eq!(body["body"], "좋아요 \"고마워요\" \u{1F600}");
+}
+
+#[test]
+fn pr_comment_refuses_before_sending_and_drops_on_401() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    for (number, body) in [
+        (7, "   ".to_string()),
+        (7, "a\0b".to_string()),
+        (7, "a".repeat(64 * 1024 + 1)),
+        (0, "좋아요".to_string()),
+    ] {
+        let err = f
+            .core
+            .execute(dir.path(), &comment(number, &body), None)
+            .unwrap_err();
+        assert_eq!(code(&err), ErrorCode::InvalidInput);
+    }
+    assert!(f.fake.requests().is_empty());
+    f.fake.push_json(401, "{}");
+    let err = f
+        .core
+        .execute(dir.path(), &comment(7, "좋아요"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::GithubExpired);
+    assert!(!format!("{err:?}").contains(TOKEN));
+    assert!(!f.core.github_status().connected);
+}

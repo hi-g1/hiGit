@@ -27,6 +27,10 @@ export type {
   GitHubRepoRowView,
   EmailCheckState,
   EmailCheckView,
+  MergeMethodView,
+  PrCommentView,
+  PrCommentsView,
+  PrRepoView,
   ScopeAdd,
   BranchView,
   ChangeKind,
@@ -175,6 +179,8 @@ export const api = {
   hostingContext: (repo: string) => call(commands.queryHostingContext(repo)),
   prList: (repo: string, request: PrListRequest) => call(commands.queryPrList(repo, request)),
   prDetail: (repo: string, number: number) => call(commands.queryPrDetail(repo, number)),
+  prRepo: (repo: string) => call(commands.queryPrRepo(repo)),
+  prComments: (repo: string, number: number, total: number) => call(commands.queryPrComments(repo, number, total)),
   /** 새 검토 요청 대화상자의 기본값(네트워크 없음). */
   prDraft: (repo: string) => call(commands.queryPrDraft(repo)),
   /** 복제 대화상자의 기본값(부모 폴더). */

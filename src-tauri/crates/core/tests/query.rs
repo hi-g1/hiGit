@@ -248,6 +248,7 @@ fn action_input_tags_match_registry() {
             ActionInput::Init
             | ActionInput::Clone(_)
             | ActionInput::PrCreate(_)
+            | ActionInput::PrComment(_)
             | ActionInput::IdentitySet(_)
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
@@ -300,6 +301,10 @@ fn action_input_tags_match_registry() {
             body: String::new(),
             base: "main".into(),
             draft: false,
+        }),
+        ActionInput::PrComment(higit_core::view::PrCommentInput {
+            number: 1,
+            body: "댓글".into(),
         }),
         ActionInput::IdentitySet(higit_core::view::IdentityInput {
             name: "이름".into(),

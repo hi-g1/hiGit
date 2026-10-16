@@ -111,6 +111,60 @@ pub struct PrDetailView {
     pub reviews: Option<ReviewsView>,
     /// 댓글 수(대화 + 코드).
     pub comments: u32,
+    /// 대화 댓글 수. 댓글 목록 조회가 마지막 쪽을 계산하는 데 쓴다(D-178).
+    pub issue_comments: u32,
+    /// head 버전. 합치기가 이 값일 때만 합친다(D-179).
+    pub head_oid: String,
+}
+
+/// 합치는 방법(D-179). "다시 쌓아 합치기"는 없다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum MergeMethodView {
+    Merge,
+    Squash,
+}
+
+/// 검토 요청 화면이 단추를 정하는 저장소 정보(D-177).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrRepoView {
+    /// 연결된 계정이 이 저장소에 올릴 수 있다.
+    pub can_push: bool,
+    /// 합칠 수 있다(올릴 권한과 같음, 서버가 마지막에 정한다).
+    pub can_merge: bool,
+    /// 저장소가 허용하는 방법(앞이 기본). 칸이 없으면 `[merge]`.
+    pub merge_methods: Vec<MergeMethodView>,
+    /// "다시 쌓아 합치기"만 허용한다(화면은 "GitHub에서 합쳐 주세요").
+    pub rebase_only: bool,
+    pub archived: bool,
+    /// 연결된 로그인.
+    pub viewer: Option<String>,
+}
+
+/// 검토 요청의 최근 댓글(D-178). 글자는 화면이 글자로만 그린다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrCommentView {
+    /// 탈퇴한 사용자면 `None`.
+    pub author: Option<String>,
+    #[specta(type = u32)]
+    pub created_at: i64,
+    /// 앞 4000자.
+    pub body: String,
+    /// 연결된 로그인이 쓴 댓글.
+    pub mine: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrCommentsView {
+    /// 오래된 것부터, 최근 20개까지.
+    pub items: Vec<PrCommentView>,
+    /// 대화 댓글 수(화면이 넘긴 값).
+    pub total: u32,
+    /// 이보다 앞의 댓글이 더 있다.
+    pub partial: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]

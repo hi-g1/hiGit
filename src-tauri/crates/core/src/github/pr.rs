@@ -148,6 +148,84 @@ pub(crate) fn detail(detail: &hosting::PrDetail, current_head: Option<&str>) -> 
             changes_requested: r.changes_requested,
         }),
         comments: detail.comments,
+        issue_comments: detail.issue_comments,
+        head_oid: detail.head_sha.clone(),
+    }
+}
+
+/// 저장소 정보 → 화면 값(D-177, D-179). 방법 칸이 하나도 없으면 `[merge]`(서버가 마지막에 정함).
+pub(crate) fn repo_view(
+    info: &hosting::RepoInfo,
+    viewer: Option<String>,
+) -> crate::view::PrRepoView {
+    use crate::view::MergeMethodView as M;
+    let mut methods = Vec::new();
+    if info.allow_merge_commit.is_none() && info.allow_squash_merge.is_none() {
+        methods.push(M::Merge);
+    } else {
+        if info.allow_merge_commit == Some(true) {
+            methods.push(M::Merge);
+        }
+        if info.allow_squash_merge == Some(true) {
+            methods.push(M::Squash);
+        }
+    }
+    crate::view::PrRepoView {
+        can_push: info.can_push,
+        can_merge: info.can_push,
+        rebase_only: methods.is_empty() && info.allow_rebase_merge == Some(true),
+        merge_methods: methods,
+        archived: info.archived,
+        viewer,
+    }
+}
+
+/// 지금 브랜치가 올리는 GitHub 저장소. GitHub가 아니면 `NotGithubRemote`, 원격이 없으면 `NoRemote`.
+pub(crate) fn github_repo(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+) -> crate::Result<hosting::RemoteRepo> {
+    pr_target(git, repo)?
+        .ok_or(crate::CoreError::NoRemote)?
+        .repo
+        .ok_or(crate::CoreError::Github {
+            kind: crate::GithubFailure::NotGithubRemote,
+            detail: None,
+        })
+}
+
+/// 마지막 두 쪽에서 최근 [`hosting::COMMENTS_PAGE`]개를 고른다(D-178). `total`은 대화 댓글 수.
+pub(crate) fn comment_pages(total: u32) -> (u32, Option<u32>) {
+    let per = hosting::COMMENTS_PAGE;
+    let last = total.div_ceil(per).max(1);
+    // 마지막 쪽이 덜 찼으면 그 앞 쪽도 읽어 20개를 채운다.
+    let prev = (last > 1 && !total.is_multiple_of(per)).then(|| last - 1);
+    (last, prev)
+}
+
+pub(crate) fn comments_view(
+    mut older: Vec<hosting::Comment>,
+    last: Vec<hosting::Comment>,
+    total: u32,
+    viewer: Option<&str>,
+) -> crate::view::PrCommentsView {
+    let per = hosting::COMMENTS_PAGE as usize;
+    older.extend(last);
+    let skip = older.len().saturating_sub(per);
+    let items: Vec<_> = older
+        .into_iter()
+        .skip(skip)
+        .map(|c| crate::view::PrCommentView {
+            mine: matches!((&c.author, viewer), (Some(a), Some(v)) if a.eq_ignore_ascii_case(v)),
+            author: c.author,
+            created_at: c.created_at,
+            body: c.body,
+        })
+        .collect();
+    crate::view::PrCommentsView {
+        partial: (total as usize) > items.len(),
+        total,
+        items,
     }
 }
 

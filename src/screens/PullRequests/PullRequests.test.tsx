@@ -132,6 +132,8 @@ describe("PullRequests", () => {
       checks: number === 7 ? { success: 3, failed: 1, pending: 2, partial: false } : null,
       reviews: null,
       comments: 0,
+      issueComments: 0,
+      headOid: "a".repeat(40),
     }));
     show();
     fireEvent.click((await screen.findAllByRole("option"))[0]!);

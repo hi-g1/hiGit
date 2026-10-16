@@ -67,6 +67,10 @@ export const commands = {
 	queryGithubRepos: (page: number) => __TAURI_INVOKE<GitHubRepoListView>("query_github_repos", { page }),
 	/**  전역 이메일이 GitHub 계정의 것인지(D-186). 결과 종류만 받는다. */
 	queryGithubEmailCheck: () => __TAURI_INVOKE<EmailCheckView>("query_github_email_check"),
+	/**  검토 요청 화면의 저장소 정보(올릴 권한·합치기 방법, D-177). */
+	queryPrRepo: (repo: string) => __TAURI_INVOKE<PrRepoView>("query_pr_repo", { repo }),
+	/**  검토 요청의 최근 댓글(D-178). `total`은 상세의 대화 댓글 수. */
+	queryPrComments: (repo: string, number: number, total: number) => __TAURI_INVOKE<PrCommentsView>("query_pr_comments", { repo, number, total }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -122,6 +126,8 @@ export type ActionInput_Deserialize =
 { id: "clone"; input: CloneInput } | 
 /**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
 { id: "pr-create"; input: PrCreateInput } | 
+/**  검토 요청에 댓글을 단다(D-178). */
+{ id: "pr-comment"; input: PrCommentInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -182,6 +188,8 @@ export type ActionInput_Serialize =
 { id: "clone"; input: CloneInput } | 
 /**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
 { id: "pr-create"; input: PrCreateInput } | 
+/**  검토 요청에 댓글을 단다(D-178). */
+{ id: "pr-comment"; input: PrCommentInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -269,7 +277,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "prCommented"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -948,6 +956,9 @@ export type MergeIntoInput = {
 	branch: string,
 };
 
+/**  합치는 방법(D-179). "다시 쌓아 합치기"는 없다. */
+export type MergeMethodView = "merge" | "squash";
+
 export type MergeableView = "clean" | "conflicts" | "behind" | "blocked" | "unknown";
 
 export type NameProblem = "empty" | 
@@ -993,6 +1004,32 @@ export type PendingWorkView = {
 	otherOperation: OtherOperation | null,
 };
 
+/**  검토 요청 댓글(D-178). 본문은 core가 앞뒤 공백을 떼고 1바이트~64KB·NUL 없음을 검사한다. */
+export type PrCommentInput = {
+	number: number,
+	body: string,
+};
+
+/**  검토 요청의 최근 댓글(D-178). 글자는 화면이 글자로만 그린다. */
+export type PrCommentView = {
+	/**  탈퇴한 사용자면 `None`. */
+	author: string | null,
+	createdAt: number,
+	/**  앞 4000자. */
+	body: string,
+	/**  연결된 로그인이 쓴 댓글. */
+	mine: boolean,
+};
+
+export type PrCommentsView = {
+	/**  오래된 것부터, 최근 20개까지. */
+	items: PrCommentView[],
+	/**  대화 댓글 수(화면이 넘긴 값). */
+	total: number,
+	/**  이보다 앞의 댓글이 더 있다. */
+	partial: boolean,
+};
+
 /**  새 검토 요청 입력. head는 core가 지금 브랜치의 upstream으로 정한다. */
 export type PrCreateInput = {
 	title: string,
@@ -1011,6 +1048,10 @@ export type PrDetailView = {
 	reviews: ReviewsView | null,
 	/**  댓글 수(대화 + 코드). */
 	comments: number,
+	/**  대화 댓글 수. 댓글 목록 조회가 마지막 쪽을 계산하는 데 쓴다(D-178). */
+	issueComments: number,
+	/**  head 버전. 합치기가 이 값일 때만 합친다(D-179). */
+	headOid: string,
 };
 
 /**  새 검토 요청 대화상자의 기본값. 로컬 정보만으로 만든다. */
@@ -1039,6 +1080,21 @@ export type PrListRequest = {
 export type PrListView = {
 	items: PrRowView[],
 	hasMore: boolean,
+};
+
+/**  검토 요청 화면이 단추를 정하는 저장소 정보(D-177). */
+export type PrRepoView = {
+	/**  연결된 계정이 이 저장소에 올릴 수 있다. */
+	canPush: boolean,
+	/**  합칠 수 있다(올릴 권한과 같음, 서버가 마지막에 정한다). */
+	canMerge: boolean,
+	/**  저장소가 허용하는 방법(앞이 기본). 칸이 없으면 `[merge]`. */
+	mergeMethods: MergeMethodView[],
+	/**  "다시 쌓아 합치기"만 허용한다(화면은 "GitHub에서 합쳐 주세요"). */
+	rebaseOnly: boolean,
+	archived: boolean,
+	/**  연결된 로그인. */
+	viewer: string | null,
 };
 
 export type PrRowView = {

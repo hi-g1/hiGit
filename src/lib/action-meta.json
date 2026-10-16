@@ -192,6 +192,12 @@
     "undo": "nothing"
   },
   {
+    "id": "pr-comment",
+    "glossaryId": "comment",
+    "risk": "safe",
+    "undo": "nothing"
+  },
+  {
     "id": "identity-set",
     "glossaryId": "identity",
     "risk": "normal",

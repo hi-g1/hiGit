@@ -734,9 +734,13 @@ impl Core {
         let token = preview_token.map(PreviewToken);
         // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
-            "fetch" | "push" | "pr-create" | "force-push" | "remote-branch-delete" | "tag-push" => {
-                Locks::Network
-            }
+            "fetch"
+            | "push"
+            | "pr-create"
+            | "pr-comment"
+            | "force-push"
+            | "remote-branch-delete"
+            | "tag-push" => Locks::Network,
             // 이름 바꾸기는 upstream을 다시 잇느라 `.git/config`도 쓴다(계획 010 R8).
             "remote-branch-rename" => Locks::Both,
             // 저장소를 만든 뒤 `origin`을 더해 `.git/config`를 쓴다(D-132).
