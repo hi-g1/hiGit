@@ -32,6 +32,12 @@ effort: high
 - [ ] 단축키와 목록 조작 키 판정은 `src/lib`(`shortcuts.ts`, `listKeys.ts`, `cardKeys.ts`, `wheelZoom.ts`)에만 있다(`rg "e\.code ===|ctrlKey" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 `ApiError.code` 비교 말고는 비어 있음, D-056).
 - [ ] 노선도·그래프 옆 글자에 `--graph-*` 색을 쓰지 않는다(D-031). 브랜치 색은 `branchColor` 하나로 정한다(노선도는 `render/palette.ts`가 색 키를 바꾼다).
 - [ ] 노선도 배치(`features/history/layout/`)는 DOM(`document`, `window`)을 쓰지 않는다. 홈·시작 화면·버전 기록이 같은 배치 함수(`buildRoute`)를 쓴다(D-090). 역 메뉴 항목은 `menu/items.tsx` 표에만 있고 화면이 git을 직접 부르지 않는다. 역 메뉴 항목의 `actionId`는 `action-meta.json`에서 `irreversible`이 아니다(확인 창 없이 바로 하므로, `items.test.ts` 가드).
+- [ ] 화면 크기(다듬기, D-146~D-162): CSS 크기·간격 길이는 rem(선 굵기·그림자·포커스 테두리만 px), 글자 크기는 `--font-size-*` 토큰만(`font-size:`에 숫자 직접 값 없음, `pnpm lint`가 막음). SVG를 px로 그리는 곳은 `useUiScale()`을 곱한다.
+- [ ] 밑줄·점선(`text-decoration: underline`·`dotted`)은 `src/ui/linkStyle.module.css`에만 있다(`rg "text-decoration:\s*(underline|dotted)" src`). Term에는 밑줄이 없다(D-140).
+- [ ] `Intl.DateTimeFormat`은 `src/lib/time.ts`에만, `navigator.language(s)`는 `src/lib/locale.ts`에만 있다(시험 제외). 시각은 `<Time>`으로 그린다.
+- [ ] OS 분기(`cfg(windows)`·`cfg(target_os)`)와 OS 값 읽기(글자 배율·다크는 `platform/src/display.rs`)는 `crates/platform`에만 있다.
+- [ ] 새 앱 설정 칸은 `core/src/view/settings.rs`의 `AppSettingsView`와 `AppSettingsPatch`에 함께 있고, 화면의 `DEFAULT_SETTINGS`(`src/lib/display.ts`)가 core 기본값과 같다.
+- [ ] 긴 이름·경로는 `ui/Truncate`(잘렸을 때만 툴팁)로 자르고 `title` 속성으로 전체를 보이지 않는다. 불러오는 표시는 `<Loading>`(300ms 지연), 포커스 테두리는 `base.css`의 전역 `:focus-visible` 하나다(`src/styles/focus.test.ts`).
 - [ ] 새 기능에 테스트가 있고 `cargo test --workspace`, `pnpm test`가 통과한다.
 
 ### 3. 보안 점검 (D-034~D-041, `docs/architecture.md` "보안")
