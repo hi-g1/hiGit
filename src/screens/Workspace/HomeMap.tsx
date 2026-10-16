@@ -32,6 +32,7 @@ export function HomeMap({ repo, onDone }: { repo: string; onDone: (text: string)
   const scene = layoutHorizontal(view, Math.max(320, Math.floor(width / scale)), "home", {
     here: m.hereNow,
     changed: m.changedFilesCount,
+    earlier: m.earlierVersions,
   });
   return (
     <div className={styles.map} style={{ height: MAP_HEIGHT * scale }}>

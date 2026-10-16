@@ -5,10 +5,17 @@ import { commitNode, type RouteNode } from "../model";
 import { fitText, textWidth } from "./geometry";
 import { branchKey } from "./lanes";
 import { buildRoute } from "./route";
-import { emptyScene, SCENE_FONT, type Scene, type SceneStation } from "./scene";
+import { emptyScene, FOLD_LINE, SCENE_FONT, type Scene, type SceneStation } from "./scene";
 
 export type Density = "home" | "preview" | "mini";
-export type HorizontalLabels = { here: string; changed: (n: number) => string };
+export type HorizontalLabels = {
+  here: string;
+  changed: (n: number) => string;
+  /** 접힌 앞쪽 버전 수 글자("이전 N개", D-141). */
+  earlier: (n: number) => string;
+  /** 참이면(홈) "이전 N개"를 SVG 글자로 그리지 않고 `scene.fold` 좌표만 둔다(화면이 단추로 겹친다). */
+  interactiveFold?: boolean;
+};
 
 /** 높이(장면 단위, D-153): 홈·큰 노선도 104, 작은 노선도 28. 화면은 배율을 곱한다. */
 export const MAP_HEIGHT = 104;
@@ -20,6 +27,17 @@ const LEFT = 24;
 const STEP = 120;
 const MIN_STEP = 84;
 const CURVE = 48;
+/** 홈(D-155): 역은 5개까지, 간격은 이름표 폭에 맞추되 72 아래로는 줄이지 않고 앞 역을 더 접는다(R9). */
+const HOME_MAX_STATIONS = 5;
+const HOME_MIN_STEP = 72;
+const HOME_LABEL_STEP = 96;
+const HOME_MAX_LABEL = 200;
+/** 홈의 "지금 여기"는 합치기 제안 블록 앞(장면 너비 − 72)에 둔다. */
+const HOME_RIGHT = 72;
+/** 접힌 앞쪽을 알리는 왼쪽 끝 점선 길이(D-141). */
+const FOLD_DASH = 24;
+/** "지금 여기" 이름표 높이와 좌우 여백. */
+const TAG_PAD = 16;
 
 type Spec = {
   height: number;
@@ -99,43 +117,68 @@ export function homeToRouteNodes(view: HomeMapView, shown: HomeMapView["currentC
   return nodes;
 }
 
-/** 너비에 맞게 역을 놓는다. 역이 많아 모자라면 앞쪽 역을 "…"로 접는다(홈과 시작 화면이 같다). */
+/**
+ * 너비에 맞게 역을 놓는다. 역이 많아 모자라면 앞쪽 역을 접고, 왼쪽 끝 점선과 "이전 N개"로 알린다(D-141, D-155).
+ * 홈은 역 5개까지·이름표 폭 간격·오른쪽 끝 "지금 여기" 이름표, 시작 화면은 지금 간격 규칙을 쓴다.
+ */
 export function layoutHorizontal(view: HomeMapView, width: number, density: Density, labels: HorizontalLabels): Scene {
   const spec = SPECS[density];
   const scene = emptyScene(width, spec.height);
   if (view.currentCommits.length === 0) return scene;
   const mini = density === "mini";
+  const home = density === "home";
   const hasNow = view.changedFiles > 0 && !mini;
   const y = view.twoLines ? spec.currentY : spec.singleY;
   const forkX = mini ? 8 + width * 0.25 : LEFT + STEP;
   const curve = mini ? 12 : CURVE;
   let folded = view.currentMore;
   let commits = view.currentCommits;
+  if (home && commits.length > HOME_MAX_STATIONS) {
+    folded += commits.length - HOME_MAX_STATIONS;
+    commits = commits.slice(commits.length - HOME_MAX_STATIONS);
+  }
+  /** 지금 줄이 시작하는 곳(한 줄이면 왼쪽 끝, 두 줄이면 갈라진 곡선이 끝난 곳). 접힌 점선이 여기서 시작한다. */
+  const lineStart = view.twoLines ? forkX + curve : LEFT;
+  const foldText = (n: number) => labels.earlier(n);
 
-  // 첫 역 이름이 왼쪽 끝 밖으로 나가지 않게 시작 위치를 잡는다(반복 2 끝 점검).
+  const labelWidth = (summary: string) => Math.min(HOME_MAX_LABEL, textWidth(summary, FONT));
+  /** 홈의 간격: 이름표 폭(최대 200) + 16, 최소 96. */
+  const homeDesired = () => Math.max(HOME_LABEL_STEP, Math.max(0, ...commits.map((c) => labelWidth(c.summary))) + TAG_PAD);
   const nameRoom = (step: number) => step - 8;
   const firstNameHalf = (step: number) =>
     spec.names && commits[0] ? textWidth(fitText(commits[0].summary, nameRoom(step), FONT), FONT) / 2 + 8 : 0;
   const startFor = (step: number) => {
     if (mini) return view.twoLines ? forkX + curve + 8 : 8;
-    if (view.twoLines) return forkX + CURVE + STEP / 2;
-    const base = LEFT + (folded > 0 ? STEP / 2 : 0);
-    return Math.max(base, firstNameHalf(step));
+    const base = view.twoLines ? forkX + CURVE + STEP / 2 : Math.max(LEFT, firstNameHalf(step));
+    if (folded === 0) return base;
+    // 점선 뒤, 그리고 첫 이름표가 "이전 N개" 글자와 겹치지 않게.
+    const afterText = lineStart + textWidth(foldText(folded), FONT) + 8 + firstNameHalf(step);
+    return Math.max(base, lineStart + FOLD_DASH + 16, afterText);
   };
-  const rightRoom = mini ? 8 : (hasNow ? STEP : 0) + 72;
+  const nowX = home ? width - HOME_RIGHT : 0;
+  /** 역을 놓을 수 있는 오른쪽 끝. */
+  const endFor = () => {
+    if (mini) return width - 8;
+    if (home) return hasNow ? nowX - HOME_LABEL_STEP : width - HOME_RIGHT;
+    return width - ((hasNow ? STEP : 0) + 72);
+  };
   const stepFor = (n: number, start: number) => {
-    const available = width - start - rightRoom;
+    const available = endFor() - start;
     if (mini) return n > 1 ? available / (n - 1) : 0;
+    if (home) return n > 1 ? Math.min(homeDesired(), available / (n - 1)) : homeDesired();
     return n > 1 ? Math.min(STEP, available / (n - 1)) : STEP;
   };
-  let step = stepFor(commits.length, startFor(STEP));
-  while (!mini && commits.length > 1 && step < MIN_STEP) {
+  const minStep = home ? HOME_MIN_STEP : MIN_STEP;
+  const firstStep = () => (home ? homeDesired() : STEP);
+  let step = stepFor(commits.length, startFor(firstStep()));
+  while (!mini && commits.length > 1 && step < minStep) {
     commits = commits.slice(1);
     folded += 1;
-    step = stepFor(commits.length, startFor(STEP));
+    step = stepFor(commits.length, startFor(firstStep()));
   }
   const start = startFor(step);
   scene.folded = folded;
+  const showFold = folded > 0 && !mini;
 
   const nodes = homeToRouteNodes(view, commits, folded, hasNow);
   const route = buildRoute(nodes, {
@@ -153,8 +196,8 @@ export function layoutHorizontal(view: HomeMapView, width: number, density: Dens
     [START, mini ? 8 : LEFT],
     [FORK, forkX],
     [MAIN_END, mainEnd],
-    [FOLD, start - (mini ? 6 : STEP / 4)],
-    [NOW, lastX + STEP],
+    [FOLD, mini ? start - 6 : lineStart + FOLD_DASH],
+    [NOW, home ? nowX : lastX + STEP],
   ]);
   commits.forEach((c, i) => xOf.set(c.oid, xs[i]!));
   const laneOf = new Map(route.layout.nodes.map((n) => [n.id, n.lane]));
@@ -166,16 +209,25 @@ export function layoutHorizontal(view: HomeMapView, width: number, density: Dens
     const yc = yOf(e.from);
     const yp = yOf(e.to);
     const trunk = view.twoLines && e.travel === 0;
+    const lineWidth = trunk ? spec.widths.main : spec.widths.current;
+    // 접힌 앞쪽: 곡선은 실선으로, 지금 줄 왼쪽 끝 24는 점선으로(D-141).
+    if (showFold && e.from === FOLD) {
+      const dashFrom = yc === yp ? xp : xp + curve;
+      if (yc !== yp) {
+        scene.lines.push({
+          d: `M ${xp} ${yp} C ${xp + curve / 2} ${yp}, ${xp + curve / 2} ${yc}, ${xp + curve} ${yc}`,
+          color: e.color,
+          width: lineWidth,
+        });
+      }
+      scene.lines.push({ d: `M ${dashFrom} ${yc} H ${xc}`, color: FOLD_LINE, width: lineWidth, dashed: true });
+      continue;
+    }
     const d =
       yc === yp
         ? `M ${xp} ${yp} H ${xc}`
         : `M ${xp} ${yp} C ${xp + curve / 2} ${yp}, ${xp + curve / 2} ${yc}, ${xp + curve} ${yc} H ${xc}`;
-    scene.lines.push({
-      d,
-      color: e.color,
-      width: trunk ? spec.widths.main : spec.widths.current,
-      dashed: e.from === NOW || undefined,
-    });
+    scene.lines.push({ d, color: e.color, width: lineWidth, dashed: e.from === NOW || undefined });
   }
 
   const color = new Map(route.layout.nodes.map((n) => [n.id, n.color]));
@@ -195,28 +247,38 @@ export function layoutHorizontal(view: HomeMapView, width: number, density: Dens
       scene.texts.push({ x: mainEnd + 10, y: spec.mainY + 4, text: view.defaultBranch, tone: "muted", anchor: "start" });
     }
   }
-  if (folded > 0 && !mini) scene.texts.push({ x: xOf.get(FOLD)!, y: y + 4, text: "…", tone: "muted", anchor: "middle" });
   const nameY = spec.names === "above" ? y - 16 : y + 22;
   const otherY = spec.names === "above" ? y + 22 : y - 16;
+  if (showFold) {
+    scene.fold = { x: lineStart, y: nameY, count: folded };
+    if (!labels.interactiveFold) {
+      scene.texts.push({ x: lineStart, y: nameY, text: foldText(folded), tone: "muted", anchor: "start" });
+    }
+  }
+  const tagWidth = (text: string) => textWidth(text, FONT) + TAG_PAD;
+  /** 홈에서 "지금 여기" 이름표가 놓이는 역(고친 파일이 없으면 마지막 버전). */
+  const hereOn = home ? (hasNow ? NOW : commits[commits.length - 1]!.oid) : null;
   commits.forEach((c, i) => {
     const x = xs[i]!;
     scene.stations.push(station(c.oid, { title: c.summary }));
     if (spec.names) scene.texts.push({ x, y: nameY, text: fitText(c.summary, nameRoom(step), FONT), tone: "text", anchor: "middle" });
     if (!mini && view.upstreamOid === c.oid && view.upstreamLabel) {
       const text = view.upstreamLabel;
-      scene.tags.push({ x, y: spec.names === "above" ? y + 26 : y - 26, text, width: textWidth(text, FONT) + 16 });
+      const ty = spec.names === "above" ? y + 26 : y - 26;
+      // "지금 여기" 이름표와 같은 역이면 한 칸 위로.
+      scene.tags.push({ x, y: hereOn === c.oid ? ty - 20 : ty, text, width: tagWidth(text) });
     }
   });
   if (mini) return scene;
   if (hasNow) {
-    const nowX = xOf.get(NOW)!;
     scene.stations.push(station(NOW, { r: 9, kind: "open" }));
-    scene.texts.push(
-      { x: nowX, y: otherY, text: labels.here, tone: "text", anchor: "middle" },
-      { x: nowX, y: nameY, text: labels.changed(view.changedFiles), tone: "muted", anchor: "middle" },
-    );
+    scene.texts.push({ x: xOf.get(NOW)!, y: nameY, text: labels.changed(view.changedFiles), tone: "muted", anchor: "middle" });
+  }
+  const hereX = hasNow ? xOf.get(NOW)! : lastX;
+  if (home) {
+    scene.tags.push({ x: hereX, y: otherY - 4, text: labels.here, width: tagWidth(labels.here) });
   } else {
-    scene.texts.push({ x: lastX, y: otherY, text: labels.here, tone: "text", anchor: "middle" });
+    scene.texts.push({ x: hereX, y: otherY, text: labels.here, tone: "text", anchor: "middle" });
   }
   return scene;
 }

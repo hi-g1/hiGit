@@ -4,6 +4,9 @@
 /** 장면 글자 크기(단위). SVG `fontSize`로 주고 그릴 때 배율이 한 번 곱해진다(D-153). */
 export const SCENE_FONT = 13;
 
+/** 접힌 앞쪽을 알리는 왼쪽 끝 점선의 색 이름(D-141). 그리는 쪽이 --border-strong으로 바꾼다. */
+export const FOLD_LINE = "~fold-line";
+
 /** 색 이름. 그리는 쪽이 palette로 CSS 색(`var(--graph-n)` 등)으로 바꾼다. 글자에는 쓰지 않는다(D-031). */
 export type ColorKey = string;
 
@@ -55,8 +58,10 @@ export type Scene = {
   tags: SceneTag[];
   /** 접어서 그리지 않은 버전 수. */
   folded: number;
+  /** 접힌 앞쪽 "이전 N개" 자리(왼쪽 끝 점선 아래, D-141). 홈은 화면이 이 자리에 단추를 겹친다. */
+  fold: { x: number; y: number; count: number } | null;
 };
 
 export function emptyScene(width: number, height: number): Scene {
-  return { width, height, lines: [], stations: [], texts: [], tags: [], folded: 0 };
+  return { width, height, lines: [], stations: [], texts: [], tags: [], folded: 0, fold: null };
 }
