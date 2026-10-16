@@ -22,7 +22,9 @@ pub use conflict::{
     ConflictSide, ConflictStateView, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
-pub use github::{GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView};
+pub use github::{
+    CloneDefaultsView, GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView,
+};
 pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
 };

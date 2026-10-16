@@ -50,3 +50,11 @@ pub enum HostingPage {
     /// 열린 저장소의 검토 요청 하나.
     PullRequest { number: u32 },
 }
+
+/// 복제 대화상자의 기본값(D-115). 부모 폴더는 홈 폴더.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneDefaultsView {
+    /// 복제할 폴더를 만들 곳. 홈 폴더를 모르면 `None`(화면이 고르게 한다).
+    pub parent: Option<String>,
+}

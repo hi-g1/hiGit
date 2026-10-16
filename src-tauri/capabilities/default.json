@@ -45,6 +45,7 @@
     "allow-query-conflict-state",
     "allow-query-conflict-file",
     "allow-query-project-summary",
+    "allow-query-clone-defaults",
     "allow-repo-watch",
     "allow-repo-unwatch"
   ]

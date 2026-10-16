@@ -21,6 +21,8 @@ export type {
   BranchView,
   ChangeKind,
   ChangedFile,
+  CloneDefaultsView,
+  CloneInput,
   CommitDetailView,
   CommitFileView,
   CommitRow,
@@ -130,6 +132,8 @@ export const api = {
   recentProjects: () => call(commands.recentList()),
   removeRecent: (path: string) => call(commands.recentRemove(path)),
   projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),
+  /** 복제 대화상자의 기본값(부모 폴더). */
+  cloneDefaults: () => call(commands.queryCloneDefaults()),
   listActions: () => call(commands.actionList()),
   previewAction: (folder: string, input: ActionInput) =>
     call(commands.actionPreview(folder, input)),

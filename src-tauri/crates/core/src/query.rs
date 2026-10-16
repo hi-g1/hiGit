@@ -69,6 +69,13 @@ impl Queries {
         self.github = github;
     }
 
+    /// 복제 대화상자의 기본값. 저장소를 열지 않아도 된다.
+    pub fn clone_defaults(&self) -> crate::view::CloneDefaultsView {
+        crate::view::CloneDefaultsView {
+            parent: platform::home_dir().map(|h| h.to_string_lossy().into_owned()),
+        }
+    }
+
     /// 열린 저장소의 GitHub 저장소. `origin`이 GitHub면 그것, 아니면 처음 나오는 GitHub 원격.
     pub(crate) fn github_repo(&self, repo: &Path) -> Result<hosting::RemoteRepo> {
         let root = self.opened_repo(repo)?;

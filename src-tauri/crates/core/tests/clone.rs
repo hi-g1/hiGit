@@ -282,3 +282,14 @@ fn cancel_matches_the_target_folder_exactly() {
     git.hold.store(false, Ordering::SeqCst);
     runner.join().unwrap().unwrap();
 }
+
+#[test]
+fn defaults_point_to_home_folder() {
+    let git = Arc::new(FakeGit::new());
+    let core = Core::with_backend(git as Arc<dyn GitBackend>).unwrap();
+    let defaults = core.queries().clone_defaults();
+    assert_eq!(
+        defaults.parent,
+        platform::home_dir().map(|h| h.to_string_lossy().into_owned())
+    );
+}

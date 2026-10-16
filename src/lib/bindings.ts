@@ -70,6 +70,8 @@ export const commands = {
 	/**  충돌 파일 하나의 고를 곳(D-086). */
 	queryConflictFile: (repo: string, path: string) => __TAURI_INVOKE<ConflictFileView>("query_conflict_file", { repo, path }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
+	/**  복제 대화상자의 기본값(부모 폴더 = 홈 폴더). */
+	queryCloneDefaults: () => __TAURI_INVOKE<CloneDefaultsView>("query_clone_defaults"),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
 	repoUnwatch: () => __TAURI_INVOKE<null>("repo_unwatch"),
@@ -252,6 +254,12 @@ export type ChangedFile = {
 	change: ChangeKind,
 	/**  다음 저장에 넣은(stage) 변경이 있는지. */
 	staged: boolean,
+};
+
+/**  복제 대화상자의 기본값(D-115). 부모 폴더는 홈 폴더. */
+export type CloneDefaultsView = {
+	/**  복제할 폴더를 만들 곳. 홈 폴더를 모르면 `None`(화면이 고르게 한다). */
+	parent: string | null,
 };
 
 /**  복제 입력. 주소와 폴더 이름은 core가 검사한다. */

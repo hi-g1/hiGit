@@ -6,11 +6,12 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode,
-    ErrorView, FileDiffView, GitHubStatusView, HomeMapView, HostingPage, LogPage, LogQuery,
-    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView,
-    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    CloneDefaultsView, CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView,
+    DiffRequest, ErrorCode, ErrorView, FileDiffView, GitHubStatusView, HomeMapView, HostingPage,
+    LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
+    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
+    RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
+    UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -192,6 +193,13 @@ pub fn recent_list(state: State<'_, AppState>) -> CmdResult<Vec<RecentProject>> 
 pub fn recent_remove(state: State<'_, AppState>, path: String) -> CmdResult<()> {
     core(&state)?.remove_recent(&PathBuf::from(path));
     Ok(())
+}
+
+/// 복제 대화상자의 기본값(부모 폴더 = 홈 폴더).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_clone_defaults(state: State<'_, AppState>) -> CmdResult<CloneDefaultsView> {
+    blocking(state, |core| Ok(core.queries().clone_defaults())).await
 }
 
 #[tauri::command]
