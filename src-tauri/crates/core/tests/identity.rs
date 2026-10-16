@@ -6,8 +6,10 @@ use std::path::Path;
 use std::sync::Arc;
 
 use common::FakeGit;
+use higit_core::github::{GitHubService, KEYCHAIN_SERVICE};
 use higit_core::view::{ActionInput, ActionResult, ErrorCode, ErrorView, IdentityInput};
 use higit_core::{Core, GitBackend};
+use hosting::testing::FakeTransport;
 
 fn core() -> (Arc<FakeGit>, Core) {
     let fake = Arc::new(FakeGit::new());
@@ -83,4 +85,37 @@ fn complete_needs_both_name_and_email() {
         email: Some("a@b.c".into()),
     };
     assert!(core.identity().unwrap().complete);
+}
+
+/// `connected`: None이면 미연결, Some((로그인, 기억함)).
+fn noreply_with(connected: Option<(&str, bool)>) -> Option<String> {
+    let config = hosting::GitHubConfig::new(Some("Ov23liTESTCLIENT01"));
+    let provider = hosting::GitHub::new(Arc::new(FakeTransport::new()), config.clone());
+    let github = GitHubService::new(
+        Arc::new(provider),
+        &config,
+        platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+        None,
+    );
+    if let Some((login, remembered)) = connected {
+        github.connect_for_tests(login, "gho_TESTSECRET0123456789", remembered);
+    }
+    let core = Core::with_backend(Arc::new(FakeGit::new()) as Arc<dyn GitBackend>)
+        .unwrap()
+        .with_github_for_tests(github);
+    core.identity().unwrap().noreply_email
+}
+
+#[test]
+fn noreply_email_only_for_a_remembered_connection() {
+    assert_eq!(
+        noreply_with(Some(("octocat", true))).as_deref(),
+        Some("1+octocat@users.noreply.github.com")
+    );
+    // 이번 실행뿐인 연결은 숫자 id를 저장하지 않는다.
+    assert_eq!(noreply_with(Some(("octocat", false))), None);
+    assert_eq!(noreply_with(None), None);
+    // 로그인 모양이 아닌 값으로는 주소를 만들지 않는다.
+    assert_eq!(noreply_with(Some(("bad login", true))), None);
+    assert_eq!(noreply_with(Some(("-x", true))), None);
 }

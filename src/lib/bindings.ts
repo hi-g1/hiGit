@@ -628,6 +628,8 @@ export type IdentityView = {
 	email: string | null,
 	/**  이름과 이메일이 둘 다 있다. */
 	complete: boolean,
+	/**  GitHub에 기억한 연결이 있으면 가림 이메일. 화면은 칸에 채우기만 한다(D-126). */
+	noreplyEmail: string | null,
 };
 
 /**  화면 언어(D-139). 시스템 따라가기는 화면이 웹뷰 언어로 정한다(D-149). */

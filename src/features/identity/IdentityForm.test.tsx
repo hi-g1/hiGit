@@ -27,7 +27,7 @@ afterEach(() => {
 
 describe("이름과 이메일(D-125)", () => {
   it("지금 값을 보이고, 바꾸기 전에는 저장이 꺼져 있다", async () => {
-    vi.mocked(api.identity).mockResolvedValue({ name: "김지원", email: "ji@example.com", complete: true });
+    vi.mocked(api.identity).mockResolvedValue({ name: "김지원", email: "ji@example.com", complete: true, noreplyEmail: null });
     show();
     expect(await screen.findByDisplayValue("김지원")).toBeInTheDocument();
     expect(screen.getByLabelText("이메일")).toHaveValue("ji@example.com");
@@ -35,7 +35,7 @@ describe("이름과 이메일(D-125)", () => {
   });
 
   it("저장하면 전역 설정에 쓰고 다시 읽으며 값은 토스트에 넣지 않는다", async () => {
-    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false });
+    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false, noreplyEmail: null });
     vi.mocked(api.executeAction).mockResolvedValue({ kind: "identitySaved" });
     show();
     await userEvent.type(screen.getByLabelText("이름"), "Jiwon");
@@ -49,7 +49,7 @@ describe("이름과 이메일(D-125)", () => {
   });
 
   it("규칙에 맞지 않으면 오류를 보인다", async () => {
-    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false });
+    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false, noreplyEmail: null });
     vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "identityInvalid", detail: null }));
     show();
     await userEvent.type(screen.getByLabelText("이름"), "-x");
@@ -58,7 +58,7 @@ describe("이름과 이메일(D-125)", () => {
   });
 
   it("한글 조합 중 Enter는 보내지 않는다", async () => {
-    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false });
+    vi.mocked(api.identity).mockResolvedValue({ name: null, email: null, complete: false, noreplyEmail: null });
     show();
     const name = screen.getByLabelText("이름");
     fireEvent.change(name, { target: { value: "김" } });
@@ -66,5 +66,24 @@ describe("이름과 이메일(D-125)", () => {
     name.dispatchEvent(enter);
     expect(enter.defaultPrevented).toBe(true);
     expect(api.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("GitHub 주소로 채우기는 이메일 칸에 채우기만 하고 저장하지 않는다(D-126)", async () => {
+    const noreply = "1+octocat@users.noreply.github.com";
+    vi.mocked(api.identity).mockResolvedValue({ name: "김지원", email: "ji@example.com", complete: true, noreplyEmail: noreply });
+    show();
+    await userEvent.click(await screen.findByRole("button", { name: "GitHub 주소로 채우기" }));
+    expect(screen.getByLabelText("이메일")).toHaveValue(noreply);
+    expect(api.executeAction).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
+    // 이미 그 주소면 단추가 없다.
+    expect(screen.queryByRole("button", { name: "GitHub 주소로 채우기" })).toBeNull();
+  });
+
+  it("GitHub에 기억한 연결이 없으면 채우기 단추가 없다", async () => {
+    vi.mocked(api.identity).mockResolvedValue({ name: "김지원", email: "ji@example.com", complete: true, noreplyEmail: null });
+    show();
+    await screen.findByDisplayValue("김지원");
+    expect(screen.queryByRole("button", { name: "GitHub 주소로 채우기" })).toBeNull();
   });
 });

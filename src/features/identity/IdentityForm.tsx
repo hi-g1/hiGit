@@ -24,6 +24,8 @@ export function IdentityForm({ onSaved }: { onSaved?: () => void }) {
   const shownName = name ?? identity.data?.name ?? "";
   const shownEmail = email ?? identity.data?.email ?? "";
   const changed = name !== null || email !== null;
+  // GitHub에 기억한 연결이 있으면 가림 주소를 칸에 채우기만 한다(저장은 "저장"으로, D-126).
+  const noreply = identity.data?.noreplyEmail ?? null;
 
   const save = useMutation({
     mutationFn: () =>
@@ -79,6 +81,13 @@ export function IdentityForm({ onSaved }: { onSaved?: () => void }) {
           {m.identity.save}
         </Button>
       </div>
+      {noreply && noreply !== shownEmail && (
+        <div>
+          <Button variant="text" onClick={() => setEmail(noreply)}>
+            {m.identity.fillGithub}
+          </Button>
+        </div>
+      )}
       {save.error && <ErrorNotice error={save.error} />}
     </form>
   );

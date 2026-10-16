@@ -7,7 +7,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   api: {
     executeAction: vi.fn(),
     secretCheck: vi.fn(),
-    identity: vi.fn(async () => ({ name: null, email: null, complete: false })),
+    identity: vi.fn(async () => ({ name: null, email: null, complete: false, noreplyEmail: null })),
   },
 }));
 

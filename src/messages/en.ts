@@ -367,7 +367,14 @@ export const en: Messages = {
   copyPath: "Copy path",
   thisFile: "This file:",
   earlierVersions: (n: number) => `${n} earlier`,
-  identity: { title: "Name and email", name: "Name", email: "Email", save: "Save", saved: "Saved" },
+  identity: {
+    title: "Name and email",
+    name: "Name",
+    email: "Email",
+    save: "Save",
+    saved: "Saved",
+    fillGithub: "Use GitHub address",
+  },
   settings: {
     title: "Settings",
     general: "General",

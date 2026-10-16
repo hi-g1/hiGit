@@ -158,6 +158,23 @@ impl GitHubService {
         }
     }
 
+    /// GitHub 가림 이메일 `<숫자 id>+<로그인>@users.noreply.github.com`(D-126). 기억한 연결의 상태 파일로만
+    /// 만들고(키체인을 건드리지 않음) 이번 실행뿐인 연결이면 없다. 파일 값이 GitHub 로그인 모양이 아니면 없다.
+    pub fn noreply_email(&self) -> Option<String> {
+        if self.state().session_login.is_some() {
+            return None;
+        }
+        let file = self.store.read()?;
+        let login = file.login.as_str();
+        let looks_like_login = (1..=39).contains(&login.len())
+            && !login.starts_with('-')
+            && login
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-');
+        (file.id > 0 && looks_like_login)
+            .then(|| format!("{}+{login}@users.noreply.github.com", file.id))
+    }
+
     /// 로그인을 시작한다. 진행 중이던 로그인은 버린다.
     pub fn connect_start(&self) -> Result<LoginChallengeView> {
         if !self.configured {

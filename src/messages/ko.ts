@@ -399,7 +399,14 @@ export const ko = {
   copyPath: "경로 복사",
   thisFile: "이 파일",
   earlierVersions: (n: number) => `이전 ${n}개`,
-  identity: { title: "이름과 이메일", name: "이름", email: "이메일", save: "저장", saved: "저장했어요" },
+  identity: {
+    title: "이름과 이메일",
+    name: "이름",
+    email: "이메일",
+    save: "저장",
+    saved: "저장했어요",
+    fillGithub: "GitHub 주소로 채우기",
+  },
   settings: {
     title: "설정",
     general: "일반",

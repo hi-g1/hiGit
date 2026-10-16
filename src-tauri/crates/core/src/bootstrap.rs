@@ -309,6 +309,7 @@ impl Core {
             name: id.name,
             email: id.email,
             complete,
+            noreply_email: self.github.noreply_email(),
         })
     }
 
