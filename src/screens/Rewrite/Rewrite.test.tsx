@@ -54,7 +54,7 @@ describe("기록 정리 화면", () => {
     await screen.findByText("셋");
     expect(api.rewritePlan).toHaveBeenCalledWith("/r", [id("c"), id("b"), id("a")]);
     expect(names()).toEqual(["셋", "둘", "하나"]);
-    expect(screen.getByRole("button", { name: ko.rewriteRun })).toBeDisabled();
+    expect(screen.getByRole("button", { name: ko.rewriteRun })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText(ko.rewriteSummary(3, 0, 0))).toBeInTheDocument();
   });
 
@@ -121,7 +121,7 @@ describe("기록 정리 화면", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(ko.rewriteBlocked.published);
     expect(screen.getByText(ko.staleLabels(2))).toBeInTheDocument();
     for (const b of within(cardsOf()[0]!).getAllByRole("button")) expect(b).toBeDisabled();
-    expect(screen.getByRole("button", { name: ko.rewriteRun })).toBeDisabled();
+    expect(screen.getByRole("button", { name: ko.rewriteRun })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("계획을 다시 읽어도 고친 카드는 남고 막힌 까닭만 바뀐다", async () => {

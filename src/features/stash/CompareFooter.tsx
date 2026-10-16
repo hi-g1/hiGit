@@ -71,7 +71,12 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
 
   return (
     <div className={styles.footer}>
-      <Button variant="text" disabled={pending || !hasChanges} onClick={() => void stash()}>
+      <Button
+        variant="text"
+        disabled={pending}
+        disabledReason={hasChanges ? null : m.disabledReasons.noChanges}
+        onClick={() => void stash()}
+      >
         <Term id="stash" focusable={false} />
       </Button>
       {stashes.length > 0 && (
@@ -89,8 +94,8 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
                       <Time at={s.at} now={now} /> · {m.filesCount(s.files)}
                     </span>
                     <Button
-                      disabled={pending || hasChanges}
-                      title={hasChanges ? m.takeOutNeedsClean : undefined}
+                      disabled={pending}
+                      disabledReason={hasChanges ? m.takeOutNeedsClean : null}
                       onClick={() => void takeOut(s.oid)}
                     >
                       {m.takeOut}

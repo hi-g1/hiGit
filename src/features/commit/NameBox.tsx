@@ -164,7 +164,12 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
         />
         <div className={styles.actions}>
           <Kbd>{SHORTCUTS.commit.label}</Kbd>
-          <Button type="submit" variant="primary" disabled={!canCommit}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={commit.isPending || checking}
+            disabledReason={files.length === 0 ? m.disabledReasons.noChanges : null}
+          >
             <Term id="commit" focusable={false} />
           </Button>
         </div>

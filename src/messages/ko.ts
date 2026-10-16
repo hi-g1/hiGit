@@ -74,6 +74,11 @@ export const ko = {
   stashCount: (n: number) => `${t("stash")} ${n}개`,
   filesCount: (n: number) => `파일 ${n}개`,
   takeOutNeedsClean: "고친 파일이 없을 때 꺼낼 수 있어요",
+  // 꺼진 버튼의 까닭(D-191)
+  disabledReasons: {
+    noChanges: "고친 파일이 없어요",
+    rewriteUnchanged: "카드를 옮기거나 묶으면 정리할 수 있어요",
+  },
   discardTitle: (name: string) => `${name}의 고친 내용을 버려요.`,
   discardConfirm: "버리기",
   discarded: "버렸어요",

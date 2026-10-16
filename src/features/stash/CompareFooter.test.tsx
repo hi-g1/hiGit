@@ -68,6 +68,11 @@ describe("비교 칸 아래 줄", () => {
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "stash" });
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("보관했어요"));
     await userEvent.click(await screen.findByRole("button", { name: "임시 보관 1개" }));
-    expect(await screen.findByRole("button", { name: "꺼내기" })).toBeDisabled();
+    // 까닭이 있는 꺼짐은 aria-disabled로 키보드에 닿고 까닭을 말한다(D-191).
+    const takeOut = await screen.findByRole("button", { name: "꺼내기" });
+    expect(takeOut).toHaveAttribute("aria-disabled", "true");
+    // 팝오버가 열리며 포커스가 가 툴팁도 열려 있다(Radix가 aria-describedby에 툴팁 id를 덧붙인다).
+    expect(takeOut.getAttribute("aria-describedby")).toBeTruthy();
+    expect(screen.getAllByText("고친 파일이 없을 때 꺼낼 수 있어요").length).toBeGreaterThan(0);
   });
 });

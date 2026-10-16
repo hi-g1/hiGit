@@ -71,6 +71,7 @@
   --radius-panel: 0.5rem;
   --border-width: 1px;
   --row-height: 2rem;
+  --target-min: 1.5rem; /* 누르는 곳의 최소 크기(WCAG 2.5.8, D-191) */
   --row-height-two: 3.25rem; /* 두 줄 행(고친 파일 줄) */
   --selected-bar: 2px;
 

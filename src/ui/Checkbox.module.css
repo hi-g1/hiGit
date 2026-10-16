@@ -1,4 +1,5 @@
 .box {
+  position: relative;
   display: inline-grid;
   flex: none;
   place-content: center;
@@ -39,7 +40,14 @@
   visibility: visible;
 }
 
+/* 보이는 상자는 16px이고 눌림 영역만 24px로 넓힌다(D-191) */
+.box::after {
+  position: absolute;
+  inset: calc((1rem - var(--target-min)) / 2);
+  content: "";
+}
+
 .box:disabled {
-  cursor: default;
-  opacity: 0.5;
+  border-color: var(--border);
+  background: var(--surface-sunken);
 }

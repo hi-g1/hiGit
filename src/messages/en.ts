@@ -54,6 +54,10 @@ export const en: Messages = {
   stashCount: (n: number) => `${t("stash")} ${n}`,
   filesCount: (n: number) => `${n} file${n === 1 ? "" : "s"}`,
   takeOutNeedsClean: "You can take it out when there are no changed files",
+  disabledReasons: {
+    noChanges: "There are no changed files",
+    rewriteUnchanged: "Move or combine cards to clean up",
+  },
   discardTitle: (name: string) => `Throw away the changes in ${name}.`,
   discardConfirm: "Discard",
   discarded: "Discarded",

@@ -78,7 +78,12 @@ export function Rewrite({ repo, onDone }: Props) {
         <Button variant="text" disabled={busy || !dirty} onClick={() => setEdited(null)}>
           {m.rewriteReset}
         </Button>
-        <Button variant="primary" disabled={busy || !dirty || blocked !== null} onClick={() => void run()}>
+        <Button
+          variant="primary"
+          disabled={busy}
+          disabledReason={blocked !== null ? m.rewriteBlocked[blocked] : !dirty ? m.disabledReasons.rewriteUnchanged : null}
+          onClick={() => void run()}
+        >
           {m.rewriteRun}
         </Button>
       </header>

@@ -156,7 +156,9 @@ describe("버전 이름 칸", () => {
 
   it("고친 파일이 없으면 버튼이 꺼지고 이유를 둘째 줄로", () => {
     show([]);
-    expect(screen.getByRole("button", { name: /버전 저장/ })).toBeDisabled();
+    const save = screen.getByRole("button", { name: /버전 저장/ });
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    expect(save).toHaveAccessibleDescription("고친 파일이 없어요");
     expect(screen.getByText("고친 파일 없음")).toBeInTheDocument();
   });
 
