@@ -5,14 +5,38 @@ use std::sync::Arc;
 use secrecy::{ExposeSecret, SecretString};
 
 use crate::HostingProvider;
-use crate::api::{self, API_ACCEPT, API_VERSION, API_VERSION_HEADER, USER_AGENT};
+use crate::api::{self, API_ACCEPT, API_VERSION, API_VERSION_HEADER, USER_AGENT, encode};
 use crate::config::GitHubConfig;
 use crate::error::{HostingError, HostingErrorKind};
 use crate::http::{HttpRequest, HttpResponse, HttpTransport, Method};
 use crate::login::{self, HostUser, LoginChallenge, LoginPoll};
-use crate::remote::{RemoteRepo, parse_remote};
+use crate::pr::{
+    self, CHECK_RUNS_PAGE, NewPr, PR_PAGE_MAX, PrDetail, PrPage, PrQuery, PullRequest,
+};
+use crate::remote::{RemoteRepo, parse_remote, valid_name, valid_owner};
 
 const DEVICE_GRANT: &str = "urn:ietf:params:oauth:grant-type:device_code";
+/// 같은 API 주소 안의 리디렉트를 따르는 최대 횟수.
+const REDIRECT_MAX: usize = 3;
+
+/// 검사한 저장소의 API 경로(`/repos/{o}/{r}`). 소유자·이름 조각은 퍼센트 인코딩한다.
+fn repo_path(repo: &RemoteRepo) -> Result<String, HostingError> {
+    if !valid_owner(&repo.owner) || !valid_name(&repo.name) {
+        return Err(invalid_input("repository"));
+    }
+    Ok(format!(
+        "/repos/{}/{}",
+        encode(&repo.owner),
+        encode(&repo.name)
+    ))
+}
+
+fn invalid_input(detail: &str) -> HostingError {
+    HostingError::with_detail(
+        HostingErrorKind::Validation(crate::error::ValidationKind::Invalid),
+        detail,
+    )
+}
 
 pub struct GitHub {
     transport: Arc<dyn HttpTransport>,
@@ -63,14 +87,55 @@ impl GitHub {
         }
     }
 
-    /// API 주소(`api_base`)에 토큰을 실어 GET.
-    fn api_get(&self, token: &SecretString, path: &str) -> Result<HttpResponse, HostingError> {
-        let req = HttpRequest::new(Method::Get, format!("{}{path}", self.config.api_base))
+    /// API 요청을 보낸다. 같은 API 주소(https, 같은 호스트·포트) 아래로 가는 리디렉트만
+    /// [`REDIRECT_MAX`]번까지 같은 요청으로 따른다. 다른 곳이면 보내지 않고 `Moved`.
+    fn api_send(&self, mut req: HttpRequest) -> Result<HttpResponse, HostingError> {
+        for _ in 0..=REDIRECT_MAX {
+            let res = self.send(&req)?;
+            if !matches!(res.status, 301 | 302 | 307 | 308) {
+                return Ok(res);
+            }
+            let Some(next) = res.header("location").and_then(|l| self.same_api_url(l)) else {
+                return Err(HostingError::with_detail(
+                    HostingErrorKind::Moved,
+                    &format!("HTTP {}", res.status),
+                ));
+            };
+            req.url = next;
+        }
+        Err(HostingError::with_detail(
+            HostingErrorKind::Moved,
+            "too many redirects",
+        ))
+    }
+
+    /// 리디렉트 주소가 `api_base` 바로 아래면 절대 주소. 사용자 정보·포트·다른 호스트는 `None`.
+    fn same_api_url(&self, location: &str) -> Option<String> {
+        let base = self.config.api_base.as_str();
+        let url = if location.starts_with('/') && !location.starts_with("//") {
+            format!("{base}{location}")
+        } else {
+            location.to_owned()
+        };
+        let rest = url.strip_prefix(base)?;
+        let clean = rest.starts_with('/')
+            && !rest
+                .chars()
+                .any(|c| c.is_whitespace() || c.is_control() || matches!(c, '\\' | '@' | '#'));
+        clean.then_some(url)
+    }
+
+    fn api_request(&self, method: Method, token: &SecretString, path: &str) -> HttpRequest {
+        HttpRequest::new(method, format!("{}{path}", self.config.api_base))
             .header("User-Agent", USER_AGENT)
             .header("Accept", API_ACCEPT)
             .header(API_VERSION_HEADER, API_VERSION)
-            .bearer(token.clone());
-        let res = self.send(&req)?;
+            .bearer(token.clone())
+    }
+
+    /// API 주소(`api_base`)에 토큰을 실어 GET. 2xx만 응답으로 준다.
+    fn api_get(&self, token: &SecretString, path: &str) -> Result<HttpResponse, HostingError> {
+        let res = self.api_send(self.api_request(Method::Get, token, path))?;
         api::check_status(&res)?;
         Ok(res)
     }
@@ -112,11 +177,86 @@ impl HostingProvider for GitHub {
         let res = self.api_get(token, "/user")?;
         login::parse_user(&res.body)
     }
+
+    fn list_prs(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        query: &PrQuery,
+    ) -> Result<PrPage, HostingError> {
+        let per_page = query.per_page.clamp(1, PR_PAGE_MAX);
+        let page = query.page.max(1);
+        let mut path = format!(
+            "{}/pulls?state={}&per_page={per_page}&page={page}&sort=updated&direction=desc",
+            repo_path(repo)?,
+            query.state.as_str()
+        );
+        if let Some(branch) = &query.head_branch {
+            if !pr::valid_branch(branch) {
+                return Err(invalid_input("branch name"));
+            }
+            path.push_str("&head=");
+            path.push_str(&encode(&format!("{}:{branch}", repo.owner)));
+        }
+        let res = self.api_get(token, &path)?;
+        Ok(PrPage {
+            items: pr::parse_list(&res.body, &repo.owner)?,
+            has_more: pr::has_next_link(res.header("link")),
+        })
+    }
+
+    fn pr_detail(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+    ) -> Result<PrDetail, HostingError> {
+        let base = repo_path(repo)?;
+        let res = self.api_get(token, &format!("{base}/pulls/{number}"))?;
+        let mut detail = pr::parse_detail(&res.body, &repo.owner)?;
+        // head sha는 parse_detail이 16진수 40·64자인지 확인했다.
+        let checks_path = format!(
+            "{base}/commits/{}/check-runs?per_page={CHECK_RUNS_PAGE}",
+            detail.head_sha
+        );
+        detail.checks = match self.api_get(token, &checks_path) {
+            Ok(res) => pr::parse_check_runs(&res.body).ok(),
+            // 시험 결과를 볼 권한이 없거나 없으면 상세는 그대로 보인다.
+            Err(err)
+                if matches!(
+                    err.kind(),
+                    HostingErrorKind::Forbidden { .. } | HostingErrorKind::NotFound
+                ) =>
+            {
+                None
+            }
+            Err(err) => return Err(err),
+        };
+        Ok(detail)
+    }
+
+    fn create_pr(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        new: &NewPr,
+    ) -> Result<PullRequest, HostingError> {
+        pr::check_new_pr(new)?;
+        let body = pr::new_pr_json(new)?;
+        let req = self
+            .api_request(Method::Post, token, &format!("{}/pulls", repo_path(repo)?))
+            .header("Content-Type", "application/json")
+            .body(body);
+        let res = self.api_send(req)?;
+        api::check_status(&res)?;
+        pr::parse_one(&res.body, &repo.owner)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pr::{Mergeable, PrStateFilter};
     use crate::testing::FakeTransport;
 
     const CLIENT_ID: &str = "Ov23liTESTCLIENT01";
@@ -296,5 +436,292 @@ mod tests {
         assert!(GitHub::detect("git@github.com:octo/hello.git").is_some());
         assert!(GitHub::detect("https://gitlab.com/octo/hello").is_none());
         assert!(GitHub::detect("https://evil.example/github.com/hello").is_none());
+    }
+
+    fn octo() -> RemoteRepo {
+        GitHub::detect("https://github.com/octo/hello").unwrap()
+    }
+
+    fn token() -> SecretString {
+        SecretString::from(TOKEN.to_owned())
+    }
+
+    fn pull_json(number: u64) -> String {
+        format!(
+            r#"{{"number":{number},"title":"Add login","state":"open","draft":false,"merged_at":null,
+               "head":{{"ref":"feature/login","sha":"{sha}","repo":{{"owner":{{"login":"octo"}}}}}},
+               "base":{{"ref":"main","sha":"{sha}","repo":{{"owner":{{"login":"octo"}}}}}},
+               "user":{{"login":"mona"}},"created_at":"2026-10-01T09:30:00Z",
+               "updated_at":"2026-10-02T00:00:00Z","mergeable_state":"dirty"}}"#,
+            sha = "a".repeat(40)
+        )
+    }
+
+    fn response(status: u16, headers: &[(&str, &str)], body: &str) -> HttpResponse {
+        HttpResponse {
+            status,
+            headers: headers
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+                .collect(),
+            body: body.as_bytes().to_vec(),
+        }
+    }
+
+    fn query(head: Option<&str>) -> PrQuery {
+        PrQuery {
+            state: PrStateFilter::Open,
+            head_branch: head.map(str::to_owned),
+            page: 2,
+            per_page: 500,
+        }
+    }
+
+    #[test]
+    fn list_builds_url_and_reads_next_link() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push(response(
+            200,
+            &[(
+                "Link",
+                r#"<https://api.github.com/repositories/1/pulls?page=3>; rel="next""#,
+            )],
+            &format!("[{}]", pull_json(7)),
+        ));
+        let gh = github(&fake);
+        let page = gh
+            .list_prs(&token(), &octo(), &query(Some("feature/a&b=c")))
+            .unwrap();
+        assert!(page.has_more);
+        assert_eq!(page.items[0].number, 7);
+        let reqs = fake.requests();
+        assert_eq!(
+            reqs[0].url,
+            "https://api.github.com/repos/octo/hello/pulls?state=open&per_page=50&page=2&sort=updated&direction=desc&head=octo%3Afeature%2Fa%26b%3Dc"
+        );
+        assert!(reqs[0].bearer.is_some());
+    }
+
+    #[test]
+    fn list_rejects_odd_branch_without_sending() {
+        let fake = Arc::new(FakeTransport::new());
+        let gh = github(&fake);
+        let err = gh
+            .list_prs(&token(), &octo(), &query(Some("has space")))
+            .unwrap_err();
+        assert_eq!(
+            err.kind(),
+            HostingErrorKind::Validation(crate::ValidationKind::Invalid)
+        );
+        let bad_repo = RemoteRepo {
+            host: "github.com".into(),
+            owner: "../x".into(),
+            name: "hello".into(),
+        };
+        assert!(gh.list_prs(&token(), &bad_repo, &query(None)).is_err());
+        assert!(fake.requests().is_empty());
+    }
+
+    #[test]
+    fn error_table() {
+        use crate::ValidationKind as V;
+        let forbidden = |rate_limited, sso| HostingErrorKind::Forbidden { rate_limited, sso };
+        let cases = [
+            (
+                response(401, &[], r#"{"message":"Bad credentials"}"#),
+                HostingErrorKind::Unauthorized,
+            ),
+            (response(403, &[], "{}"), forbidden(false, false)),
+            (
+                response(403, &[("X-RateLimit-Remaining", "0")], "{}"),
+                forbidden(true, false),
+            ),
+            (
+                response(403, &[("X-GitHub-SSO", "required; url=x")], "{}"),
+                forbidden(false, true),
+            ),
+            (response(404, &[], "{}"), HostingErrorKind::NotFound),
+            (
+                response(
+                    422,
+                    &[],
+                    r#"{"errors":[{"message":"A pull request already exists for octo:x."}]}"#,
+                ),
+                HostingErrorKind::Validation(V::AlreadyExists),
+            ),
+            (
+                response(
+                    422,
+                    &[],
+                    r#"{"errors":[{"message":"No commits between main and x"}]}"#,
+                ),
+                HostingErrorKind::Validation(V::NoDifference),
+            ),
+            (
+                response(422, &[], r#"{"errors":[{"code":"custom"}]}"#),
+                HostingErrorKind::Validation(V::Invalid),
+            ),
+            (response(500, &[], "oops"), HostingErrorKind::Unavailable),
+        ];
+        for (res, want) in cases {
+            let fake = Arc::new(FakeTransport::new());
+            fake.push(res);
+            let err = github(&fake)
+                .list_prs(&token(), &octo(), &query(None))
+                .unwrap_err();
+            assert_eq!(err.kind(), want);
+            assert!(!format!("{err} {err:?} {:?}", err.detail()).contains(TOKEN));
+        }
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_error(crate::TransportError::Timeout);
+        assert_eq!(
+            github(&fake)
+                .list_prs(&token(), &octo(), &query(None))
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::Unreachable
+        );
+    }
+
+    #[test]
+    fn follows_redirect_only_within_api_host() {
+        // 같은 호스트: 따라간다.
+        let fake = Arc::new(FakeTransport::new());
+        fake.push(response(
+            301,
+            &[(
+                "Location",
+                "https://api.github.com/repositories/42/pulls?state=open",
+            )],
+            "",
+        ));
+        fake.push(response(307, &[("Location", "/repositories/43/pulls")], ""));
+        fake.push(response(200, &[], "[]"));
+        github(&fake)
+            .list_prs(&token(), &octo(), &query(None))
+            .unwrap();
+        let reqs = fake.requests();
+        assert_eq!(reqs.len(), 3);
+        assert_eq!(
+            reqs[1].url,
+            "https://api.github.com/repositories/42/pulls?state=open"
+        );
+        assert_eq!(reqs[2].url, "https://api.github.com/repositories/43/pulls");
+
+        // 다른 호스트·http·포트·사용자 정보: 두 번째 요청이 없다.
+        for location in [
+            "https://evil.example/repos/octo/hello/pulls",
+            "http://api.github.com/repos/octo/hello/pulls",
+            "https://api.github.com.evil.example/x",
+            "https://api.github.com:8443/x",
+            "https://api.github.com@evil.example/x",
+            "//evil.example/x",
+            "",
+        ] {
+            let fake = Arc::new(FakeTransport::new());
+            fake.push(response(301, &[("Location", location)], ""));
+            fake.push(response(200, &[], "[]"));
+            let err = github(&fake)
+                .list_prs(&token(), &octo(), &query(None))
+                .unwrap_err();
+            assert_eq!(err.kind(), HostingErrorKind::Moved, "{location}");
+            assert_eq!(fake.requests().len(), 1, "{location}");
+        }
+
+        // 끝없는 리디렉트는 네 번 보내고 멈춘다.
+        let fake = Arc::new(FakeTransport::new());
+        for _ in 0..10 {
+            fake.push(response(
+                302,
+                &[("Location", "https://api.github.com/loop")],
+                "",
+            ));
+        }
+        let err = github(&fake)
+            .list_prs(&token(), &octo(), &query(None))
+            .unwrap_err();
+        assert_eq!(err.kind(), HostingErrorKind::Moved);
+        assert_eq!(fake.requests().len(), 4);
+    }
+
+    #[test]
+    fn detail_with_and_without_checks() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(200, &pull_json(7));
+        fake.push_json(
+            200,
+            r#"{"total_count":2,"check_runs":[{"conclusion":"success"},{"conclusion":null}]}"#,
+        );
+        let gh = github(&fake);
+        let detail = gh.pr_detail(&token(), &octo(), 7).unwrap();
+        assert_eq!(detail.mergeable, Mergeable::Conflicts);
+        assert_eq!(detail.checks.unwrap().pending, 1);
+        let reqs = fake.requests();
+        assert_eq!(
+            reqs[0].url,
+            "https://api.github.com/repos/octo/hello/pulls/7"
+        );
+        assert_eq!(
+            reqs[1].url,
+            format!(
+                "https://api.github.com/repos/octo/hello/commits/{}/check-runs?per_page=100",
+                "a".repeat(40)
+            )
+        );
+
+        for status in [403, 404] {
+            let fake = Arc::new(FakeTransport::new());
+            fake.push_json(200, &pull_json(7));
+            fake.push_json(status, "{}");
+            let detail = github(&fake).pr_detail(&token(), &octo(), 7).unwrap();
+            assert_eq!(detail.checks, None);
+        }
+
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(200, &pull_json(7));
+        fake.push_json(401, "{}");
+        assert_eq!(
+            github(&fake)
+                .pr_detail(&token(), &octo(), 7)
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::Unauthorized
+        );
+    }
+
+    #[test]
+    fn create_sends_json_and_reads_result() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(201, &pull_json(12));
+        let gh = github(&fake);
+        let new = NewPr {
+            title: "로그인 \"추가\"".into(),
+            body: "본문\n둘째 줄".into(),
+            head: "feature/login".into(),
+            base: "main".into(),
+            draft: false,
+        };
+        let created = gh.create_pr(&token(), &octo(), &new).unwrap();
+        assert_eq!(created.number, 12);
+        let reqs = fake.requests();
+        assert_eq!(reqs[0].method, Method::Post);
+        assert_eq!(reqs[0].url, "https://api.github.com/repos/octo/hello/pulls");
+        assert_eq!(header(&reqs[0], "Content-Type"), Some("application/json"));
+        let sent: serde_json::Value =
+            serde_json::from_slice(reqs[0].body.as_ref().unwrap()).unwrap();
+        assert_eq!(sent["title"], "로그인 \"추가\"");
+        assert_eq!(sent["body"], "본문\n둘째 줄");
+        assert_eq!(sent["head"], "feature/login");
+        assert_eq!(sent["draft"], false);
+        assert!(!body(&reqs[0]).contains(TOKEN));
+
+        let fake = Arc::new(FakeTransport::new());
+        let gh = github(&fake);
+        let empty = NewPr {
+            title: " ".into(),
+            ..new
+        };
+        assert!(gh.create_pr(&token(), &octo(), &empty).is_err());
+        assert!(fake.requests().is_empty());
     }
 }

@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G5 끝 (hosting `HostingProvider`·`GitHub` device flow·사용자 확인)
-- 마지막 커밋: (이 갱신과 같은 커밋) hosting: add github device flow and current user
-- 다음 할 일: G6 검토 요청 API → G7 ureq 전송 → G8a 실패 종류(작업 트리에 준비됨) … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G6 끝 (hosting 검토 요청 목록·상세·만들기, 리디렉트는 같은 API 주소 안에서만)
+- 마지막 커밋: (이 갱신과 같은 커밋) hosting: add pull request list, detail and create
+- 다음 할 일: G7 ureq 전송 → G8a 실패 종류·G8b 취소 표시 분리(작업 트리에 준비됨) → G8c … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -169,11 +169,12 @@
 ## 반복 4 단계 (계획 009, 바뀐 순서)
 - [x] 계획 65ad359(planner + code-analyst 검토 반영)
 - [x] G1 결정·용어
-- [x] G2 의존성: ureq 3.4(rustls-no-provider·platform-verifier) + rustls 0.23(ring), secrecy 0.10, keyring-core 1.0 + Windows·zbus 스토어. deny 허용 목록 변경 없음, webpki-roots 없음. 새 중복 버전: ring의 windows-sys 0.52·getrandom 0.2, secret-service의 digest·hmac·sha2 0.11 계열(맞출 수 없음). 실행 파일 크기는 코드가 쓰기 시작하는 G20에서 잰다
+- [x] G2 의존성(CI fd35f66 두 OS·기본 git·deny 초록, Windows VC++ 런타임 없이 뜸): ureq 3.4(rustls-no-provider·platform-verifier) + rustls 0.23(ring), secrecy 0.10, keyring-core 1.0 + Windows·zbus 스토어. deny 허용 목록 변경 없음, webpki-roots 없음. 새 중복 버전: ring의 windows-sys 0.52·getrandom 0.2, secret-service의 digest·hmac·sha2 0.11 계열(맞출 수 없음). 실행 파일 크기는 코드가 쓰기 시작하는 G20에서 잰다
 - [x] G3 platform 키체인(`Keychain` get/set/delete, Windows는 Local 보관, 실패는 Unavailable·Denied·Other)·`current_exe_path`
 - [x] G4 hosting `parse_remote`(호스트만 보고 GitHub 판정)·`HostingError`(종류+앞 200자 설명)·`HttpTransport`·`GitHubConfig`(client id 영숫자 8~64자)
 - [x] G5 `HostingProvider`(id·detect·begin_login·poll_login·current_user)·`GitHub`, 응답 검사(verification_uri 정확 일치, user_code 모양, 시간 보정), 시험용 `hosting::testing::FakeTransport`
-- [ ] G6 검토 요청 API / G7 ureq 전송
+- [x] G6 `list_prs`·`pr_detail`(check-runs 403·404면 시험 결과 없음)·`create_pr`(serde로만 JSON), 422 나눔, 같은 API 주소 안 리디렉트 3번까지
+- [ ] G7 ureq 전송
 - [ ] G8a 실패 종류 / G8b 취소 표시 분리 / G8c 원격 주소·인증 방식 / G9 복제(git)
 - [ ] G10a 연결 서비스 / G10b 연결 명령 / G11 helper / G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리

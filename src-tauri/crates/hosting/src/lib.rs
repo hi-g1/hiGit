@@ -11,6 +11,7 @@ mod error;
 mod github;
 mod http;
 mod login;
+mod pr;
 mod remote;
 #[doc(hidden)]
 pub mod testing;
@@ -20,6 +21,10 @@ pub use error::{DETAIL_MAX_CHARS, HostingError, HostingErrorKind, ValidationKind
 pub use github::GitHub;
 pub use http::{HttpRequest, HttpResponse, HttpTransport, Method, TransportError};
 pub use login::{HostUser, LoginChallenge, LoginPoll};
+pub use pr::{
+    BRANCH_MAX_BYTES, ChecksSummary, Mergeable, NewPr, PR_BODY_MAX_BYTES, PR_PAGE_MAX,
+    PR_TITLE_MAX_BYTES, PrDetail, PrPage, PrQuery, PrState, PrStateFilter, PullRequest,
+};
 pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
 pub use secrecy::{ExposeSecret, SecretString};
 
@@ -35,6 +40,27 @@ pub trait HostingProvider: Send + Sync {
     fn poll_login(&self, challenge: &LoginChallenge) -> Result<LoginPoll, HostingError>;
     /// 토큰 주인을 확인한다.
     fn current_user(&self, token: &SecretString) -> Result<HostUser, HostingError>;
+    /// 검토 요청 목록 한 쪽(최근에 바뀐 것부터).
+    fn list_prs(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        query: &PrQuery,
+    ) -> Result<PrPage, HostingError>;
+    /// 검토 요청 하나와 합칠 수 있는지, 시험 결과 요약.
+    fn pr_detail(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+    ) -> Result<PrDetail, HostingError>;
+    /// 새 검토 요청. 입력이 규칙에 맞지 않으면 보내지 않는다.
+    fn create_pr(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        new: &NewPr,
+    ) -> Result<PullRequest, HostingError>;
 }
 
 #[cfg(test)]

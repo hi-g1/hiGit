@@ -36,6 +36,7 @@ pub(crate) fn status_error(res: &HttpResponse) -> HostingError {
             sso: false,
         },
         301 | 302 | 303 | 307 | 308 => HostingErrorKind::Moved,
+        422 => return crate::pr::validation_error(&res.body),
         500..=599 => HostingErrorKind::Unavailable,
         _ => HostingErrorKind::BadResponse,
     };
@@ -59,24 +60,22 @@ pub(crate) fn transport_error(err: TransportError) -> HostingError {
     }
 }
 
-/// `application/x-www-form-urlencoded` 본문. 이름과 값을 모두 퍼센트 인코딩한다.
-pub(crate) fn form_body(fields: &[(&str, &str)]) -> Vec<u8> {
+/// RFC 3986의 예약되지 않은 글자만 그대로 두고 나머지는 퍼센트 인코딩한다(URL 조각·폼 값).
+pub(crate) fn encode(text: &str) -> String {
     use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
-    // RFC 3986의 예약되지 않은 글자만 그대로 둔다.
-    const FORM: &AsciiSet = &NON_ALPHANUMERIC
+    const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC
         .remove(b'-')
         .remove(b'.')
         .remove(b'_')
         .remove(b'~');
+    utf8_percent_encode(text, UNRESERVED).to_string()
+}
+
+/// `application/x-www-form-urlencoded` 본문. 이름과 값을 모두 퍼센트 인코딩한다.
+pub(crate) fn form_body(fields: &[(&str, &str)]) -> Vec<u8> {
     fields
         .iter()
-        .map(|(name, value)| {
-            format!(
-                "{}={}",
-                utf8_percent_encode(name, FORM),
-                utf8_percent_encode(value, FORM)
-            )
-        })
+        .map(|(name, value)| format!("{}={}", encode(name), encode(value)))
         .collect::<Vec<_>>()
         .join("&")
         .into_bytes()
