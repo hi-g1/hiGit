@@ -247,6 +247,8 @@ pub enum GithubFailure {
     PrHeadChanged,
     /// 열린(닫기)·닫힌(다시 열기) 검토 요청이 아니거나 다시 열 수 없다(422, D-180).
     PrNotOpen,
+    /// 이 조직에 저장소를 만들 수 없다(앱 접근 제한·권한 없음, D-184).
+    OrgForbidden,
     /// 포크가 아직 준비되지 않았다(다시 누르면 이어서 된다, D-181).
     ForkNotReady,
     /// 원격 `fork`가 이미 다른 주소를 가리킨다.

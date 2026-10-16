@@ -189,7 +189,7 @@ export type ActionInput_Deserialize =
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
 { id: "tag-push"; input: TagPushInput } | 
 /**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
-{ id: "publish"; input: PublishInput };
+{ id: "publish"; input: PublishInput_Deserialize };
 
 export type ActionInput_Serialize = 
 /**  관리 시작. 입력 없음. */
@@ -259,7 +259,7 @@ export type ActionInput_Serialize =
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
 { id: "tag-push"; input: TagPushInput } | 
 /**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
-{ id: "publish"; input: PublishInput };
+{ id: "publish"; input: PublishInput_Serialize };
 
 export type ActionMetaView = {
 	id: string,
@@ -656,7 +656,7 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  GitHub에 같은 이름의 저장소가 있다. */
 "githubRepoExists" | 
 /**  GitHub가 저장소 만들기 입력을 받지 않았다(그 밖의 422, 계획 010 R10). */
-"githubRepoInvalid" | "prNotMergeable" | "prHeadChanged" | "prNotOpen" | "forkNotReady" | "forkRemoteTaken" | "forkParentMismatch" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+"githubRepoInvalid" | "prNotMergeable" | "prHeadChanged" | "prNotOpen" | "forkNotReady" | "forkRemoteTaken" | "forkParentMismatch" | "githubOrgForbidden" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -1228,11 +1228,26 @@ export type PublishDraftView = {
 };
 
 /**  GitHub에 올리기 입력(D-132). 공개면 `acknowledge_public`이 있어야 받는다(대화상자 안의 한 번 더 확인). */
-export type PublishInput = {
+export type PublishInput = PublishInput_Serialize | PublishInput_Deserialize;
+
+/**  GitHub에 올리기 입력(D-132). 공개면 `acknowledge_public`이 있어야 받는다(대화상자 안의 한 번 더 확인). */
+export type PublishInput_Deserialize = {
 	name: string,
 	description: string | null,
 	visibility: Visibility,
 	acknowledgePublic?: boolean,
+	/**  만들 곳(D-184). 없으면 내 계정, 있으면 그 조직(`valid_owner`). 없으면 직렬화하지 않는다. */
+	owner?: string | null,
+};
+
+/**  GitHub에 올리기 입력(D-132). 공개면 `acknowledge_public`이 있어야 받는다(대화상자 안의 한 번 더 확인). */
+export type PublishInput_Serialize = {
+	name: string,
+	description: string | null,
+	visibility: Visibility,
+	acknowledgePublic: boolean,
+	/**  만들 곳(D-184). 없으면 내 계정, 있으면 그 조직(`valid_owner`). 없으면 직렬화하지 않는다. */
+	owner?: string | null,
 };
 
 export type RecentProject = {

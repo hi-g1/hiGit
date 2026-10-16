@@ -428,6 +428,7 @@ fn action_input_tags_match_registry() {
             description: None,
             visibility: higit_core::view::Visibility::Private,
             acknowledge_public: false,
+            owner: None,
         }),
     ];
     samples.iter().for_each(every_variant);

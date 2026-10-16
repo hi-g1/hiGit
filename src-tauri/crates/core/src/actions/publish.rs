@@ -109,6 +109,12 @@ impl Action for PublishAction {
                 "공개 저장소는 한 번 더 확인해 주세요",
             ));
         }
+        // 만들 곳: 없으면 내 계정, 있으면 조직(D-184). 이름은 보내기 전에 검사한다.
+        let org = match i.owner.as_deref().map(str::trim) {
+            None | Some("") => None,
+            Some(org) if hosting::valid_owner(org) => Some(org.to_string()),
+            Some(_) => return Err(CoreError::InvalidInput("조직 이름")),
+        };
         let status = ctx.github.status();
         let login = match (status.connected, status.login) {
             (true, Some(login)) => login,
@@ -123,7 +129,9 @@ impl Action for PublishAction {
             name,
             description,
             private: i.visibility == Visibility::Private,
-            owner: hosting::RepoOwner::Me,
+            owner: org
+                .clone()
+                .map_or(hosting::RepoOwner::Me, hosting::RepoOwner::Org),
         };
         let created = ctx
             .github
@@ -143,10 +151,19 @@ impl Action for PublishAction {
                     kind: GithubFailure::RepoInvalid,
                     detail,
                 },
+                // 조직이 앱을 막았거나 만들 권한이 없다.
+                CoreError::Github {
+                    kind: GithubFailure::Forbidden,
+                    detail,
+                } if org.is_some() => CoreError::Github {
+                    kind: GithubFailure::OrgForbidden,
+                    detail,
+                },
                 other => other,
             })?;
-        // 내 계정의 저장소여야 한다. 주소는 검사한 소유자·이름으로만 만든다.
-        if !created.owner.eq_ignore_ascii_case(&login) {
+        // 고른 곳(내 계정이나 조직)의 저장소여야 한다. 주소는 검사한 소유자·이름으로만 만든다.
+        let expected_owner = org.as_deref().unwrap_or(&login);
+        if !created.owner.eq_ignore_ascii_case(expected_owner) {
             return Err(CoreError::Github {
                 kind: GithubFailure::BadResponse,
                 detail: Some("unexpected owner".into()),

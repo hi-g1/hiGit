@@ -78,6 +78,7 @@ fn publish(
             description: Some("설명 \"따옴표\"".into()),
             visibility,
             acknowledge_public: ack,
+            owner: None,
         }),
         None,
     )
@@ -221,4 +222,80 @@ fn draft_suggests_a_name_and_counts() {
     assert!(draft.connected && draft.configured);
     assert_eq!(draft.login.as_deref(), Some("octocat"));
     assert_eq!(draft.branch.as_deref(), Some("main"));
+}
+
+fn publish_to(f: &Fixture, owner: &str) -> higit_core::Result<ActionResult> {
+    f.core.execute(
+        f.dir.path(),
+        &ActionInput::Publish(PublishInput {
+            name: "tool".into(),
+            description: None,
+            visibility: Visibility::Private,
+            acknowledge_public: false,
+            owner: Some(owner.into()),
+        }),
+        None,
+    )
+}
+
+#[test]
+fn publishes_to_an_organization() {
+    let f = fixture(true, true);
+    f.fake.push_json(
+        201,
+        r#"{"name":"tool","owner":{"login":"My-Org","type":"Organization"},"private":true}"#,
+    );
+    assert_eq!(
+        publish_to(&f, "my-org").unwrap(),
+        ActionResult::Published {
+            owner: "My-Org".into(),
+            name: "tool".into()
+        }
+    );
+    assert_eq!(
+        f.fake.requests()[0].url,
+        "https://api.github.com/orgs/my-org/repos"
+    );
+    assert_eq!(
+        origin(f.dir.path()).as_deref(),
+        Some("https://github.com/My-Org/tool.git")
+    );
+}
+
+#[test]
+fn organization_refusals() {
+    // 조직이 앱을 막았거나 권한이 없음.
+    let f = fixture(true, true);
+    f.fake.push_json(
+        403,
+        r#"{"message":"Must have admin rights to Repository."}"#,
+    );
+    assert_eq!(
+        code(&publish_to(&f, "my-org").unwrap_err()),
+        ErrorCode::GithubOrgForbidden
+    );
+    // 다른 곳에 만들어졌다는 응답은 받지 않는다.
+    f.fake
+        .push_json(201, r#"{"name":"tool","owner":{"login":"someone"}}"#);
+    assert_eq!(
+        code(&publish_to(&f, "my-org").unwrap_err()),
+        ErrorCode::GithubBadResponse
+    );
+    assert_eq!(origin(f.dir.path()), None);
+    // 이름 중복은 그대로.
+    f.fake.push_json(422, r#"{"message":"Repository creation failed.","errors":[{"message":"name already exists on this account"}]}"#);
+    assert_eq!(
+        code(&publish_to(&f, "my-org").unwrap_err()),
+        ErrorCode::GithubRepoExists
+    );
+    // 조직 이름 규칙에 맞지 않으면 보내지 않는다.
+    let g = fixture(true, true);
+    for bad in ["-a", "a/b", &"a".repeat(40)] {
+        assert_eq!(
+            code(&publish_to(&g, bad).unwrap_err()),
+            ErrorCode::InvalidInput,
+            "{bad}"
+        );
+    }
+    assert!(g.fake.requests().is_empty());
 }

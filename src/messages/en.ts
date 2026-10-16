@@ -552,6 +552,7 @@ export const en: Messages = {
     prNotMergeable: "It can't be combined right now. Check the reason on GitHub.",
     prHeadChanged: "A new version was uploaded in the meantime. Please check again.",
     prNotOpen: `This ${t("pr").toLowerCase()} isn't open.`,
+    githubOrgForbidden: "You can't create a repository in this organization. An organization admin needs to allow this app.",
     forkNotReady: "The fork isn't ready yet. Please try again in a moment.",
     forkRemoteTaken: "The remote name fork already points to another address.",
     forkParentMismatch: "This fork isn't a copy of the origin repository.",

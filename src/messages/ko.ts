@@ -593,6 +593,7 @@ export const ko = {
     prNotMergeable: "지금은 합칠 수 없어요. GitHub에서 까닭을 봐 주세요.",
     prHeadChanged: "그사이 새 버전이 올라왔어요. 다시 확인해 주세요.",
     prNotOpen: `열린 ${t("pr")}이 아니에요.`,
+    githubOrgForbidden: "이 조직에 저장소를 만들 수 없어요. 조직 관리자가 이 앱을 허용해야 해요.",
     forkNotReady: `${josa(t("fork"), "이/가")} 아직 준비되지 않았어요. 잠시 뒤 다시 눌러 주세요.`,
     forkRemoteTaken: `원격 저장소 이름 fork가 이미 다른 주소에 쓰이고 있어요.`,
     forkParentMismatch: `이 ${josa(t("fork"), "은/는")} origin 저장소의 복사본이 아니에요.`,

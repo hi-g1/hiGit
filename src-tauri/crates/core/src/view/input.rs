@@ -470,6 +470,9 @@ pub struct PublishInput {
     pub visibility: Visibility,
     #[serde(default)]
     pub acknowledge_public: bool,
+    /// 만들 곳(D-184). 없으면 내 계정, 있으면 그 조직(`valid_owner`). 없으면 직렬화하지 않는다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
 }
 
 /// 태그 올리기 입력(D-131).

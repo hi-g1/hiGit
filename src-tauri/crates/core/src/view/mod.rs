@@ -744,6 +744,7 @@ pub enum ErrorCode {
     ForkNotReady,
     ForkRemoteTaken,
     ForkParentMismatch,
+    GithubOrgForbidden,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -962,6 +963,7 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::ForkNotReady => ErrorCode::ForkNotReady,
         G::ForkRemoteTaken => ErrorCode::ForkRemoteTaken,
         G::ForkParentMismatch => ErrorCode::ForkParentMismatch,
+        G::OrgForbidden => ErrorCode::GithubOrgForbidden,
     }
 }
 
