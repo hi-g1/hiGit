@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G6 끝 (hosting 검토 요청 목록·상세·만들기, 리디렉트는 같은 API 주소 안에서만)
-- 마지막 커밋: (이 갱신과 같은 커밋) hosting: add pull request list, detail and create
-- 다음 할 일: G7 ureq 전송 → G8a 실패 종류·G8b 취소 표시 분리(작업 트리에 준비됨) → G8c … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G7 끝 (hosting `UreqTransport`: https만·리디렉트 안 따름·연결 5초·전체 15초·본문 2MB)
+- 마지막 커밋: (이 갱신과 같은 커밋) hosting: add ureq transport with limits
+- 다음 할 일: G8a 실패 종류·G8b 취소 표시 분리(작업 트리에 준비됨) → G8c 원격 주소·인증 방식 → G9 복제 … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -174,7 +174,7 @@
 - [x] G4 hosting `parse_remote`(호스트만 보고 GitHub 판정)·`HostingError`(종류+앞 200자 설명)·`HttpTransport`·`GitHubConfig`(client id 영숫자 8~64자)
 - [x] G5 `HostingProvider`(id·detect·begin_login·poll_login·current_user)·`GitHub`, 응답 검사(verification_uri 정확 일치, user_code 모양, 시간 보정), 시험용 `hosting::testing::FakeTransport`
 - [x] G6 `list_prs`·`pr_detail`(check-runs 403·404면 시험 결과 없음)·`create_pr`(serde로만 JSON), 422 나눔, 같은 API 주소 안 리디렉트 3번까지
-- [ ] G7 ureq 전송
+- [x] G7 `UreqTransport`(rustls ring + OS 인증서, 환경 변수 프록시, Authorization은 bearer 칸에서만, 오류에 URL 없음), 로컬 TcpListener 시험
 - [ ] G8a 실패 종류 / G8b 취소 표시 분리 / G8c 원격 주소·인증 방식 / G9 복제(git)
 - [ ] G10a 연결 서비스 / G10b 연결 명령 / G11 helper / G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
