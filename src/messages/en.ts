@@ -355,6 +355,8 @@ export const en: Messages = {
     prNoDifference: `There are no different versions between the two ${t("branch").toLowerCase()}es.`,
     prInvalid: `Could not create the ${t("pr").toLowerCase()}. Please check your input.`,
     notGithubRemote: `This ${t("branch").toLowerCase()}'s ${t("remote").toLowerCase()} isn't on GitHub.`,
+    notPushed: `Some versions haven't been sent with ${t("push")} yet. Use ${t("push")} first.`,
+    prSameBranch: `A ${t("pr").toLowerCase()} can't be made between the same ${t("branch").toLowerCase()}.`,
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",
     invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,

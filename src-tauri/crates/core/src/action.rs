@@ -184,6 +184,10 @@ pub enum Outcome {
     ParkedRecovered {
         count: u32,
     },
+    /// 검토 요청을 만들었다(번호만, 페이지는 core가 번호로 연다).
+    PrCreated {
+        number: u32,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -213,7 +217,9 @@ impl Outcome {
             // 꺼내기는 HEAD를 바꾸지 않아 앞선 되돌리기를 막지 않는다.
             Outcome::TookOut => JournalMode::Skip,
             // HEAD·브랜치를 바꾸지 않는다. 경계를 남기면 앞선 되돌리기가 까닭 없이 막힌다(C13).
-            Outcome::LocksCleared { .. } | Outcome::ParkedRecovered { .. } => JournalMode::Skip,
+            Outcome::LocksCleared { .. }
+            | Outcome::ParkedRecovered { .. }
+            | Outcome::PrCreated { .. } => JournalMode::Skip,
             // 맡긴 ref를 지웠다. 그 앞의 갈아타기를 되돌리면 맡긴 파일이 엉키므로 경계를 둔다.
             Outcome::ParkedResolved => JournalMode::Barrier,
             _ => JournalMode::Journal,

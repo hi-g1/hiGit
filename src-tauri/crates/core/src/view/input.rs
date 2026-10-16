@@ -13,6 +13,8 @@ pub enum ActionInput {
     Init,
     /// 원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115).
     Clone(CloneInput),
+    /// 올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113).
+    PrCreate(PrCreateInput),
     Stage(PathsInput),
     Unstage(PathsInput),
     Commit(CommitInput),
@@ -70,6 +72,7 @@ impl ActionInput {
         match self {
             ActionInput::Init => "init",
             ActionInput::Clone(_) => "clone",
+            ActionInput::PrCreate(_) => "pr-create",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
@@ -205,6 +208,17 @@ pub struct BranchCreateInput {
     /// 시작할 버전(노선도의 역, 작업 내역). 없으면 지금 버전에서 만들고 고친 파일이 따라간다.
     #[serde(default)]
     pub from: Option<String>,
+}
+
+/// 새 검토 요청 입력. head는 core가 지금 브랜치의 upstream으로 정한다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrCreateInput {
+    pub title: String,
+    pub body: String,
+    /// 합칠 대상 원격 브랜치 이름.
+    pub base: String,
+    pub draft: bool,
 }
 
 /// 복제 입력. 주소와 폴더 이름은 core가 검사한다.

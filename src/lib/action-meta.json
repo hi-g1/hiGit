@@ -184,5 +184,11 @@
     "glossaryId": "clone",
     "risk": "safe",
     "undo": "nothing"
+  },
+  {
+    "id": "pr-create",
+    "glossaryId": "pr",
+    "risk": "safe",
+    "undo": "nothing"
   }
 ]

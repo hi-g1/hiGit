@@ -621,7 +621,7 @@ impl Core {
         let token = preview_token.map(PreviewToken);
         // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
-            "fetch" | "push" => Locks::Network,
+            "fetch" | "push" | "pr-create" => Locks::Network,
             // 잠금 정리는 앱의 다른 작업이 하나도 없을 때만(D-081).
             "pull" | "sync" | "clear-lock" => Locks::Both,
             _ => Locks::Worktree,

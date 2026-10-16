@@ -281,3 +281,165 @@ fn queries_need_an_opened_repo() {
         assert_eq!(code(&err), ErrorCode::NotOpened);
     }
 }
+
+/// 기능 브랜치를 만들고 버전 하나를 더한 뒤 올린 것처럼 둔다.
+fn feature_pushed(p: &Path) {
+    git(p, &["switch", "-q", "-c", "feature/x"]);
+    commit(p, "b.txt", "기능");
+    git(p, &["update-ref", "refs/remotes/origin/feature/x", "HEAD"]);
+    git(p, &["config", "branch.feature/x.remote", "origin"]);
+    git(
+        p,
+        &["config", "branch.feature/x.merge", "refs/heads/feature/x"],
+    );
+}
+
+fn create(title: &str, base: &str) -> higit_core::view::ActionInput {
+    higit_core::view::ActionInput::PrCreate(higit_core::view::PrCreateInput {
+        title: title.into(),
+        body: "본문\n\"따옴표\"".into(),
+        base: base.into(),
+        draft: true,
+    })
+}
+
+#[test]
+fn pr_create_sends_remote_branch_as_head() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    feature_pushed(dir.path());
+    let f = core(dir.path(), true);
+    f.fake.push_json(201, &pull_json(12, "feature/x", "octo"));
+    let result = f
+        .core
+        .execute(dir.path(), &create(" 기능 추가 ", "main"), None)
+        .unwrap();
+    assert_eq!(
+        result,
+        higit_core::view::ActionResult::PrCreated { number: 12 }
+    );
+    let reqs = f.fake.requests();
+    assert_eq!(reqs.len(), 1);
+    assert_eq!(reqs[0].url, "https://api.github.com/repos/octo/hello/pulls");
+    let sent: serde_json::Value = serde_json::from_slice(reqs[0].body.as_ref().unwrap()).unwrap();
+    assert_eq!(sent["title"], "기능 추가");
+    assert_eq!(sent["head"], "feature/x");
+    assert_eq!(sent["base"], "main");
+    assert_eq!(sent["body"], "본문\n\"따옴표\"");
+    assert_eq!(sent["draft"], true);
+}
+
+#[test]
+fn pr_create_refuses_before_sending() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let p = dir.path();
+    let f = core(p, true);
+    // 기본 브랜치에서는 만들지 않는다.
+    let err = f
+        .core
+        .execute(p, &create("t", "develop"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PrSameBranch);
+
+    // 올린 적 없는 브랜치
+    git(p, &["switch", "-q", "-c", "local-only"]);
+    commit(p, "c.txt", "로컬");
+    let err = f.core.execute(p, &create("t", "main"), None).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::NotPushed);
+
+    // 올린 뒤 버전을 더했다
+    git(p, &["switch", "-q", "main"]);
+    feature_pushed(p);
+    commit(p, "d.txt", "안 올림");
+    let err = f.core.execute(p, &create("t", "main"), None).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::NotPushed);
+    git(p, &["update-ref", "refs/remotes/origin/feature/x", "HEAD"]);
+
+    for (title, base, want) in [
+        ("", "main", ErrorCode::InvalidInput),
+        ("   ", "main", ErrorCode::InvalidInput),
+        (&"가".repeat(86)[..], "main", ErrorCode::InvalidInput),
+        ("a\0b", "main", ErrorCode::InvalidInput),
+        ("a\nb", "main", ErrorCode::InvalidInput),
+        ("t", "없는-브랜치", ErrorCode::InvalidInput),
+        ("t", "bad name", ErrorCode::InvalidInput),
+        ("t", "feature/x", ErrorCode::PrSameBranch),
+    ] {
+        let err = f.core.execute(p, &create(title, base), None).unwrap_err();
+        assert_eq!(code(&err), want, "{title:?} {base:?}");
+    }
+    assert!(
+        f.fake.requests().is_empty(),
+        "검사에서 걸리면 보내지 않는다"
+    );
+}
+
+#[test]
+fn pr_create_maps_server_answers() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    feature_pushed(dir.path());
+    let cases = [
+        (
+            422,
+            r#"{"errors":[{"message":"A pull request already exists for octo:feature/x."}]}"#,
+            ErrorCode::PrAlreadyExists,
+        ),
+        (
+            422,
+            r#"{"errors":[{"message":"No commits between main and feature/x"}]}"#,
+            ErrorCode::PrNoDifference,
+        ),
+        (
+            422,
+            r#"{"errors":[{"code":"custom"}]}"#,
+            ErrorCode::PrInvalid,
+        ),
+        (500, "oops", ErrorCode::GithubUnavailable),
+    ];
+    for (status, body, want) in cases {
+        let f = core(dir.path(), true);
+        f.fake.push_json(status, body);
+        let err = f
+            .core
+            .execute(dir.path(), &create("t", "main"), None)
+            .unwrap_err();
+        assert_eq!(code(&err), want, "{body}");
+        assert!(!format!("{err:?} {:?}", ErrorView::from(&err)).contains(TOKEN));
+    }
+    let f = core(dir.path(), true);
+    f.fake.push_json(401, "{}");
+    let err = f
+        .core
+        .execute(dir.path(), &create("t", "main"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::GithubExpired);
+    assert!(!f.core.github_status().connected);
+
+    let f = core(dir.path(), false);
+    let err = f
+        .core
+        .execute(dir.path(), &create("t", "main"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::GithubNotConnected);
+}
+
+#[test]
+fn pr_create_needs_a_difference_and_a_github_remote() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let p = dir.path();
+    git(p, &["switch", "-q", "-c", "same"]);
+    git(p, &["update-ref", "refs/remotes/origin/same", "HEAD"]);
+    git(p, &["config", "branch.same.remote", "origin"]);
+    git(p, &["config", "branch.same.merge", "refs/heads/same"]);
+    let f = core(p, true);
+    let err = f.core.execute(p, &create("t", "main"), None).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PrNoDifference);
+
+    let gitlab = repo(Some("https://gitlab.com/octo/hello.git"));
+    feature_pushed(gitlab.path());
+    let f = core(gitlab.path(), true);
+    let err = f
+        .core
+        .execute(gitlab.path(), &create("t", "main"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::NotGithubRemote);
+}

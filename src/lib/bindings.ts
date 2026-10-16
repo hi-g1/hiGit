@@ -97,7 +97,9 @@ export type ActionInput =
 /**  관리 시작. 입력 없음. */
 { id: "init" } | 
 /**  원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115). */
-{ id: "clone"; input: CloneInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
+{ id: "clone"; input: CloneInput } | 
+/**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
+{ id: "pr-create"; input: PrCreateInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
 { id: "ignore"; input: PathsInput } | 
 /**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
@@ -173,7 +175,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "parkedRecovered"; count: number };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -440,7 +442,11 @@ export type DiffRequest = {
 
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
-"notGithubRemote" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+"notGithubRemote" | 
+/**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
+"notPushed" | 
+/**  검토 요청의 head와 대상이 같거나 head가 기본 브랜치다. */
+"prSameBranch" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
 "cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
@@ -682,6 +688,15 @@ export type PendingWorkView = {
 	leftoverParked: number,
 	/**  다른 도구가 시작해 앱이 끝낼 수 없는 작업. */
 	otherOperation: OtherOperation | null,
+};
+
+/**  새 검토 요청 입력. head는 core가 지금 브랜치의 upstream으로 정한다. */
+export type PrCreateInput = {
+	title: string,
+	body: string,
+	/**  합칠 대상 원격 브랜치 이름. */
+	base: string,
+	draft: boolean,
 };
 
 export type PrDetailView = {

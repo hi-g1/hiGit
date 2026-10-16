@@ -185,6 +185,10 @@ pub enum GithubFailure {
     PrInvalid,
     /// 지금 브랜치가 올리는 원격이 github.com이 아니다.
     NotGithubRemote,
+    /// 아직 올리지 않은 버전이 있거나 올린 적이 없다.
+    NotPushed,
+    /// head와 대상이 같거나 head가 기본 브랜치다.
+    PrSameBranch,
 }
 
 impl CoreError {

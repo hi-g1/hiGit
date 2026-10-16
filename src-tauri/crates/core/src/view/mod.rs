@@ -36,9 +36,9 @@ pub use hosting::{
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice,
-    MergeInput, MergeIntoInput, OidInput, PathsInput, RestoreInput, RewriteInput, RewriteKindInput,
-    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TakeOutInput,
-    TakeOutSource,
+    MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput, RestoreInput, RewriteInput,
+    RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput,
+    TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -528,6 +528,9 @@ pub enum ActionResult {
     LocksCleared {
         count: u32,
     },
+    PrCreated {
+        number: u32,
+    },
     ParkedRecovered {
         count: u32,
     },
@@ -599,6 +602,7 @@ impl From<Outcome> for ActionResult {
             Outcome::Discarded { count } => ActionResult::Discarded { count },
             Outcome::Restored => ActionResult::Restored,
             Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
+            Outcome::PrCreated { number } => ActionResult::PrCreated { number },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
         }
     }
@@ -663,6 +667,10 @@ pub enum ErrorCode {
     PrInvalid,
     /// 지금 브랜치가 올리는 원격이 github.com이 아니다.
     NotGithubRemote,
+    /// 아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다).
+    NotPushed,
+    /// 검토 요청의 head와 대상이 같거나 head가 기본 브랜치다.
+    PrSameBranch,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -810,6 +818,8 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::PrNoDifference => ErrorCode::PrNoDifference,
         G::PrInvalid => ErrorCode::PrInvalid,
         G::NotGithubRemote => ErrorCode::NotGithubRemote,
+        G::NotPushed => ErrorCode::NotPushed,
+        G::PrSameBranch => ErrorCode::PrSameBranch,
     }
 }
 

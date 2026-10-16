@@ -247,6 +247,7 @@ fn action_input_tags_match_registry() {
         match input {
             ActionInput::Init
             | ActionInput::Clone(_)
+            | ActionInput::PrCreate(_)
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
@@ -287,6 +288,12 @@ fn action_input_tags_match_registry() {
             url: "https://github.com/octo/hello.git".into(),
             name: "hello".into(),
             accept_old_git: false,
+        }),
+        ActionInput::PrCreate(higit_core::view::PrCreateInput {
+            title: "제목".into(),
+            body: String::new(),
+            base: "main".into(),
+            draft: false,
         }),
         ActionInput::Stage(paths.clone()),
         ActionInput::Unstage(paths.clone()),
