@@ -481,7 +481,9 @@ fn take_out_refuses_paths_into_the_git_folder() {
         )
         .unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
-    assert!(!dir.join(".GIT").exists());
+    // Windows는 `.GIT`과 `.git`이 같은 폴더다: 설정 파일이 덮어써지지 않았는지 본다.
+    let config = std::fs::read_to_string(dir.join(".git/config")).unwrap();
+    assert!(config.contains("repositoryformatversion"), "{config}");
     assert_eq!(git(dir, &["rev-parse", "refs/higit/parked/main"]), evil);
     let err = core
         .execute(

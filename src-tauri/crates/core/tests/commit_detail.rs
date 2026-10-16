@@ -105,7 +105,12 @@ fn bad_hashes_unopened_repos_and_limits() {
     for i in 0..501 {
         std::fs::write(dir.join(format!("{i:03}.txt")), "x").unwrap();
     }
-    let many = commit_all(dir, &"긴 메시지 ".repeat(8000));
+    // 긴 메시지는 파일로 넘긴다(Windows 명령줄은 32K 글자까지).
+    let note = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(note.path(), "긴 메시지 ".repeat(8000)).unwrap();
+    git(dir, &["add", "-A"]);
+    git(dir, &["commit", "-q", "-F", &note.path().to_string_lossy()]);
+    let many = git(dir, &["rev-parse", "HEAD"]);
     let core = core(dir);
     let d = core.queries().commit_detail(dir, &many).unwrap();
     assert_eq!((d.files.len(), d.more_files), (500, 1));
