@@ -883,6 +883,7 @@
 - 상태: 확정
 - 날짜: 2026-10-16
 - 결정: 새 의존성은 `hosting`·`platform` 안에만 둔다. HTTP는 `ureq` 3(블로킹, 기본 기능을 끄고 rustls와 OS 인증서 확인만), 비밀은 `secrecy`, 키체인은 `keyring-core`와 Windows `windows-native-keyring-store`, Linux `zbus-secret-service-keyring-store`(순수 Rust, `zbus`는 이미 트리에 있음, 런타임은 `async-io`). `keyring` 본체 크레이트는 쓰지 않는다(v4부터 라이브러리가 `keyring-core`로 옮겨졌다). 정확한 버전·기능과 `cargo deny` 허용 라이선스는 두 OS CI와 `deny check` 결과로 정하고 `THIRD_PARTY_NOTICES.md`에 더한다. 막히면 `ring` → `native-tls`, zbus 스토어 → dbus 스토어 순서로 바꾼다.
+- 확정 내용(G2): `ureq` 3.4는 `rustls-no-provider`·`platform-verifier` 기능만 켜고, 암호 구현은 `rustls` 0.23의 `ring` 기능으로 직접 고른다(ureq의 `rustls` 기능은 webpki-roots 인증서 묶음까지 끌고 와서 쓰지 않는다). keyring-core 1.0, windows-native-keyring-store 1.1(기본 기능 끔), zbus-secret-service-keyring-store 1.0(`rt-async-io-crypto-rust`), secrecy 0.10. 새 크레이트 라이선스는 모두 기존 허용 목록 안이라 `deny.toml`은 그대로다.
 - 이유: 앱의 동기 core 구조에 맞고 의존성이 적다. rustls와 순수 Rust 스토어는 시스템 라이브러리 없이 Windows와 Ubuntu 최소 설치에서 같게 빌드된다.
 - 대안: `reqwest`(tokio·hyper), `native-tls`, `dbus-secret-service-keyring-store`(libdbus 필요).
 - 영향: D-038, D-040(키체인 크레이트 이름을 보완, 계획 009 C2).

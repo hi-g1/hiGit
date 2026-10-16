@@ -215,3 +215,41 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
+
+## Rust 라이브러리: GitHub 연결(반복 4)
+
+GitHub API 호출과 토큰 보관에 쓰는 크레이트입니다. 라이선스 원문은 각 크레이트 소스의 `LICENSE*` 파일에 있습니다.
+인증서는 OS 저장소로 확인하므로 별도 인증서 묶음(webpki-roots)은 포함하지 않습니다.
+
+| 크레이트 | 버전 | 쓰는 곳 | 라이선스 | 출처 |
+| --- | --- | --- | --- | --- |
+| ureq | 3.4 | HTTP | MIT OR Apache-2.0 | https://github.com/algesten/ureq |
+| rustls | 0.23 | TLS | Apache-2.0 OR ISC OR MIT | https://github.com/rustls/rustls |
+| rustls-webpki | 0.103 | 인증서 검증 | ISC | https://github.com/rustls/webpki |
+| rustls-platform-verifier | 0.7 | OS 인증서 저장소 | MIT OR Apache-2.0 | https://github.com/rustls/rustls-platform-verifier |
+| ring | 0.17 | 암호 구현 | Apache-2.0 AND ISC (BoringSSL 유래 코드 포함) | https://github.com/briansmith/ring |
+| secrecy | 0.10 | 토큰 감싸기 | Apache-2.0 OR MIT | https://github.com/iqlusioninc/crates/tree/main/secrecy |
+| keyring-core | 1.0 | OS 키체인 | MIT OR Apache-2.0 | https://github.com/open-source-cooperative/keyring-core |
+| windows-native-keyring-store | 1.1 | Windows 자격 증명 관리자 | MIT OR Apache-2.0 | https://github.com/open-source-cooperative/windows-native-keyring-store |
+| zbus-secret-service-keyring-store | 1.0 | Linux Secret Service | MIT OR Apache-2.0 | https://github.com/open-source-cooperative/zbus-secret-service-keyring-store |
+| secret-service | 5.2 | Linux Secret Service | MIT OR Apache-2.0 | https://github.com/hwchen/secret-service-rs |
+
+### ring
+
+```
+Copyright 2015-2025 Brian Smith.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
+
+BoringSSL에서 가져온 코드는 Apache License 2.0을 따릅니다(ring 소스의 `LICENSE-BoringSSL`).

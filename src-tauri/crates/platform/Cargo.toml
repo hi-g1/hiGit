@@ -10,10 +10,19 @@ publish = false
 which = { workspace = true }
 dunce = { workspace = true }
 dirs = { workspace = true }
+keyring-core = { workspace = true }
+secrecy = { workspace = true }
 
 # 프로세스 그룹째 끝내기(D-041). unsafe 없는 API라 platform의 forbid(unsafe_code)를 지킨다.
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["process"] }
+
+# OS 키체인 저장소(D-110). Windows 자격 증명 관리자, Linux Secret Service(순수 Rust).
+[target.'cfg(windows)'.dependencies]
+windows-native-keyring-store = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus-secret-service-keyring-store = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

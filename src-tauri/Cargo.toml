@@ -67,6 +67,15 @@ notify = "8.2"
 notify-debouncer-full = "0.7"
 ignore = "0.4"
 serde = { version = "1.0", features = ["derive"] }
+# 반복 4(D-110): GitHub API용 HTTP(블로킹, rustls + OS 인증서 확인), 토큰 감싸기, OS 키체인.
+# ureq의 `rustls` 기능은 webpki-roots 인증서 묶음까지 끌고 오므로 provider 없는 쪽을 쓰고
+# 암호 구현(`ring`)은 rustls에서 직접 고른다. 인증서는 OS 저장소로 확인한다.
+ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+secrecy = "0.10"
+keyring-core = "1.0"
+windows-native-keyring-store = { version = "1.1", default-features = false }
+zbus-secret-service-keyring-store = { version = "1.0", features = ["rt-async-io-crypto-rust"] }
 # 바인딩 생성(D-019): RC라서 정확한 버전으로 고정한다. 세 크레이트는 함께 올린다.
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "=0.0.12"
