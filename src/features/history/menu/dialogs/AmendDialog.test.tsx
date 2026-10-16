@@ -47,6 +47,7 @@ function open(stagedFiles = 0) {
   const ctx: MenuCtx = {
     repo: "/r",
     toast: vi.fn(),
+    toastError: vi.fn(),
     queryClient: new QueryClient(),
     onDone: vi.fn(),
     ask: vi.fn(),

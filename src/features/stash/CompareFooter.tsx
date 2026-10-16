@@ -1,7 +1,7 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ApiError, api, type ChangedFile } from "../../lib/api";
+import { api, type ChangedFile } from "../../lib/api";
 import { useStashes } from "../../lib/queries";
 import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
@@ -30,6 +30,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const setView = useRepoStore((s) => s.setView);
   const stashes = useStashes(repo).data?.items ?? [];
   const [confirm, setConfirm] = useState<{ token: string } | null>(null);
@@ -42,7 +43,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
       void queryClient.invalidateQueries({ queryKey: [key, repo] });
     }
   };
-  const fail = (e: unknown) => show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+  const fail = (e: unknown) => showError(e);
 
   const stash = async () => {
     setPending(true);

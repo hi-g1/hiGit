@@ -11,7 +11,6 @@ import { AppProviders, createQueryClient } from "../../App";
 import { api, type BranchListView, type BranchRow } from "../../lib/api";
 import { ApiError } from "../../lib/api";
 import { ko } from "../../messages/ko";
-import { useToastStore } from "../../ui/toastStore";
 import { BranchList } from "./BranchList";
 
 const row = (name: string, over: Partial<BranchRow> = {}): BranchRow => ({
@@ -204,7 +203,7 @@ describe("브랜치 목록", () => {
       vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "branchProtected", detail: null }));
       await openMenu("결제 수정");
       await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 지우기" }));
-      await waitFor(() => expect(useToastStore.getState().toast?.text).toBe(ko.errors.branchProtected));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(ko.errors.branchProtected));
     });
   });
 });

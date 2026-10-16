@@ -26,6 +26,29 @@
   font-size: var(--font-size-md);
 }
 
+/* 오류 토스트(D-166): 성공과 다른 모양. 보통 바탕 위 알림 판, 닫을 때까지 남는다 */
+.errorToast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: min(35rem, calc(100vw - 2 * var(--space-4)));
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
+  font-size: var(--font-size-md);
+}
+
+.errorToast > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.close {
+  flex: none;
+  margin: var(--space-2) var(--space-2) 0 0;
+}
+
 /* 어두운 바탕 위의 단축키는 글자색을 따른다(r-saved.png) */
 .toast kbd {
   color: inherit;

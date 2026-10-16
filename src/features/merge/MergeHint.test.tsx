@@ -8,7 +8,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
-import { ApiError, api, type MergeHintView } from "../../lib/api";
+import { ApiError, api, toApiError, type MergeHintView } from "../../lib/api";
 import { useToastStore } from "../../ui/toastStore";
 import { MergeHint } from "./MergeHint";
 
@@ -60,7 +60,9 @@ describe("합치기 제안", () => {
     show(hint());
     vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "stagedChanges", detail: null }));
     await userEvent.click(await screen.findByRole("button", { name: "main 가져와 합치기" }));
-    await vi.waitFor(() => expect(useToastStore.getState().toast?.text).toContain("이번 버전에 넣은 파일이 있어요"));
+    await vi.waitFor(() =>
+      expect(toApiError(useToastStore.getState().toast?.error?.value).code).toBe("stagedChanges"),
+    );
   });
 
   it("내 쪽만 앞서 있거나 제안이 없으면 노선도 옆에는 아무것도 없다", async () => {

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { ApiError, api } from "../../lib/api";
+import { api } from "../../lib/api";
 import { queryKeys, usePendingWork } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
@@ -24,6 +24,7 @@ export function PendingNotice({ repo, otherConflicts }: Props) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const pending = usePendingWork(repo).data;
   const dismissed = usePendingStore((s) => s.dismissed);
   const dismiss = usePendingStore((s) => s.dismiss);
@@ -35,7 +36,7 @@ export function PendingNotice({ repo, otherConflicts }: Props) {
       const result = await api.executeAction(repo, { id: "recover-parked" });
       if (result.kind === "parkedRecovered") show(m.parkedRecovered(result.count));
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setBusy(false);
       for (const key of [queryKeys.pendingWork(repo), queryKeys.stashes(repo), queryKeys.branches(repo)]) {

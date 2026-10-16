@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, api, type BranchView } from "../../lib/api";
+import { api, type BranchView } from "../../lib/api";
 import { formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
@@ -30,7 +30,7 @@ type Props = {
 export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Props) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
-  const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const { overlap, fetchFailedAt } = useSyncStore();
   const sync = useSync(repo);
   useShortcut("sync", sync.run, shortcut);
@@ -42,7 +42,7 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
     try {
       await api.cancelAction(repo);
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     }
   };
 

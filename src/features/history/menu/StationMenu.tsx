@@ -57,7 +57,7 @@ export function StationMenu({ open, onOpenChange, info, env, ctx, items = STATIO
         onSelect={() => {
           // 누른 순간에 바로 돌린다(클립보드는 사람의 동작 안에서만 쓸 수 있다). 실패하면 조용히 묻히지
           // 않게 알린다(액션의 오류는 `runAction`이 이미 알린다).
-          const fail = () => ctx.toast(m.errors.internal);
+          const fail = (e?: unknown) => ctx.toastError(e);
           try {
             void Promise.resolve(item.run(info, ctx)).catch(fail);
           } catch {

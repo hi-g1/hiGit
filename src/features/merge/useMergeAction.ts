@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ApiError, api } from "../../lib/api";
+import { api } from "../../lib/api";
 import { invalidateLog } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -14,7 +14,7 @@ export function useMergeAction(repo: string, onDone: (text: string) => void) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
   const queryClient = useQueryClient();
-  const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const [pending, setPending] = useState(false);
 
   const run = async (kind: "merge" | "merge-into", branch: string) => {
@@ -26,7 +26,7 @@ export function useMergeAction(repo: string, onDone: (text: string) => void) {
           : await api.executeAction(repo, { id: "merge-into", input: { branch } });
       if (result.kind === "merged") onDone(m.merged);
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setPending(false);
       invalidateLog(queryClient, repo);

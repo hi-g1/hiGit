@@ -48,6 +48,7 @@ export function History({
   const scale = useUiScale();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const status = useStatus(repo).data;
   const changedFiles = status?.files.length ?? 0;
   const stagedFiles = status?.files.filter((f) => f.staged).length ?? 0;
@@ -226,6 +227,7 @@ export function History({
   const ctx: MenuCtx = {
     repo,
     toast: show,
+    toastError: showError,
     queryClient,
     onDone,
     ask: (d) => {

@@ -4,7 +4,7 @@ import { backupLabel, groupByDay, restoreInput } from "../../features/activity/m
 import { NewBranchDialog } from "../../features/history/menu/dialogs/NewBranchDialog";
 import type { RunCtx } from "../../features/history/menu/run";
 import type { TermId } from "../../glossary/types";
-import { ApiError, api, type RecoveryItem } from "../../lib/api";
+import { api, type RecoveryItem } from "../../lib/api";
 import { invalidateLog, useActions, useRecovery } from "../../lib/queries";
 import { formatClock, formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
@@ -36,11 +36,12 @@ export function Activity({ repo, onDone }: Props) {
   const setView = useRepoStore((s) => s.setView);
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const [now] = useState(() => Date.now());
   const [pending, setPending] = useState<string | null>(null);
   // "새 브랜치로"로 연 대화상자의 버전.
   const [branchFrom, setBranchFrom] = useState<RecoveryItem | null>(null);
-  const ctx: RunCtx = { repo, toast: show, queryClient, onDone, openActivity: () => setView("activity"), m };
+  const ctx: RunCtx = { repo, toast: show, toastError: showError, queryClient, onDone, openActivity: () => setView("activity"), m };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -65,7 +66,7 @@ export function Activity({ repo, onDone }: Props) {
       if (result.kind === "restored") onDone(m.restored);
       else show(m.tookOutToast);
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setPending(null);
       invalidateLog(queryClient, repo);

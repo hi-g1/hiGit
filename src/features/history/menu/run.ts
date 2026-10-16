@@ -5,7 +5,7 @@ import { invalidateLog } from "../../../lib/queries";
 import type { MenuCtx } from "./items";
 
 /** 실행에 쓰는 것만(역 메뉴 밖의 화면도 쓴다). */
-export type RunCtx = Pick<MenuCtx, "repo" | "toast" | "queryClient" | "onDone" | "openActivity" | "m">;
+export type RunCtx = Pick<MenuCtx, "repo" | "toast" | "toastError" | "queryClient" | "onDone" | "openActivity" | "m">;
 
 export type RunOptions = {
   /** 끝났을 때 토스트 문구. null이면 토스트 없음. */
@@ -32,9 +32,8 @@ export async function runAction(ctx: RunCtx, input: ActionInput, options: RunOpt
   } catch (e) {
     const code: ErrorCode = e instanceof ApiError ? e.code : "internal";
     if (options.onError) options.onError(code);
-    else if (POINT_TO_ACTIVITY.includes(code))
-      ctx.toast(ctx.m.errors[code], { label: ctx.m.openActivity, onClick: ctx.openActivity });
-    else ctx.toast(ctx.m.errors[code]);
+    else if (POINT_TO_ACTIVITY.includes(code)) ctx.toastError(e, { label: ctx.m.openActivity, onClick: ctx.openActivity });
+    else ctx.toastError(e);
     return null;
   } finally {
     invalidateLog(ctx.queryClient, ctx.repo);

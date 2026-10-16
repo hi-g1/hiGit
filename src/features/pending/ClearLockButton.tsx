@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ApiError, api } from "../../lib/api";
+import { api } from "../../lib/api";
 import { queryKeys, usePendingWork } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
@@ -15,12 +15,13 @@ export function ClearLockButton({ repo }: { repo: string }) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const locks = usePendingWork(repo).data?.staleLocks ?? [];
   const [token, setToken] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   if (locks.length === 0 && token === null) return null;
 
-  const fail = (e: unknown) => show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+  const fail = (e: unknown) => showError(e);
   const refresh = () => {
     for (const key of [queryKeys.pendingWork(repo), queryKeys.status(repo)]) {
       void queryClient.invalidateQueries({ queryKey: key });

@@ -17,6 +17,7 @@ export function useUndo(repo: string) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const setRestoredMessage = useUndoStore((s) => s.setRestoredMessage);
 
   const refresh = useCallback(() => {
@@ -32,12 +33,12 @@ export function useUndo(repo: string) {
       const code = e instanceof ApiError ? e.code : "internal";
       // 앱 밖에서 바뀌었거나 올린 것이면 작업 내역에서 되살린다(D-085).
       if (code === "undoStale" || code === "undoPushed") {
-        show(m.errors[code], { label: m.openActivity, onClick: () => setView("activity") });
+        showError(e, { label: m.openActivity, onClick: () => setView("activity") });
         return;
       }
-      show(m.errors[code]);
+      showError(e);
     },
-    [m, show, setView],
+    [m, showError, setView],
   );
 
   const redo = useCallback(async () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiError, api } from "../../lib/api";
+import { api } from "../../lib/api";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
@@ -13,7 +13,7 @@ import { REMOTE_ACTIONS, STUCK_LOCAL_SECS, useProgress } from "./useProgress";
  */
 export function StuckNotice({ repo }: { repo: string }) {
   const m = useMessages();
-  const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const progress = useProgress(repo);
   const [confirm, setConfirm] = useState(false);
   const stuck =
@@ -25,7 +25,7 @@ export function StuckNotice({ repo }: { repo: string }) {
     try {
       await api.cancelAction(repo);
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     }
   };
 

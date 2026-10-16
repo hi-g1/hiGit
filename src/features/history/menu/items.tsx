@@ -34,6 +34,8 @@ export type MenuEnv = {
 export type MenuCtx = {
   repo: string;
   toast: (text: string, action?: ToastAction) => void;
+  /** 오류 토스트(D-166). */
+  toastError: (error: unknown, action?: ToastAction) => void;
   queryClient: QueryClient;
   /** 실행 뒤 결과 토스트와 되돌리기(useUndo의 notifyDone). 기록을 다시 읽고 선택은 남긴다. */
   onDone: (text: string) => void;

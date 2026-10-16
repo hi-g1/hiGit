@@ -35,6 +35,7 @@ export function Rewrite({ repo, onDone }: Props) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const toast = useToastStore((s) => s.show);
+  const toastError = useToastStore((s) => s.showError);
   const oids = useRepoStore((s) => s.rewriteOids);
   const setView = useRepoStore((s) => s.setView);
   const plan = useRewritePlan(repo, oids);
@@ -55,7 +56,7 @@ export function Rewrite({ repo, onDone }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setView, busy]);
 
-  const ctx: RunCtx = { repo, toast, queryClient, onDone, openActivity: () => setView("activity"), m };
+  const ctx: RunCtx = { repo, toast, toastError, queryClient, onDone, openActivity: () => setView("activity"), m };
   const run = async () => {
     setBusy(true);
     const result = await runAction(ctx, { id: "rebase-i", input: { steps: toInput(cards) } }, { done: () => m.rewritten });

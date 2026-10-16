@@ -1,7 +1,7 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
+import { api, type ActionInput, type BranchListView } from "../../lib/api";
 import { invalidateLog, useBranchNameCheck, useBranches, useHostingContext, useMergeHint } from "../../lib/queries";
 import { formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
@@ -101,6 +101,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
   const [pending, setPending] = useState(false);
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const view = branches.data;
   // 지금 브랜치만 앞서 있으면 "main에 합치기"(D-071). 노선도 옆이 아니라 여기에 둔다(D-048).
   const hint = useMergeHint(repo).data;
@@ -140,7 +141,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       close();
       onDone(choice.kind === "create" ? m.createdBranch(choice.name) : m.switchedTo(choice.item.name));
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setPending(false);
       invalidateLog(queryClient, repo);
@@ -160,7 +161,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       // 지운 줄의 `…`이 사라지므로 찾기 칸으로 돌아간다.
       searchRef.current?.focus();
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setPending(false);
       invalidateLog(queryClient, repo);
@@ -181,7 +182,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       close();
       if (result.kind === "tookOut") show(m.parkedResolved);
     } catch (e) {
-      show(m.errors[e instanceof ApiError ? e.code : "internal"]);
+      showError(e);
     } finally {
       setPending(false);
       for (const key of ["status", "branches", "mergeState", "homeMap"]) {

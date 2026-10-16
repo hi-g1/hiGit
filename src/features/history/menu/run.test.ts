@@ -17,6 +17,7 @@ function context() {
   const ctx: MenuCtx = {
     repo: "/r",
     toast: vi.fn(),
+    toastError: vi.fn(),
     queryClient,
     onDone: vi.fn(),
     ask: vi.fn(),
@@ -53,15 +54,18 @@ describe("runAction", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["mergeState", "/r"] });
   });
 
-  it("오류 코드의 문구로 알리고, 올린 기록은 작업 내역으로 안내한다", async () => {
+  it("오류는 오류 토스트로 알리고, 올린 기록은 작업 내역으로 안내한다(D-166)", async () => {
     const { ctx } = context();
-    vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "branchProtected", detail: null }));
+    const protectedError = new ApiError({ code: "branchProtected", detail: null });
+    vi.mocked(api.executeAction).mockRejectedValue(protectedError);
     expect(await runAction(ctx, { id: "branch-delete", input: { name: "main" } }, { done: () => null })).toBeNull();
-    expect(ctx.toast).toHaveBeenCalledWith(ko.errors.branchProtected);
+    expect(ctx.toastError).toHaveBeenCalledWith(protectedError);
+    expect(ctx.toast).not.toHaveBeenCalled();
 
-    vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "publishedHistory", detail: null }));
+    const published = new ApiError({ code: "publishedHistory", detail: null });
+    vi.mocked(api.executeAction).mockRejectedValue(published);
     await runAction(ctx, { id: "reset", input: { oid: "a".repeat(40) } }, { done: () => null });
-    expect(ctx.toast).toHaveBeenLastCalledWith(ko.errors.publishedHistory, {
+    expect(ctx.toastError).toHaveBeenLastCalledWith(published, {
       label: ko.openActivity,
       onClick: ctx.openActivity,
     });
@@ -74,5 +78,6 @@ describe("runAction", () => {
     await runAction(ctx, { id: "tag", input: { oid: "a".repeat(40), name: "v1" } }, { done: () => null, onError });
     expect(onError).toHaveBeenCalledWith("tagExists");
     expect(ctx.toast).not.toHaveBeenCalled();
+    expect(ctx.toastError).not.toHaveBeenCalled();
   });
 });

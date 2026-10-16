@@ -105,6 +105,7 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     const ctx: MenuCtx = {
       repo: "/r",
       toast: vi.fn(),
+    toastError: vi.fn(),
       queryClient: new QueryClient(),
       onDone: vi.fn(),
       ask: vi.fn(),
