@@ -1380,3 +1380,10 @@
 - 대안: 한글은 Pretendard 그대로(지금), 시스템 글꼴.
 - 영향: D-014(번들 글꼴과 OFL 원문), design.md "글꼴", 계획 012 U30.
 
+
+## D-174 앱 라이선스는 MIT, git은 설치 파일에 넣지 않는다
+- 상태: 확정
+- 날짜: 2026-10-16
+- 결정: 앱 라이선스는 MIT다(저작권자 "hiGit contributors", 2026). 원문은 저장소 루트 `LICENSE`이고 `package.json`과 모든 크레이트(`[workspace.package] license = "MIT"`, 크레이트마다 `license.workspace = true`)에 적는다. `publish = false`는 그대로. 앱에 넣는 글꼴(Pretendard, JetBrains Mono, D2Coding)의 OFL 원문은 `assets/fonts/licenses/`에 두고 설치 파일에도 함께 넣는다(`bundle.resources`, D2Coding은 글꼴을 넣는 012-U30 때). 의존 라이브러리 고지(`THIRD_PARTY_NOTICES`)는 반복 5에서 cargo·pnpm 의존성 목록으로 자동으로 만들어 설치 파일에 넣고(014-R16b), 설정 "정보"의 "오픈 소스 라이선스" 줄이 연다(014-R16c). **git은 설치 파일에 넣지 않는다**: 사용자가 설치한 git을 찾아 쓴다. 나중에 git을 함께 넣게 되면 git은 GPL-2.0이라 원문과 소스 제공 고지가 따로 필요하다.
+- 이유: 사용자 결정.
+- 영향: D-014(글꼴 OFL), D-173(D2Coding), 계획 014.

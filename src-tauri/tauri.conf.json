@@ -29,6 +29,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "../assets/fonts/licenses/Pretendard-OFL.txt": "licenses/Pretendard-OFL.txt",
+      "../assets/fonts/licenses/JetBrainsMono-OFL.txt": "licenses/JetBrainsMono-OFL.txt"
+    },
     "icon": [
       "icons/16x16.png",
       "icons/24x24.png",

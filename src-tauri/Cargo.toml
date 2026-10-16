@@ -4,6 +4,7 @@ description = "hiGit: Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish = false
 # 바이너리가 둘(higit, gen-bindings)이라 tauri dev가 띄울 것을 정한다.
 default-run = "higit"
@@ -48,6 +49,7 @@ panic = "warn"
 
 [workspace.package]
 version = "0.1.0"
+license = "MIT"
 edition = "2024"
 rust-version = "1.99"
 
