@@ -16,6 +16,7 @@ import { useForcePushStore } from "./forcePushStore";
 const plan = (rewrotePublished: boolean): ForcePushPlanView => ({
   allowed: true,
   blocked: null,
+  needsNameConfirm: false,
   branch: "기능",
   remote: "origin",
   remoteBranch: "기능",

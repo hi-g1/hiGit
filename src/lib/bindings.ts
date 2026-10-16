@@ -61,7 +61,7 @@ export const commands = {
 	queryForcePushPlan: (repo: string) => __TAURI_INVOKE<ForcePushPlanView>("query_force_push_plan", { repo }),
 	/**  원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 읽기만 한다. */
 	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
-	/**  GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽기만 한다. */
+	/**  GitHub에 올리기 대화상자의 처음 값(D-132). */
 	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
 	/**  내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다. */
 	queryGithubRepos: (page: number) => __TAURI_INVOKE<GitHubRepoListView>("query_github_repos", { page }),
@@ -71,6 +71,8 @@ export const commands = {
 	queryPrRepo: (repo: string) => __TAURI_INVOKE<PrRepoView>("query_pr_repo", { repo }),
 	/**  검토 요청의 최근 댓글(D-178). `total`은 상세의 대화 댓글 수. */
 	queryPrComments: (repo: string, number: number, total: number) => __TAURI_INVOKE<PrCommentsView>("query_pr_comments", { repo, number, total }),
+	/**  GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽기만 한다. */
+	queryBranchProtection: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<boolean | null>("query_branch_protection", { repo, remote, branch }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -179,11 +181,11 @@ export type ActionInput_Deserialize =
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
 { id: "branch-rename"; input: BranchRenameInput } | 
 /**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
-{ id: "force-push"; input: ForcePushInput } | 
+{ id: "force-push"; input: ForcePushInput_Deserialize } | 
 /**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
-{ id: "remote-branch-delete"; input: RemoteBranchInput } | 
+{ id: "remote-branch-delete"; input: RemoteBranchInput_Deserialize } | 
 /**  원격 브랜치 이름 바꾸기(D-130). */
-{ id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput_Deserialize } | 
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
 { id: "tag-push"; input: TagPushInput } | 
 /**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
@@ -249,11 +251,11 @@ export type ActionInput_Serialize =
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
 { id: "branch-rename"; input: BranchRenameInput } | 
 /**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
-{ id: "force-push"; input: ForcePushInput } | 
+{ id: "force-push"; input: ForcePushInput_Serialize } | 
 /**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
-{ id: "remote-branch-delete"; input: RemoteBranchInput } | 
+{ id: "remote-branch-delete"; input: RemoteBranchInput_Serialize } | 
 /**  원격 브랜치 이름 바꾸기(D-130). */
-{ id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput_Serialize } | 
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
 { id: "tag-push"; input: TagPushInput } | 
 /**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
@@ -672,7 +674,9 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔). */
 "remoteNameTaken" | 
 /**  원격의 같은 이름 태그가 다른 버전이다(D-182). */
-"remoteTagDiffers" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+"remoteTagDiffers" | 
+/**  원격 기본 브랜치라 이름을 똑같이 입력해야 한다(D-183). */
+"nameConfirmMismatch" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186). */
 "privateEmailBlocked" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
@@ -722,8 +726,6 @@ export type ForcePushBlock =
 "otherOperation" | 
 /**  올린 적이 없다(upstream 없음). */
 "noUpstream" | 
-/**  upstream이 원격 기본 브랜치다(`main`·`master`·`init.defaultBranch`·원격 HEAD). */
-"defaultBranch" | 
 /**  원격에 내 기록에 없는 버전이 없다. 덮어쓸 것 없이 그냥 올리면 된다. */
 "nothingToOverwrite";
 
@@ -731,7 +733,13 @@ export type ForcePushBlock =
  *  덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
  *  같은지 비교한다(토큰이 이름까지 묶는다). 해시는 확인 창이 보여 준 값이다.
  */
-export type ForcePushInput = {
+export type ForcePushInput = ForcePushInput_Serialize | ForcePushInput_Deserialize;
+
+/**
+ *  덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
+ *  같은지 비교한다(토큰이 이름까지 묶는다). 해시는 확인 창이 보여 준 값이다.
+ */
+export type ForcePushInput_Deserialize = {
 	/**  upstream 원격 이름(`origin`). */
 	remote: string,
 	/**  upstream의 원격 브랜치 이름(`기능`). */
@@ -740,6 +748,25 @@ export type ForcePushInput = {
 	expectRemote: string,
 	/**  확인 창이 본 지금 위치. 이 버전만 올라간다. */
 	expectHead: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
+};
+
+/**
+ *  덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
+ *  같은지 비교한다(토큰이 이름까지 묶는다). 해시는 확인 창이 보여 준 값이다.
+ */
+export type ForcePushInput_Serialize = {
+	/**  upstream 원격 이름(`origin`). */
+	remote: string,
+	/**  upstream의 원격 브랜치 이름(`기능`). */
+	branch: string,
+	/**  확인 창이 보여 준 원격 끝(lease 기대 값). 그사이 원격이 바뀌면 서버가 거절한다. */
+	expectRemote: string,
+	/**  확인 창이 본 지금 위치. 이 버전만 올라간다. */
+	expectHead: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
 };
 
 export type ForcePushPlanView = {
@@ -763,6 +790,11 @@ export type ForcePushPlanView = {
 	sample: DroppedVersion[],
 	/**  이 브랜치에 "올린 기록을 바꿨다" 표식이 있다(D-129). */
 	rewrotePublished: boolean,
+	/**
+	 *  기본 브랜치로 보여(로컬 규칙) 브랜치 이름을 똑같이 입력해야 한다(D-183). 서버가 기본 브랜치라고
+	 *  하면 실행 때 core가 `NameConfirmMismatch`로 알린다.
+	 */
+	needsNameConfirm: boolean,
 };
 
 /**  내 GitHub 저장소 목록 한 쪽(복제 대화상자, D-133). 이름·공개 여부·날짜뿐이다. */
@@ -848,7 +880,9 @@ export type HostingPage =
 /**  열린 저장소의 검토 요청 하나. */
 { kind: "pullRequest"; number: number } | 
 /**  열린 저장소의 GitHub 페이지(GitHub에 올리기 뒤, D-132). */
-{ kind: "repository" };
+{ kind: "repository" } | 
+/**  열린 저장소의 브랜치 보호 규칙 설정(서버가 올리기를 거절했을 때, D-183). */
+{ kind: "branchSettings" };
 
 export type HostingProviderView = "github";
 
@@ -1255,7 +1289,7 @@ export type RefLabelView = {
 
 /**  지우거나 이름을 바꿀 수 없는 까닭. */
 export type RemoteBranchBlock = 
-/**  원격 기본 브랜치(`main`·`master`·`init.defaultBranch`·원격 HEAD). */
+/**  원격 기본 브랜치(로컬에 기록된 원격 HEAD, 서버가 알려 준 것). 이름 입력으로도 열지 않는다(D-183). */
 "protected" | 
 /**  로컬에 그 원격 브랜치의 추적 ref가 없다(원격 확인 뒤 다시). */
 "noTrackingRef" | 
@@ -1263,10 +1297,24 @@ export type RemoteBranchBlock =
 "noRemote";
 
 /**  원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다. */
-export type RemoteBranchInput = {
+export type RemoteBranchInput = RemoteBranchInput_Serialize | RemoteBranchInput_Deserialize;
+
+/**  원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다. */
+export type RemoteBranchInput_Deserialize = {
 	remote: string,
 	branch: string,
 	expectTip: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
+};
+
+/**  원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다. */
+export type RemoteBranchInput_Serialize = {
+	remote: string,
+	branch: string,
+	expectTip: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
 };
 
 export type RemoteBranchPlanView = {
@@ -1281,14 +1329,31 @@ export type RemoteBranchPlanView = {
 	blocked: RemoteBranchBlock | null,
 	/**  지금 브랜치의 upstream이다(지우면 upstream이 사라진다). */
 	isUpstreamOfCurrent: boolean,
+	/**  이름만 기본 브랜치 같아(`main`·`master`·`init.defaultBranch`) 이름을 똑같이 입력해야 한다(D-183). */
+	needsNameConfirm: boolean,
 };
 
 /**  원격 브랜치 이름 바꾸기 입력(D-130). */
-export type RemoteBranchRenameInput = {
+export type RemoteBranchRenameInput = RemoteBranchRenameInput_Serialize | RemoteBranchRenameInput_Deserialize;
+
+/**  원격 브랜치 이름 바꾸기 입력(D-130). */
+export type RemoteBranchRenameInput_Deserialize = {
 	remote: string,
 	from: string,
 	to: string,
 	expectTip: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
+};
+
+/**  원격 브랜치 이름 바꾸기 입력(D-130). */
+export type RemoteBranchRenameInput_Serialize = {
+	remote: string,
+	from: string,
+	to: string,
+	expectTip: string,
+	/**  원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	confirmBranch?: string | null,
 };
 
 /**  원격 태그 지우기(D-182). `expect`는 확인 창이 본 버전(태그가 가리키는 커밋). lease 값은 core가 로컬 태그에서 읽는다. */

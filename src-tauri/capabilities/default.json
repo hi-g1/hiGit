@@ -43,6 +43,7 @@
     "allow-query-github-email-check",
     "allow-query-pr-repo",
     "allow-query-pr-comments",
+    "allow-query-branch-protection",
     "allow-query-commit-detail",
     "allow-query-diff",
     "allow-query-branches",

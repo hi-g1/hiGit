@@ -77,15 +77,17 @@ pub(crate) fn tracking_tip(
         .and_then(|r| Oid::parse(&r.oid)))
 }
 
-/// 로컬 규칙(이름·원격 HEAD)과 서버가 알려 준 기본 브랜치로 막는다. 서버 값을 읽지 못하면 막는다.
-fn refuse_default(net: &Net<'_>, remote: &str, branch: &str) -> Result<()> {
-    if guard::protected_branch(net.git, net.repo, Some(remote), branch)? {
-        return Err(CoreError::RemoteBranchProtected);
-    }
+/// 서버가 알려 준 기본 브랜치는 막고(읽지 못하면 막음), 이름만 기본 같은 것(`main`·`master`·
+/// `init.defaultBranch`·로컬 원격 HEAD)은 브랜치 이름을 똑같이 입력했을 때만 연다(D-183).
+fn refuse_default(net: &Net<'_>, remote: &str, branch: &str, confirm: Option<&str>) -> Result<()> {
     match net.server_head(remote)? {
-        Some(server) if server != branch => Ok(()),
-        _ => Err(CoreError::RemoteBranchProtected),
+        Some(server) if server != branch => {}
+        _ => return Err(CoreError::RemoteBranchProtected),
     }
+    if guard::protected_branch(net.git, net.repo, Some(remote), branch)? {
+        guard::confirm_name(confirm, branch)?;
+    }
+    Ok(())
 }
 
 impl Action for RemoteBranchAction {
@@ -123,7 +125,7 @@ impl Action for RemoteBranchAction {
                 if tip != expect {
                     return Err(remote_moved());
                 }
-                refuse_default(&net, &i.remote, &i.branch)?;
+                refuse_default(&net, &i.remote, &i.branch, i.confirm_branch.as_deref())?;
                 crate::undo::backup::backup_oid(
                     git,
                     repo,
@@ -162,7 +164,7 @@ impl Action for RemoteBranchAction {
                 if tracking_tip(git, repo, &i.remote, &to)?.is_some() {
                     return Err(CoreError::RemoteNameTaken);
                 }
-                refuse_default(&net, &i.remote, &i.from)?;
+                refuse_default(&net, &i.remote, &i.from, i.confirm_branch.as_deref())?;
                 // 서버의 지금 값으로 다시 본다: 새 이름은 없고 옛 이름은 본 값이어야 한다.
                 if net.server_branch(&i.remote, &to)?.is_some() {
                     return Err(CoreError::RemoteNameTaken);

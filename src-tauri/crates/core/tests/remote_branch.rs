@@ -108,6 +108,7 @@ fn delete(branch: &str, tip: &str) -> ActionInput {
         remote: "origin".into(),
         branch: branch.into(),
         expect_tip: tip.into(),
+        confirm_branch: None,
     })
 }
 
@@ -117,6 +118,7 @@ fn rename(from: &str, to: &str, tip: &str) -> ActionInput {
         from: from.into(),
         to: to.into(),
         expect_tip: tip.into(),
+        confirm_branch: None,
     })
 }
 
@@ -140,8 +142,16 @@ fn plan_counts_versions_only_on_that_branch() {
         .queries()
         .remote_branch_plan(dir, "origin", "main")
         .unwrap();
-    assert_eq!(main.blocked, Some(RemoteBranchBlock::Protected));
+    // 로컬에 원격 HEAD 기록이 없으면 이름만 기본 같은 것으로 보고 이름 입력을 받는다(서버가 실행 때 다시 봄).
+    assert_eq!(main.blocked, None);
+    assert!(main.needs_name_confirm);
     assert!(main.is_upstream_of_current);
+    git(dir, &["remote", "set-head", "origin", "main"]);
+    let recorded = core
+        .queries()
+        .remote_branch_plan(dir, "origin", "main")
+        .unwrap();
+    assert_eq!(recorded.blocked, Some(RemoteBranchBlock::Protected));
     let none = core
         .queries()
         .remote_branch_plan(dir, "origin", "없음")
@@ -242,6 +252,54 @@ fn default_branch_and_head_are_never_deleted() {
         ErrorCode::RemoteBranchProtected
     );
     assert!(remote_ref(&s, "refs/heads/feature/login").is_some());
+}
+
+/// 이름만 기본 같은 원격 브랜치(서버 기본은 trunk인데 main)는 이름을 똑같이 입력하면 지운다(D-183).
+#[test]
+fn name_only_default_is_deleted_with_the_typed_name() {
+    let s = setup();
+    let dir = s.mine.path();
+    git(
+        s.other.path(),
+        &["push", "-q", "origin", "main:refs/heads/trunk"],
+    );
+    git(
+        s.remote.path(),
+        &["symbolic-ref", "HEAD", "refs/heads/trunk"],
+    );
+    git(dir, &["fetch", "-q", "origin"]);
+    let core = core(dir);
+    let main = git(dir, &["rev-parse", "origin/main"]);
+    let with = |confirm: Option<&str>| {
+        ActionInput::RemoteBranchDelete(RemoteBranchInput {
+            remote: "origin".into(),
+            branch: "main".into(),
+            expect_tip: main.clone(),
+            confirm_branch: confirm.map(str::to_owned),
+        })
+    };
+    for wrong in [None, Some("main "), Some("MAIN")] {
+        assert_eq!(
+            code(&confirmed(&core, dir, &with(wrong)).unwrap_err()),
+            ErrorCode::NameConfirmMismatch,
+            "{wrong:?}"
+        );
+    }
+    assert!(remote_ref(&s, "refs/heads/main").is_some());
+    confirmed(&core, dir, &with(Some("main"))).unwrap();
+    assert!(remote_ref(&s, "refs/heads/main").is_none());
+    // 서버 기본(trunk)은 이름을 입력해도 막는다.
+    let trunk = git(dir, &["rev-parse", "origin/trunk"]);
+    let input = ActionInput::RemoteBranchDelete(RemoteBranchInput {
+        remote: "origin".into(),
+        branch: "trunk".into(),
+        expect_tip: trunk,
+        confirm_branch: Some("trunk".into()),
+    });
+    assert_eq!(
+        code(&confirmed(&core, dir, &input).unwrap_err()),
+        ErrorCode::RemoteBranchProtected
+    );
 }
 
 #[test]

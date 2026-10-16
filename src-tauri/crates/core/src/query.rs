@@ -162,6 +162,30 @@ impl Queries {
         ))
     }
 
+    /// 서버가 이 원격 브랜치를 보호하는지(D-183 ④). GitHub 원격이고 연결됐을 때만 묻고, 그 밖이나 읽지
+    /// 못하면 `None`(안내만 빠진다). 확인 창이 열릴 때 한 번 읽는다.
+    pub fn branch_protection(
+        &self,
+        repo: &Path,
+        remote: &str,
+        branch: &str,
+    ) -> Result<Option<bool>> {
+        let root = self.opened_repo(repo)?;
+        crate::actions::remote_branch::checked_remote(self.git.as_ref(), &root, remote)?;
+        crate::actions::names::validate_ref_like(branch)?;
+        if !self.github.status().connected {
+            return Ok(None);
+        }
+        let Some(github) = crate::github::pr::github_push_repo(self.git.as_ref(), &root, remote)?
+        else {
+            return Ok(None);
+        };
+        Ok(self
+            .github
+            .call(|provider, token| provider.branch_protected(token, &github, branch))
+            .unwrap_or(None))
+    }
+
     /// 검토 요청 화면의 저장소 정보(D-177): 올릴 권한, 허용된 합치기 방법.
     pub fn pr_repo(&self, repo: &Path) -> Result<crate::view::PrRepoView> {
         let root = self.opened_repo(repo)?;
@@ -1189,6 +1213,7 @@ impl Queries {
             dropped_by_others: 0,
             sample: Vec::new(),
             rewrote_published: false,
+            needs_name_confirm: false,
         };
         let blocked = |mut v: ForcePushPlanView, b: B| {
             v.blocked = Some(b);
@@ -1212,11 +1237,8 @@ impl Queries {
         let (remote, remote_branch) = up.push_target(git)?;
         view.remote = Some(remote.clone());
         view.remote_branch = Some(remote_branch.clone());
-        if crate::guard::protected_branch(git, &root, None, &branch)?
-            || crate::guard::protected_branch(git, &root, Some(&remote), &remote_branch)?
-        {
-            return blocked(view, B::DefaultBranch);
-        }
+        view.needs_name_confirm = crate::guard::protected_branch(git, &root, None, &branch)?
+            || crate::guard::protected_branch(git, &root, Some(&remote), &remote_branch)?;
         let (Some(head), Some(tip)) = (
             git.resolve_ref(&root, "HEAD")?,
             git.resolve_ref(&root, &up.rev())?,
@@ -1321,6 +1343,7 @@ impl Queries {
             by_others: 0,
             blocked: None,
             is_upstream_of_current: false,
+            needs_name_confirm: false,
         };
         if crate::actions::remote_branch::checked_remote(git, &root, remote).is_err() {
             view.blocked = Some(B::NoRemote);
@@ -1335,8 +1358,11 @@ impl Queries {
         view.tip = Some(tip.to_string());
         view.is_upstream_of_current = git.status(&root)?.branch.upstream.as_deref()
             == Some(format!("{remote}/{branch}").as_str());
-        if branch == "HEAD" || crate::guard::protected_branch(git, &root, Some(remote), branch)? {
+        // 로컬에 기록된 원격 HEAD는 서버 기본 브랜치로 보고 막는다. 이름만 기본 같은 것은 이름 입력으로(D-183).
+        if branch == "HEAD" || git.remote_head(&root, remote)?.as_deref() == Some(branch) {
             view.blocked = Some(B::Protected);
+        } else if crate::guard::protected_branch(git, &root, Some(remote), branch)? {
+            view.needs_name_confirm = true;
         }
         // 이 브랜치에만 있는 버전: 다른 원격 추적 브랜치와 로컬 브랜치에서 닿지 않는 것.
         let own = format!("refs/remotes/{remote}/{branch}");

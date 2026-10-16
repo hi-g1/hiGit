@@ -38,6 +38,7 @@ const COMMANDS: &[&str] = &[
     "query_github_email_check",
     "query_pr_repo",
     "query_pr_comments",
+    "query_branch_protection",
     "query_commit_detail",
     "query_diff",
     "query_branches",

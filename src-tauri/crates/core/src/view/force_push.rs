@@ -15,8 +15,6 @@ pub enum ForcePushBlock {
     OtherOperation,
     /// 올린 적이 없다(upstream 없음).
     NoUpstream,
-    /// upstream이 원격 기본 브랜치다(`main`·`master`·`init.defaultBranch`·원격 HEAD).
-    DefaultBranch,
     /// 원격에 내 기록에 없는 버전이 없다. 덮어쓸 것 없이 그냥 올리면 된다.
     NothingToOverwrite,
 }
@@ -53,4 +51,7 @@ pub struct ForcePushPlanView {
     pub sample: Vec<DroppedVersion>,
     /// 이 브랜치에 "올린 기록을 바꿨다" 표식이 있다(D-129).
     pub rewrote_published: bool,
+    /// 기본 브랜치로 보여(로컬 규칙) 브랜치 이름을 똑같이 입력해야 한다(D-183). 서버가 기본 브랜치라고
+    /// 하면 실행 때 core가 `NameConfirmMismatch`로 알린다.
+    pub needs_name_confirm: bool,
 }

@@ -125,6 +125,10 @@ pub enum CoreError {
     #[error("저장한 버전이 없습니다")]
     PublishNoVersions,
 
+    /// 원격 기본 브랜치로 보여 이름을 똑같이 입력해야 한다(D-183).
+    #[error("브랜치 이름이 맞지 않습니다")]
+    NameConfirmMismatch,
+
     /// 원격의 같은 이름 태그가 내 태그와 다른 버전이다(D-182).
     #[error("원격 태그가 다른 버전입니다")]
     RemoteTagDiffers,

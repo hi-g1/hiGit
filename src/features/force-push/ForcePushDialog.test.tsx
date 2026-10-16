@@ -24,6 +24,7 @@ import { useForcePushStore } from "./forcePushStore";
 const plan = (over: Partial<ForcePushPlanView> = {}): ForcePushPlanView => ({
   allowed: true,
   blocked: null,
+  needsNameConfirm: false,
   branch: "기능",
   remote: "origin",
   remoteBranch: "기능",
@@ -93,9 +94,9 @@ describe("덮어쓰며 올리기 확인 창(D-128)", () => {
   });
 
   it("막혔으면 까닭 한 줄과 꺼진 위험 버튼", async () => {
-    vi.mocked(api.forcePushPlan).mockResolvedValue(plan({ blocked: "defaultBranch", sample: [] }));
+    vi.mocked(api.forcePushPlan).mockResolvedValue(plan({ blocked: "otherOperation", sample: [] }));
     show();
-    expect(await screen.findByText("원격 저장소의 기본 브랜치는 덮어쓸 수 없어요")).toBeInTheDocument();
+    expect(await screen.findByText("다른 작업이 진행 중이에요")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "덮어쓰며 올리기" }).at(-1)).toBeDisabled();
     expect(screen.queryByText(/사라지는 버전/)).toBeNull();
   });

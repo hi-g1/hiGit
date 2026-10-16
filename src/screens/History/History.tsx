@@ -229,7 +229,9 @@ export function History({
     upstream: status?.branch.upstream ?? null,
     defaultBranch: first?.defaultBranch ?? null,
     allowPublishedRewrite,
-    publishedRewrite: allowPublishedRewrite && forcePushPlan?.blocked !== "defaultBranch" && forcePushPlan?.blocked !== "detached",
+    // 원격 기본 브랜치에서는 올린 버전을 고치지 않는다(D-127, D-183 ③).
+    publishedRewrite:
+      allowPublishedRewrite && forcePushPlan?.needsNameConfirm !== true && forcePushPlan?.blocked !== "detached",
     zoom,
     headLine: line,
   };

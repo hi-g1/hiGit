@@ -435,6 +435,14 @@ impl Core {
                 let repo = self.queries.github_repo(folder)?;
                 self.github.repository_url(&repo)
             }
+            HostingPage::BranchSettings => {
+                let folder = folder.ok_or(CoreError::NotOpened)?;
+                let repo = self.queries.github_repo(folder)?;
+                Ok(format!(
+                    "{}/settings/branches",
+                    self.github.repository_url(&repo)?
+                ))
+            }
         }
     }
 

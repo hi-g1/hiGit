@@ -486,6 +486,9 @@ pub struct RemoteBranchInput {
     pub remote: String,
     pub branch: String,
     pub expect_tip: String,
+    /// 원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirm_branch: Option<String>,
 }
 
 /// 원격 브랜치 이름 바꾸기 입력(D-130).
@@ -496,6 +499,9 @@ pub struct RemoteBranchRenameInput {
     pub from: String,
     pub to: String,
     pub expect_tip: String,
+    /// 원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirm_branch: Option<String>,
 }
 
 /// 덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
@@ -511,6 +517,9 @@ pub struct ForcePushInput {
     pub expect_remote: String,
     /// 확인 창이 본 지금 위치. 이 버전만 올라간다.
     pub expect_head: String,
+    /// 원격 기본 브랜치로 보이면 브랜치 이름을 똑같이 입력한 값(D-183). 없으면 직렬화하지 않아 옛 journal 서명과 같다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confirm_branch: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
@@ -543,6 +552,25 @@ pub struct SyncInput {
 
 #[cfg(test)]
 mod tests {
+    /// 이름 입력 칸이 없으면 직렬화하지 않아 옛 journal 줄의 서명과 같다(D-183).
+    #[test]
+    fn empty_name_confirmation_keeps_the_old_shape() {
+        let input = ActionInput::ForcePush(ForcePushInput {
+            remote: "origin".into(),
+            branch: "main".into(),
+            expect_remote: "a".repeat(40),
+            expect_head: "b".repeat(40),
+            confirm_branch: None,
+        });
+        let json = serde_json::to_string(&input).unwrap();
+        assert!(!json.contains("confirm"), "{json}");
+        let old = r#"{"id":"force-push","input":{"remote":"origin","branch":"main","expectRemote":"aa","expectHead":"bb"}}"#;
+        let ActionInput::ForcePush(read) = serde_json::from_str::<ActionInput>(old).unwrap() else {
+            panic!("force-push");
+        };
+        assert_eq!(read.confirm_branch, None);
+    }
+
     use super::*;
 
     #[test]

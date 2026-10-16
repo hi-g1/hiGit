@@ -7,7 +7,7 @@ use specta::Type;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum RemoteBranchBlock {
-    /// 원격 기본 브랜치(`main`·`master`·`init.defaultBranch`·원격 HEAD).
+    /// 원격 기본 브랜치(로컬에 기록된 원격 HEAD, 서버가 알려 준 것). 이름 입력으로도 열지 않는다(D-183).
     Protected,
     /// 로컬에 그 원격 브랜치의 추적 ref가 없다(원격 확인 뒤 다시).
     NoTrackingRef,
@@ -29,4 +29,6 @@ pub struct RemoteBranchPlanView {
     pub blocked: Option<RemoteBranchBlock>,
     /// 지금 브랜치의 upstream이다(지우면 upstream이 사라진다).
     pub is_upstream_of_current: bool,
+    /// 이름만 기본 브랜치 같아(`main`·`master`·`init.defaultBranch`) 이름을 똑같이 입력해야 한다(D-183).
+    pub needs_name_confirm: bool,
 }

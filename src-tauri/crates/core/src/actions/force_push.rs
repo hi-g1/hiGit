@@ -78,11 +78,9 @@ impl Action for ForcePushAction {
         if input.remote != remote || input.branch != remote_branch {
             return Err(CoreError::InvalidInput("올릴 곳이 바뀌었어요"));
         }
-        if guard::protected_branch(git, repo, None, &branch)?
-            || guard::protected_branch(git, repo, Some(&remote), &remote_branch)?
-        {
-            return Err(CoreError::ForcePushProtected);
-        }
+        // 기본 브랜치로 보이면(이름만 같은 것도) 브랜치 이름을 똑같이 입력해야 한다(D-183).
+        let looks_default = guard::protected_branch(git, repo, None, &branch)?
+            || guard::protected_branch(git, repo, Some(&remote), &remote_branch)?;
         let head = git
             .resolve_ref(repo, "HEAD")?
             .ok_or(CoreError::InvalidInput("올릴 버전이 없어요"))?;
@@ -106,10 +104,13 @@ impl Action for ForcePushAction {
             background: false,
             use_helper: ctx.settings.git_helper,
         };
-        // 서버가 알려 주는 기본 브랜치도 막는다. 읽지 못하면 막는 쪽으로(계획 010 검토 "바뀐 결정" ①).
-        match net.server_head(&remote)? {
-            Some(server) if server != remote_branch => {}
-            _ => return Err(CoreError::ForcePushProtected),
+        // 서버가 알려 주는 기본 브랜치도 이름 입력으로만 연다. 읽지 못하면 기본 브랜치로 본다(D-183 ②).
+        let server_default = match net.server_head(&remote)? {
+            Some(server) => server == remote_branch,
+            None => true,
+        };
+        if looks_default || server_default {
+            guard::confirm_name(input.confirm_branch.as_deref(), &remote_branch)?;
         }
         // 원격의 옛 끝을 살려 둔다. 못 남기면 올리지 않는다(D-034 4번).
         crate::undo::backup::backup_oid(git, repo, &expect, &format!("force-push-{branch}"))?;

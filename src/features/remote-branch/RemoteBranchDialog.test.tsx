@@ -35,6 +35,7 @@ describe("원격 브랜치 지우기 확인 창(D-130)", () => {
       byOthers: 1,
       blocked: null,
       isUpstreamOfCurrent: false,
+      needsNameConfirm: false,
     });
     vi.mocked(api.previewAction).mockResolvedValue({ token: "토큰" });
     vi.mocked(api.executeAction).mockResolvedValue({ kind: "remoteBranchDeleted", remote: "origin", branch: "feature/login" });

@@ -110,6 +110,8 @@ pub enum HostingPage {
     PullRequest { number: u32 },
     /// 열린 저장소의 GitHub 페이지(GitHub에 올리기 뒤, D-132).
     Repository,
+    /// 열린 저장소의 브랜치 보호 규칙 설정(서버가 올리기를 거절했을 때, D-183).
+    BranchSettings,
 }
 
 /// 복제 대화상자의 기본값(D-115). 부모 폴더는 홈 폴더.

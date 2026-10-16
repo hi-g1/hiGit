@@ -108,6 +108,7 @@ fn input_from(plan: &ForcePushPlanView) -> ActionInput {
         branch: plan.remote_branch.clone().unwrap(),
         expect_remote: plan.expect_remote.clone().unwrap(),
         expect_head: plan.expect_head.clone().unwrap(),
+        confirm_branch: None,
     })
 }
 
@@ -204,6 +205,7 @@ fn needs_the_setting_a_matching_token_and_no_default_branch() {
         branch: "기능".into(),
         expect_remote: "0".repeat(40),
         expect_head: plan.expect_head.clone().unwrap(),
+        confirm_branch: None,
     });
     let token = core.preview(dir, &other).unwrap().token;
     assert_eq!(
@@ -220,7 +222,7 @@ fn needs_the_setting_a_matching_token_and_no_default_branch() {
         code(&force_push(&core, dir, &input).unwrap_err()),
         ErrorCode::ForcePushDisabled
     );
-    // 서버가 기능을 기본 브랜치라고 하면 막는다(로컬에는 그 기록이 없어도).
+    // 서버가 기능을 기본 브랜치라고 하면 이름을 입력해야 한다(로컬에는 그 기록이 없어도, D-183).
     allow(&core, true);
     git(
         s.remote.path(),
@@ -228,7 +230,7 @@ fn needs_the_setting_a_matching_token_and_no_default_branch() {
     );
     assert_eq!(
         code(&force_push(&core, dir, &input).unwrap_err()),
-        ErrorCode::ForcePushProtected
+        ErrorCode::NameConfirmMismatch
     );
     git(
         s.remote.path(),
@@ -238,25 +240,48 @@ fn needs_the_setting_a_matching_token_and_no_default_branch() {
     assert_eq!(remote_tip(&s, "기능"), plan.expect_remote.unwrap());
 }
 
+/// 원격 기본 브랜치는 브랜치 이름을 똑같이 입력해야 덮어쓴다(D-183). 남이 main에 올린 버전을 내
+/// main으로 덮어쓰는 경우.
 #[test]
-fn main_is_never_overwritten() {
+fn main_is_overwritten_only_with_the_typed_name() {
     let s = setup();
     let dir = s.mine.path();
     git(dir, &["switch", "-q", "main"]);
     let core = core(dir);
     allow(&core, true);
-    let plan = core.force_push_plan(dir).unwrap();
-    assert_eq!(plan.blocked, Some(ForcePushBlock::DefaultBranch));
-    let input = ActionInput::ForcePush(ForcePushInput {
-        remote: "origin".into(),
-        branch: "main".into(),
-        expect_remote: git(dir, &["rev-parse", "origin/main"]),
-        expect_head: git(dir, &["rev-parse", "HEAD"]),
-    });
-    assert_eq!(
-        code(&force_push(&core, dir, &input).unwrap_err()),
-        ErrorCode::ForcePushProtected
+    git(s.other.path(), &["switch", "-q", "main"]);
+    let bad = commit(
+        s.other.path(),
+        "bad.txt",
+        "잘못 올림
+",
     );
+    git(s.other.path(), &["push", "-q", "origin", "main"]);
+    git(dir, &["fetch", "-q", "origin"]);
+    let plan = core.force_push_plan(dir).unwrap();
+    assert_eq!(plan.blocked, None);
+    assert!(plan.needs_name_confirm);
+    let with = |confirm: Option<&str>| {
+        ActionInput::ForcePush(ForcePushInput {
+            confirm_branch: confirm.map(str::to_owned),
+            ..match input_from(&plan) {
+                ActionInput::ForcePush(i) => i,
+                _ => unreachable!(),
+            }
+        })
+    };
+    for wrong in [None, Some(""), Some("Main"), Some(" main"), Some("main ")] {
+        assert_eq!(
+            code(&force_push(&core, dir, &with(wrong)).unwrap_err()),
+            ErrorCode::NameConfirmMismatch,
+            "{wrong:?}"
+        );
+        assert_eq!(remote_tip(&s, "main"), bad);
+    }
+    force_push(&core, dir, &with(Some("main"))).unwrap();
+    assert_eq!(remote_tip(&s, "main"), git(dir, &["rev-parse", "HEAD"]));
+    // 옛 끝은 백업 ref에 남는다.
+    assert!(git(dir, &["for-each-ref", "refs/higit/"]).contains(&bad));
 }
 
 #[test]
@@ -293,6 +318,7 @@ fn nothing_to_overwrite_and_merging_are_refused() {
         branch: "기능".into(),
         expect_remote: plan.expect_remote.unwrap(),
         expect_head: plan.expect_head.unwrap(),
+        confirm_branch: None,
     });
     assert_eq!(
         code(&force_push(&core, dir, &input).unwrap_err()),

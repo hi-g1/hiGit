@@ -791,6 +791,8 @@ pub enum ErrorCode {
     RemoteNameTaken,
     /// 원격의 같은 이름 태그가 다른 버전이다(D-182).
     RemoteTagDiffers,
+    /// 원격 기본 브랜치라 이름을 똑같이 입력해야 한다(D-183).
+    NameConfirmMismatch,
     NoUpstream,
     SshHostUnverified,
     SshAuthFailed,
@@ -896,6 +898,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::RemoteBranchProtected => ErrorCode::RemoteBranchProtected,
             CoreError::RemoteNameTaken => ErrorCode::RemoteNameTaken,
             CoreError::RemoteTagDiffers => ErrorCode::RemoteTagDiffers,
+            CoreError::NameConfirmMismatch => ErrorCode::NameConfirmMismatch,
             CoreError::PublishHasRemote => ErrorCode::PublishHasRemote,
             CoreError::PublishNoVersions => ErrorCode::PublishNoVersions,
             CoreError::RemoteRenamePartial(_) => ErrorCode::RemoteRenamePartial,

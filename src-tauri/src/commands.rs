@@ -449,6 +449,22 @@ pub async fn query_force_push_plan(
 /// GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽기만 한다.
 #[tauri::command]
 #[specta::specta]
+pub async fn query_branch_protection(
+    state: State<'_, AppState>,
+    repo: String,
+    remote: String,
+    branch: String,
+) -> CmdResult<Option<bool>> {
+    blocking(state, move |core| {
+        core.queries()
+            .branch_protection(&PathBuf::from(repo), &remote, &branch)
+    })
+    .await
+}
+
+/// GitHub에 올리기 대화상자의 처음 값(D-132).
+#[tauri::command]
+#[specta::specta]
 pub async fn query_publish_draft(
     state: State<'_, AppState>,
     repo: String,

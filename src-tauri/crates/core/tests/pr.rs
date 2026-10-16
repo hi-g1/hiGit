@@ -930,3 +930,51 @@ fn fork_refusals_leave_no_remote() {
         "올리지 않는다"
     );
 }
+
+#[test]
+fn branch_protection_is_asked_only_for_connected_github_remotes() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let q = f.core.queries();
+    f.fake.push_json(200, r#"{"name":"main","protected":true}"#);
+    f.fake
+        .push_json(200, r#"{"name":"main","protected":false}"#);
+    f.fake.push_json(403, "{}");
+    assert_eq!(
+        q.branch_protection(dir.path(), "origin", "main").unwrap(),
+        Some(true)
+    );
+    assert_eq!(
+        q.branch_protection(dir.path(), "origin", "main").unwrap(),
+        Some(false)
+    );
+    assert_eq!(
+        q.branch_protection(dir.path(), "origin", "main").unwrap(),
+        None
+    );
+    assert_eq!(
+        f.fake.requests()[0].url,
+        "https://api.github.com/repos/octo/hello/branches/main"
+    );
+    // GitHub가 아니거나 연결 안 됐으면 묻지 않는다.
+    let other = repo(Some("https://gitlab.com/octo/hello.git"));
+    let g = core(other.path(), true);
+    assert_eq!(
+        g.core
+            .queries()
+            .branch_protection(other.path(), "origin", "main")
+            .unwrap(),
+        None
+    );
+    assert!(g.fake.requests().is_empty());
+    let h = core(dir.path(), false);
+    assert_eq!(
+        h.core
+            .queries()
+            .branch_protection(dir.path(), "origin", "main")
+            .unwrap(),
+        None
+    );
+    assert!(h.fake.requests().is_empty());
+    assert!(q.branch_protection(dir.path(), "없는원격", "main").is_err());
+}

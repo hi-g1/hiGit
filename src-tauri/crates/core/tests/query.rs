@@ -407,17 +407,20 @@ fn action_input_tags_match_registry() {
             branch: "기능".into(),
             expect_remote: "a".repeat(40),
             expect_head: "b".repeat(40),
+            confirm_branch: None,
         }),
         ActionInput::RemoteBranchDelete(higit_core::view::RemoteBranchInput {
             remote: "origin".into(),
             branch: "옆".into(),
             expect_tip: "a".repeat(40),
+            confirm_branch: None,
         }),
         ActionInput::RemoteBranchRename(higit_core::view::RemoteBranchRenameInput {
             remote: "origin".into(),
             from: "옆".into(),
             to: "곁".into(),
             expect_tip: "a".repeat(40),
+            confirm_branch: None,
         }),
         ActionInput::TagPush(higit_core::view::TagPushInput { name: "v1".into() }),
         ActionInput::Publish(higit_core::view::PublishInput {

@@ -43,7 +43,7 @@ impl PrTarget {
 }
 
 /// 원격 하나의 올리기 주소가 모두 같은 github.com 저장소면 그 저장소.
-fn github_push_repo(
+pub(crate) fn github_push_repo(
     git: &dyn GitBackend,
     root: &RepoPath,
     remote: &str,

@@ -101,6 +101,15 @@ pub(crate) fn protected_branch(
     Ok(false)
 }
 
+/// 브랜치 이름 입력 확인(D-183): `confirm`이 원격 브랜치 이름과 바이트까지 같아야 한다.
+pub(crate) fn confirm_name(confirm: Option<&str>, branch: &str) -> Result<()> {
+    if confirm == Some(branch) {
+        Ok(())
+    } else {
+        Err(CoreError::NameConfirmMismatch)
+    }
+}
+
 /// 설정(`allow`)과 지금 브랜치로 규칙을 정한다. 설정이 꺼졌거나, 특정 버전을 보는 중이거나, 지금 브랜치나
 /// 그 upstream이 기본 브랜치면 `Refuse`(D-127: 기본 브랜치는 켜져 있어도 완화하지 않는다).
 pub(crate) fn published_rule(

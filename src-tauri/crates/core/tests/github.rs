@@ -45,6 +45,11 @@ fn page_urls_come_from_constants_and_checked_remotes() {
             .unwrap(),
         "https://github.com/octo/hello/pull/7"
     );
+    assert_eq!(
+        core.hosting_page_url(Some(dir.path()), HostingPage::BranchSettings)
+            .unwrap(),
+        "https://github.com/octo/hello/settings/branches"
+    );
     let err = core
         .hosting_page_url(Some(dir.path()), HostingPage::PullRequest { number: 0 })
         .unwrap_err();
