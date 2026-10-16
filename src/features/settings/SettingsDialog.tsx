@@ -1,9 +1,11 @@
 import { useMessages } from "../../messages";
 import { DialogFrame } from "../../ui/DialogFrame";
+import { GeneralSection } from "./GeneralSection";
 import { GitHubSection } from "./GitHubSection";
+import styles from "./SettingsDialog.module.css";
 import { useSettingsStore } from "./settingsStore";
 
-/** 설정 대화상자(D-116). 지금은 GitHub 구역 하나. */
+/** 설정 대화상자(D-116, D-160). 세로로 쌓은 구역: 일반 · GitHub. */
 export function SettingsDialog() {
   const m = useMessages();
   const open = useSettingsStore((s) => s.open);
@@ -12,7 +14,10 @@ export function SettingsDialog() {
   if (!open) return null;
   return (
     <DialogFrame title={m.settings.title} onClose={close} size="wide">
-      <GitHubSection autoConnect={connect} />
+      <div className={styles.sections}>
+        <GeneralSection />
+        <GitHubSection autoConnect={connect} />
+      </div>
     </DialogFrame>
   );
 }

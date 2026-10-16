@@ -391,6 +391,9 @@ export const ko = {
   // 설정과 GitHub 연결(D-109, D-116)
   settings: {
     title: "설정",
+    general: "일반",
+    fontSize: "글자 크기",
+    fontSizes: { small: "작게", normal: "보통", large: "크게", xlarge: "아주 크게" },
     github: "GitHub",
     notConfigured: "이 앱에는 GitHub 연결이 준비되지 않았어요",
     connect: "GitHub 연결",

@@ -6,8 +6,10 @@ import { CloneDialog } from "./features/clone/CloneDialog";
 import { useCloneStore } from "./features/clone/cloneStore";
 import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
+import { useFontShortcuts } from "./features/settings/useFontShortcuts";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { useAppStatus } from "./lib/queries";
+import { useDisplaySync } from "./lib/useDisplaySync";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
@@ -33,13 +35,21 @@ export function AppProviders({ children, client }: { children: ReactNode; client
   );
 }
 
-/** 라우터 없이 열린 저장소가 있으면 작업 공간, 없으면 홈. */
-export function App() {
+/** 라우터 없이 열린 저장소가 있으면 작업 공간, 없으면 홈. `client`는 시작 때 설정을 미리 읽은 것(main.tsx). */
+export function App({ client }: { client?: QueryClient }) {
   return (
-    <AppProviders>
+    <AppProviders client={client}>
+      <DisplaySync />
       <Screens />
     </AppProviders>
   );
+}
+
+/** 글자 크기·OS 배율을 화면에 적용하고 글자 크기 단축키를 받는다(D-146, D-152). */
+function DisplaySync() {
+  useDisplaySync();
+  useFontShortcuts();
+  return null;
 }
 
 function Screens() {

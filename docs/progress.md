@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: **다듬기**(계획 011, 사용자 결정 D-138~D-145, 근거 `docs/research/polish.md`). 반복 4b는 010-H2까지 하고 멈춤(다듬기 뒤 010-H3부터).
-- 단계: 011-P5 끝(settings.json 칸 다섯, 명령 `app_display_hints`)
-- 마지막 커밋: (이 갱신과 같은 커밋) core: extend app settings and add display hints command
-- 다음 할 일: 011-P6 글자 크기 적용·설정 "일반" 구역·Ctrl+=·−·0(검토 반영 R1 하한, R4 대화상자 스크롤, R7 시작 순서, R8 `choiceKeys.ts`, 300ms 디바운스) → P7 → P8 → P9 스크린샷
+- 단계: 011-P6 끝(루트 글자 크기 = 16px × 배율, 설정 "글자 크기", Ctrl+=·−·0)
+- 마지막 커밋: (이 갱신과 같은 커밋) features: font size setting, os scale and shortcuts
+- 다음 할 일: Ubuntu에서 WebKitGTK가 이미 OS 글자 배율(Xft.dpi)로 화면 전체를 키우는 것을 확인함 → platform이 Ubuntu 배율을 곱하지 않게 고치고 결정으로 올림 → P7 → P8 → P9 스크린샷
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 4b(010-H2까지) → **다듬기**(2026-10-16 사용자 추가) → 4b 나머지 → 4c → 5.
@@ -209,7 +209,8 @@
 - [x] 011-P3 노선도·목록 배율(`uiStore.uiScale`, `SvgRenderer scale`, `SCENE_FONT`, 이름표 폭은 글자 폭 + 16. `hitTest`는 화면에서 부르는 곳이 없어 바꿀 것 없음)
 - [x] 011-P4 OS 글자 배율·다크 읽기(platform, 이 컴퓨터는 `text-scaling-factor` 1.25라 Ubuntu 본문이 15×1.25px가 된다)
 - [x] 011-P5 설정 칸 다섯·`app_display_hints`(Core 없이 도는 `higit_core::settings::display_hints`)
-- [ ] 011-P6 글자 크기 적용·설정·Ctrl+=·−·0 / 011-P7 상단 바 테두리·줄 바꿈 / 011-P8 밑줄·용어 설명 보기
+- [x] 011-P6 글자 크기 적용·설정 "일반" 구역·Ctrl+=·−·0(저장은 300ms 모아 한 번, 대화상자는 넘치면 스크롤)
+- [ ] 011-P7 상단 바 테두리·줄 바꿈 / 011-P8 밑줄·용어 설명 보기
 - [ ] 011-P9 Ubuntu 스크린샷(`docs/research/img/polish/`)
 - [ ] 011-P10 언어·시각 / 011-P11 화면 모드
 - [ ] 011-P12 노선도 배치 / 011-P13 홈 노선도 연결

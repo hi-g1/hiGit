@@ -1,0 +1,29 @@
+/* 고르는 부품(design.md "설정 대화상자"): 글자 버튼 묶음, 고른 것은 600·--text */
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.option {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--surface-hover);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.checked {
+  color: var(--text);
+  font-weight: var(--font-weight-bold);
+}

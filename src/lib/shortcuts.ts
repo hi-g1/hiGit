@@ -66,6 +66,15 @@ export const SHORTCUTS = {
     inTextField: "native",
   },
   zoomOut: { keys: [plain("Minus"), plain("NumpadSubtract")], label: "-", scope: "history", inTextField: "native" },
+  /** 글자 크기 한 단계 크게·작게·보통(D-138, D-152). 웹뷰 자체 확대는 꺼 두고 앱이 받는다 */
+  fontLarger: {
+    keys: [ctrl("Equal"), ctrl("Equal", true), ctrl("NumpadAdd")],
+    label: "Ctrl+=",
+    scope: "global",
+    inTextField: "app",
+  },
+  fontSmaller: { keys: [ctrl("Minus"), ctrl("NumpadSubtract")], label: "Ctrl+-", scope: "global", inTextField: "app" },
+  fontReset: { keys: [ctrl("Digit0"), ctrl("Numpad0")], label: "Ctrl+0", scope: "global", inTextField: "app" },
   /** 파일 목록에서 다음·이전 파일 */
   nextFile: { keys: [plain("ArrowDown")], label: "↓", scope: "fileList", inTextField: "native" },
   prevFile: { keys: [plain("ArrowUp")], label: "↑", scope: "fileList", inTextField: "native" },
@@ -76,7 +85,10 @@ export const PLANNED: readonly Key[] = [
   ctrl("KeyK"), // 명령 팔레트
 ];
 
-/** 웹뷰(WebView2, WebKitGTK)와 OS가 쓰는 키. 앱 단축키로 쓰면 앱에 오지 않거나 동작이 섞인다. */
+/**
+ * 웹뷰(WebView2, WebKitGTK)와 OS가 쓰는 키. 앱 단축키로 쓰면 앱에 오지 않거나 동작이 섞인다.
+ * Ctrl+=·−·0은 웹뷰 확대를 끄고(tauri.conf.json `zoomHotkeysEnabled: false`) 글자 크기에 쓴다(D-152).
+ */
 export const RESERVED: readonly Key[] = [
   ctrl("KeyF"),
   ctrl("KeyG"),
@@ -85,9 +97,6 @@ export const RESERVED: readonly Key[] = [
   ctrl("KeyU"),
   ctrl("KeyW"),
   ctrl("KeyQ"),
-  ctrl("Equal"),
-  ctrl("Minus"),
-  ctrl("Digit0"),
   ctrl("KeyI", true),
   ctrl("KeyJ", true),
   ctrl("KeyC", true),

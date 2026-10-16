@@ -20,6 +20,23 @@ describe("단축키 표", () => {
     expect(used.filter((c) => reserved.has(c))).toEqual([]);
   });
 
+  it("글자 크기는 Ctrl 조합이고 버전 기록 확대(Ctrl 없음)와 겹치지 않는다", () => {
+    expect(matches("fontLarger", key("Equal", { ctrlKey: true }))).toBe(true);
+    expect(matches("fontLarger", key("Equal", { ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(matches("fontLarger", key("NumpadAdd", { ctrlKey: true }))).toBe(true);
+    expect(matches("fontSmaller", key("Minus", { ctrlKey: true }))).toBe(true);
+    expect(matches("fontSmaller", key("NumpadSubtract", { ctrlKey: true }))).toBe(true);
+    expect(matches("fontReset", key("Digit0", { ctrlKey: true }))).toBe(true);
+    expect(matches("zoomIn", key("Equal", { ctrlKey: true }))).toBe(false);
+    expect(matches("fontLarger", key("Equal"))).toBe(false);
+    // 예약 목록에서 뺀 키는 표에 있다.
+    const reserved = new Set(RESERVED.map(combo));
+    for (const code of ["Equal", "Minus", "Digit0"]) {
+      expect(reserved.has(`${code}|true|false|false`)).toBe(false);
+      expect(used).toContain(`${code}|true|false|false`);
+    }
+  });
+
   it("다시 하기는 Ctrl+Shift+Z와 Ctrl+Y 둘 다", () => {
     expect(matches("redo", key("KeyZ", { ctrlKey: true, shiftKey: true }))).toBe(true);
     expect(matches("redo", key("KeyY", { ctrlKey: true }))).toBe(true);

@@ -30,6 +30,26 @@ fn csp_is_fixed_and_has_no_remote_sources() {
     assert!(global.is_null() || global == &serde_json::Value::Bool(false));
 }
 
+/// 글자 크기는 앱이 Ctrl+=·−·0으로 바꾸므로 웹뷰 자체 확대는 끈다(D-152). Linux의 확대 폴리필은
+/// 확대 권한이 있어야 돌므로 그 권한도 열지 않는다.
+#[test]
+fn webview_zoom_stays_off() {
+    let conf = json("tauri.conf.json");
+    let windows = conf["app"]["windows"].as_array().unwrap();
+    assert!(!windows.is_empty());
+    for w in windows {
+        assert_eq!(w["zoomHotkeysEnabled"], serde_json::Value::Bool(false));
+    }
+    let cap = json("capabilities/default.json");
+    for p in cap["permissions"].as_array().unwrap() {
+        let p = p.as_str().unwrap();
+        assert!(
+            !(p.contains("webview-zoom") || p == "core:webview:default"),
+            "{p}"
+        );
+    }
+}
+
 #[test]
 fn capability_has_no_broad_permissions() {
     let cap = json("capabilities/default.json");
