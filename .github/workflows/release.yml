@@ -82,8 +82,12 @@ jobs:
           if ($env:WINDOWS_SIGN_COMMAND) {
             # 서명 명령은 저장소에 쓰지 않고 비밀에서만 온다. 따옴표는 node가 JSON으로 감싼다.
             node -e "require('fs').writeFileSync('src-tauri/tauri.sign.json', JSON.stringify({ bundle: { windows: { signCommand: process.env.WINDOWS_SIGN_COMMAND } } }))"
-            pnpm tauri build --bundles nsis --config src-tauri/tauri.sign.json
-            Remove-Item src-tauri/tauri.sign.json
+            try {
+              pnpm tauri build --bundles nsis --config src-tauri/tauri.sign.json
+              if ($LASTEXITCODE -ne 0) { throw "tauri build 실패" }
+            } finally {
+              Remove-Item -ErrorAction SilentlyContinue src-tauri/tauri.sign.json
+            }
           } else {
             Write-Host "WINDOWS_SIGN_COMMAND가 없어 서명하지 않습니다."
             pnpm tauri build --bundles nsis
@@ -122,8 +126,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: 산출물 받기
+        env:
+          RUN_ID: ${{ github.run_id }}
         run: |
-          gh run download "${{ github.run_id }}" --dir dl
+          gh run download "$RUN_ID" --dir dl
           mkdir -p release
           find dl -type f -exec cp {} release/ \;
           cp docs/guide/index.html release/hiGit-guide.html
@@ -145,15 +151,20 @@ jobs:
           fi
 
       - name: GitHub 릴리스
+        # 태그 이름 같은 값은 셸 글자에 바로 넣지 않고 환경 변수로 넘긴다(태그에 따옴표·$()가 들어갈 수 있다).
         env:
           SIGNED: ${{ secrets.WINDOWS_SIGN_COMMAND != '' && 'yes' || '' }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          SHA: ${{ github.sha }}
         run: |
           title="hiGit ${VERSION}"
           if [ -z "$SIGNED" ]; then title="${title} (서명 없는 시험판)"; fi
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            gh release create "${{ github.ref_name }}" release/* --prerelease --title "$title" --notes-file packaging/RELEASE_NOTES.md
+          if [ "$REF_TYPE" = "tag" ]; then
+            gh release create "$REF_NAME" release/* --prerelease --title "$title" --notes-file packaging/RELEASE_NOTES.md
           else
             # 수동 실행은 초안만 만든다(사람이 보고 지운다).
-            gh release create "v${VERSION}-draft-${{ github.run_number }}" release/* --draft --prerelease \
-              --target "${{ github.sha }}" --title "$title (초안)" --notes-file packaging/RELEASE_NOTES.md
+            gh release create "v${VERSION}-draft-${RUN_NUMBER}" release/* --draft --prerelease \
+              --target "$SHA" --title "$title (초안)" --notes-file packaging/RELEASE_NOTES.md
           fi
