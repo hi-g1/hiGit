@@ -109,7 +109,7 @@ pub trait GitBackend: Send + Sync {
     fn read_blobs(&self, repo: &RepoPath, oids: &[Oid], max_bytes: usize) -> Result<Vec<BlobHead>>; // cat-file --batch 프로세스 둘
     fn merge_segments(&self, repo: &RepoPath, base: &[u8], ours: &[u8], theirs: &[u8]) -> Result<Vec<MergeSegment>>; // 충돌 구간(D-086)
     // 반복 2: 진행·취소·잠금 (D-080, D-081)
-    fn request_cancel(&self, repo: &RepoPath);   // 이 저장소에서 지켜보는 git을 끝낸다(취소·강제로 멈추기)
+    fn request_cancel(&self, repo: &RepoPath);   // 이 저장소에서 사람이 시킨 git을 끝낸다(취소·강제로 멈추기). 저절로 하는 원격 확인은 깃발이 따로라 건드리지 않는다(D-117)
     fn clear_cancel(&self, repo: &RepoPath);     // 액션을 시작·마칠 때 취소 표시를 지운다
     fn set_observer(&self, observer: Option<ProgressObserver>); // 1초마다 (저장소, 경과, 마지막 출력 뒤 시간)
     fn other_git_running(&self) -> bool;         // 앱이 띄우지 않은 git이 시스템에 있는지. 모르면 true

@@ -61,7 +61,11 @@ impl CliBackend {
             }
         };
         full.extend_from_slice(args);
-        let cancel = self.cancel_flag(repo);
+        let scope = match mode {
+            NetMode::Foreground => super::CancelScope::User,
+            NetMode::Background => super::CancelScope::Background,
+        };
+        let cancel = self.cancel_flag(repo, scope);
         let observer = self.observer_for(repo);
         self.runner.run_watched(
             dir,

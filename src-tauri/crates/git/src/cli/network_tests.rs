@@ -170,4 +170,35 @@ mod watched {
             .run_network(&path, &["-c", "alias.ok=!true", "ok"], NetMode::Foreground)
             .unwrap();
     }
+
+    #[test]
+    fn user_and_background_cancel_flags_are_separate() {
+        let repo = testutil::init_repo();
+        let backend = testutil::backend();
+        let path = RepoPath::new(repo.path());
+        let ok = ["-c", "alias.ok=!true", "ok"];
+
+        // 사람이 취소해도 저절로 하는 확인은 계속된다.
+        backend.request_cancel(&path);
+        backend
+            .run_network(&path, &ok, NetMode::Background)
+            .unwrap();
+        let err = backend
+            .run_network(&path, &ok, NetMode::Foreground)
+            .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::Cancelled);
+        backend.clear_cancel(&path);
+
+        // 저절로 하는 확인의 표시는 사람이 시킨 작업을 끝내지 않는다.
+        backend
+            .cancel_flag(&path, crate::cli::CancelScope::Background)
+            .store(true, Ordering::SeqCst);
+        backend
+            .run_network(&path, &ok, NetMode::Foreground)
+            .unwrap();
+        let err = backend
+            .run_network(&path, &ok, NetMode::Background)
+            .unwrap_err();
+        assert_eq!(err.kind(), FailureKind::Cancelled);
+    }
 }

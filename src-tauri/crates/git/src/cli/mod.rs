@@ -63,6 +63,14 @@ use crate::{
     Result, StashEntry, Status, TagRef,
 };
 
+/// 취소 깃발의 주인(D-117). 취소 단추·강제로 멈추기는 사람이 시킨 작업의 깃발만 켠다.
+/// 저절로 하는 원격 확인은 자기 깃발만 보고, 시간 제한(60초)으로 끝난다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum CancelScope {
+    User,
+    Background,
+}
+
 /// 시스템 git 명령을 실행하는 [`GitBackend`] 구현.
 pub struct CliBackend {
     runner: Runner,
@@ -70,9 +78,12 @@ pub struct CliBackend {
     timeouts: (std::time::Duration, std::time::Duration),
     /// `version()` 결과. `--end-of-options`를 넣을지 고를 때 쓴다(args.rs).
     version: OnceLock<GitVersion>,
-    /// 저장소별 취소 깃발(취소 단추·강제로 멈추기, D-080).
+    /// 저장소·주인별 취소 깃발(취소 단추·강제로 멈추기, D-080, D-117).
     cancels: std::sync::Mutex<
-        std::collections::HashMap<PathBuf, std::sync::Arc<std::sync::atomic::AtomicBool>>,
+        std::collections::HashMap<
+            (PathBuf, CancelScope),
+            std::sync::Arc<std::sync::atomic::AtomicBool>,
+        >,
     >,
     /// 오래 걸리는 작업의 진행 알림(저장소, 경과, 마지막 출력 뒤 시간).
     observer: std::sync::Mutex<Option<crate::ProgressObserver>>,
@@ -90,15 +101,16 @@ impl CliBackend {
         }
     }
 
-    /// 이 저장소의 취소 깃발.
+    /// 이 저장소의 취소 깃발. 사람이 시킨 작업과 저절로 하는 확인은 깃발이 따로다(D-117).
     pub(crate) fn cancel_flag(
         &self,
         repo: &RepoPath,
+        scope: CancelScope,
     ) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
         self.cancels
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .entry(repo.as_path().to_path_buf())
+            .entry((repo.as_path().to_path_buf(), scope))
             .or_default()
             .clone()
     }
@@ -138,7 +150,7 @@ impl CliBackend {
         envs: &[(&str, runner::EnvChange<'_>)],
         stdin: Option<&[u8]>,
     ) -> Result<runner::GitOutput> {
-        let cancel = self.cancel_flag(repo);
+        let cancel = self.cancel_flag(repo, CancelScope::User);
         let observer = self.observer_for(repo);
         self.runner.run_watched(
             Some(repo.as_path()),
@@ -740,12 +752,12 @@ impl GitBackend for CliBackend {
     }
 
     fn request_cancel(&self, repo: &RepoPath) {
-        self.cancel_flag(repo)
+        self.cancel_flag(repo, CancelScope::User)
             .store(true, std::sync::atomic::Ordering::SeqCst);
     }
 
     fn clear_cancel(&self, repo: &RepoPath) {
-        self.cancel_flag(repo)
+        self.cancel_flag(repo, CancelScope::User)
             .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
