@@ -159,6 +159,18 @@ export const ko: Glossary = {
     command: null,
     description: "아직 검토를 받을 준비가 안 된 검토 요청. 합칠 수 없어요.",
   },
+  "pr-merge": {
+    friendly: "검토 요청 합치기",
+    gitName: "merge pull request",
+    command: null,
+    description: "검토 요청의 브랜치를 GitHub에서 대상 브랜치에 합치기. 앱에서 되돌릴 수 없어요.",
+  },
+  "pr-close": {
+    friendly: "검토 요청 닫기",
+    gitName: "close pull request",
+    command: null,
+    description: "합치지 않고 검토 요청을 닫기. 다시 열 수 있어요.",
+  },
   checks: {
     friendly: "시험 결과",
     gitName: "checks",
@@ -170,12 +182,24 @@ export const ko: Glossary = {
     command: null,
     description: "검토 요청에 팀원이 남기는 승인이나 변경 요청",
   },
+  comment: {
+    friendly: "댓글",
+    gitName: "comment",
+    command: null,
+    description: "검토 요청에 남기는 글. 저장소를 볼 수 있는 사람이 모두 봐요.",
+  },
 
   clone: {
     friendly: "복제",
     gitName: "clone",
     command: "git clone",
     description: "원격 저장소를 내 컴퓨터로 복사",
+  },
+  fork: {
+    friendly: "포크",
+    gitName: "fork",
+    command: null,
+    description: "내 GitHub 계정에 복사본 만들기. 그 복사본에 올리고 원래 저장소에 검토 요청을 보내요.",
   },  publish: {
     friendly: "GitHub에 올리기",
     gitName: "new repository",
@@ -241,6 +265,12 @@ export const ko: Glossary = {
     gitName: "push tag",
     command: "git push <원격> <태그>",
     description: "이 태그를 원격 저장소로 보내기. 같은 이름의 태그를 덮어쓰지 않아요.",
+  },
+  "remote-tag-delete": {
+    friendly: "원격 태그 지우기",
+    gitName: "push --delete tag",
+    command: "git push <원격> --delete <태그>",
+    description: "원격 저장소의 태그를 지우기. 내 컴퓨터의 태그는 그대로예요.",
   },
 
   blame: {

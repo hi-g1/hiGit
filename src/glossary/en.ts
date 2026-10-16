@@ -158,6 +158,18 @@ export const en: Glossary = {
     command: null,
     description: "A review request that isn't ready for review yet. It can't be combined.",
   },
+  "pr-merge": {
+    friendly: "Combine review request",
+    gitName: "merge pull request",
+    command: null,
+    description: "Combine a review request's branch into its target branch on GitHub. The app can't undo it.",
+  },
+  "pr-close": {
+    friendly: "Close review request",
+    gitName: "close pull request",
+    command: null,
+    description: "Close a review request without combining it. You can reopen it.",
+  },
   checks: {
     friendly: "Checks",
     gitName: "checks",
@@ -169,12 +181,24 @@ export const en: Glossary = {
     command: null,
     description: "An approval or change request a teammate leaves on a review request",
   },
+  comment: {
+    friendly: "Comment",
+    gitName: "comment",
+    command: null,
+    description: "A note on a review request. Everyone who can see the repository can read it.",
+  },
 
   clone: {
     friendly: "Clone",
     gitName: "clone",
     command: "git clone",
     description: "Copy a remote repository to your computer",
+  },
+  fork: {
+    friendly: "Fork",
+    gitName: "fork",
+    command: null,
+    description: "Make a copy in your GitHub account. You upload there and send a review request to the original.",
   },  publish: {
     friendly: "Publish to GitHub",
     gitName: "new repository",
@@ -240,6 +264,12 @@ export const en: Glossary = {
     gitName: "push tag",
     command: "git push <원격> <태그>",
     description: "Send this tag to the remote repository. A tag with the same name isn't overwritten.",
+  },
+  "remote-tag-delete": {
+    friendly: "Delete remote tag",
+    gitName: "push --delete tag",
+    command: "git push <원격> --delete <태그>",
+    description: "Delete a tag on the remote repository. The tag on your computer stays.",
   },
 
   blame: {
