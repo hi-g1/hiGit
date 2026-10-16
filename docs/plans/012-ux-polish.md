@@ -6,14 +6,14 @@
 - 단계 이름은 U1~U31이고 `docs/progress.md`와 커밋 본문에는 "012-U3"처럼 계획 번호를 붙여 적는다(005·010·011의 단계 이름과 겹치지 않게). 진행: 사람 확인 없이 Claude가 계획 → code-analyst 검토 → 아래 순서대로 구현, 한 단계 = 한 커밋(메시지 `<영역>: <요약>`).
 
 ## 목표
-앱이 웹페이지가 아니라 데스크톱 프로그램처럼 굴고(브라우저 메뉴·단축키·손가락 커서·글자 끌림·흰 화면이 사라짐), 오류는 "무슨 일인지·무엇을 하면 되는지·버튼 하나"로 말하고, 브랜치를 바꿀 때 고친 파일을 "가져가기/여기 두기"로 고르고, 버린 파일도 되돌릴 수 있다. 키보드와 화면 읽기 프로그램으로 목록을 다루고, Ctrl+K 명령 팔레트(한글 초성 검색)·단축키 표·이미지 비교·프로젝트와 브랜치 고정·처음 하는 일 안내가 생긴다.
+앱이 웹페이지가 아니라 데스크톱 프로그램처럼 굴고(브라우저 메뉴·단축키·손가락 커서·글자 끌림·흰 화면이 사라짐), 오류는 "무슨 일인지·무엇을 하면 되는지·버튼 하나"로 말하고, 브랜치를 바꿀 때 고친 파일을 "새 브랜치로 옮기기/여기 두기"로 고르고, 버린 파일도 되돌릴 수 있다. 키보드와 화면 읽기 프로그램으로 목록을 다루고, Ctrl+K 명령 팔레트(한글 초성 검색)·단축키 표·이미지 비교·프로젝트와 브랜치 고정·처음 하는 일 안내가 생긴다.
 
 ## 완료 기준 (반복 전체)
 두 OS(Ubuntu 22.04, Windows 11)에서 손으로, 가능한 것은 자동 테스트로 확인한다. 손 확인은 `docs/progress.md` "사람이 할 일"에 모은다(U31).
 - 웹 느낌: 릴리스 빌드에서 마우스 오른쪽 클릭에 브라우저 메뉴가 뜨지 않고(입력칸은 잘라내기·복사·붙여넣기·모두 선택만, 선택한 글자는 복사만), F5·Ctrl+R·Ctrl+P·Ctrl+F·F12·Alt+←가 아무 일도 하지 않는다. 버튼·목록 위 커서는 화살표(링크만 손가락), 버튼·목록 글자가 끌려 선택되지 않고 비교 칸·오류 원문·버전 번호·경로는 선택된다. 화면 끝에서 튕기지 않고 이미지·링크가 끌려가지 않는다. 다크 모드로 켜도 흰 화면이 보이지 않는다. 본문은 `word-break: keep-all`이고 개수·시각 숫자는 같은 폭이다.
 - 버튼·토스트·기다림: 꺼진 버튼은 투명도 대신 읽히는 색이고 까닭이 툴팁과 `aria-describedby`로 나온다. 누르는 곳은 24×24px 이상(WCAG 2.5.8). 되돌리기 토스트는 다음 토스트가 와도 자기 시간(8초)을 채우고(최대 셋), 토스트가 포커스를 가리지 않는다. 불러오기는 300ms가 넘을 때만 보이고 한 번 보이면 0.5초 유지, 그동안 이전 내용이 그대로이며 처음 로드는 빈 줄 모양, 작업 버튼은 버튼 안에 진행 표시가 있다.
 - 오류: 모든 오류 코드가 `ERROR_FIX` 표에 해결 버튼 하나(또는 없음)를 갖고, 문구 속 행동 이름은 실제 버튼 이름과 같다(시험). 오류의 "자세히 보기"에 복사 버튼이 있다. 로그인 만료·100MB 넘는 파일 거절·다른 프로그램이 파일을 쓰는 중·올리기 거절이 각각 쉬운 문구와 버튼으로 나온다. 50MB 넘는 파일은 저장 전에 알리고 100MB 넘으면 "GitHub가 올리기를 거절해요"를 미리 말한다.
-- 되돌릴 수 있는 일: 고친 파일이 있는 채로 브랜치를 바꾸면 "가져가기"(기본)·"여기 두기"를 묻고, 겹쳐서 가져갈 수 없으면 까닭과 함께 "여기 두기"만 쓸 수 있다. 바꾼 뒤 토스트가 한 일을 말하고 Ctrl+Z가 둘 다 되돌린다. 고친 것 버리기는 확인 창 없이 되고 토스트의 "되돌리기"/Ctrl+Z가 파일을 되살린다(백업을 남기지 못해 버리지 않은 경우뿐). 작업 내역의 줄마다 Ctrl+Z로 되돌릴 수 있는지가 보이고 "이 작업 전으로 되돌리기"가 있다.
+- 되돌릴 수 있는 일: 고친 파일이 있는 채로 브랜치를 바꾸면 "새 브랜치로 옮기기"(기본)·"여기 두기"를 묻고, 겹쳐서 가져갈 수 없으면 까닭과 함께 "여기 두기"만 쓸 수 있다. 바꾼 뒤 토스트가 한 일을 말하고 Ctrl+Z가 둘 다 되돌린다. 고친 것 버리기는 확인 창 없이 되고 토스트의 "되돌리기"/Ctrl+Z가 파일을 되살린다(백업을 남기지 못해 버리지 않은 경우뿐). 작업 내역의 줄마다 Ctrl+Z로 되돌릴 수 있는지가 보이고 "이 작업 전으로 되돌리기"가 있다.
 - 길 찾기: 원격 확인 실패가 알림 줄("원격 확인 못 함 · 3분 전")과 해결 버튼으로 나오고(6px 색점 없음), 동기화 버튼 툴팁이 "2개 올리기 · 1개 가져오기"를 말하며 마지막 확인 시각이 옆에 있다. 상단 바 버튼 툴팁에 단축키가 있고 Ctrl+/가 단축키 표를 연다. Ctrl+K가 명령 팔레트를 열어 액션·브랜치 바꾸기·최근 프로젝트·화면 이동을 찾고 "ㅂㄹㅊ"으로 "브랜치"를 찾는다.
 - 키보드·화면 읽기: 파일 목록은 Tab 한 번에 들어가 ↑↓·Space·메뉴 키로 쓰고, 버튼 안의 `<Term>`은 Tab 정지가 아니다. 브랜치 목록은 `aria-activedescendant`로 고른 줄을 알리고 키보드로 줄 메뉴를 연다. 노선도에서 역을 누르면 고르기만 하고 메뉴는 두 번째 누름·`⋯` 단추·Enter·오른쪽 클릭·메뉴 키로 연다. `outline: none` 12곳 모두 대신하는 포커스 표시가 있다(시험).
 - 고정·안내: 시작 화면·프로젝트 메뉴·브랜치 목록에서 프로젝트(10개)와 브랜치(프로젝트당 10개)를 고정하면 맨 위에 남는다. 첫 브랜치·첫 충돌·첫 동기화·첫 되돌리기에 짧은 안내가 한 번만 뜨고, 닫으면 다시 뜨지 않으며 설정 "일반"에서 끄고 다시 켤 수 있다.
@@ -23,11 +23,10 @@
 ## 범위
 - **이번에 한다**: ux.md 1장 "중간"·"낮음" 전부, 4장(기다림 표시·창과 웹뷰·접근성), 5장(한국어 문구·글자 배치), 6장 2~15 중 아래 "뺀다"와 "이미 계획에 있음"이 아닌 것, 그리고 D-165~D-171 구현.
 - **뺀다**(까닭과 갈 곳):
-  - 10초 넘는 작업의 진행 막대·"파일 7/200개 받는 중": Git의 `--progress` 줄을 해석해야 해서 D-003·D-080("출력이 오는지만 본다")과 부딪힌다. 지금의 "동기화 중 · N초"·"응답 없음"·"취소"(D-080)를 유지한다. 사람에게 묻는다.
-  - 1분 넘는 작업이 창 뒤에서 끝났을 때 OS 알림: 알림 플러그인(새 의존성·capability·cargo-deny)이 필요하다 → 반복 5 후보, 사람에게 묻는다.
+  - 1분 넘는 작업이 창 뒤에서 끝났을 때 OS 알림: 넣지 않는다(D-172, 사용자 결정). 10초 넘는 작업의 진행 막대는 U7b로 한다.
   - 버전 기록 "이때 파일 보기" 목록의 이미지 썸네일: 이미지를 줄이는 코드가 없어 목록마다 원본을 보내야 한다. 고른 파일의 큰 비교만 한다(C18).
   - 프로젝트 메뉴의 "폴더 위치 열기"·창 크기·위치 기억: 반복 5(D-161).
-  - Windows WebView2 전용 `AreBrowserAcceleratorKeysEnabled` 설정: OS 분기가 platform 밖에 생기거나 `webview2-com`·unsafe가 든다. 먼저 JS로 막고(U3) 두 OS 손 확인에서 새는 키가 있으면 반복 5의 platform 함수로 옮긴다(사람에게 묻는다).
+  - (넣음으로 바뀜) Windows WebView2 `AreBrowserAcceleratorKeysEnabled`: 먼저 JS로 막고(U3) 새는 키가 있으면 U3b에서 `crates/platform`이 끈다(D-171 덧붙임, 사용자 결정).
   - 자동 접근성 검사 도구(axe): C21.
 - **이미 계획에 있음**(중복 단계를 만들지 않는다):
 
@@ -72,7 +71,7 @@
 - 노선도: 세로 목록(`layout/route.ts`)은 태그를 이름 옆 글자로만 보이고 역 크기는 같다. 확대·축소 "태그만"(`ZOOMS`)이 이미 있다(`ko.ts:181`). 홈 요약(`HomeMapView`)에는 받을 버전의 목록이 없다(`count_between`의 수뿐).
 - 글꼴: `tokens.css:42`의 `--font-mono`는 JetBrains Mono(latin) 뒤에 Pretendard를 이어 받는다(D-014). 한글이 섞인 코드 줄은 비례폭이라 칸이 어긋난다.
 
-## 결정 후보 (U1이 D-172부터 "(자동 결정)"으로 올린다)
+## 결정 후보 (U1이 그때 마지막 번호+1부터 "(자동 결정)"으로 올린다. D-172·D-173은 2026-10-16 사용자 결정이 먼저 썼으므로 아래 표의 번호는 2씩 밀린다)
 추천안을 적었다. 사용자 결정 D-165~D-171은 그대로 구현하는 쪽이고 아래는 그 세부다.
 
 | 번호 | 결정(추천안) | 까닭 | 대안 |
@@ -83,7 +82,7 @@
 | C4 (D-175) | **토스트: 되돌리기 토스트는 보존, 최대 셋, 포커스를 가리지 않는다.** `toastStore`가 목록(최대 3)을 들고, 새 토스트가 와도 "되돌리기" 단추가 있는 토스트(`ToastAction.kind === "undo"`)는 자기 8초를 채운다. 3개를 넘으면 가장 오래된 평범한 토스트부터 밀어낸다. 오류 토스트는 사람이 닫을 때까지 남고 둘까지(새 오류가 오면 가장 오래된 오류가 밀린다). 토스트 높이를 `--toast-clearance`로 알려 스크롤 칸이 `scroll-padding-bottom`으로 포커스를 가리지 않게 한다(WCAG 2.4.11). design.md "한 번에 하나" 문장을 바꾼다. | 단추가 사라져도 Ctrl+Z는 되지만 단추를 믿는 사람은 놓친다. ux.md의 "작업 내역 안내로 바뀌게"는 같은 효과를 내려고 토스트를 더 만들어야 해서 쌓아 두는 쪽이 단순하다. | 새 토스트가 올 때 이전 토스트를 "작업 내역" 안내로 바꾸기, 한 번에 하나 유지 |
 | C5 (D-176) | **기다림 표시 규칙(D-167 구체화).** 300ms 미만은 아무것도 보이지 않고 이전 내용을 그대로 둔다(`placeholderData: keepPreviousData`, 머리와 본문이 같은 요청을 가리키게 마지막으로 받은 `request`를 함께 든다). 300ms가 넘으면: 이전 내용이 있으면 그대로 두고 머리 오른쪽에 `--text-muted` "불러오는 중…", 처음 로드(이전 내용 없음)면 `Skeleton` 빈 줄 3~6줄. 한 번 보이면 0.5초 유지(`useDelayedFlag(pending, { delay: 300, hold: 500 })`). 작업 버튼은 버튼 안 진행 표시(`Button busy`: 글자는 그대로, 오른쪽 작은 회전 표시, 모션 줄이기면 정지한 점 셋). 10초 넘는 진행 막대·1분 넘는 OS 알림은 하지 않는다(범위 "뺀다"). | 사용자 결정 D-167을 그대로 구현한다. 이전 내용 유지는 파일을 ↑↓로 넘길 때 번쩍임을 없앤다. | 1초 지연(Nielsen, D-159가 300ms로 정함), 이전 내용 없이 빈 줄만 |
 | C6 (D-177) | **오류 안내 틀.** ① 문구: 한 문장 "무슨 일", 둘째 문장 "무엇을 하면 되는지"(해요체, 이름과 숫자만, 행동 이름은 실제 버튼 이름). ② 해결 버튼은 코드당 하나 이하: `src/features/errors/fixes.ts`의 `ERROR_FIX: Record<ErrorCode, FixKind>`(`none`·`reconnect`·`setIdentity`·`sync`·`openActivity`·`openHistory`·`clearLock`·`retry`)가 모든 코드를 덮어야 컴파일된다. `retry`는 호출한 쪽이 다시 할 일을 줄 때만 나온다. ③ 원문은 "자세히 보기"에 접고 안에 글자 버튼 "복사". ④ 새 실패 둘(`FileTooLarge`, `FileInUse`)을 `failure.rs`에 더한다(D-021: 문구마다 실제 git 재현 시험). 가장 먼저 다루는 넷: 로그인 만료(`githubExpired`·`httpAuthFailed` → 다시 연결), 100MB 넘는 파일 거절(`fileTooLarge` → 버전 기록), 다른 프로그램이 쓰는 중(`fileInUse` → 다시 해 보기), 올리기 거절(`pushRejected`·`remoteRefused` → 동기화). ⑤ 확인 창 문구는 `m.confirm.<이름> = { title, danger, close }` 묶음으로 모아 시험한다: 제목은 물음("?"·"하시겠습니까")이 아닌 결과 문장, 위험 버튼은 결과 이름("고친 것 버리기"·"덮어쓰며 올리기"), 물러나는 쪽은 "닫기"나 "다음에", 위험 버튼은 Enter 기본값이 아니다. | ux.md 5장·6장 3. 해결 버튼을 표 한 곳에 모으면 새 오류 코드가 생길 때 결정을 빠뜨릴 수 없다. | 화면마다 붙이기(지금 방식, 어긋남), 모든 코드에 버튼(없는 게 맞는 코드가 많음) |
-| C7 (D-178) | **브랜치 바꾸기 구현(D-165).** `SwitchInput`에 `dirty: Option<DirtyChoice>`(`park`·`carry`, `skip_serializing_if`로 옛 journal 서명이 그대로 맞는다)를 더한다. 없고 고친 파일이 있으면 지금처럼 `park`. **가져가기(`carry`)**: ① 고친 파일을 `SnapshotFiles`로 stash 모양 커밋으로 만들고 ② `merge_check(base = 지금 버전, ours = 도착할 브랜치 끝, theirs = 스냅샷)`가 `Clean`일 때만 ③ 맡기고(`GitOp::Park`) ④ 갈아타고 ⑤ 같은 stash를 적용한다. 겹치면 갈아타지 않고 `CarryBlocked`(겹친 파일 5개까지). 적용한 stash는 `switch-carry-<브랜치>` 백업 ref로 옮겨 되돌리기에 쓴다. 되돌리기(`undo_switch`)는 입력의 `dirty`를 따라 같은 방식으로 돌아온다. 조회 `query_switch_plan(branch, remote)`가 `{ dirtyFiles, canCarry, blocked }`를 주고(객체만 쓰고 ref·index·작업 폴더는 그대로, `merge_check`와 같은 수준) core는 실행 때 다시 계산한다. 고친 파일이 없으면 묻지 않는다. 새 브랜치 만들기는 지금처럼 파일이 따라간다. **용어**: `park`의 쉬운 이름을 "맡겨 두기"에서 "여기 두기"로 바꾸고("맡겨 둔 파일 N개"→"두고 간 파일 N개") "가져가기"는 용어가 아니라 이 대화상자의 선택 이름이다. | D-165는 두 선택과 기본값만 정했다. 가져가기를 `git switch`의 "충돌 없으면 따라옴"만으로 하면 고친 파일이 목적 브랜치와 다른 파일이면 거절되어 기본값이 자주 실패한다. stash+겹침 검사는 이미 있는 D-054 방식이라 새 git 기능이 없다. D-024(한 낱말은 한 뜻) 때문에 "맡겨"와 "여기 두기"를 섞지 않는다. | 가져가기=`git switch` 그대로(자주 거절됨), 겹쳐도 충돌 표시를 남기고 가져가기(D-028 위반), 기억하는 설정 "항상 이렇게"(열린 질문) |
+| C7 (D-178) | **브랜치 바꾸기 구현(D-165).** `SwitchInput`에 `dirty: Option<DirtyChoice>`(`park`·`carry`, `skip_serializing_if`로 옛 journal 서명이 그대로 맞는다)를 더한다. 없고 고친 파일이 있으면 지금처럼 `park`. **새 브랜치로 옮기기(`carry`)**: ① 고친 파일을 `SnapshotFiles`로 stash 모양 커밋으로 만들고 ② `merge_check(base = 지금 버전, ours = 도착할 브랜치 끝, theirs = 스냅샷)`가 `Clean`일 때만 ③ 맡기고(`GitOp::Park`) ④ 갈아타고 ⑤ 같은 stash를 적용한다. 겹치면 갈아타지 않고 `CarryBlocked`(겹친 파일 5개까지). 적용한 stash는 `switch-carry-<브랜치>` 백업 ref로 옮겨 되돌리기에 쓴다. 되돌리기(`undo_switch`)는 입력의 `dirty`를 따라 같은 방식으로 돌아온다. 조회 `query_switch_plan(branch, remote)`가 `{ dirtyFiles, canCarry, blocked }`를 주고(객체만 쓰고 ref·index·작업 폴더는 그대로, `merge_check`와 같은 수준) core는 실행 때 다시 계산한다. 고친 파일이 없으면 묻지 않는다. 새 브랜치 만들기는 지금처럼 파일이 따라간다. **용어**: `park`의 쉬운 이름을 "맡겨 두기"에서 "여기 두기"로 바꾸고("맡겨 둔 파일 N개"→"두고 간 파일 N개") "새 브랜치로 옮기기"는 용어가 아니라 이 대화상자의 선택 이름이다. | D-165는 두 선택과 기본값만 정했다. 새 브랜치로 옮기기를 `git switch`의 "충돌 없으면 따라옴"만으로 하면 고친 파일이 목적 브랜치와 다른 파일이면 거절되어 기본값이 자주 실패한다. stash+겹침 검사는 이미 있는 D-054 방식이라 새 git 기능이 없다. D-024(한 낱말은 한 뜻) 때문에 "맡겨"와 "여기 두기"를 섞지 않는다. | 새 브랜치로 옮기기=`git switch` 그대로(자주 거절됨), 겹쳐도 충돌 표시를 남기고 새 브랜치로 옮기기(D-028 위반), 기억하는 설정 "항상 이렇게"(열린 질문) |
 | C8 (D-179) | **고친 것 버리기는 되돌릴 수 있는 일이다(D-169).** `discard`를 `Caution`/`Inverse`(백업 ref에서 되살리기)로 바꾸고 확인 창과 확인 토큰을 없앤다. 토스트는 "버렸어요 · 되돌리기"(Ctrl+Z). 되돌리기는 그 파일들이 아직 버린 모습 그대로일 때만 하고(`status`에 그 경로가 없음) 아니면 `UndoStale`과 작업 내역 단추. 새 파일(추적 안 함)도 되살린다. 백업 ref를 못 쓰면 지금처럼 내용은 임시 보관 목록에 남고 `BackupFailed`로 알린다(그 경우도 잃는 내용은 없으므로 확인 창이 필요한 경우가 없다). `Irreversible` 집합에서 `discard`가 빠진다(D-136의 시험 갱신). 다시 하기는 없다(`stash`와 같음). | D-169("남기지 못하는 경우만 확인 창")를 `discard.rs`가 이미 stash로 먼저 남기는 구조에 맞게 구현하면, 남기지 못하는 경우는 버리기 자체가 실패하는 경우뿐이라 확인 창이 남을 자리가 없다. | 백업을 먼저 확인하는 질의+확인 창(쓸 일 없는 코드), 별도 `discard-anyway` 액션(같은 이유) |
 | C9 (D-180) | **동기화 줄 정보.** 원격 확인 실패는 6px 점 대신 알림 줄("원격 확인 못 함 · 3분 전" `m.fetchFailed`)+`ERROR_FIX`의 해결 버튼 하나(인증 실패면 다시 연결, 그 밖은 동기화)로 보이고 닫을 수 있다. 동기화 버튼 툴팁은 할 일("2개 올리기 · 1개 가져오기", 낱말은 용어표의 `push`·`pull`)을 말하고 버튼 옆에 `--text-muted` 13px로 마지막 확인 시각(`<Time>`)을 둔다. 시각은 메모리(`syncStore.lastCheckedAt`: 동기화·자동 원격 확인 성공 때)만 쓴다. (선택, U29) 홈 노선도에 받을 버전 최대 3개를 흐린 속 빈 역으로 이어 붙인다(`HomeMapView.incoming`). | ux.md 1장 중간·6장 9. 색점은 키보드에 닿지 않고 색으로만 알린다. 시각을 파일에 저장하면 앱 데이터에 쓸 일이 늘고 다시 켜면 낡는다. | 파일(`FETCH_HEAD`) 시각 읽기(OS 파일 시각 읽기를 core에 더함), 점을 키우기 |
 | C10 (D-181) | **단축키 보이기.** 상단 바·동기화·브랜치 단추의 툴팁(`TermTooltip`)에 `Kbd`로 단축키를 붙인다(`shortcut` 속성, 표에서 읽음). 새 단축키 `Ctrl+/`(`shortcutHelp`)가 단축키 표 대화상자를 열고 설정 "일반"의 "단축키 보기"와 팔레트에서도 연다. 표는 `SHORTCUTS`에서 만들며 `m.shortcutName`이 `Record<ShortcutId, string>`이라 단축키를 더하면 이름을 빠뜨릴 수 없다. | ux.md 1장 중간. 표가 이미 한 곳에 있다(D-056). | 단축키 글자를 버튼에 항상 표시(상단 바 컨트롤 5개 제한과 소란) |
@@ -102,7 +101,7 @@
 ## 용어 변경
 - **`park`**: 쉬운 이름 "맡겨 두기" → "여기 두기"(en "Leave here"). 설명은 그대로. 화면 문구 "맡겨 둔 파일 N개"→"두고 간 파일 N개", "맡겨 둔 파일 N개 · 겹침"→"두고 간 파일 N개 · 겹침", "맡겨 둔 파일만 남음"→"두고 간 파일만 남음", 오류 `parkBlocked`·`unparkConflict`와 작업 내역의 백업 이름(`backupLabel`)의 "맡긴"을 같은 말로. `docs/spec.md` 용어표와 화면 구성, `docs/design.md`, `src/glossary/ko.ts`·`en.ts`, `src/messages`를 **U12에서 한 커밋**으로 고친다(spec-sync 시험). `rg "맡겨|맡긴|맡기"`로 빠짐을 확인한다.
 - **`discard`**: 호버 설명에 "되돌리기로 되살릴 수 있어요." 한 문장을 더하고 spec "위험도" 문단의 확인 목록에서 고친 것 버리기를 뺀다(U13).
-- 새 용어는 없다. "가져가기"·명령 팔레트·고정·안내·이미지 비교는 Git 용어가 아니라 용어표에 넣지 않는다. 새 문구는 `src/messages` ko·en 둘 다 같은 커밋에: `switchDialog`(제목·`carry`·`leave`·설명·`carryBlocked(files)`), `switchedCarried(n, branch)`·`switchedLeft(n, branch)`, `disabledReasons.*`, `confirm.*`, `fix.*`(해결 버튼 이름)·`copyDetail`, `errors.fileTooLarge`·`errors.fileInUse`, `secretRule.hugeFile`, `shortcutName.*`·`shortcutsTitle`, `palette.*`, `pin`·`unpin`·`pinned`·`recentProjects`, `activityUndo.*`(`next`·`earlier`·`never`)·`restoreBefore`, `tip.*`(네 안내와 "알겠어요"·"처음 하는 일 안내"·"다시 보기"), `imageCompare.*`(`sideBySide`·`overlay`·`swipe`·`oldSide`·`newSide`), `textMenu.*`(잘라내기·복사·붙여넣기·모두 선택·`pasteWithKeys`), `incoming(n)`, `lastChecked`. 모두 `copy-rules.test.ts`·`terms-in-messages.test.ts`·`parity.test.ts`(ko·en 키 같음)를 통과해야 한다.
+- 새 용어는 없다. "새 브랜치로 옮기기"·명령 팔레트·고정·안내·이미지 비교는 Git 용어가 아니라 용어표에 넣지 않는다. 새 문구는 `src/messages` ko·en 둘 다 같은 커밋에: `switchDialog`(제목·`carry`·`leave`·설명·`carryBlocked(files)`), `switchedCarried(n, branch)`·`switchedLeft(n, branch)`, `disabledReasons.*`, `confirm.*`, `fix.*`(해결 버튼 이름)·`copyDetail`, `errors.fileTooLarge`·`errors.fileInUse`, `secretRule.hugeFile`, `shortcutName.*`·`shortcutsTitle`, `palette.*`, `pin`·`unpin`·`pinned`·`recentProjects`, `activityUndo.*`(`next`·`earlier`·`never`)·`restoreBefore`, `tip.*`(네 안내와 "알겠어요"·"처음 하는 일 안내"·"다시 보기"), `imageCompare.*`(`sideBySide`·`overlay`·`swipe`·`oldSide`·`newSide`), `textMenu.*`(잘라내기·복사·붙여넣기·모두 선택·`pasteWithKeys`), `incoming(n)`, `lastChecked`. 모두 `copy-rules.test.ts`·`terms-in-messages.test.ts`·`parity.test.ts`(ko·en 키 같음)를 통과해야 한다.
 
 ## 단계
 각 단계 = 커밋 하나. Rust를 고친 단계는 커밋 전에 `pnpm check:full`. `core::view`·Tauri 명령이 바뀌면 같은 커밋에서 `cargo run -p app --bin gen-bindings`(`src/lib/bindings.ts`·`action-meta.json`). 새 Tauri 명령은 `src/commands.rs`·`src/bindings.rs`·`build.rs`의 `COMMANDS`·`capabilities/default.json` 네 곳과 `src/lib/api.ts`를 같은 커밋에 넣는다(`tests/security_config.rs`가 확인). 화면은 git도 `invoke`도 직접 부르지 않고 `src/lib/api.ts`·`queries.ts`로만 core를 부른다(D-010). 색·간격·크기는 `tokens.css` 변수만(길이는 rem, 린트가 막음). 새 화면 문구는 ko·en 같은 커밋(이름과 숫자만, D-049; 오류·안내·확인은 짧은 문장). 용어는 `<Term>`, 문장 속 용어는 `t(id)`(D-029). OS별 코드는 `crates/platform`에만(이 계획의 앱·화면 코드에는 OS 분기가 없고, `#[cfg(windows)]`/`#[cfg(unix)]`는 시험에만 쓴다). 테스트는 사용자 설정·실제 키체인·실제 네트워크·전역 git 설정을 건드리지 않는다.
@@ -130,7 +129,13 @@ U3. 앱 메뉴와 브라우저 단축키 (`features: app context menu and blocke
 - 내용: 한글 조합 중에는 메뉴를 열지 않는다. `RouteList`와 011-P17b의 파일 줄 메뉴처럼 직접 `contextmenu`를 처리하는 곳(`defaultPrevented`로 알아본다)은 그대로 동작해야 한다(기존 시험).
 - 테스트: `webFeel.test.tsx`(버튼 위 `contextmenu`는 `defaultPrevented`, 입력칸 위는 메뉴가 열림, 이미 막은 곳은 그대로, 선택 글자 위는 "복사"만, 릴리스 모드에서 `F5`·`Ctrl+R`·`Alt+←`가 막히고 개발 모드에서 `F12`는 안 막힘, 표 하나), `TextMenu.test.tsx`(항목 동작은 `execCommand`·클립보드 모의, 읽기 거절 때 꺼진 항목, ↑↓·Esc, 닫히면 포커스가 입력칸으로 돌아감), 기존 `RouteList`·`Rewrite` 시험.
 - 완료 기준: `pnpm test`·`pnpm lint`·`pnpm typecheck`. 눈으로: 릴리스 빌드(`pnpm tauri build --no-bundle`)에서 오른쪽 클릭·F5·Ctrl+R·Ctrl+P·Ctrl+F·F12·Alt+←.
-- Windows/Ubuntu: WebView2는 일부 브라우저 키(인쇄·찾기 등)를 JS보다 먼저 가져갈 수 있다 → 새는 키는 progress "사람이 할 일"에 적고 반복 5의 platform 함수 후보로 둔다(C1, 사람에게 묻는다). WebKitGTK는 JS 막기로 충분한지 확인. 붙여넣기 읽기 권한이 웹뷰마다 다르다. 보안: 클립보드는 사용자 동작 안에서만 읽고 값을 저장·기록하지 않는다. 메뉴 글자는 상수.
+- Windows/Ubuntu: WebView2는 일부 브라우저 키(인쇄·찾기 등)를 JS보다 먼저 가져갈 수 있다 → 새는 키가 있으면 U3b(D-171 덧붙임). WebKitGTK는 JS 막기로 충분한지 확인. 붙여넣기 읽기 권한이 웹뷰마다 다르다. 보안: 클립보드는 사용자 동작 안에서만 읽고 값을 저장·기록하지 않는다. 메뉴 글자는 상수.
+
+U3b. Windows 브라우저 단축키 끄기 (`platform: turn off WebView2 browser accelerator keys`, D-171 덧붙임, 2026-10-16 사용자 결정)
+- 목표: JS로 막히지 않고 새는 브라우저 키가 Windows에 있으면 WebView2의 `AreBrowserAcceleratorKeysEnabled`를 끈다.
+- 바꿀 파일: `crates/platform`(신규 `webview.rs`, `cfg(windows)`만: Tauri·wry가 주는 설정(wry `with_browser_accelerator_keys` 등)을 먼저 찾고, 없으면 `webview2-com`으로 `ICoreWebView2Settings3::SetAreBrowserAcceleratorKeysEnabled(false)`. `unsafe`가 필요하면 이 함수 하나에만 두고 D-038 예외로 `docs/decision.md`·code-analyst 점검표에 적음), `src-tauri/src/main.rs`(창을 만든 뒤 platform 함수 호출, OS 분기는 platform 안), 새 의존성이면 `Cargo.toml`·`deny.toml`·`cargo deny check`.
+- 테스트: 앱이 쓰는 단축키(D-056 표: Ctrl+Enter·Ctrl+Z·Ctrl+Shift+Z·Ctrl+B·Ctrl+H·Ctrl+K·Ctrl+=/−/0)와 입력칸의 Ctrl+C·Ctrl+V·Ctrl+X·Ctrl+Z가 계속 되는지: 단위 시험은 표가 그대로인지, 손 확인 목록을 progress "사람이 할 일"에(Windows 실기기). Linux는 바뀌는 것이 없음을 시험(함수가 아무것도 하지 않음).
+- 완료 기준: 두 OS CI 초록, `cargo deny check`. 새는 키가 없다고 U3 손 확인에서 확인되면 이 단계는 하지 않고 progress에 적는다.
 
 U4. 첫 화면 흰 번쩍임 (`app: show the window after the first paint`)
 - 목표: 어두운 화면 모드로 켜도 흰 화면이 보이지 않는다(C2).
@@ -159,10 +164,17 @@ U6. 토스트 겹침과 포커스 가림 (`ui: keep undo toasts, stack up to thr
 U7. 기다림 표시 (`ui: delayed loading with hold, previous content and skeleton`)
 - 목표: 짧은 기다림에는 아무것도 보이지 않고 이전 내용이 남으며, 길면 빈 줄 모양과 버튼 안 표시가 나온다(C5, 011-P19 ② 확장).
 - 바꿀 파일: `src/lib/useDelayed.ts`(011-P19의 `useDelayedFlag(pending, ms)`를 `{ delay: 300, hold: 500 }` 객체 인자로, 한 번 켜진 뒤 최소 500ms 유지), 신규 `src/ui/Skeleton.tsx`·`Skeleton.module.css`(`role="status"` 안에 `m.loading` 시각 숨김 글자, `--surface-sunken` 막대 3~6줄, 모션 줄이기면 정지), `src/ui/Button.tsx`(`busy`: `aria-busy`, 글자 그대로, 오른쪽 작은 회전 표시·모션 줄이기면 점 셋), `src/lib/queries.ts`(`useDiff`·`useStatus`·`useLogPages` 첫 쪽·`useRecovery`·`useRewritePlan`·`usePrDetail`에 `placeholderData: keepPreviousData`), `src/features/diff/DiffView.tsx`(마지막으로 받은 `{ request, data }`를 들고 머리와 본문을 그 요청으로 그림, 300ms 넘으면 머리 오른쪽 "불러오는 중…", 처음 로드는 `Skeleton`), `src/screens/Workspace/Workspace.tsx`(`<DiffView key={selected.path}>`의 `key` 제거, 파일이 바뀌면 펼침·줄 바꿈 임시 상태만 effect로 초기화), `History.tsx`·`Activity.tsx`·`Rewrite.tsx`·`PullRequests.tsx`(처음 로드 `Skeleton`), `busy`를 쓰는 작업 버튼(`NameBox` 버전 저장, `CloneDialog` 복제, `CreatePrDialog` 만들기, `GitHubSection` 연결, `ConnectPanel`), `src/messages`, 시험.
-- 내용: 동기화 버튼의 "동기화 중 · N초"는 그대로(이미 버튼 안 표시). 10초 넘는 진행 막대·OS 알림은 하지 않는다.
+- 내용: 동기화 버튼의 "동기화 중 · N초"는 그대로(이미 버튼 안 표시). 10초 넘는 작업의 진행 막대는 U7b, OS 알림은 하지 않는다(D-172).
 - 테스트: `useDelayed.test`(299ms 거짓·301ms 참, 그 안에 끝나면 안 켜짐, 켜진 뒤 즉시 끝나도 500ms까지 유지), `DiffView.test`(파일을 바꾸면 이전 파일의 머리와 줄이 그대로이고 응답이 오면 함께 바뀜, 300ms 뒤 "불러오는 중…", 처음 로드는 `Skeleton`), `Skeleton.test`, `Button` `busy`(`aria-busy`·폭 변화 없음), 각 화면 시험의 "불러오는 중" 기대 갱신(즉시 끝나는 질의는 없음).
 - 완료 기준: `pnpm test`·`pnpm lint`·`pnpm typecheck`. 눈으로: 파일을 ↑↓로 빠르게 넘겨도 비교 칸이 번쩍이지 않는다.
 - Windows/Ubuntu: 차이 없음. 보안: 해당 없음.
+
+U7b. 진행 막대와 Git이 주는 개수 (`git+core: progress counts for long remote work`, D-172, 2026-10-16 사용자 추가)
+- 목표: 10초 넘는 원격 작업에 진행 막대와 "파일 7/200개 받는 중"을 보인다. 1분 넘는 작업의 OS 알림은 넣지 않는다.
+- 바꿀 파일: `crates/git/src/progress.rs`(신규, `--progress` 줄 해석은 이 한 곳: `Receiving objects: 45% (90/200)`·`Writing objects: …`·`Resolving deltas`·`Counting/Compressing objects`에서 단계와 `done/total`만, `\r`로 나뉜 줄, 못 읽으면 `None`), `cli/runner.rs`의 관찰자(`ProgressObserver`)가 stderr 줄을 넘겨받아 마지막 개수를 들고 있음, `core`의 `op-progress` 페이로드(`OpProgress`)에 `phase: Option<ProgressPhase { Receive, Send, Resolve, Count }>`·`done: Option<u32>`·`total: Option<u32>`(파일 이름·주소 없음), 생성물, `src/features/progress/`(10초가 지나고 `total`이 있으면 `ui/ProgressBar`(신규, `role="progressbar"`·`aria-valuenow`·`aria-valuemax`, 토큰 색)와 문구 `m.progress.receiving(done, total)` "파일 {done}/{total}개 받는 중"·`sending` "…올리는 중", 없으면 지금 "동기화 중 · N초"), `SyncButton`·`CloneDialog`·덮어쓰며 올리기 대화상자의 진행 자리, `src/messages` ko·en, `docs/architecture.md`(D-003 예외: 진행 줄은 `progress.rs`에서만 읽는다).
+- 테스트: `progress.rs` 표(실제 git 2.34.1·최신 출력 표본, 백분율만 있는 줄, 한글 locale이 아니라 `LC_ALL=C` 원문, 모르는 줄 `None`), 로컬 bare 원격 받기에서 관찰자에 `done ≤ total` 값이 오는지, 이벤트 페이로드에 경로가 없음, 화면(9초는 막대 없음·10초 뒤 막대와 문구, `total` 없으면 지금 문구, 모션 줄이기).
+- 완료 기준: `cargo test --workspace`·`pnpm test`·바인딩 최신. 손: 큰 저장소 복제에서 막대가 움직인다.
+- Windows/Ubuntu: Git for Windows의 진행 줄 모양이 같은지 표본으로. 보안: 진행 줄 원문은 화면·로그로 내보내지 않고 숫자만.
 
 ### B. 오류와 큰 파일
 
@@ -192,7 +204,7 @@ U10. 큰 파일 미리 알림 (`core: warn about files over 50MB and 100MB`)
 
 ### C. 되돌릴 수 있는 일
 
-U11. core: 브랜치 바꾸기 — 여기 두기·가져가기 (`core: switch with leave-here or carry choice`)
+U11. core: 브랜치 바꾸기 — 여기 두기·새 브랜치로 옮기기 (`core: switch with leave-here or carry choice`)
 - 목표: 고친 파일이 있을 때 두 선택으로 브랜치를 바꾸고 둘 다 Ctrl+Z로 되돌린다(D-165, C7).
 - 바꿀 파일: `crates/core/src/view/input.rs`(`SwitchInput.dirty: Option<DirtyChoice>`, `#[serde(default, skip_serializing_if = "Option::is_none")]`, `journal_copy`와 시험), `crates/core/src/actions/switch.rs`(`switch_with_parking`이 선택을 받아 `carry` 흐름 추가: 스냅샷 → 겹침 검사 → 맡기기 → 갈아타기 → 적용, 겹치면 갈아타기 전에 `CoreError::CarryBlocked`, 적용한 stash를 `switch-carry-<브랜치>` 백업으로, `SwitchReport`에 `files`·`carried`), `crates/core/src/undo/run.rs`(`undo_switch`·`redo_switch`가 입력의 `dirty`를 따름), `crates/core/src/query.rs`·`view/`(신규 `SwitchPlanView { dirty_files, can_carry, blocked: Vec<String> }`, `Queries::switch_plan`), `crates/core/src/error.rs`·`ErrorCode::CarryBlocked`+문구, `src-tauri`(`query_switch_plan` 네 곳), `src/lib/api.ts`·`queries.ts`(`useSwitchPlan`), 생성물, `docs/architecture.md`.
 - 내용: 고친 파일이 없으면 지금과 같다. `dirty`가 없고 고친 파일이 있으면 `park`(옛 호출·옛 journal 호환). `carry`는 core가 실행 때 다시 계산하고 화면의 `can_carry`를 믿지 않는다. 새 파일(추적 안 함)도 `Park`(`stash -u`)가 포함한다. 첫 저장 전(버전 없음)·특정 버전을 보는 중은 지금처럼 맡기지 않는다.
@@ -202,9 +214,9 @@ U11. core: 브랜치 바꾸기 — 여기 두기·가져가기 (`core: switch wi
 
 U12. screens: 브랜치 바꾸기 대화상자와 "여기 두기" 용어 (`screens: branch switch dialog and leave-here wording`)
 - 목표: 브랜치를 고르면 고친 파일이 있을 때 두 선택을 묻고, 한 일을 토스트로 말한다(D-165).
-- 바꿀 파일: 신규 `src/features/branches/SwitchDialog.tsx`(+css·test; `DialogFrame` 폭 narrow, 제목 "고친 파일 N개가 있어요", 주 버튼 "가져가기"(처음 포커스·Enter)와 둘째 "여기 두기"(`<Term park>`)와 글자 "닫기", 각 선택 아래 `--text-muted` 한 줄 설명, `can_carry`가 거짓이면 "가져가기"를 `disabledReason`("겹치는 파일이 있어요 · a.txt 외 2개")으로, 계획 조회 중에는 둘 다 `busy`), `src/features/branches/BranchList.tsx`(`run`이 `useStatus`의 고친 파일 수가 0보다 크면 대화상자를 열고 선택을 `executeAction({ id: "switch", input: { …, dirty } })`로 보냄. 새 브랜치 만들기는 묻지 않음), `src/lib/queries.ts`, `src/messages`(`switchDialog.*`, `switchedCarried(n, branch)`: "고친 파일 3개를 '디자인-수정'으로 가져왔어요", `switchedLeft(n, branch)`: "고친 파일 3개를 'main'에 두고 왔어요" + 도착한 브랜치에서 `unparked`면 "두고 간 파일 N개를 꺼냈어요" 덧붙임), 용어: `docs/spec.md` 용어표 `park` 행과 화면 구성 문구, `docs/design.md`, `src/glossary/ko.ts`·`en.ts`, `src/messages`의 "맡겨 둔 파일…" 계열(위 "용어 변경"), 시험.
+- 바꿀 파일: 신규 `src/features/branches/SwitchDialog.tsx`(+css·test; `DialogFrame` 폭 narrow, 제목 "고친 파일 N개가 있어요", 주 버튼 "새 브랜치로 옮기기"(처음 포커스·Enter)와 둘째 "여기 두기"(`<Term park>`)와 글자 "닫기", 각 선택 아래 `--text-muted` 한 줄 설명, `can_carry`가 거짓이면 "새 브랜치로 옮기기"를 `disabledReason`("겹치는 파일이 있어요 · a.txt 외 2개")으로, 계획 조회 중에는 둘 다 `busy`), `src/features/branches/BranchList.tsx`(`run`이 `useStatus`의 고친 파일 수가 0보다 크면 대화상자를 열고 선택을 `executeAction({ id: "switch", input: { …, dirty } })`로 보냄. 새 브랜치 만들기는 묻지 않음), `src/lib/queries.ts`, `src/messages`(`switchDialog.*`, `switchedCarried(n, branch)`: "고친 파일 3개를 '디자인-수정'으로 가져왔어요", `switchedLeft(n, branch)`: "고친 파일 3개를 'main'에 두고 왔어요" + 도착한 브랜치에서 `unparked`면 "두고 간 파일 N개를 꺼냈어요" 덧붙임), 용어: `docs/spec.md` 용어표 `park` 행과 화면 구성 문구, `docs/design.md`, `src/glossary/ko.ts`·`en.ts`, `src/messages`의 "맡겨 둔 파일…" 계열(위 "용어 변경"), 시험.
 - 내용: 토스트에는 "되돌리기"(Ctrl+Z). 선택을 기억하는 설정은 만들지 않는다(열린 질문). 팔레트·ProjectMenu 등에서 `switch`를 부르는 곳이 있으면 같은 대화상자를 거친다(`rg 'id: "switch"'`).
-- 테스트: `SwitchDialog.test`(포커스가 "가져가기", Enter가 가져가기, "여기 두기"·"닫기", 가져갈 수 없으면 까닭 툴팁과 `aria-disabled`, 고친 파일 0개면 대화상자 없이 바로 바뀜, 한글 조합 중 Enter 무시), `BranchList.test`(기존 `switch` 호출 기대 갱신), 토스트 문구(두 가지·`unparked`), `spec-sync`·`terms-in-messages`·`copy-rules`·`parity`, 용어 이름 바뀜 확인(`rg "맡겨|맡긴"`).
+- 테스트: `SwitchDialog.test`(포커스가 "새 브랜치로 옮기기", Enter가 새 브랜치로 옮기기, "여기 두기"·"닫기", 가져갈 수 없으면 까닭 툴팁과 `aria-disabled`, 고친 파일 0개면 대화상자 없이 바로 바뀜, 한글 조합 중 Enter 무시), `BranchList.test`(기존 `switch` 호출 기대 갱신), 토스트 문구(두 가지·`unparked`), `spec-sync`·`terms-in-messages`·`copy-rules`·`parity`, 용어 이름 바뀜 확인(`rg "맡겨|맡긴"`).
 - 완료 기준: `pnpm test`·`pnpm lint`·`pnpm typecheck`. 눈으로: 고친 파일이 있는 채로 브랜치를 바꿔 두 선택과 토스트, Ctrl+Z, 겹치는 경우의 까닭.
 - Windows/Ubuntu: 대화상자 포커스(`onOpenAutoFocus`)를 두 웹뷰에서 한 번 더 본다. 보안: 화면은 선택 값만 보내고 core가 다시 검사한다.
 
@@ -357,7 +369,7 @@ U29. 받을 버전 흐린 역 (선택) (`history: faded stations for incoming ve
 U30. 코드 글꼴 D2Coding (`styles: d2coding for korean in code`)
 - 목표: 한글이 섞인 코드 줄의 칸이 맞는다(C20).
 - 바꿀 파일: `package.json`·`pnpm-lock.yaml`(글꼴 npm 패키지 1개), `src/styles/fonts.css` 또는 `main.tsx`의 글꼴 import(한글 범위 woff2 400 하나), `src/styles/tokens.css`(`--font-mono`에 `"D2Coding"` 추가), `THIRD_PARTY_NOTICES.md`, `docs/design.md`는 U1, 신규 `src/styles/fonts.test.ts`.
-- 내용: 설치 뒤 번들 크기(`dist` 증가분)를 재어 2MB를 넘거나 woff2가 없으면 하지 않고 progress "사람이 할 일"에 적는다. 라틴은 JetBrains Mono 그대로.
+- 내용(D-173): 설치 뒤 번들 크기(`dist` 증가분)를 재어 2MB를 넘거나 woff2가 없으면 하지 않고 progress "사람이 할 일"에 적는다. 라틴은 JetBrains Mono 그대로. 글꼴 파일 옆에 OFL 원문 라이선스 파일을 함께 두고, `THIRD_PARTY_NOTICES.md` "글꼴" 표와 `docs/design.md` "글꼴"에 라이선스를 적는다(`cargo deny`와 별개).
 - 테스트: `fonts.test`(`--font-mono`의 글꼴 순서, `unicode-range`가 한글 범위, 라이선스 원문이 `THIRD_PARTY_NOTICES.md`에 있음), `pnpm lint`, 눈으로: 비교 칸의 한글 섞인 줄 정렬, `pnpm tauri build --no-bundle` 크기.
 - 완료 기준: `pnpm test`·`pnpm lint`·`pnpm typecheck`·`pnpm build`.
 - Windows/Ubuntu: 글꼴은 번들이라 같다. 보안: 라이선스(OFL) 표시, `pnpm` 설치 스크립트 제한(`onlyBuiltDependencies`) 유지.
@@ -375,8 +387,8 @@ U31. 문서·점검·사람이 할 일 (`docs: wrap up ux polish iteration`)
 ## 위험
 - **규모**: 31단계라 길다. 그룹(A~J)은 서로 독립이고 한 단계씩 끝내도 앱이 깨지지 않는다. 시간이 모자라면 뒤에서부터(U29 선택 → U30 → U28 → H 이미지)를 반복 5로 넘기고 U31에 적는다.
 - **011·010이 아직 안 끝난 가정**: U5·U7·U9·U10·U19는 011-P17b·P18·P19와 앞선 처리(오류 토스트·`ConfirmDialog`)가 끝난 코드를 가정한다. 구현 첫날 `rg`로 현재 상태를 확인하고 어긋나면 progress에 적고 단계 순서를 맞춘다.
-- **"가져가기"와 "가져오기"는 한 글자 차이**다. 사용자 결정(D-165)이라 그대로 쓰되 대화상자 설명에 동작을 풀어 쓰고 `pull`의 쉬운 이름은 바꾸지 않는다. 혼동되면 사용자에게 물을 질문으로 올렸다.
-- **가져가기 계산 비용과 정확성**: 스냅샷+`merge_check`는 큰 저장소에서 느릴 수 있다(대화상자가 조회 중 `busy`, core는 실행 때 다시 계산). 겹침 검사는 줄 단위 3-way라 git이 실제로 적용할 때와 어긋날 수 있다 → 적용이 충돌하면 갈아타기를 되돌리고(기존 실패 정리) `CarryBlocked`로 알린다. 시험으로 고정한다.
+- **낱말**: 처음의 "새 브랜치로 옮기기"는 "가져오기"(`pull`)와 한 글자 차이라 사용자가 "새 브랜치로 옮기기"로 바꿨다(D-165 고침). 대화상자 설명에 동작을 풀어 쓴다.
+- **새 브랜치로 옮기기 계산 비용과 정확성**: 스냅샷+`merge_check`는 큰 저장소에서 느릴 수 있다(대화상자가 조회 중 `busy`, core는 실행 때 다시 계산). 겹침 검사는 줄 단위 3-way라 git이 실제로 적용할 때와 어긋날 수 있다 → 적용이 충돌하면 갈아타기를 되돌리고(기존 실패 정리) `CarryBlocked`로 알린다. 시험으로 고정한다.
 - **버리기 되돌리기의 stale**: 사용자가 버린 파일을 곧바로 다시 만들거나 고쳤으면 되돌리지 않는다(`UndoStale`). 조용히 덮어쓰지 않는다.
 - **브라우저 키 막기의 한계**: WebView2는 일부 키를 JS보다 먼저 가져갈 수 있다. 새는 키 목록을 손 확인으로 찾고 반복 5의 platform 함수(`webview2-com`, unsafe 이유 주석)로 옮길지 사람에게 묻는다.
 - **앱 메뉴의 붙여넣기**: 웹뷰가 `navigator.clipboard.readText()`를 막을 수 있다. 막히면 항목이 꺼지고 Ctrl+V 안내가 나온다(기능 손실 작음).
@@ -401,7 +413,7 @@ U31. 문서·점검·사람이 할 일 (`docs: wrap up ux polish iteration`)
 - **버리기·작업 내역**: 파일을 버리고 Ctrl+Z, 그사이 같은 파일을 고쳤을 때, 새 파일 버리기, 작업 내역의 "Ctrl+Z로 되돌려요" 표시와 "이 작업 전으로".
 - **팔레트·단축키**: Ctrl+K·Ctrl+/가 WebView2·WebKitGTK에서 앱에 오는지(한국어 자판), 한글 IME로 초성 검색, 단축키 표의 키와 실제 동작.
 - **고정·안내·이미지·노선도·글꼴**: 고정이 껐다 켜도 남는지, 안내 네 가지가 한 번만 뜨고 설정에서 다시 켜지는지, png·jpg·gif·webp·svg와 투명 png·큰 이미지(3MB 근처)의 세 보기, 태그 역 크기, 받을 버전 흐린 역(만들었다면), 비교 칸의 한글 줄 정렬.
-- **사람에게 묻는 것**: ① 10초 넘는 작업의 진행 막대·1분 넘는 작업의 OS 알림이 필요한지(D-080·새 의존성), ② "가져가기"가 "가져오기"와 헷갈리지 않는지·선택을 기억하는 설정이 필요한지, ③ Windows에서 브라우저 단축키가 새면 platform 함수(`webview2-com`)를 허용할지, ④ D2Coding 번들 크기 허용치, ⑤ 최소 창 크기(011의 질문 그대로).
+- **사람에게 묻는 것**: 없음. 질문 다섯은 2026-10-16 사용자가 답했다(D-172 진행 막대, D-165 낱말, D-171 덧붙임 WebView2 단축키, D-173 D2Coding, D-161 최소 창 크기 800×560 유지).
 
 ## 단계 순서 요약
 | 단계 | 내용 | 크기 | 크레이트·화면 | 커밋 메시지 제안 |
@@ -409,14 +421,16 @@ U31. 문서·점검·사람이 할 일 (`docs: wrap up ux polish iteration`)
 | U1 | 결정 D-172~D-192·문서 | 소 | docs | `docs: add ux polish decisions and plan 012` |
 | U2 | 웹 느낌 CSS·한국어 글자 배치·린트 | 중 | styles | `styles: desktop-app feel and korean text layout` |
 | U3 | 앱 메뉴·브라우저 단축키 막기 | 중 | 화면(lib, ui) | `features: app context menu and blocked browser keys` |
+| U3b | Windows 브라우저 단축키 끄기(새는 키가 있을 때만, D-171 덧붙임) | 소 | platform, app | `platform: turn off WebView2 browser accelerator keys` |
 | U4 | 첫 화면 흰 번쩍임 | 소 | app, 화면 | `app: show the window after the first paint` |
 | U5 | 꺼진 버튼 이유·24px·포커스 점검 | 중 | 화면(ui, styles) | `ui: disabled reasons, 24px targets and focus audit` |
 | U6 | 토스트 겹침·포커스 가림 | 중 | 화면(ui) | `ui: keep undo toasts, stack up to three and clear focus` |
 | U7 | 기다림 표시(0.5초 유지·이전 내용·빈 줄) | 중 | 화면 | `ui: delayed loading with hold, previous content and skeleton` |
+| U7b | 진행 막대와 Git이 주는 개수(D-172) | 중 | git, core, 화면 | `git+core: progress counts for long remote work` |
 | U8 | 새 실패 둘(100MB 거절·파일 사용 중) | 중 | git, core | `git+core: classify oversized files and files in use` |
 | U9 | 오류 안내 틀·해결 버튼 표·확인 창 문구 | 대 | 화면 | `features: error guide with one fix button and raw copy` |
 | U10 | 큰 파일 50MB·100MB 미리 알림 | 소 | core, 화면 | `core: warn about files over 50MB and 100MB` |
-| U11 | 브랜치 바꾸기 core(여기 두기·가져가기) | 대 | core, app | `core: switch with leave-here or carry choice` |
+| U11 | 브랜치 바꾸기 core(여기 두기·새 브랜치로 옮기기) | 대 | core, app | `core: switch with leave-here or carry choice` |
 | U12 | 브랜치 바꾸기 대화상자·"여기 두기" 용어 | 중 | 화면, 문서(용어) | `screens: branch switch dialog and leave-here wording` |
 | U13 | 버린 파일 되돌리기 | 중 | core, 화면 | `features: undoable discard with backup` |
 | U14 | 작업 내역 Ctrl+Z 표시·"이 작업 전으로" | 중 | core, 화면 | `features: show which activity rows undo can reach` |
@@ -446,7 +460,7 @@ U31. 문서·점검·사람이 할 일 (`docs: wrap up ux polish iteration`)
 - **R1 (U6, C4) 쌓인 되돌리기 토스트.** 모든 "되돌리기"는 가장 최근 줄(`undo_last`)을 되돌리므로(`useUndo.ts`), 새 되돌리기 토스트가 오면 앞 토스트의 단추는 "작업 내역" 글자 버튼으로 바뀐다(ux.md 원안). 시험: 저장 토스트 뒤 브랜치 바꾸기 토스트가 오면 앞 토스트에 "되돌리기"가 없다.
 - **R2 (U13, C8) 버린 파일 되돌리기.** 지금 `unpark`는 작업 폴더에 고친 파일이 하나라도 있으면 `WouldOverwrite`로 거절한다(`park.rs`). 그래서 stash가 가진 경로만 되살리는 새 `GitOp`(경로 한정 적용, 새 파일인 세 번째 부모 포함, `refuse_unsafe` 검사)를 U13 앞부분에 둔다. 백업은 "경로가 같은 가장 최근 `discard-<브랜치>` 백업"으로 찾지 않고 `Outcome::Discarded`에 백업 oid를 담아 서명된 journal에 남긴다(D-063, D-085). `UndoState::is_valid`가 그 ref를 받도록 넓히는지 확인한다. `journal_mode`의 `Always`는 `count > 0`일 때만. `Irreversible` 집합 시험(D-136)이 그때까지 없으면 U13이 만든다(`discard`를 빼고 `clear-lock`·`force-push`·원격 브랜치 지우기·이름 바꾸기).
 - **R3 (U8, U9) 새 실패 둘.** `fileTooLarge`는 큰 파일이 이미 로컬 버전에 들어 있어 작업 폴더에서 빼도 풀리지 않는다. 문구는 "그 파일이 든 버전에서 빼야 해요"이고 해결 버튼은 "버전 기록"이다. `failure.rs`의 `RULES`에서 `RemoteUnreachable`·`HttpAuthFailed` 앞에 둔다. `fileInUse`는 `Unlink of file`, `Device or resource busy`, `being used by another process`로만 판정하고 "Permission denied"는 권한 문제라 넣지 않는다(Ubuntu 시험도 이 문구로).
-- **R4 (U11·U12, C7) 가져가기의 빈틈.** (a) 도착 브랜치에 맡긴 파일이 있으면 "가져가기"를 끄고 까닭 툴팁을 보이며 "여기 두기"만 둔다(두 번 꺼낼 수 없다). (b) 가져가기를 되돌릴 때 겹쳐 막히면 `UndoStale`과 "작업 내역" 안내. (c) 원격 브랜치로 바꿀 때 `merge_check`의 도착 이름은 `<원격>/<브랜치>`. (d) `query_switch_plan`의 스냅샷은 파일 500개·합계 50MB를 넘으면 계산하지 않고 "가져가기"를 까닭과 함께 끈다(조회마다 해시하지 않게). (e) 이미 있는 새 파일과 겹치는 경우를 시험에 넣는다. (f) 화면은 상태를 읽는 중이면 계획 조회를 기다리고, 낡은 `dirty`로 core가 조용히 맡기지 않게 core도 실행 때 다시 본다.
+- **R4 (U11·U12, C7) 새 브랜치로 옮기기의 빈틈.** (a) 도착 브랜치에 맡긴 파일이 있으면 "새 브랜치로 옮기기"를 끄고 까닭 툴팁을 보이며 "여기 두기"만 둔다(두 번 꺼낼 수 없다). (b) 새 브랜치로 옮기기를 되돌릴 때 겹쳐 막히면 `UndoStale`과 "작업 내역" 안내. (c) 원격 브랜치로 바꿀 때 `merge_check`의 도착 이름은 `<원격>/<브랜치>`. (d) `query_switch_plan`의 스냅샷은 파일 500개·합계 50MB를 넘으면 계산하지 않고 "새 브랜치로 옮기기"를 까닭과 함께 끈다(조회마다 해시하지 않게). (e) 이미 있는 새 파일과 겹치는 경우를 시험에 넣는다. (f) 화면은 상태를 읽는 중이면 계획 조회를 기다리고, 낡은 `dirty`로 core가 조용히 맡기지 않게 core도 실행 때 다시 본다.
 - **R5 (U7) 이전 내용 유지.** `placeholderData`는 함수로 두어 같은 repo의 이전 결과일 때만 쓴다(다른 프로젝트 목록이 남지 않게). 파일이 바뀔 때의 임시 상태는 effect로 지우지 않고 안쪽 컴포넌트에 `key`를 건다(react-hooks `set-state-in-effect`).
 - **R6 (U22, C15) 고정.** `recent.rs`의 `touch`는 항목을 새로 만들므로 `pinned`·`pinned_branches`를 물려받게 한다. 고정 프로젝트는 20개 한도 밖에서도 남고, 사라진 브랜치 이름은 읽을 때 고정 목록에서 뺀다.
 - **R7 (U14, C16) 작업 내역 표시.** `Never`에 "올린 버전 저장"을 넣지 않는다(되돌리는 새 버전을 만들어 되돌린다, D-073). 힌트는 `undo()`와 같은 규칙 함수에서 만들고 "되돌리는 새 버전을 만들어요" 변형을 둔다. "이 작업 전으로 되돌리기"는 HEAD를 옮기는 줄 중 `before.branch == after.branch == 지금 브랜치`일 때만 보이고 core가 입력 때 같은 검사를 한다. `restore`에 올림 검사(`guard::refuse_published`)가 없으면 이 단계에서 더한다.
