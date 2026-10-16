@@ -345,7 +345,7 @@ export const ko = {
     merged: "합쳐짐",
     all: "전체",
     filter: "보기",
-    currentBranch: "지금 브랜치",
+    currentBranch: `지금 ${t("branch")}`,
     connectToSee: `GitHub에 연결하면 ${josa(t("pr"), "을/를")} 볼 수 있어요`,
     empty: `${josa(t("pr"), "이/가")} 없어요`,
     checks: (success: number, failed: number, pending: number) =>
@@ -363,7 +363,7 @@ export const ko = {
     draftLabel: glossary["pr-draft"].friendly,
     titleLabel: "제목",
     bodyPlaceholder: "설명 추가",
-    base: "합칠 브랜치",
+    base: `대상 ${t("branch")}`,
     ahead: (base: string, n: number) => `${base}보다 앞선 버전 ${n}개`,
     unpushed: (n: number) => `${t("push")}하지 않은 버전 ${n}개`,
     same: (base: string) => `${base} ${josa(t("branch"), "과/와")} 같아요`,

@@ -315,7 +315,7 @@ export const en: Messages = {
     merged: "Merged",
     all: "All",
     filter: "Show",
-    currentBranch: "Current branch",
+    currentBranch: `Current ${t("branch").toLowerCase()}`,
     connectToSee: `Connect GitHub to see ${t("pr").toLowerCase()}s`,
     empty: `No ${t("pr").toLowerCase()}s`,
     checks: (success: number, failed: number, pending: number) =>
@@ -333,7 +333,7 @@ export const en: Messages = {
     draftLabel: glossary["pr-draft"].friendly,
     titleLabel: "Title",
     bodyPlaceholder: "Add a description",
-    base: "Merge into",
+    base: `Target ${t("branch").toLowerCase()}`,
     ahead: (base: string, n: number) => `${n} versions ahead of ${base}`,
     unpushed: (n: number) => `${n} versions not sent with ${t("push")}`,
     same: (base: string) => `Same as the ${base} ${t("branch").toLowerCase()}`,

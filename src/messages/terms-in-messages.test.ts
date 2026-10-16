@@ -16,6 +16,11 @@ describe("문장 속 용어", () => {
     expect(ko.errors.pushRejected).toContain(glossary.pull.friendly);
     expect(ko.errors.remoteUnreachable).toContain(glossary.remote.friendly);
     expect(ko.changeKind.conflicted).toBe(glossary.conflict.friendly);
+    // 검토 요청 화면(반복 4)
+    expect(ko.pr.currentBranch).toContain(glossary.branch.friendly);
+    expect(ko.pr.base).toContain(glossary.branch.friendly);
+    expect(ko.pr.connectToSee).toContain(glossary.pr.friendly);
+    expect(ko.clone.run).toBe(glossary.clone.friendly);
   });
 
   it("용어표 이름을 바꾸면 문장과 조사가 함께 바뀐다", async () => {
@@ -33,5 +38,7 @@ describe("문장 속 용어", () => {
     expect(ko.errors.branchExists).toBe("같은 이름의 작업 줄기가 이미 있어요.");
     expect(ko.errors.noUpstream).toContain("작업 줄기예요.");
     expect(ko.errors.notFastForward).toContain("먼저 병합을 해 주세요.");
+    expect(ko.pr.currentBranch).toBe("지금 작업 줄기");
+    expect(ko.pr.base).toBe("대상 작업 줄기");
   });
 });
