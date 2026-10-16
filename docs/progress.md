@@ -334,7 +334,8 @@
 - [x] 014-R18 파서 무작위 시험(이 커밋. git 파서 22개를 10개 시험에서 2만 번씩(0.2초), 함수 안에 있던 설정·reflog·stash 파서는 이름 있는 함수로 꺼냄, rebase 할 일 목록은 줄 거르기뿐이라 뺌, `remote_urls`는 줄 나누기뿐이라 대신 `hosting::parse_remote`를 2만 번, journal은 파일 쓰기·서명 때문에 600번)
 - [x] 014-R19 릴리스 워크플로(이 커밋. 산출물은 새 액션 대신 러너의 `gh run download`로(쓰기 권한은 publish 하나, `actions: read`), 체크섬과 릴리스를 한 작업에서, 태그는 시험판(pre-release)·수동 실행은 초안, 사용법 html을 `hiGit-guide.html`로 붙임, 릴리스 본문은 `packaging/RELEASE_NOTES.md`. 수동 실행 한 번은 CI 초록 뒤에)
 - [x] 014-R20 마무리·점검(이 커밋. code-analyst 보안 위주 점검 한 번: 높음 0, 중간 2(열기 차단표 → 0bd411b, 릴리스 워크플로 태그 이름 셸 삽입 → de22a23), 낮음 5 중 3 고침(신뢰 창 호스트 `\` → b2c4a18, journal 옮기기 잠금·임시 파일 → d29fefe), 2는 받아들임(아래 "알려진 한계"). client id를 저장소 변수로(ab42e98). 릴리스 스크린샷 `docs/research/img/release/`(홈·버전 기록·설정, Ubuntu, 데모 저장소))
-- [x] 014-R20b 사용법 문서(이 커밋. `docs/guide/src/`의 원본과 그림(webp)을 `node scripts/guide-build.mjs`가 한 파일 `docs/guide/index.html`(336KB, 인터넷 없이 열림)로 묶음. 15장 중 12장에 Ubuntu 그림. English `en.html`은 그림 없이 같은 차례) 사용법 문서 / R21 v0.1.0 시험판(GitHub 릴리스 "pre-release")
+- [x] 014-R20b 사용법 문서(이 커밋. `docs/guide/src/`의 원본과 그림(webp)을 `node scripts/guide-build.mjs`가 한 파일 `docs/guide/index.html`(336KB, 인터넷 없이 열림)로 묶음. 15장 중 12장에 Ubuntu 그림. English `en.html`은 그림 없이 같은 차례)
+- [ ] 014-R21 v0.1.0 시험판(GitHub 릴리스 "pre-release")
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
