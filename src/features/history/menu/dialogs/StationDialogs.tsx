@@ -1,6 +1,7 @@
 import type { StationDialog } from "../ask";
 import type { MenuCtx, MenuEnv } from "../items";
 import { AmendDialog } from "./AmendDialog";
+import { FilesDialog } from "./FilesDialog";
 import { NewBranchDialog } from "./NewBranchDialog";
 import { TagDialog } from "./TagDialog";
 
@@ -29,7 +30,7 @@ export function StationDialogs({ dialog, onClose, env, ctx }: Props) {
       );
     case "amend":
       return <AmendDialog info={dialog.info} stagedFiles={env.stagedFiles} ctx={ctx} onClose={onClose} />;
-    default:
-      return null;
+    case "files":
+      return <FilesDialog info={dialog.info} ctx={ctx} onClose={onClose} />;
   }
 }

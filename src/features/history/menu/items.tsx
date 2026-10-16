@@ -64,6 +64,14 @@ function blockedByState(env: MenuEnv): Availability | null {
 
 export const STATION_ITEMS: readonly StationMenuItem[] = [
   {
+    // 그 버전에서 바뀐 파일과 비교(읽기만, D-105).
+    id: "files",
+    group: "main",
+    label: (m) => m.filesAtVersion,
+    availability: () => "show",
+    run: (info, ctx) => ctx.ask({ kind: "files", info }),
+  },
+  {
     id: "copy-id",
     group: "main",
     label: (m) => m.copyVersionId,

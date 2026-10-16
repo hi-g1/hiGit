@@ -75,6 +75,7 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     ["new-branch", info({ isHead: true }), env({ changedFiles: 1 }), "show"],
     ["new-branch", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["tag", info({ isAncestorOfHead: false }), env({ currentBranch: null }), "show"],
+    ["files", info({ isAncestorOfHead: false }), env({ operation: "other", currentBranch: null }), "show"],
     ["tag", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["amend", info({ isHead: true }), env(), "show"],
     ["amend", info(), env(), "hide"],
@@ -126,6 +127,7 @@ describe("대화상자를 여는 항목", () => {
     ["tag", "tag"],
     ["new-branch", "newBranch"],
     ["amend", "amend"],
+    ["files", "files"],
   ] as const)("%s는 대화상자를 연다", (id, kind) => {
     const ask = vi.fn();
     const ctx = { ask } as unknown as MenuCtx;

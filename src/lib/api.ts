@@ -20,6 +20,8 @@ export type {
   BranchView,
   ChangeKind,
   ChangedFile,
+  CommitDetailView,
+  CommitFileView,
   CommitRow,
   DiffLineView,
   DiffRequest,

@@ -1,0 +1,80 @@
+/* 이때 파일 보기(계획 008 E25): 왼쪽 파일 목록, 오른쪽 비교. 좁으면 위아래로 접힌다. */
+.files {
+  width: min(960px, calc(100vw - 2 * var(--space-4)));
+  height: min(640px, calc(100vh - 2 * var(--space-6)));
+}
+
+.meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.list:focus-visible {
+  outline: var(--selected-bar) solid var(--accent);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.row[aria-selected="true"] {
+  box-shadow: inset var(--selected-bar) 0 0 var(--accent);
+  background: var(--surface-hover);
+}
+
+.letter {
+  width: 1ch;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.diff {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+@media (width <= 900px) {
+  .body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 160px 1fr;
+  }
+}

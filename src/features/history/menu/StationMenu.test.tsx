@@ -76,6 +76,7 @@ describe("역 메뉴", () => {
     expect(menu).toHaveTextContent("버전 번호 복사");
     expect(menu).toHaveTextContent("되돌리기");
     expect(menu).toHaveTextContent("여기서 새 브랜치");
+    expect(menu).toHaveTextContent("이때 파일 보기");
     expect(screen.getByText("더 보기")).toBeInTheDocument();
     // 지금 위치에는 돌아가기·복사가 없다.
     expect(menu).not.toHaveTextContent("이 버전으로 돌아가기");
