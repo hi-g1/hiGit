@@ -1,3 +1,4 @@
+import { ProgressCount } from "../progress/ProgressCount";
 import { useEffect, useState } from "react";
 import { api, type BranchView } from "../../lib/api";
 import { formatTime } from "../../lib/time";
@@ -66,7 +67,9 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
       >
         <Term id="sync" focusable={false} />
         {sync.running ? (
-          <span className={styles.count}>{m.syncRunning(progress?.elapsedSecs ?? null)}</span>
+          <span className={styles.count}>
+            <ProgressCount tick={progress} fallback={m.syncRunning(progress?.elapsedSecs ?? null)} />
+          </span>
         ) : (
           <>
             {ahead > 0 && <span className={styles.count}>↑{ahead}</span>}

@@ -144,15 +144,15 @@ impl CliBackend {
     pub(crate) fn observer_for(
         &self,
         repo: &RepoPath,
-    ) -> Option<Box<dyn Fn(std::time::Duration, std::time::Duration) + Send + Sync>> {
+    ) -> Option<Box<runner::WatchObserver<'static>>> {
         let observer = self
             .observer
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone()?;
         let path = repo.as_path().to_path_buf();
-        Some(Box::new(move |elapsed, idle| {
-            observer(&path, elapsed, idle)
+        Some(Box::new(move |elapsed, idle, count| {
+            observer(&path, elapsed, idle, count)
         }))
     }
 

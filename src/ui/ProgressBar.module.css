@@ -1,0 +1,24 @@
+/* 진행 막대(design.md "불러오는 표시", D-172) */
+.track {
+  display: inline-block;
+  position: relative;
+  width: 6rem;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  vertical-align: middle;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  transition: width var(--motion-duration) var(--motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}

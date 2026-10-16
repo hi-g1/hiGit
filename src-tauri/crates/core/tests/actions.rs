@@ -222,7 +222,7 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
     let secs = std::time::Duration::from_secs;
 
     // 도는 액션이 없으면 알리지 않고 취소도 남기지 않는다.
-    observe(repo.as_path(), secs(4), secs(4));
+    observe(repo.as_path(), secs(4), secs(4), None);
     assert!(heard.lock().unwrap().is_empty());
     core.cancel(dir.path()).unwrap();
     assert!(!git.calls().iter().any(|c| c.starts_with("cancel")));
@@ -239,12 +239,18 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
     assert_eq!(git.cancel_cleared.load(Ordering::SeqCst), 1);
-    observe(repo.as_path(), secs(5), secs(2));
-    observe(std::path::Path::new("/다른 저장소"), secs(5), secs(2));
+    observe(repo.as_path(), secs(5), secs(2), None);
+    observe(std::path::Path::new("/다른 저장소"), secs(5), secs(2), None);
     // 로컬 쓰기는 60초가 지나야 강제로 멈출 수 있다(화면이 아니라 core가 확인한다).
     core.cancel(dir.path()).unwrap();
     assert!(!git.calls().iter().any(|c| c.starts_with("cancel")));
-    observe(repo.as_path(), secs(61), secs(61));
+    // Git이 준 개수는 단계·개수만 화면으로 간다(D-172).
+    let count = git::ProgressCount {
+        phase: git::ProgressPhase::Receive,
+        done: 3,
+        total: 10,
+    };
+    observe(repo.as_path(), secs(61), secs(61), Some(count));
     core.cancel(dir.path()).unwrap();
     git.hold.store(false, Ordering::SeqCst);
     first.join().unwrap().unwrap();
@@ -259,12 +265,18 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
                 action: "stage".into(),
                 elapsed_secs: 5,
                 idle_secs: 2,
+                phase: None,
+                done: None,
+                total: None,
             },
             higit_core::view::OpProgress {
                 repo: repo.as_path().to_string_lossy().into_owned(),
                 action: "stage".into(),
                 elapsed_secs: 61,
                 idle_secs: 61,
+                phase: Some(higit_core::view::ProgressPhaseView::Receive),
+                done: Some(3),
+                total: Some(10),
             }
         ]
     );
@@ -273,7 +285,7 @@ fn progress_names_the_running_action_and_cancel_reaches_git() {
             .contains(&format!("cancel {}", repo.as_path().display()))
     );
     // 끝난 뒤에는 다시 알리지 않는다.
-    observe(repo.as_path(), secs(62), secs(62));
+    observe(repo.as_path(), secs(62), secs(62), None);
     assert_eq!(heard.lock().unwrap().len(), 2);
 }
 

@@ -105,7 +105,7 @@ describe("CloneDialog", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("복제 중 · 0초");
     expect(screen.queryByRole("button", { name: "취소" })).toBeNull();
     act(() =>
-      useProgressStore.getState().receive({ repo: "/home/me/hello", action: "clone", elapsedSecs: 4, idleSecs: 0 }),
+      useProgressStore.getState().receive({ repo: "/home/me/hello", action: "clone", elapsedSecs: 4, idleSecs: 0, phase: null, done: null, total: null }),
     );
     expect(screen.getByRole("status")).toHaveTextContent("복제 중 · 4초");
     fireEvent.click(screen.getByRole("button", { name: "취소" }));

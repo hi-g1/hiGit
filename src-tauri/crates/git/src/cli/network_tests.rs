@@ -140,7 +140,7 @@ mod watched {
     #[test]
     fn observer_hears_every_second() {
         let calls = AtomicUsize::new(0);
-        let observe = |_: Duration, _: Duration| {
+        let observe = |_: Duration, _: Duration, _: Option<crate::ProgressCount>| {
             calls.fetch_add(1, Ordering::SeqCst);
         };
         run(

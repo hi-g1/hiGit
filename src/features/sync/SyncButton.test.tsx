@@ -10,6 +10,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
 import { AppProviders, createQueryClient } from "../../App";
 import { ApiError, api, type BranchView } from "../../lib/api";
 import { useToastStore } from "../../ui/toastStore";
+import type { OpProgress } from "../../lib/events";
 import { useProgressStore } from "../progress/progressStore";
 import { SyncButton } from "./SyncButton";
 import { useSyncStore } from "./syncStore";
@@ -40,8 +41,10 @@ afterEach(() => {
   });
 });
 
-const tick = (elapsedSecs: number, idleSecs = 0, action = "sync") =>
-  act(() => useProgressStore.getState().receive({ repo: "/repo", action, elapsedSecs, idleSecs }));
+const tick = (elapsedSecs: number, idleSecs = 0, action = "sync", count: Partial<OpProgress> = {}) =>
+  act(() =>
+    useProgressStore.getState().receive({ repo: "/repo", action, elapsedSecs, idleSecs, phase: null, done: null, total: null, ...count }),
+  );
 
 describe("동기화 버튼", () => {
   it("보낼·받을 수를 붙이고, 고친 파일이 없으면 주 버튼", () => {
@@ -97,11 +100,20 @@ describe("동기화 버튼", () => {
     expect(button).toHaveTextContent("중 · 2초");
     expect(screen.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
     // 다른 저장소나 로컬 작업의 진행은 보이지 않는다.
-    act(() => useProgressStore.getState().receive({ repo: "/other", action: "sync", elapsedSecs: 9, idleSecs: 0 }));
+    act(() => useProgressStore.getState().receive({ repo: "/other", action: "sync", elapsedSecs: 9, idleSecs: 0, phase: null, done: null, total: null }));
     expect(button).toHaveTextContent("중 · 2초");
 
     tick(3);
     expect(screen.queryByText(/응답 없음/)).not.toBeInTheDocument();
+    // 10초 전에는 Git이 준 개수가 있어도 초만, 10초가 지나면 개수와 진행 막대(D-172).
+    tick(9, 0, "sync", { phase: "receive", done: 90, total: 200 });
+    expect(button).toHaveTextContent("중 · 9초");
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    tick(10, 0, "sync", { phase: "receive", done: 90, total: 200 });
+    expect(button).toHaveTextContent("파일 90/200개 받는 중");
+    const bar = screen.getByRole("progressbar", { name: "파일 90/200개 받는 중" });
+    expect(bar).toHaveAttribute("aria-valuenow", "90");
+    expect(bar).toHaveAttribute("aria-valuemax", "200");
     tick(40, 31);
     expect(screen.getByText("응답 없음 · 31초")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "취소" }));

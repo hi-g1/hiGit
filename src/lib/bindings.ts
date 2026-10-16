@@ -1039,6 +1039,10 @@ export type OpProgress = {
 	elapsedSecs: number,
 	/**  마지막 출력 뒤 시간(원격 작업). 로컬 작업은 경과와 같다. */
 	idleSecs: number,
+	/**  Git이 준 진행(D-172). 단계와 개수만이고 파일 이름·주소는 없다. */
+	phase: ProgressPhaseView | null,
+	done: number | null,
+	total: number | null,
 };
 
 /**
@@ -1194,6 +1198,9 @@ export type PrStateView = "open" | "closed" | "merged";
 export type PreviewView = {
 	token: string,
 };
+
+/**  진행 단계(D-172). */
+export type ProgressPhaseView = "count" | "receive" | "resolve" | "send";
 
 export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } | 
 /**  폴더가 없다. */

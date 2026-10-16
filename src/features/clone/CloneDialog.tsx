@@ -15,6 +15,7 @@ import { useSettingsStore } from "../settings/settingsStore";
 import { useCloneStore } from "./cloneStore";
 import { joinPath, suggestName } from "./name";
 import { RepoList } from "./RepoList";
+import { ProgressCount } from "../progress/ProgressCount";
 import styles from "./CloneDialog.module.css";
 import { Truncate } from "../../ui/Truncate";
 
@@ -187,7 +188,7 @@ function CloneForm() {
       <div className={styles.actions}>
         {running && (
           <span className={styles.progress} role="status">
-            {m.clone.running(progress?.elapsedSecs ?? 0)}
+            <ProgressCount tick={progress} fallback={m.clone.running(progress?.elapsedSecs ?? 0)} />
           </span>
         )}
         {running && (progress?.elapsedSecs ?? 0) >= CANCEL_AFTER_SECS && (

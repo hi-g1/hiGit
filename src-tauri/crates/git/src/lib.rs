@@ -8,6 +8,7 @@ mod backend;
 mod cli;
 mod error;
 mod failure;
+mod progress;
 mod types;
 
 #[cfg(test)]
@@ -15,9 +16,11 @@ mod testutil;
 
 pub use backend::GitBackend;
 
-/// 진행 알림을 받는 함수(저장소, 경과, 마지막 출력 뒤 시간).
+/// 진행 알림을 받는 함수(저장소, 경과, 마지막 출력 뒤 시간, Git이 준 마지막 개수).
 pub type ProgressObserver = std::sync::Arc<
-    dyn Fn(&std::path::Path, std::time::Duration, std::time::Duration) + Send + Sync,
+    dyn Fn(&std::path::Path, std::time::Duration, std::time::Duration, Option<ProgressCount>)
+        + Send
+        + Sync,
 >;
 pub use cli::{
     BACKGROUND_TIMEOUT, CLONE_TIMEOUT, CliBackend, ConfigureCommand, HELPER_ENV, NETWORK_TIMEOUT,
@@ -25,6 +28,7 @@ pub use cli::{
 };
 pub use error::{GitError, Result};
 pub use failure::FailureKind;
+pub use progress::{ProgressCount, ProgressPhase};
 pub use types::{
     AuthMode, BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitFile, CommitFiles,
     CommitMessage, CommitStat, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitIdentity,

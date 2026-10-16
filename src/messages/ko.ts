@@ -494,6 +494,13 @@ export const ko = {
   },
   // 태그 올리기(D-131)
   tagPush: { push: "올리기", done: "태그를 올렸어요" },
+  // 원격 작업 진행(D-172). 개수만
+  progress: {
+    count: (done: number, total: number) => `세는 중 ${done}/${total}`,
+    receive: (done: number, total: number) => `파일 ${done}/${total}개 받는 중`,
+    resolve: (done: number, total: number) => `받은 파일 푸는 중 ${done}/${total}`,
+    send: (done: number, total: number) => `파일 ${done}/${total}개 올리는 중`,
+  },
   // 입력칸 앱 메뉴(D-189)
   textMenu: {
     label: "편집",

@@ -13,6 +13,7 @@ import { Truncate } from "../../ui/Truncate";
 import { useToastStore } from "../../ui/toastStore";
 import { CANCEL_AFTER_SECS, useProgress } from "../progress/useProgress";
 import { NameConfirmField } from "../remote-branch/NameConfirmField";
+import { ProgressCount } from "../progress/ProgressCount";
 import styles from "./ForcePushDialog.module.css";
 import { useForcePushStore } from "./forcePushStore";
 
@@ -146,7 +147,7 @@ export function ForcePushDialog({ repo }: { repo: string }) {
       )}
       {pending && (
         <p className={styles.running} role="status">
-          {m.forcePush.running(progress?.elapsedSecs ?? null)}
+          <ProgressCount tick={progress} fallback={m.forcePush.running(progress?.elapsedSecs ?? null)} />
           {progress && progress.elapsedSecs >= CANCEL_AFTER_SECS && (
             <Button variant="text" onClick={cancel}>
               {m.cancel}

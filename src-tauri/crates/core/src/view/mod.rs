@@ -79,6 +79,20 @@ pub struct OpProgress {
     pub elapsed_secs: u32,
     /// 마지막 출력 뒤 시간(원격 작업). 로컬 작업은 경과와 같다.
     pub idle_secs: u32,
+    /// Git이 준 진행(D-172). 단계와 개수만이고 파일 이름·주소는 없다.
+    pub phase: Option<ProgressPhaseView>,
+    pub done: Option<u32>,
+    pub total: Option<u32>,
+}
+
+/// 진행 단계(D-172).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ProgressPhaseView {
+    Count,
+    Receive,
+    Resolve,
+    Send,
 }
 
 /// 앱 시작 시 확인한 환경.

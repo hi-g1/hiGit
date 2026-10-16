@@ -106,13 +106,23 @@ fn progress(
     action: &str,
     elapsed: std::time::Duration,
     idle: std::time::Duration,
+    count: Option<git::ProgressCount>,
 ) -> crate::view::OpProgress {
+    use crate::view::ProgressPhaseView as V;
     let secs = |d: std::time::Duration| u32::try_from(d.as_secs()).unwrap_or(u32::MAX);
     crate::view::OpProgress {
         repo: repo.to_string_lossy().into_owned(),
         action: action.to_string(),
         elapsed_secs: secs(elapsed),
         idle_secs: secs(idle),
+        phase: count.map(|c| match c.phase {
+            git::ProgressPhase::Count => V::Count,
+            git::ProgressPhase::Receive => V::Receive,
+            git::ProgressPhase::Resolve => V::Resolve,
+            git::ProgressPhase::Send => V::Send,
+        }),
+        done: count.map(|c| c.done),
+        total: count.map(|c| c.total),
     }
 }
 
@@ -450,7 +460,7 @@ impl Core {
     pub fn set_progress_sink(&self, sink: Arc<dyn Fn(crate::view::OpProgress) + Send + Sync>) {
         let running = self.running.clone();
         self.git
-            .set_observer(Some(Arc::new(move |path, elapsed, idle| {
+            .set_observer(Some(Arc::new(move |path, elapsed, idle, count| {
                 let action = {
                     let mut running = running.lock().unwrap_or_else(PoisonError::into_inner);
                     running.get_mut(path).map(|r| {
@@ -459,7 +469,7 @@ impl Core {
                     })
                 };
                 if let Some(action) = action {
-                    sink(progress(path, action, elapsed, idle));
+                    sink(progress(path, action, elapsed, idle, count));
                 }
             })));
     }

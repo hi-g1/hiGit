@@ -418,7 +418,7 @@ pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, �
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.
 - 타입은 Rust에서 정의하고 `tauri-specta`로 TS 바인딩을 생성한다. 프론트에서 타입을 손으로 쓰지 않는다.
-- 이벤트: `repo-changed { repo, worktree, git }`, `watch-status { repo, active, reason }`, `op-progress { repo, action, elapsedSecs, idleSecs }`. 이름은 Rust 상수를 바인딩으로 내보내고(`REPO_CHANGED_EVENT`, `WATCH_STATUS_EVENT`, `OP_PROGRESS_EVENT`), 화면은 `src/lib/events.ts`로만 구독한다. `op-progress`는 사람이 누른 액션의 지켜보는 git 프로세스가 도는 동안 1초마다 온다(위 "진행과 취소"). 저절로 하는 원격 확인은 보내지 않고, 파일 이름이나 원격 주소는 담지 않는다.
+- 이벤트: `repo-changed { repo, worktree, git }`, `watch-status { repo, active, reason }`, `op-progress { repo, action, elapsedSecs, idleSecs, phase, done, total }`(`phase`·`done`·`total`은 Git의 `--progress` 줄에서 읽은 단계와 개수, D-172. 진행 줄은 기계용 형식이 아니라 D-003의 예외이고 `crates/git/src/progress.rs` 한 곳에서만 읽으며 원문은 내보내지 않는다). 이름은 Rust 상수를 바인딩으로 내보내고(`REPO_CHANGED_EVENT`, `WATCH_STATUS_EVENT`, `OP_PROGRESS_EVENT`), 화면은 `src/lib/events.ts`로만 구독한다. `op-progress`는 사람이 누른 액션의 지켜보는 git 프로세스가 도는 동안 1초마다 온다(위 "진행과 취소"). 저절로 하는 원격 확인은 보내지 않고, 파일 이름이나 원격 주소는 담지 않는다.
 - 프론트는 `action_list`로 받은 메타데이터로 버튼, 메뉴, 명령 팔레트(Ctrl+K)를 만든다.
 
 ## 용어와 호버 (D-006)

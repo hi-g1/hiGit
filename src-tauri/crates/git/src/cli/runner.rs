@@ -39,6 +39,10 @@ impl Default for ProcessControl {
     }
 }
 
+/// 지켜보는 실행이 1초마다 부르는 함수(경과, 마지막 출력 뒤 시간, Git이 준 마지막 개수).
+pub(crate) type WatchObserver<'a> =
+    dyn Fn(Duration, Duration, Option<crate::ProgressCount>) + Send + Sync + 'a;
+
 /// `run_watched`의 감시 조건.
 #[derive(Default)]
 pub(crate) struct Watch<'a> {
@@ -46,8 +50,8 @@ pub(crate) struct Watch<'a> {
     /// 첫 출력 뒤 이만큼 출력이 없으면 멈춘 것으로 본다.
     pub stall: Option<Duration>,
     pub cancel: Option<&'a std::sync::atomic::AtomicBool>,
-    /// 1초마다 (경과, 마지막 출력 뒤 시간).
-    pub observer: Option<&'a (dyn Fn(Duration, Duration) + Send + Sync)>,
+    /// 1초마다 (경과, 마지막 출력 뒤 시간, Git이 준 마지막 개수).
+    pub observer: Option<&'a WatchObserver<'a>>,
 }
 
 /// 호출 하나에만 바꾸는 환경 변수.
@@ -245,10 +249,12 @@ impl Runner {
             _ => None,
         };
         let out_reader = read_all(child.stdout.take());
-        // stderr는 조각마다 "마지막 출력 시각"을 고친다. 내용은 해석하지 않는다(D-003).
+        // stderr는 조각마다 "마지막 출력 시각"을 고치고, 진행 줄에서 개수만 읽는다(D-172, D-003 예외는 progress.rs).
         let last_output: Arc<std::sync::Mutex<Option<Instant>>> = Arc::default();
+        let last_count: Arc<std::sync::Mutex<Option<crate::ProgressCount>>> = Arc::default();
         let err_reader = {
             let last = last_output.clone();
+            let count = last_count.clone();
             let mut pipe = child.stderr.take();
             std::thread::spawn(move || {
                 let mut buf = Vec::new();
@@ -262,6 +268,13 @@ impl Runner {
                                 .lock()
                                 .unwrap_or_else(std::sync::PoisonError::into_inner) =
                                 Some(Instant::now());
+                            let tail = &buf[buf.len().saturating_sub(512)..];
+                            if let Some(found) = crate::progress::last_progress(tail) {
+                                *count
+                                    .lock()
+                                    .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                                    Some(found);
+                            }
                         }
                     }
                 }
@@ -307,7 +320,10 @@ impl Runner {
             if let Some(observe) = watch.observer
                 && Instant::now() >= next_report
             {
-                observe(elapsed, idle);
+                let count = *last_count
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                observe(elapsed, idle, count);
                 next_report += Duration::from_secs(1);
             }
             std::thread::sleep(Duration::from_millis(20));

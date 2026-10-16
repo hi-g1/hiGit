@@ -454,6 +454,12 @@ export const en: Messages = {
     open: "Open",
   },
   tagPush: { push: "Upload", done: "Tag uploaded" },
+  progress: {
+    count: (done: number, total: number) => `Counting ${done}/${total}`,
+    receive: (done: number, total: number) => `Receiving ${done}/${total} files`,
+    resolve: (done: number, total: number) => `Unpacking ${done}/${total}`,
+    send: (done: number, total: number) => `Uploading ${done}/${total} files`,
+  },
   textMenu: {
     label: "Edit",
     cut: "Cut",

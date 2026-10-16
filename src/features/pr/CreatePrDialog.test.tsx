@@ -99,7 +99,7 @@ describe("CreatePrDialog", () => {
     expect(await screen.findByText(/올리기하지 않은 버전 2개/)).toBeInTheDocument();
     fireEvent.click(createButton());
     expect(await screen.findByRole("status")).toHaveTextContent("올리기 중 · 0초");
-    act(() => useProgressStore.getState().receive({ repo: REPO, action: "push", elapsedSecs: 5, idleSecs: 0 }));
+    act(() => useProgressStore.getState().receive({ repo: REPO, action: "push", elapsedSecs: 5, idleSecs: 0, phase: null, done: null, total: null }));
     fireEvent.click(screen.getByRole("button", { name: "취소" }));
     expect(api.cancelAction).toHaveBeenCalledWith(REPO);
     await act(async () => finishPush({ kind: "synced", received: 0, sent: 2, merged: false, overlap: [], mergeStarted: false } as ActionResult));

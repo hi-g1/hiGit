@@ -22,7 +22,7 @@ import { StuckNotice } from "./StuckNotice";
 import { useProgress, useProgressEvents } from "./useProgress";
 
 const tick = (action: string, elapsedSecs: number) =>
-  act(() => useProgressStore.getState().receive({ repo: "/repo", action, elapsedSecs, idleSecs: elapsedSecs }));
+  act(() => useProgressStore.getState().receive({ repo: "/repo", action, elapsedSecs, idleSecs: elapsedSecs, phase: null, done: null, total: null }));
 
 afterEach(() => {
   vi.useRealTimers();
@@ -35,8 +35,8 @@ describe("진행", () => {
     const events = renderHook(() => useProgressEvents());
     await vi.waitFor(() => expect(listeners.has("op-progress")).toBe(true));
     const progress = renderHook(() => useProgress("/repo"));
-    act(() => listeners.get("op-progress")?.({ payload: { repo: "/repo", action: "push", elapsedSecs: 4, idleSecs: 1 } }));
-    expect(progress.result.current).toEqual({ repo: "/repo", action: "push", elapsedSecs: 4, idleSecs: 1 });
+    act(() => listeners.get("op-progress")?.({ payload: { repo: "/repo", action: "push", elapsedSecs: 4, idleSecs: 1, phase: null, done: null, total: null } }));
+    expect(progress.result.current).toEqual({ repo: "/repo", action: "push", elapsedSecs: 4, idleSecs: 1, phase: null, done: null, total: null });
     events.unmount();
     expect(unlisten).toHaveBeenCalled();
   });
