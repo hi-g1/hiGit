@@ -7,6 +7,9 @@ import styles from "./BranchList.module.css";
 
 type Props = {
   row: BranchRow;
+  /** 고정했는지(D-203). */
+  pinned: boolean;
+  onPin: (pinned: boolean) => void;
   /** 열림은 목록이 정한다(찾기 칸의 메뉴 키로도 연다, D-201). */
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -19,7 +22,7 @@ type Props = {
  * 항목도 키보드로 닿고 까닭이 툴팁으로 뜬다). `…`는 마우스용이고(Tab 정지 아님, 읽기 프로그램에서 숨김)
  * 키보드는 찾기 칸에서 고른 줄의 메뉴 키·Shift+F10으로 연다(D-201).
  */
-export function BranchRowMenu({ row, open, onOpenChange, onRename, onDelete }: Props) {
+export function BranchRowMenu({ row, pinned, onPin, open, onOpenChange, onRename, onDelete }: Props) {
   const m = useMessages();
   const protectedRow = row.isHead || row.isDefault;
   return (
@@ -37,6 +40,9 @@ export function BranchRowMenu({ row, open, onOpenChange, onRename, onDelete }: P
           // 포커스는 목록이 정한다(이름 입력칸, 지운 뒤나 그냥 닫으면 찾기 칸).
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
+          <Menu.Item className={styles.menuItem} onSelect={() => onPin(!pinned)}>
+            {pinned ? m.unpin : m.pin}
+          </Menu.Item>
           <Menu.Item className={styles.menuItem} onSelect={onRename}>
             <Term id="branch-rename" focusable={false} />
           </Menu.Item>

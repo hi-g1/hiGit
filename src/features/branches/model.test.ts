@@ -32,6 +32,13 @@ const view: BranchListView = {
 };
 
 describe("브랜치 목록 모델", () => {
+  it("고정한 브랜치는 맨 위 묶음, 지금 브랜치와 없는 이름은 빼고 고른 순서대로(D-203)", () => {
+    const s = sections(view, ["c", "없음", "로그인 기능", "main"]);
+    expect(s.pinned.map((i) => i.name)).toEqual(["c", "main"]);
+    expect(s.current?.name).toBe("로그인 기능");
+    expect(s.recent.map((i) => i.name)).toEqual(["a", "b", "d", "e", "f"]);
+  });
+
   it("지금, 최근 5개, 나머지(원격에만 있는 것 포함)", () => {
     const s = sections(view);
     expect(s.current?.name).toBe("로그인 기능");

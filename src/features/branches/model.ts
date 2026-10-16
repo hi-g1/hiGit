@@ -11,6 +11,8 @@ export type ListItem = {
 };
 
 export type Sections = {
+  /** 고정한 브랜치(D-203). 지금 브랜치는 "지금"에 두고 여기서 뺀다. */
+  pinned: ListItem[];
   current: ListItem | null;
   recent: ListItem[];
   more: ListItem[];
@@ -25,14 +27,20 @@ function remoteOnly(view: BranchListView): ListItem[] {
     .filter((i) => i.name !== "HEAD" && !locals.has(i.name));
 }
 
-/** "지금", "최근에 쓴 브랜치"(마지막 버전 순 5개), 나머지. */
-export function sections(view: BranchListView): Sections {
+/** "고정"(있는 로컬 브랜치만), "지금", "최근에 쓴 브랜치"(마지막 버전 순 5개), 나머지. */
+export function sections(view: BranchListView, pinnedNames: readonly string[] = []): Sections {
   const head = view.local.find((b) => b.isHead) ?? null;
+  const pinnedSet = new Set(pinnedNames);
+  const pinned = view.local
+    .filter((b) => !b.isHead && pinnedSet.has(b.name))
+    .sort((a, b) => pinnedNames.indexOf(a.name) - pinnedNames.indexOf(b.name))
+    .map((row) => ({ name: row.name, remote: null, row }));
   const others = view.local
-    .filter((b) => !b.isHead)
+    .filter((b) => !b.isHead && !pinnedSet.has(b.name))
     .sort((a, b) => b.lastAt - a.lastAt)
     .map((row) => ({ name: row.name, remote: null, row }));
   return {
+    pinned,
     current: head && { name: head.name, remote: null, row: head },
     recent: others.slice(0, RECENT_COUNT),
     more: [...others.slice(RECENT_COUNT), ...remoteOnly(view)],

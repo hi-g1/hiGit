@@ -11,6 +11,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
     projectSummary: vi.fn(),
     openProject: vi.fn(),
     removeRecent: vi.fn(),
+    pinProject: vi.fn(async () => null),
     listActions: vi.fn(async () => []),
     routePreview: vi.fn(async () => ({
       current: "로그인-기능",
@@ -218,5 +219,24 @@ describe("시작 화면", () => {
     renderStart();
     await screen.findByText("폴더 열기", { exact: false });
     expect(screen.queryByRole("button", { name: "내려받기" })).toBeNull();
+  });
+
+  it("고정한 프로젝트는 '고정' 묶음, 줄의 고정 단추가 고정을 바꾼다(D-203)", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([
+      project("my-shop", 10),
+      { ...project("blog", 60), pinned: true },
+      project("notes", 90),
+    ]);
+    vi.mocked(api.projectSummary).mockResolvedValue(summary());
+    renderStart();
+    const pinned = await screen.findByRole("region", { name: "고정" });
+    expect(pinned).toHaveTextContent("blog");
+    expect(pinned).not.toHaveTextContent("notes");
+    const blogPin = screen.getByRole("button", { name: "고정: blog" });
+    expect(blogPin).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(blogPin);
+    expect(api.pinProject).toHaveBeenCalledWith("/home/me/blog", false);
+    await userEvent.click(screen.getByRole("button", { name: "고정: notes" }));
+    expect(api.pinProject).toHaveBeenCalledWith("/home/me/notes", true);
   });
 });

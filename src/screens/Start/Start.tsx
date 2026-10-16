@@ -38,11 +38,33 @@ export function Start() {
   const startNotice = useRepoStore((s) => s.startNotice);
   const gitReady = appStatus.isSuccess;
   const show = useToastStore((s) => s.show);
+  const showError = useToastStore((s) => s.showError);
   const projects = recent.data ?? [];
   // 위쪽 자리에 둘 프로젝트. 맨 앞 폴더가 사라졌거나 저장소가 아니면 다음 것으로 넘긴다.
   const [topIndex, setTopIndex] = useState(0);
   const top = projects[topIndex] ?? projects[0];
   const others = projects.filter((p) => p !== top);
+  // 고정한 프로젝트는 위에 따로 묶는다(D-203).
+  const pinnedOthers = others.filter((p) => p.pinned);
+  const restOthers = others.filter((p) => !p.pinned);
+  const refreshRecent = () => void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
+  const row = (p: RecentProject) => (
+    <ProjectRow
+      key={p.path}
+      project={p}
+      now={recent.dataUpdatedAt}
+      onRemove={async () => {
+        await api.removeRecent(p.path);
+        refreshRecent();
+      }}
+      onPin={(pinned) => {
+        void api
+          .pinProject(p.path, pinned)
+          .catch((e: unknown) => showError(e))
+          .finally(refreshRecent);
+      }}
+    />
+  );
   const identity = useIdentity();
   // "나중에"는 이번 실행 동안만(저장하지 않음, D-126).
   const [firstRunLater, setFirstRunLater] = useState(false);
@@ -139,22 +161,18 @@ export function Start() {
           ))}
       </section>
 
+      {pinnedOthers.length > 0 && (
+        <section className={styles.list} aria-labelledby="start-pinned">
+          <h2 id="start-pinned" className={styles.listHeader}>
+            {m.pinnedSection}
+          </h2>
+          <ul className={styles.rows}>{pinnedOthers.map(row)}</ul>
+        </section>
+      )}
       <section className={styles.list}>
         <h2 className={styles.listHeader}>{others.length > 0 ? m.otherProjectsHeader : m.startTitle}</h2>
         {recent.isSuccess && projects.length === 0 && <p className={styles.empty}>{m.noProjects}</p>}
-        <ul className={styles.rows}>
-          {others.map((p) => (
-            <ProjectRow
-              key={p.path}
-              project={p}
-              now={recent.dataUpdatedAt}
-              onRemove={async () => {
-                await api.removeRecent(p.path);
-                void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
-              }}
-            />
-          ))}
-        </ul>
+        <ul className={styles.rows}>{restOthers.map(row)}</ul>
       </section>
     </div>
   );

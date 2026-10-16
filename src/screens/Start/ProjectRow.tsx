@@ -19,10 +19,13 @@ export function ProjectRow({
   project,
   now,
   onRemove,
+  onPin,
 }: {
   project: RecentProject;
   now: number;
   onRemove: () => void;
+  /** 고정하거나 푼다(D-203). */
+  onPin: (pinned: boolean) => void;
 }) {
   const m = useMessages();
   const open = useOpenProject();
@@ -63,6 +66,15 @@ export function ProjectRow({
         <span className={short?.kind === "conflict" ? `${styles.rowStatus} ${styles.danger}` : styles.rowStatus}>
           {gone ?? status}
         </span>
+      </button>
+      <button
+        type="button"
+        className={`${styles.pin} ${project.pinned ? styles.pinned : ""}`}
+        aria-pressed={project.pinned}
+        aria-label={`${m.pin}: ${project.name}`}
+        onClick={() => onPin(!project.pinned)}
+      >
+        {m.pin}
       </button>
       {gone ? (
         <Button variant="text" onClick={onRemove}>

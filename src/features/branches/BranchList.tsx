@@ -4,10 +4,12 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { api, type ActionInput, type BranchListView } from "../../lib/api";
 import {
   invalidateLog,
+  queryKeys,
   useBranchNameCheck,
   useBranches,
   useHostingContext,
   useMergeHint,
+  useRecentProjects,
   useStatus,
 } from "../../lib/queries";
 import { isMenuKey } from "../../lib/listKeys";
@@ -152,6 +154,9 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
   const [active, setActive] = useState(0);
   const [pending, setPending] = useState(false);
   const status = useStatus(repo).data;
+  // 이 저장소에서 고정한 브랜치(D-203). 지금 목록에 없는 이름은 sections가 뺀다.
+  const recentList = useRecentProjects().data;
+  const pinnedNames = useMemo(() => recentList?.find((p) => p.path === repo)?.pinnedBranches ?? [], [recentList, repo]);
   const sw = useSwitch(repo, onDone);
   const busy = pending || sw.pending !== null;
   const queryClient = useQueryClient();
@@ -172,10 +177,10 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
       const found = search(view, query).map((item) => ({ kind: "switch" as const, item }));
       return canOfferCreate(view, query) ? [...found, { kind: "create", name: query.trim() }] : found;
     }
-    const s = sections(view);
-    const visible = [...(s.current ? [s.current] : []), ...s.recent, ...(expanded ? s.more : [])];
+    const s = sections(view, pinnedNames);
+    const visible = [...s.pinned, ...(s.current ? [s.current] : []), ...s.recent, ...(expanded ? s.more : [])];
     return visible.map((item) => ({ kind: "switch", item }));
-  }, [view, query, expanded]);
+  }, [view, query, expanded, pinnedNames]);
 
   const createBlocked =
     debounced !== query.trim() || nameCheck.isFetching || (nameCheck.data !== undefined && !nameCheck.data.ok);
@@ -211,6 +216,18 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
       for (const key of [["status", repo], ["branches", repo]]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
+    }
+  };
+
+  // 브랜치 고정(D-203). 목록 맨 위 "고정" 묶음에 남는다.
+  const pinBranch = async (name: string, pinned: boolean) => {
+    try {
+      await api.pinBranch(repo, name, pinned);
+    } catch (e) {
+      showError(e);
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.recent });
+      searchRef.current?.focus();
     }
   };
 
@@ -316,6 +333,8 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
           onDelete={(name) => void edit({ id: "branch-delete", input: { name } }, m.branchDeleted(name))}
           onClose={close}
           listId={listId}
+          pinnedNames={pinnedNames}
+          onPin={(name, pinned) => void pinBranch(name, pinned)}
           menuFor={menuFor}
           setMenuFor={(key) => {
             setMenuFor(key);
@@ -349,9 +368,9 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
           </TermTooltip>
         </div>
       )}
-      {view && !query.trim() && !expanded && sections(view).more.length > 0 && (
+      {view && !query.trim() && !expanded && sections(view, pinnedNames).more.length > 0 && (
         <button type="button" className={styles.more} onClick={() => setExpanded(true)}>
-          {m.moreBranches(sections(view).more.length)}
+          {m.moreBranches(sections(view, pinnedNames).more.length)}
         </button>
       )}
       {choices.some((c) => c.kind === "create") && nameCheck.data && !nameCheck.data.ok && (
@@ -377,6 +396,8 @@ function List({
   onDelete,
   onClose,
   listId,
+  pinnedNames,
+  onPin,
   menuFor,
   setMenuFor,
 }: {
@@ -394,6 +415,9 @@ function List({
   /** 원격 줄 메뉴가 확인 창을 열기 전에 목록을 닫는다. */
   onClose: () => void;
   listId: string;
+  pinnedNames: readonly string[];
+  /** 브랜치 고정·풀기(D-203). */
+  onPin: (name: string, pinned: boolean) => void;
   /** 메뉴가 열린 줄(`choiceKey`). */
   menuFor: string | null;
   setMenuFor: (key: string | null) => void;
@@ -416,20 +440,25 @@ function List({
         return `${r.author} · ${formatTime(r.at, now, locale)}`;
     }
   };
-  const s = sections(view);
+  const s = sections(view, pinnedNames);
   const searching = query.trim() !== "";
   return (
     // 찾기 칸이 combobox이고 이 목록이 listbox다(D-201). 고른 줄은 찾기 칸의 aria-activedescendant로 알린다.
     // 줄의 `…`는 마우스용이라 읽기 프로그램에서 숨긴다.
     <ul id={listId} role="listbox" className={styles.list} aria-label={branchLabel}>
       {choices.map((c, i) => {
-        const first = s.recent[0];
-        const header =
-          !searching && i === 0 && s.current
-            ? m.currentSection
-            : !searching && c.kind === "switch" && first && c.item.name === first.name && c.item.remote === first.remote
-              ? m.recentSection
-              : null;
+        const same = (item: ListItem | null | undefined) =>
+          !!item && c.kind === "switch" && c.item.name === item.name && c.item.remote === item.remote;
+        // 묶음 제목: 고정 → 지금 → 최근에 쓴 브랜치(찾는 중에는 없음).
+        const header = searching
+          ? null
+          : same(s.pinned[0])
+            ? m.pinnedSection
+            : same(s.current)
+              ? m.currentSection
+              : same(s.recent[0])
+                ? m.recentSection
+                : null;
         const local = c.kind === "switch" && c.item.remote === null ? c.item : null;
         const remoteRow = c.kind === "switch" && c.item.remote !== null ? c.item : null;
         if (local && renaming === local.name) {
@@ -480,6 +509,8 @@ function List({
             {local && (
               <BranchRowMenu
                 row={local.row}
+                pinned={pinnedNames.includes(local.name)}
+                onPin={(pinned) => onPin(local.name, pinned)}
                 open={menuFor === choiceKey(c)}
                 onOpenChange={(o) => setMenuFor(o ? choiceKey(c) : null)}
                 onRename={() => onRenameStart(local.name)}

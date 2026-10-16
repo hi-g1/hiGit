@@ -1,3 +1,12 @@
+/* 제목 글자 크기는 안의 단추가 정한다 */
+.heading {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .trigger {
   display: inline-flex;
   align-items: center;
@@ -20,6 +29,7 @@
   max-width: 20rem;
   overflow: hidden;
   font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -40,6 +50,9 @@
 }
 
 .item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-control);
   font-size: var(--font-size-md);
@@ -49,4 +62,29 @@
 
 .item[data-highlighted] {
   background: var(--surface-hover);
+}
+
+.itemName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label {
+  padding: var(--space-1) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.separator {
+  height: var(--border-width);
+  margin: var(--space-1) 0;
+  background: var(--border);
 }

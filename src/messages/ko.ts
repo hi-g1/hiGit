@@ -28,6 +28,11 @@ export const ko = {
   appTagline: "Git을 모르는 사람도 쉽게 쓰는 Git 앱",
   openFolder: "폴더 열기",
   otherProjects: "다른 프로젝트 열기",
+  pin: "고정",
+  unpin: "고정 풀기",
+  pinnedSection: "고정",
+  recentProjects: "최근 프로젝트",
+  pinProject: (name: string) => `${name} 고정`,
   // 시작 화면(D-031)
   gitUpdate: "Git을 업데이트해 주세요. 보안 수정이 빠진 버전이에요.",
   gitDownload: "내려받기",

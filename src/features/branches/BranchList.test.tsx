@@ -11,6 +11,8 @@ vi.mock("../../lib/api", async (importOriginal) => ({
     mergeHint: vi.fn(),
     status: vi.fn(),
     switchPlan: vi.fn(),
+    recentProjects: vi.fn(),
+    pinBranch: vi.fn(),
   },
 }));
 
@@ -54,7 +56,11 @@ const dirty = (n: number): StatusView => ({
   files: Array.from({ length: n }, (_, i) => ({ path: `f${i}.txt`, origPath: null, change: "modified", staged: false })),
 });
 
-function show(onDone = vi.fn()) {
+function show(onDone = vi.fn(), pinned: string[] = []) {
+  vi.mocked(api.recentProjects).mockResolvedValue([
+    { path: "/repo", name: "repo", lastOpenedAt: 1, pinned: false, pinnedBranches: pinned },
+  ]);
+  vi.mocked(api.pinBranch).mockResolvedValue(null);
   vi.mocked(api.status).mockResolvedValue(clean);
   vi.mocked(api.branches).mockResolvedValue(view);
   vi.mocked(api.checkBranchName).mockResolvedValue({ ok: true, problem: null });
@@ -199,6 +205,19 @@ describe("브랜치 목록", () => {
     await userEvent.click(await screen.findByRole("button", { name: "닫기" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(api.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("고정한 브랜치는 맨 위 '고정' 묶음, 줄 메뉴로 고정·풀기(D-203)", async () => {
+    show(vi.fn(), ["결제 수정"]);
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await vi.waitFor(() => expect(screen.getAllByRole("option")[0]).toHaveTextContent("결제 수정"));
+    expect(screen.getByText("고정")).toBeInTheDocument();
+    await userEvent.click(await menuButton("결제 수정"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "고정 풀기" }));
+    expect(api.pinBranch).toHaveBeenCalledWith("/repo", "결제 수정", false);
+    await userEvent.click(await menuButton("main"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "고정" }));
+    expect(api.pinBranch).toHaveBeenCalledWith("/repo", "main", true);
   });
 
   it("없는 이름을 쓰고 Enter면 새 브랜치", async () => {
