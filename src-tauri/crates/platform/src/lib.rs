@@ -6,34 +6,17 @@
 #![forbid(unsafe_code)]
 
 mod app_dir;
+mod exe;
 mod git_exe;
 mod link;
 mod path;
 mod process;
+mod secret;
 
 pub use app_dir::{DATA_DIR_ENV, app_data_dir, home_dir, open_private_append, write_private_file};
+pub use exe::current_exe_path;
 pub use git_exe::{GitBuild, find_git, git_build, git_download_url};
 pub use link::{symlink_dir, symlink_file};
 pub use path::{git_path_string, normalize_repo_path, same_path};
 pub use process::{configure_child, kill_tree, prepare_killable, running_git_pids, terminate_tree};
-
-#[cfg(test)]
-mod tests {
-    use keyring_core::api::CredentialStoreApi;
-
-    // G2 스모크 시험: keyring-core의 모의 저장소로 쓰고 읽고 지운다.
-    #[test]
-    fn mock_keychain_round_trip() {
-        let store = keyring_core::mock::Store::new().expect("모의 저장소");
-        let entry = store
-            .build("dev.higit.test", "github.com", None)
-            .expect("항목");
-        entry.set_password("secret-value").expect("쓰기");
-        assert_eq!(entry.get_password().expect("읽기"), "secret-value");
-        entry.delete_credential().expect("지우기");
-        assert!(matches!(
-            entry.get_password(),
-            Err(keyring_core::Error::NoEntry)
-        ));
-    }
-}
+pub use secret::{Keychain, KeychainError, SECRET_MAX_BYTES};

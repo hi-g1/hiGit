@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G2 끝 (새 의존성, 두 스모크 시험, THIRD_PARTY_NOTICES)
-- 마지막 커밋: (이 갱신과 같은 커밋) build: add http, keychain and secret crates
-- 다음 할 일: push 후 두 OS CI·deny 초록 확인 → G3 platform 키체인·앱 실행 파일 위치 → G4 hosting … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G3 끝 (platform 키체인 `Keychain`·`current_exe_path`)
+- 마지막 커밋: (이 갱신과 같은 커밋) platform: add keychain and helper exe path
+- 다음 할 일: G4 hosting 주소·오류·전송 틀 → G5 device flow → G6 검토 요청 API … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -170,7 +170,8 @@
 - [x] 계획 65ad359(planner + code-analyst 검토 반영)
 - [x] G1 결정·용어
 - [x] G2 의존성: ureq 3.4(rustls-no-provider·platform-verifier) + rustls 0.23(ring), secrecy 0.10, keyring-core 1.0 + Windows·zbus 스토어. deny 허용 목록 변경 없음, webpki-roots 없음. 새 중복 버전: ring의 windows-sys 0.52·getrandom 0.2, secret-service의 digest·hmac·sha2 0.11 계열(맞출 수 없음). 실행 파일 크기는 코드가 쓰기 시작하는 G20에서 잰다
-- [ ] G3 platform 키체인 / G4 hosting 주소·오류·전송 틀 / G5 device flow / G6 검토 요청 API / G7 ureq 전송
+- [x] G3 platform 키체인(`Keychain` get/set/delete, Windows는 Local 보관, 실패는 Unavailable·Denied·Other)·`current_exe_path`
+- [ ] G4 hosting 주소·오류·전송 틀 / G5 device flow / G6 검토 요청 API / G7 ureq 전송
 - [ ] G8a 실패 종류 / G8b 취소 표시 분리 / G8c 원격 주소·인증 방식 / G9 복제(git)
 - [ ] G10a 연결 서비스 / G10b 연결 명령 / G11 helper / G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
@@ -181,6 +182,7 @@
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
+- 반복 4 키체인(G3): 두 OS에서 `cd src-tauri && cargo test -p platform -- --ignored os_keychain_round_trip`이 통과하는지(Ubuntu는 GNOME 키링 잠금 해제 창이 뜰 수 있음, Windows는 자격 증명 관리자에 `dev.higit.test-only.round-trip`이 잠깐 생겼다 지워짐).
 - 반복 2 충돌 해결 화면: 실제로 겹치는 합치기를 만들어 끝까지(곳마다 고르기, 직접 고치기 글상자의 한글 IME, 1·2·3·Ctrl+↑↓가 두 웹뷰에서 오는지, 마치기·그만두기), 앱을 중간에 껐다 켜도 고른 것이 이어지는지, 800px·다크.
 - 합치기 제안(main 가져와 합치기·main에 합치기)과 동기화 중 겹침이 충돌 화면으로 가는지, 브랜치 목록 "겹침 해결".
 - 비밀 파일 알림 줄: `.env`를 만들고 저장하면 알림 줄, 다시 저장하면 저장되는지.

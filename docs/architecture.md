@@ -409,7 +409,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 | 로그 폴더(D-078) | 앱 데이터 폴더 아래 `logs` | 같음. 파일 권한 0600 |
 | git 끝내기(D-080) | `taskkill /T`, 2초 뒤 `taskkill /T /F` | 새 프로세스 그룹에 SIGTERM, 2초 뒤 SIGKILL |
 | 도는 git 찾기(D-081) | `tasklist`의 `git.exe`·`git-*.exe` | `/proc/*/comm`이 `git`이거나 `git-`로 시작 |
-| 비밀 저장 | Credential Manager (`keyring` 크레이트) | Secret Service (`keyring` 크레이트) |
+| 비밀 저장 | 자격 증명 관리자 (`keyring-core` + `windows-native-keyring-store`) | Secret Service (`keyring-core` + `zbus-secret-service-keyring-store`, 순수 Rust) |
 | 웹뷰 | WebView2 | WebKitGTK 4.1 |
 
 우클릭 메뉴 등록·해제는 설정 화면 토글로 하고, 설치 프로그램에서는 기본 등록한다.
