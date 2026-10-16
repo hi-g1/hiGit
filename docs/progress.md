@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G14 끝 (대화상자 틀 `ui/DialogFrame`·`lib/copy` 공용화)
-- 마지막 커밋: (이 갱신과 같은 커밋) ui: share the dialog frame and copy helper
-- 다음 할 일: G15 설정 대화상자·GitHub 연결 → G16 복제 화면 → G17 검토 요청 화면 → G18 새 검토 요청 → G19 브랜치 목록 → G20 (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G15 끝 (설정 대화상자·GitHub 연결 패널, 상단 바 "설정"·"GitHub 연결")
+- 마지막 커밋: (이 갱신과 같은 커밋) screens: settings dialog and github connection
+- 다음 할 일: G16 복제 화면(Ctrl+Shift+O) → G17 검토 요청 화면 → G18 새 검토 요청 → G19 브랜치 목록 → G20 (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -187,7 +187,8 @@
 - [x] G13a 대상 원격(upstream 원격, 없으면 하나뿐·origin)의 올리기 주소가 github.com일 때만, head는 upstream 원격 브랜치 이름. 조회 4개(hosting_context·pr_draft는 네트워크 없음), `NotGithubRemote`
 - [x] G13b 액션 `pr-create`(32번째, safe/Nothing, 원격 잠금만, journal 남기지 않음), `NotPushed`·`PrSameBranch`, 보내기 전 검사, D-123
 - [x] G14 `ui/DialogFrame`(부제 선택, 폭 narrow/wide, 키 차단, `composing`)·`lib/copy`, 역 메뉴 대화상자 4개가 사용
-- [ ] G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
+- [x] G15 `features/settings`(SettingsDialog·GitHubSection·ConnectPanel·settingsStore), `features/github/useConnect`(간격 연쇄·창 포커스 때 한 번·닫으면 취소), `useGitHubStatus`, 시작 화면·상단 바 "설정", 원격 없고 미연결이면 "GitHub 연결"
+- [ ] G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 
 ## 다음 반복
 - [ ] 반복 4b: 설정과 GitHub 넓히기
@@ -195,6 +196,7 @@
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
+- 반복 4 설정(G15): client id를 넣은 빌드(`HIGIT_GITHUB_CLIENT_ID=<id> pnpm tauri dev`)에서 설정 → GitHub 연결 → 기본 브라우저에 코드 페이지가 열리고, 코드를 넣으면 앱이 "GitHub에 연결했어요"·`@로그인`·"이 컴퓨터에 저장됨"을 보이는지. 껐다 켜도 연결돼 있는지. Ubuntu 키링 잠금 해제 창, 연결 끊기 뒤 "GitHub에서 권한 지우기". 800px·다크.
 - 반복 4 helper(G11): **Windows 릴리스 exe(GUI 하위 시스템)**에서 git이 준 표준 입출력 파이프로 `--git-credential get`이 답하는지(연결한 뒤 GitHub 비공개 저장소 https 동기화가 GCM 창 없이 되는지). 설치 경로에 공백이 있는 `C:\Program Files\…`에서도. Ubuntu에서 같은 동기화.
 - 반복 4 키체인(G3): 두 OS에서 `cd src-tauri && cargo test -p platform -- --ignored os_keychain_round_trip`이 통과하는지(Ubuntu는 GNOME 키링 잠금 해제 창이 뜰 수 있음, Windows는 자격 증명 관리자에 `dev.higit.test-only.round-trip`이 잠깐 생겼다 지워짐).
 - 반복 2 충돌 해결 화면: 실제로 겹치는 합치기를 만들어 끝까지(곳마다 고르기, 직접 고치기 글상자의 한글 IME, 1·2·3·Ctrl+↑↓가 두 웹뷰에서 오는지, 마치기·그만두기), 앱을 중간에 껐다 켜도 고른 것이 이어지는지, 800px·다크.

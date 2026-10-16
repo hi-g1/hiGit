@@ -1,0 +1,56 @@
+/* 설정 대화상자(design.md "설정 대화상자", "GitHub 연결 패널") */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.login {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  user-select: all;
+}

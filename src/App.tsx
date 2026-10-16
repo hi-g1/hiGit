@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
 import { TrustDialog } from "./features/open-project/TrustDialog";
+import { SettingsDialog } from "./features/settings/SettingsDialog";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { useAppStatus } from "./lib/queries";
 import { useShortcut } from "./lib/useShortcut";
@@ -52,6 +53,7 @@ function Screens() {
     <>
       {repo ? <Workspace repo={repo} /> : <Start />}
       <TrustDialog />
+      <SettingsDialog />
     </>
   );
 }

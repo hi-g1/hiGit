@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ActionButton } from "../../features/actions/ActionButton";
 import { useOpenFolder } from "../../features/open-project/useOpenFolder";
+import { useSettingsStore } from "../../features/settings/settingsStore";
 import { api, type RecentProject } from "../../lib/api";
 import { queryKeys, useAppStatus, useProjectSummary, useRecentProjects } from "../../lib/queries";
 import { SHORTCUTS } from "../../lib/shortcuts";
@@ -24,6 +25,7 @@ export function Start() {
   const recent = useRecentProjects();
   const openFolder = useOpenFolder();
   const openRepo = useRepoStore((s) => s.openRepo);
+  const openSettings = useSettingsStore((s) => s.openSettings);
   const pendingInit = useRepoStore((s) => s.pendingInit);
   const setPendingInit = useRepoStore((s) => s.setPendingInit);
   const startNotice = useRepoStore((s) => s.startNotice);
@@ -48,6 +50,9 @@ export function Start() {
         >
           {m.openFolder}{" "}
           <Kbd>{SHORTCUTS.openFolder.label}</Kbd>
+        </button>
+        <button type="button" className={styles.textAction} onClick={() => openSettings()}>
+          {m.settings.title}
         </button>
       </header>
 

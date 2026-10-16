@@ -7,11 +7,13 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
     branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: "main", orphanParked: [], remotes: [] })),
+    githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false })),
   },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
 import type { StatusView } from "../../lib/api";
+import { useSettingsStore } from "../../features/settings/settingsStore";
 import { useRepoStore } from "../../state/repoStore";
 import { TopBar as RealTopBar } from "./TopBar";
 
@@ -46,5 +48,25 @@ describe("TopBar", () => {
   it("특정 버전을 보는 중이면 브랜치 이름 대신 안내", () => {
     render(<TopBar repo={repo} status={status({ name: null })} />);
     expect(screen.getByText("특정 버전을 보는 중")).toBeInTheDocument();
+  });
+
+  it("설정 단추와, 원격이 없고 연결 안 됐으면 GitHub 연결 단추", async () => {
+    render(<TopBar repo={repo} status={status({})} />);
+    await userEvent.click(await screen.findByRole("button", { name: "GitHub 연결" }));
+    expect(useSettingsStore.getState()).toMatchObject({ open: true, connect: true });
+    act(() => useSettingsStore.getState().close());
+    await userEvent.click(screen.getByRole("button", { name: "설정" }));
+    expect(useSettingsStore.getState()).toMatchObject({ open: true, connect: false });
+    act(() => useSettingsStore.getState().close());
+  });
+
+  it("오른쪽 컨트롤은 다섯 개를 넘지 않는다", async () => {
+    const { container } = render(<TopBar repo={repo} status={status({})} />);
+    await screen.findByRole("button", { name: "GitHub 연결" });
+    const header = container.querySelector("header")!;
+    const spacer = [...header.children].findIndex((el) => String(el.className).includes("spacer"));
+    expect(spacer).toBeGreaterThan(0);
+    const right = [...header.children].slice(spacer + 1);
+    expect(right.length).toBeLessThanOrEqual(5);
   });
 });

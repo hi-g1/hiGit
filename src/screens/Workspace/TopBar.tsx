@@ -1,8 +1,9 @@
 import { BranchList } from "../../features/branches/BranchList";
 import { branchColor } from "../../features/branches/color";
+import { useSettingsStore } from "../../features/settings/settingsStore";
 import { SyncButton } from "../../features/sync/SyncButton";
 import type { RepoInfo, StatusView } from "../../lib/api";
-import { useBranches } from "../../lib/queries";
+import { useBranches, useGitHubStatus } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -12,7 +13,8 @@ import styles from "./TopBar.module.css";
 
 /**
  * 상단 바(D-045). 왼쪽: 프로젝트 메뉴, 브랜치 단추(누르거나 Ctrl+B면 브랜치 목록).
- * 오른쪽: 동기화(H15), 버전 기록(Ctrl+H, D-058). "작업 내역"은 반복 2, "설정"은 설정 화면과 함께.
+ * 오른쪽: 동기화(H15)(원격이 없고 GitHub에 연결 안 됐으면 그 자리에 "GitHub 연결"), 버전 기록
+ * (Ctrl+H, D-058), 작업 내역(Ctrl+Shift+H), 설정. 오른쪽 컨트롤은 다섯 개를 넘지 않는다.
  */
 export function TopBar({
   repo,
@@ -31,6 +33,8 @@ export function TopBar({
   const branches = useBranches(repo.path).data;
   const defaultBranch = branches?.defaultBranch ?? null;
   const hasRemote = (branches?.remotes.length ?? 0) > 0;
+  const github = useGitHubStatus().data;
+  const openSettings = useSettingsStore((s) => s.openSettings);
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
   const toggleHistory = () => setView(view === "history" ? "home" : "history");
@@ -56,6 +60,11 @@ export function TopBar({
       {branch && hasRemote && !merging && (
         <SyncButton repo={repo.path} branch={branch} changedFiles={status?.files.length ?? 0} />
       )}
+      {branches && !hasRemote && github?.configured && !github.connected && !merging && (
+        <button type="button" className={styles.textButton} onClick={() => openSettings(true)}>
+          {m.settings.connect}
+        </button>
+      )}
       {!merging && (
       <button
         type="button"
@@ -78,6 +87,9 @@ export function TopBar({
           <Term id="reflog" focusable={false} />
         </button>
       )}
+      <button type="button" className={styles.textButton} onClick={() => openSettings()}>
+        {m.settings.title}
+      </button>
     </header>
   );
 }

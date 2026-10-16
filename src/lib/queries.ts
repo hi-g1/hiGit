@@ -26,7 +26,23 @@ export const queryKeys = {
   stashes: (repo: string) => ["stashes", repo] as const,
   pendingWork: (repo: string) => ["pendingWork", repo] as const,
   routePreview: (repo: string, limit: number) => ["routePreview", repo, limit] as const,
+  /** GitHub 연결에 기대는 것은 모두 "github"로 시작한다(연결·끊기 뒤 한 번에 무효화). */
+  github: ["github"] as const,
+  githubStatus: ["github", "status"] as const,
+  hostingContext: (repo: string) => ["github", "context", repo] as const,
+  prList: (repo: string, state: string, branch: string | null) => ["github", "prList", repo, state, branch] as const,
+  prDetail: (repo: string, number: number) => ["github", "prDetail", repo, number] as const,
+  prDraft: (repo: string) => ["github", "prDraft", repo] as const,
+  cloneDefaults: ["cloneDefaults"] as const,
 };
+
+/** 설정의 GitHub 구역 상태(키체인을 건드리지 않는다). */
+export function useGitHubStatus() {
+  return useQuery<Awaited<ReturnType<typeof api.githubStatus>>, ApiError>({
+    queryKey: queryKeys.githubStatus,
+    queryFn: api.githubStatus,
+  });
+}
 
 /** 시작 화면 노선도는 동시에 3개까지 부른다(Windows는 git 시작이 느리다, D-093). */
 export const previewQueue = limiter(3);
