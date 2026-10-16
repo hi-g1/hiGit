@@ -178,3 +178,128 @@ jobs:
           path: artifact/
           retention-days: 14
           if-no-files-found: error
+
+  bundle:
+    # 설치 파일이 만들어지고 깔리는지 본다(D-220). PR에서는 돌지 않는다. 비밀은 쓰지 않는다.
+    name: 설치 파일 ${{ matrix.os }}
+    needs: build-and-test
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ubuntu 러너 디스크 비우기
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Ubuntu 시스템 패키지
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libssl-dev build-essential libxdo-dev libayatana-appindicator3-dev desktop-file-utils file
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Rust 도구 (rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+          key: bundle
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Ubuntu 설치 파일 만들기 (deb, AppImage)
+        if: runner.os == 'Linux'
+        run: pnpm tauri build --bundles deb,appimage
+
+      - name: deb 내용 확인
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb=$(ls src-tauri/target/release/bundle/deb/*.deb)
+          info=$(dpkg-deb -I "$deb")
+          echo "$info"
+          grep -Eq '^ Depends:.*\bgit\b' <<<"$info" || { echo "deb의 Depends에 git이 없습니다"; exit 1; }
+          files=$(dpkg-deb -c "$deb" | awk '{print $6}' | sed 's#^\./##')
+          for want in usr/bin/higit usr/share/applications/hiGit.desktop \
+            usr/share/icons/hicolor/16x16/apps/higit.png usr/share/icons/hicolor/24x24/apps/higit.png \
+            usr/share/icons/hicolor/32x32/apps/higit.png usr/share/icons/hicolor/128x128/apps/higit.png \
+            usr/share/doc/higit/copyright usr/share/doc/higit/THIRD_PARTY_LICENSES.txt \
+            usr/lib/hiGit/LICENSE usr/lib/hiGit/THIRD_PARTY_LICENSES.txt usr/lib/hiGit/licenses/D2Coding-OFL.txt \
+            usr/lib/hiGit/guide/index.html; do
+            grep -qxF "$want" <<<"$files" || { echo "deb에 $want 가 없습니다"; exit 1; }
+          done
+          if grep -qxF usr/bin/gen-bindings <<<"$files"; then echo "deb에 개발용 gen-bindings가 들어 있습니다"; exit 1; fi
+          dpkg-deb --fsys-tarfile "$deb" | tar -xO usr/share/applications/hiGit.desktop > hiGit.desktop
+          cat hiGit.desktop
+          desktop-file-validate hiGit.desktop
+          if grep -q MimeType hiGit.desktop; then echo ".desktop이 폴더 형식을 맡으면 안 됩니다"; exit 1; fi
+          ls -l src-tauri/target/release/bundle/appimage/*.AppImage
+
+      - name: 새 Ubuntu 22.04 컨테이너에 deb 설치
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb=$(ls src-tauri/target/release/bundle/deb/*.deb)
+          docker run --rm -v "$PWD/$(dirname "$deb"):/pkg:ro" ubuntu:22.04 bash -c \
+            "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq /pkg/$(basename "$deb") > /dev/null && test -x /usr/bin/higit && git --version"
+
+      - name: Windows 설치 파일 만들기 (NSIS)
+        if: runner.os == 'Windows'
+        run: pnpm tauri build --bundles nsis
+
+      - name: Windows 사용자 단위 설치·지우기 확인
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem src-tauri\target\release\bundle\nsis\*-setup.exe | Select-Object -First 1
+          if (-not $setup) { throw "NSIS 설치 파일이 만들어지지 않았습니다" }
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          $dir = Join-Path $env:LOCALAPPDATA 'hiGit'
+          foreach ($f in 'higit.exe', 'uninstall.exe', 'LICENSE', 'THIRD_PARTY_LICENSES.txt', 'licenses\D2Coding-OFL.txt', 'guide\index.html') {
+            if (-not (Test-Path (Join-Path $dir $f))) {
+              if (Test-Path $dir) { Get-ChildItem -Recurse $dir | Select-Object -ExpandProperty FullName }
+              throw "사용자 설치 폴더($dir)에 $f 가 없습니다"
+            }
+          }
+          if (Test-Path (Join-Path $dir 'gen-bindings.exe')) { throw "개발용 gen-bindings.exe가 들어 있습니다" }
+          # 앱이 만드는 우클릭 키(D-214)를 흉내 내고, 지우기가 그 두 키만 지우는지 본다.
+          foreach ($k in 'Directory\shell\higit', 'Directory\Background\shell\higit') {
+            New-Item -Path "HKCU:\Software\Classes\$k\command" -Force | Out-Null
+          }
+          New-Item -Path 'HKCU:\Software\Classes\Directory\shell\higit-ci-other' -Force | Out-Null
+          Start-Process -FilePath (Join-Path $dir 'uninstall.exe') -ArgumentList '/S', "_?=$dir" -Wait
+          if (Test-Path (Join-Path $dir 'higit.exe')) { throw "지운 뒤에도 higit.exe가 남았습니다" }
+          foreach ($k in 'Directory\shell\higit', 'Directory\Background\shell\higit') {
+            if (Test-Path "HKCU:\Software\Classes\$k") { throw "지운 뒤에도 $k 키가 남았습니다" }
+          }
+          if (-not (Test-Path 'HKCU:\Software\Classes\Directory\shell\higit-ci-other')) { throw "지우기가 남의 키까지 지웠습니다" }
+          Remove-Item 'HKCU:\Software\Classes\Directory\shell\higit-ci-other' -Recurse
+
+      - name: 설치 파일 올리기
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: higit-installers-${{ runner.os }}-${{ github.sha }}
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+          retention-days: 14
+          if-no-files-found: error

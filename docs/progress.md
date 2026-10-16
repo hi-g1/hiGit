@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: **반복 5**(계획 014) 차례. UX 다듬기(계획 012)는 2026-10-17 끝(U29는 반복 5로). 4c(계획 013)·4b(계획 010)·다듬기(계획 011)는 2026-10-16 끝. 4b·4c·UX 다듬기의 끝 점검은 반복 5 끝 점검에 합친다(진행 방식).
-- 단계: 014-R16c 정보 줄 끝(R16b 413e34d, R16 f2d65b6, CI 고침 718060b, R14 5cb1596, R13 a60dae2, R12 03c7a51, R11 5ab285d … R1 9634bd8. R2~R8 CI 초록, R9~R11 Windows 실패 → 718060b로 고쳐 R12~R16과 push, 결과 대기). 사용자 지시 반영: 계획 013·014(5fa36b2), MIT 라이선스(58663c5, D-174)
-- 마지막 커밋: (이 갱신과 같은 커밋) screens: open source licenses and user guide in settings
-- 다음 할 일: CI(718060b) 초록 확인(초록 전 push 금지) → 014-R17 CI 설치 확인 → R18 파서 무작위 시험 → R19 …
+- 단계: 014-R17 CI 설치 확인 끝(R16c a044d0d, R16b 413e34d, R16 f2d65b6, CI 고침 718060b, R14 5cb1596 … R1 9634bd8. R2~R8 CI 초록, R9~R11 Windows 실패 → 718060b로 고쳐 R12~R16과 push, 결과 대기). 사용자 지시 반영: 계획 013·014(5fa36b2), MIT 라이선스(58663c5, D-174)
+- 마지막 커밋: (이 갱신과 같은 커밋) ci: build and smoke-test installers
+- 다음 할 일: CI(718060b) 초록 확인(초록 전 push 금지) → R16b~R17 push(새 bundle 작업 첫 실행) → 014-R18 파서 무작위 시험 → R19 …
 
 ## 진행 방식 (사용자 지시, 2026-10-15, 2026-10-16 고침)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: … → 4b → **4c(계획 013)** → **UX 다듬기(계획 012)** → **반복 5(계획 014)** → **v0.1.0 시험판**(GitHub 릴리스 "pre-release", 설치 파일과 사용법 `hiGit-guide.html`).
@@ -330,7 +330,8 @@
 - [x] 014-R16 설치 파일 설정(이 커밋. NSIS 사용자 단위로(D-220), WebView2는 내려받기 부트스트래퍼, deb는 로컬에서 만들어 봄, AppImage·NSIS는 R17 CI에서(AppImage 도구는 저장소 밖에 내려받아서 로컬에서 안 함). D2Coding OFL도 묶음 자원에. 계획에 없던 것: Tauri가 모든 `[[bin]]`을 묶어 `gen-bindings`가 deb에 들어가서 예제로 옮김(명령은 `cargo run -p app --example gen-bindings`), deb 패키지 이름은 Tauri가 제품 이름에서 정해 `hi-git`)
 - [x] 014-R16b 서드파티 고지(이 커밋. `THIRD_PARTY_LICENSES.txt`(465개, 331KB)를 커밋해 둔다(tauri-build가 빌드마다 묶음 자원을 찾아서). 두 라이선스 중 고르면 MIT 원문, 파일 없는 crate는 MIT·BSD 표준 원문에 작성자, Apache·MPL은 다른 crate의 원문. 글꼴은 THIRD_PARTY_NOTICES.md 그대로)
 - [x] 014-R16c 정보 줄(이 커밋. 자원 경로는 core·platform이 아니라 Tauri 자원 경로(앱 층)로 찾는다. 이름만 core 상수. 사용법 html 두 개는 자리만 두고 R20b가 채운다)
-- [ ] R17 CI 설치 확인 / R18 파서 무작위 시험 / R19 릴리스 워크플로
+- [x] 014-R17 CI 설치 확인(이 커밋. MSI 대신 NSIS: `/S`로 사용자 단위 설치(`%LOCALAPPDATA%\hiGit`) → 자원 확인 → HKCU 키를 만든 뒤 `uninstall.exe /S _?=` → 실행 파일·두 키 사라짐, 남의 키는 남음. 결과는 CI 첫 실행에서 확인)
+- [ ] R18 파서 무작위 시험 / R19 릴리스 워크플로
 - [ ] 014-R20 마무리·점검(보안 위주, 릴리스 직전 한 번) / R20b 사용법 문서 / R21 v0.1.0 시험판(GitHub 릴리스 "pre-release")
 
 ## 사람이 할 일
