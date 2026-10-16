@@ -25,7 +25,8 @@ pub use history::{RewriteBlocked, RewriteCardView, RewritePlanView};
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
     FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, OidInput, PathsInput,
-    RestoreInput, SwitchInput, SyncInput, TakeOutInput, TakeOutSource,
+    RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput,
+    TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -438,6 +439,12 @@ pub enum ActionResult {
     Reset {
         dropped: u32,
     },
+    /// 기록을 정리했다. 남은·뺀·묶어 합친 버전 수.
+    Rewritten {
+        kept: u32,
+        dropped: u32,
+        joined: u32,
+    },
     /// 복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등).
     OperationConflicts {
         context: ConflictContext,
@@ -514,6 +521,15 @@ impl From<Outcome> for ActionResult {
             }
             Outcome::Picked { short_oid, summary } => ActionResult::Picked { short_oid, summary },
             Outcome::Reset { dropped } => ActionResult::Reset { dropped },
+            Outcome::Rewritten {
+                kept,
+                dropped,
+                joined,
+            } => ActionResult::Rewritten {
+                kept,
+                dropped,
+                joined,
+            },
             Outcome::OperationConflicts { context, paths } => {
                 ActionResult::OperationConflicts { context, paths }
             }

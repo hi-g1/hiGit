@@ -16,6 +16,7 @@ mod recover_parked;
 mod remote;
 mod reset;
 mod restore;
+mod rewrite;
 mod stage;
 pub(crate) mod stash;
 pub(crate) mod switch;
@@ -34,6 +35,7 @@ pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
 pub use reset::ResetAction;
 pub use restore::RestoreAction;
+pub use rewrite::RewriteAction;
 pub use stage::PathsAction;
 pub use stash::StashAction;
 pub use switch::{SwitchAction, SwitchReport};
@@ -97,6 +99,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(PickAction::revert()))?;
     registry.register(Box::new(PickAction::cherry_pick()))?;
     registry.register(Box::new(ResetAction::new()))?;
+    registry.register(Box::new(RewriteAction::new()))?;
     Ok(())
 }
 

@@ -68,6 +68,7 @@ fn op(kind: OpKind, head_before: &Oid, base: Option<&Oid>, oids: &[&Oid]) -> OpM
         base: base.map(|b| b.to_string()),
         oids: oids.iter().map(|o| o.to_string()).collect(),
         started_at: 1,
+        messages: Vec::new(),
     }
 }
 

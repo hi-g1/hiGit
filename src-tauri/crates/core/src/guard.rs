@@ -138,7 +138,6 @@ pub(crate) const MAX_REWRITE: usize = 50;
 const MAX_CHAIN: usize = 1000;
 
 /// 기록 정리할 구간. 모든 목록은 새 것부터.
-#[allow(dead_code)] // `branch`·`head`·`base`는 계획 008 E14b의 액션이 쓴다.
 #[derive(Debug, Clone)]
 pub(crate) struct RewriteChain {
     pub branch: String,
@@ -173,14 +172,15 @@ pub(crate) fn rewrite_chain(
             blocked: Some(b),
         })
     };
-    let Some(branch) = git.current_branch(repo)? else {
-        return blocked(B::Detached);
-    };
+    // 리베이스 중에는 브랜치를 떠나 있으므로 진행 중인 작업을 먼저 본다.
     if crate::actions::switch::refuse_during_operation(git, repo).is_err()
         || git.index_entries(repo)?.iter().any(|e| e.stage > 0)
     {
         return blocked(B::OtherOperation);
     }
+    let Some(branch) = git.current_branch(repo)? else {
+        return blocked(B::Detached);
+    };
     if oids.len() > MAX_REWRITE {
         return blocked(B::TooMany);
     }

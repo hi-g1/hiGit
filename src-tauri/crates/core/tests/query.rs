@@ -269,7 +269,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Amend(_)
             | ActionInput::Revert(_)
             | ActionInput::CherryPick(_)
-            | ActionInput::Reset(_) => {}
+            | ActionInput::Reset(_)
+            | ActionInput::RebaseI(_) => {}
         }
     }
     let paths = PathsInput {
@@ -336,6 +337,7 @@ fn action_input_tags_match_registry() {
         ActionInput::Reset(higit_core::view::OidInput {
             oid: "a".repeat(40),
         }),
+        ActionInput::RebaseI(higit_core::view::RewriteInput { steps: vec![] }),
     ];
     samples.iter().for_each(every_variant);
 

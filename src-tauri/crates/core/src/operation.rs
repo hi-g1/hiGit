@@ -9,8 +9,10 @@ use crate::Result;
 use crate::marker::{self, Name};
 use crate::undo::JournalKey;
 
-/// 표식에 담는 버전 수 상한(기록 정리 50개).
-const MAX_OIDS: usize = 50;
+/// 표식에 담는 버전 수 상한(기록 정리: 고른 50개 + 그 위 1000개).
+const MAX_OIDS: usize = 1050;
+/// 표식에 담는 고친 메시지 전체 크기 상한.
+const MAX_MESSAGES_BYTES: usize = 24 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,9 +53,13 @@ pub(crate) struct OpMarker {
     /// 기록 정리의 바탕(정리할 첫 버전의 부모).
     #[serde(default)]
     pub base: Option<String>,
-    /// 복사·되돌리기는 고른 버전 하나, 기록 정리는 정리할 버전들(아래부터).
+    /// 복사·되돌리기는 고른 버전 하나, 기록 정리는 할 일 목록에 넣은 버전 모두(아래부터).
     pub oids: Vec<String>,
     pub started_at: i64,
+    /// 기록 정리에서 메시지를 고칠 버전(옛 해시)과 새 메시지. `edit`으로 멈추면 이것으로 고친다.
+    /// 껐다 켜도 이어 가도록 표식에 담는다(D-100).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub messages: Vec<(String, String)>,
 }
 
 impl OpMarker {
@@ -67,6 +73,20 @@ impl OpMarker {
             && self.oids.len() <= MAX_OIDS
             && self.oids.iter().all(|o| oid_ok(o))
             && (self.kind == OpKind::Rebase) == self.base.is_some()
+            && self.messages.iter().all(|(o, _)| oid_ok(o))
+            && self.messages.iter().map(|(_, m)| m.len()).sum::<usize>() <= MAX_MESSAGES_BYTES
+    }
+
+    /// `edit`으로 멈춘 버전(옛 해시)의 새 메시지. git은 할 일 목록의 해시를 줄여 적을 수 있어
+    /// 앞부분(7자 이상)으로 찾는다.
+    pub(crate) fn message_for(&self, oid: &str) -> Option<&str> {
+        if oid.len() < 7 || !oid.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return None;
+        }
+        self.messages
+            .iter()
+            .find(|(o, _)| o.starts_with(oid))
+            .map(|(_, m)| m.as_str())
     }
 }
 

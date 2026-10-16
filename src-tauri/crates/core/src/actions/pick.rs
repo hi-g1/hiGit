@@ -121,6 +121,7 @@ impl Action for PickAction {
                 base: None,
                 oids: vec![picked.to_string()],
                 started_at: crate::undo::journal::now(),
+                messages: Vec::new(),
             },
         )?;
         match git.run(repo, &op) {

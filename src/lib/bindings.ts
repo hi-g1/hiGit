@@ -99,7 +99,9 @@ export type ActionInput =
 /**  다른 브랜치의 버전 하나를 지금 브랜치로 복사한다. */
 { id: "cherry-pick"; input: OidInput } | 
 /**  지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐). */
-{ id: "reset"; input: OidInput };
+{ id: "reset"; input: OidInput } | 
+/**  기록 정리: 고른 구간의 순서 바꾸기·묶기·빼기·메시지 고치기(D-100, D-106). */
+{ id: "rebase-i"; input: RewriteInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -116,6 +118,8 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 { kind: "picked"; shortOid: string; summary: string } | 
 /**  지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수. */
 { kind: "reset"; dropped: number } | 
+/**  기록을 정리했다. 남은·뺀·묶어 합친 버전 수. */
+{ kind: "rewritten"; kept: number; dropped: number; joined: number } | 
 /**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
 { kind: "operationConflicts"; context: ConflictContext; paths: string[] } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
@@ -663,12 +667,28 @@ export type RewriteCardView = {
 	time: number,
 };
 
+/**  기록 정리 입력. `steps`는 적용 순서(아래 = 옛 것부터)이고, 해시 집합은 고른 구간과 같아야 한다. */
+export type RewriteInput = {
+	steps: RewriteStepInput[],
+};
+
+export type RewriteKindInput = "pick" | 
+/**  바로 아래 단계의 버전에 합친다. */
+"squash" | "drop";
+
 export type RewritePlanView = {
 	/**  고른 버전들(새 것 먼저). 구간을 알 수 없으면 비어 있다. */
 	cards: RewriteCardView[],
 	blocked: RewriteBlocked | null,
 	/**  정리하면 옛 버전을 가리키게 될 다른 브랜치·태그 수(막지는 않는다). */
 	staleLabels: number,
+};
+
+export type RewriteStepInput = {
+	oid: string,
+	kind: RewriteKindInput,
+	/**  고친 메시지. 묶음의 맨 아래(`pick`) 카드에만 둔다. */
+	message: string | null,
 };
 
 export type RiskView = "safe" | "normal" | "caution" | "danger";

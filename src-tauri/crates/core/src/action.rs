@@ -110,6 +110,12 @@ pub enum Outcome {
     Reset {
         dropped: u32,
     },
+    /// 기록을 정리했다. 남은·뺀·묶어 합친 버전 수.
+    Rewritten {
+        kept: u32,
+        dropped: u32,
+        joined: u32,
+    },
     /// 앱이 시작한 작업이 충돌·hook으로 멈췄다(표식이 남아 있다, D-101).
     OperationConflicts {
         context: crate::view::ConflictContext,

@@ -50,6 +50,8 @@ pub enum ActionInput {
     CherryPick(OidInput),
     /// 지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐).
     Reset(OidInput),
+    /// 기록 정리: 고른 구간의 순서 바꾸기·묶기·빼기·메시지 고치기(D-100, D-106).
+    RebaseI(RewriteInput),
 }
 
 impl ActionInput {
@@ -81,6 +83,7 @@ impl ActionInput {
             ActionInput::Revert(_) => "revert",
             ActionInput::CherryPick(_) => "cherry-pick",
             ActionInput::Reset(_) => "reset",
+            ActionInput::RebaseI(_) => "rebase-i",
         }
     }
 
@@ -128,6 +131,18 @@ impl ActionInput {
             }),
             ActionInput::Sync(i) => ActionInput::Sync(SyncInput {
                 locale: journal_locale(&i.locale),
+            }),
+            ActionInput::RebaseI(i) => ActionInput::RebaseI(RewriteInput {
+                steps: i
+                    .steps
+                    .iter()
+                    .take(MAX_PATHS)
+                    .map(|s| RewriteStepInput {
+                        oid: s.oid.clone(),
+                        kind: s.kind,
+                        message: s.message.as_ref().map(|_| String::new()),
+                    })
+                    .collect(),
             }),
             // 메시지(최대 1MB)는 줄에 남기지 않는다. 되돌리기는 `before`/`after`로 한다.
             ActionInput::Amend(i) => ActionInput::Amend(AmendInput {
@@ -251,6 +266,31 @@ pub enum TakeOutSource {
     Parked { branch: String },
     /// 작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085).
     Ref { refname: String },
+}
+
+/// 기록 정리 입력. `steps`는 적용 순서(아래 = 옛 것부터)이고, 해시 집합은 고른 구간과 같아야 한다.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RewriteInput {
+    pub steps: Vec<RewriteStepInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RewriteStepInput {
+    pub oid: String,
+    pub kind: RewriteKindInput,
+    /// 고친 메시지. 묶음의 맨 아래(`pick`) 카드에만 둔다.
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum RewriteKindInput {
+    Pick,
+    /// 바로 아래 단계의 버전에 합친다.
+    Squash,
+    Drop,
 }
 
 /// 노선도에서 고른 버전 해시. core가 다시 확인한다(D-099).

@@ -148,5 +148,11 @@
     "glossaryId": "reset",
     "risk": "danger",
     "undo": "restoreTree"
+  },
+  {
+    "id": "rebase-i",
+    "glossaryId": "rebase-i",
+    "risk": "danger",
+    "undo": "restoreTree"
   }
 ]
