@@ -136,7 +136,8 @@ describe("시작 화면", () => {
 
     expect(await screen.findByRole("heading", { name: "blog" })).toBeInTheDocument();
     const row = (await screen.findByText("폴더를 찾을 수 없어요")).closest("li")!;
-    expect(within(row).getByText("사라진 폴더").className).toMatch(/muted/);
+    // 이름은 Truncate 안의 bdi다. 흐린 색은 그 바깥 줄에 있다.
+    expect(within(row).getByText("사라진 폴더").parentElement?.className).toMatch(/muted/);
     await user.click(within(row).getByRole("button", { name: "목록에서 빼기" }));
     expect(api.removeRecent).toHaveBeenCalledWith("/home/me/사라진 폴더");
   });

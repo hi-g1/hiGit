@@ -9,6 +9,7 @@ import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import styles from "./Start.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /**
  * 다른 프로젝트 한 줄: 이름 · 작은 노선도 · 짧은 상태 · 마지막으로 연 때. 줄 전체가 열기 버튼이다.
@@ -52,7 +53,9 @@ export function ProjectRow({
         disabled={gone !== null || open.isPending}
         onClick={() => void open.open(project.path, "recent")}
       >
-        <span className={gone ? `${styles.rowName} ${styles.muted}` : styles.rowName}>{project.name}</span>
+        <Truncate full={project.path} className={gone ? `${styles.rowName} ${styles.muted}` : styles.rowName}>
+          {project.name}
+        </Truncate>
         {/* 장식: 상태 글자가 같은 정보를 준다. 비어 있어도 자리는 둔다. */}
         <span className={styles.rowMap} aria-hidden="true">
           {map && map.currentCommits.length > 0 && <RoutePreview view={map} density="mini" />}

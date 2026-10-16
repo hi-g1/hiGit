@@ -12,6 +12,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import styles from "./PullRequests.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 const FILTERS: PrStateFilterView[] = ["open", "closed", "all"];
 
@@ -75,7 +76,7 @@ export function PullRequests({ repo }: { repo: string }) {
           ))}
         </div>
         <span className={styles.spacer} />
-        {context?.repo && <bdi className={styles.repo}>{context.repo}</bdi>}
+        {context?.repo && <Truncate className={styles.repo}>{context.repo}</Truncate>}
         {connected && context?.branch && !context.isDefaultBranch && (
           <Button variant="primary" onClick={openPrDialog}>
             {m.pr.newPr}

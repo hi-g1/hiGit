@@ -3,6 +3,7 @@ import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { Term } from "../../ui/Term";
 import styles from "./SecretNotice.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /** 한 번에 보여 줄 파일 수. 나머지는 개수로만 센다. */
 const SHOWN = 3;
@@ -44,7 +45,9 @@ export function SecretNotice({ findings, files, onUnstage, onIgnore, onSaveAnywa
       <ul className={styles.files}>
         {findings.slice(0, SHOWN).map((f) => (
           <li key={f.path}>
-            <span className={styles.path}>{f.path}</span> · {m.secretRule[f.rule]}
+            <Truncate full={`${f.path} · ${m.secretRule[f.rule]}`}>
+              <span className={styles.path}>{f.path}</span> · {m.secretRule[f.rule]}
+            </Truncate>
           </li>
         ))}
         {findings.length > SHOWN && <li>{m.moreFiles(findings.length - SHOWN)}</li>}

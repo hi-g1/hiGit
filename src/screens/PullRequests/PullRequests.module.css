@@ -52,12 +52,9 @@
 }
 
 .repo {
-  overflow: hidden;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .body {

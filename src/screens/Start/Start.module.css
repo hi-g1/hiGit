@@ -83,12 +83,9 @@
 }
 
 .path {
-  overflow: hidden;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 불러오는 동안에도 한 줄 높이를 지켜 아래가 밀리지 않게 한다 */
@@ -180,10 +177,7 @@
 .rowName {
   flex: none;
   width: 12.5rem;
-  overflow: hidden;
   font-weight: var(--font-weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .rowMap {

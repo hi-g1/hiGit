@@ -53,10 +53,7 @@
 }
 
 .itemName {
-  overflow: hidden;
   font-weight: var(--font-weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .itemMeta {

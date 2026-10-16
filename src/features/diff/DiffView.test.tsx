@@ -95,7 +95,8 @@ describe("DiffView", () => {
     const added = screen.getByText("나나").closest("tr")!;
     expect(added).toHaveTextContent("2+나나");
     expect(screen.getByText("파일 끝 줄바꿈 없음")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "src/한글 파일.txt" })).toBeInTheDocument();
+    // 경로는 자르지 않고 줄을 바꾼다. title 툴팁을 쓰지 않는다(머리에는 용어 툴팁이 있다).
+    expect(screen.getByRole("heading", { name: "src/한글 파일.txt" })).not.toHaveAttribute("title");
     expect(api.diff).toHaveBeenCalledWith("/repo", request);
   });
 

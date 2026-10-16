@@ -132,7 +132,11 @@ function CloneForm() {
           }}
         />
       </label>
-      {name.trim() !== "" && parent !== "" && <p className={styles.target}>{target}</p>}
+      {name.trim() !== "" && parent !== "" && (
+        <Truncate from="start" className={styles.target}>
+          {target}
+        </Truncate>
+      )}
       {outdated && (
         <label className={styles.check}>
           <Checkbox checked={acceptOld} disabled={running} onChange={(e) => setAcceptOld(e.target.checked)} />

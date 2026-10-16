@@ -12,6 +12,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import styles from "./Start.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 /** "마지막으로 하던 곳": 이름(26px)·경로·상태 문장·큰 노선도·이어서 하기(start-normal.png, D-093). */
 /** `now`: 상대 시각의 기준(목록을 불러온 시각, ms). 다시 그려도 글자가 바뀌지 않게 한다. */
@@ -46,8 +47,12 @@ export function LastProject({
     <div className={styles.last}>
       <p className={styles.small}>{m.lastPlace(formatTime(project.lastOpenedAt, now, locale))}</p>
       <div className={styles.nameLine}>
-        <h1 className={gone ? `${styles.name} ${styles.muted}` : styles.name}>{project.name}</h1>
-        <span className={styles.path}>{project.path}</span>
+        <h1 className={gone ? `${styles.name} ${styles.muted}` : styles.name}>
+          <Truncate>{project.name}</Truncate>
+        </h1>
+        <Truncate from="start" className={styles.path}>
+          {project.path}
+        </Truncate>
       </div>
       <p className={styles.sentence}>
         {gone ??

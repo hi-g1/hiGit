@@ -51,11 +51,6 @@
   font-family: var(--font-mono);
 }
 
-.path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .note {
   margin: 0;

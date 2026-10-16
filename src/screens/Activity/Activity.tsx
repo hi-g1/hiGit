@@ -18,6 +18,7 @@ import { Term } from "../../ui/Term";
 import { Tooltip } from "../../ui/Tooltip";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./Activity.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 type Props = {
   repo: string;
@@ -102,10 +103,10 @@ export function Activity({ repo, onDone }: Props) {
                     {item.source === "backup" ? (
                       <BackupName label={item.label} />
                     ) : (
-                      item.source !== "reflog" && item.label && <span className={styles.label}>{item.label}</span>
+                      item.source !== "reflog" && item.label && <Truncate className={styles.label}>{item.label}</Truncate>
                     )}
                   </span>
-                  <span className={styles.summary}>{item.summary}</span>
+                  <Truncate>{item.summary}</Truncate>
                   {item.source === "reflog" && (
                     <details className={styles.raw}>
                       <summary>{m.showDetail}</summary>

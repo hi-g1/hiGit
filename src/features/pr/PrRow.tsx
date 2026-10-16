@@ -39,7 +39,7 @@ export function PrRow({
         <span className={styles.state}>{label ?? <Term id="pr-draft" focusable={false} />}</span>
       </div>
       <div className={styles.bottom}>
-        <bdi className={styles.branches}>{branchLine(row)}</bdi>
+        <Truncate className={styles.branches}>{branchLine(row)}</Truncate>
         {row.author && <bdi>{row.author}</bdi>}
         <Time at={row.updatedAt} now={now} />
         {row.isCurrentBranch && <span className={styles.current}>{m.pr.currentBranch}</span>}

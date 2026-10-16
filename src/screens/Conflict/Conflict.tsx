@@ -26,6 +26,7 @@ import { useToastStore } from "../../ui/toastStore";
 import { usePaneWidth } from "../../lib/usePaneWidth";
 import { Splitter } from "../../ui/Splitter";
 import styles from "./Conflict.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 type Props = {
   repo: string;
@@ -214,7 +215,9 @@ export function Conflict({ repo, state, onDone }: Props) {
                       onClick={() => store.setCurrent({ path: f.path, hunk: 0 })}
                     >
                       <span aria-hidden="true">{left === 0 ? "✓" : "●"}</span>
-                      <span className={styles.fileName}>{f.path.split("/").pop()}</span>
+                      <Truncate full={f.path} className={styles.fileName}>
+                        {f.path.split("/").pop() ?? f.path}
+                      </Truncate>
                       {left > 0 && f.kind === "text" && <span className={styles.left}>{left}</span>}
                     </button>
                   </li>

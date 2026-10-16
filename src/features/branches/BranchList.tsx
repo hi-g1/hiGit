@@ -16,6 +16,7 @@ import styles from "./BranchList.module.css";
 import { branchColor } from "./color";
 import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
+import { Truncate } from "../../ui/Truncate";
 
 type Props = {
   repo: string;
@@ -356,13 +357,13 @@ function List({
             >
               {c.kind === "create" ? (
                 <>
-                  <span className={styles.name}>{m.createBranch(c.name)}</span>
+                  <Truncate className={styles.name}>{m.createBranch(c.name)}</Truncate>
                   <span className={styles.right}>Enter</span>
                 </>
               ) : (
                 <>
                   <span className={styles.dot} style={{ background: branchColor(c.item.name, view.defaultBranch) }} />
-                  <span className={styles.name}>{c.item.remote ? `${c.item.remote}/${c.item.name}` : c.item.name}</span>
+                  <Truncate className={styles.name}>{c.item.remote ? `${c.item.remote}/${c.item.name}` : c.item.name}</Truncate>
                   <span className={styles.right}>{right(c.item)}</span>
                 </>
               )}
@@ -376,7 +377,7 @@ function List({
       {!searching &&
         view.orphanParked.map((name) => (
           <li key={`orphan/${name}`} className={styles.orphan}>
-            <span className={styles.name}>{name}</span>
+            <Truncate className={styles.name}>{name}</Truncate>
             <span className={styles.right}>{m.parkedOnly}</span>
           </li>
         ))}

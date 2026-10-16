@@ -13,6 +13,7 @@ import { DialogFrame } from "../../../../ui/DialogFrame";
 import { usePaneWidth } from "../../../../lib/usePaneWidth";
 import { Splitter } from "../../../../ui/Splitter";
 import styles from "./FilesDialog.module.css";
+import { Truncate } from "../../../../ui/Truncate";
 
 type Props = { info: StationInfo; ctx: MenuCtx; onClose: () => void };
 
@@ -97,7 +98,9 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
                     <span className={styles.letter} aria-hidden="true">
                       {LETTER[f.change]}
                     </span>
-                    <span className={styles.path}>{f.path}</span>
+                    <Truncate from="start">
+                      {f.path}
+                    </Truncate>
                   </li>
                 ))}
               </ul>

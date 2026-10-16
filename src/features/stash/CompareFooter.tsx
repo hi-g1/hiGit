@@ -10,6 +10,7 @@ import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./CompareFooter.module.css";
 import { useDiscardFlow } from "./useDiscardFlow";
+import { Truncate } from "../../ui/Truncate";
 
 type Props = {
   repo: string;
@@ -83,7 +84,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
               <ul>
                 {stashes.map((s) => (
                   <li key={s.oid} className={styles.item}>
-                    <span className={styles.itemName}>{s.branch ?? s.message}</span>
+                    <Truncate className={styles.itemName}>{s.branch ?? s.message}</Truncate>
                     <span className={styles.itemMeta}>
                       <Time at={s.at} now={now} /> · {m.filesCount(s.files)}
                     </span>

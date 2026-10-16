@@ -66,11 +66,6 @@
   white-space: nowrap;
 }
 
-.summary {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .raw {
   grid-column: 2 / 4;

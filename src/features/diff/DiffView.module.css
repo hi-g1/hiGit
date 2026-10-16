@@ -14,14 +14,13 @@
   border-bottom: var(--border-width) solid var(--border);
 }
 
+/* 경로는 자르지 않고 줄을 바꾼다(머리에는 용어 툴팁이 있어 잘린 경로 툴팁과 겹치지 않게) */
 .path {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .summary {

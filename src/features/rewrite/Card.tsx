@@ -4,6 +4,7 @@ import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
 import type { Card as CardModel, CardStatus } from "./model";
 import styles from "./CardMap.module.css";
+import { Truncate } from "../../ui/Truncate";
 
 export type CardAction = "up" | "down" | "join" | "split" | "drop" | "edit";
 
@@ -103,7 +104,7 @@ export const Card = forwardRef<HTMLLIElement, Props>(function Card(props, ref) {
           </span>
         )}
         <span className={styles.oid}>{card.shortOid}</span>
-        <bdi className={styles.name}>{name}</bdi>
+        <Truncate className={styles.name}>{name}</Truncate>
         {head && groupSize > 1 && <span className={styles.group}>{m.cardGroup(groupSize)}</span>}
         {statusText && <span className={styles.status}>{statusText}</span>}
       </div>
