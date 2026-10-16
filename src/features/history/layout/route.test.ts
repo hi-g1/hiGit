@@ -48,6 +48,24 @@ describe("세로 노선도 장면", () => {
     expect(by.fold!.kind).toBe("fold");
   });
 
+  it("태그가 붙은 역은 조금 크고, 지금 위치 고리보다는 작다(D-207)", () => {
+    const nodes = [
+      n("h", ["m"], { isHead: true, tags: ["v2"] }),
+      n("m", ["a", "s"], { tags: ["v1.5"] }),
+      n("s", ["b"]),
+      n("a", ["b"], { tags: ["v1"] }),
+      n("b"),
+    ];
+    const scene = verticalScene(buildRoute(nodes, { trunkId: "h" }));
+    const by = Object.fromEntries(scene.stations.map((s) => [s.id, s]));
+    expect(by.a!.tagged).toBe(true);
+    expect(by.a!.r).toBe(by.b!.r + 2);
+    expect(by.b!.tagged).toBeUndefined();
+    // 합치기 역도 태그면 더 크다. 지금 위치 고리는 그 바깥에 남는다.
+    expect(by.m!.r).toBe(9);
+    expect(by.h!.r).toBeLessThan(by.h!.ring!);
+  });
+
   it("굵기: 로그 눈금 2~5, 모름 2", () => {
     expect([0, 9, 10, 99, 100, 999, 1000, 100_000].map(edgeWidth)).toEqual([2, 3, 3, 4, 4, 5, 5, 5]);
     expect(edgeWidth(null)).toBe(2);

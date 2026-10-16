@@ -35,6 +35,16 @@ describe("SVG 그리기", () => {
     expect(container.querySelector("circle[r='11']")).not.toBeNull();
   });
 
+  it("태그가 붙은 역은 따로 표시한다(D-207)", () => {
+    const s = scene();
+    s.stations.push({ id: "tag", x: 40, y: 120, r: 7, stroke: 2.4, color: "a", kind: "commit", tagged: true });
+    const { container } = render(<SvgRenderer scene={s} palette={() => "var(--graph-1)"} />);
+    const circles = [...container.querySelectorAll("circle[r='7']")];
+    expect(circles).toHaveLength(1);
+    expect(circles[0]!.getAttribute("class")).toMatch(/tagged/);
+    expect(container.querySelector("circle[r='5']")!.getAttribute("class")).not.toMatch(/tagged/);
+  });
+
   it("배율은 그린 크기에만 곱하고 장면(viewBox)과 글자 크기는 그대로", () => {
     const { container } = render(<SvgRenderer scene={scene()} palette={() => "x"} scale={1.5} />);
     const svg = container.querySelector("svg")!;

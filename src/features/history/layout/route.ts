@@ -20,6 +20,8 @@ const STATION = { r: 5, stroke: 2.4 };
 const MERGE_R = 7;
 const FOLD_R = 4;
 const RING_R = 11;
+/** 태그가 붙은 역은 이만큼 크다(D-207). 지금 위치 고리보다는 작다. */
+const TAG_GROW = 2;
 
 /** 레인이 많으면 간격을 8까지 줄여 그래프 폭이 240을 넘지 않게 한다. */
 export function laneGap(laneCount: number): number {
@@ -112,11 +114,13 @@ export function verticalScene(route: Route, stats: LineStats = new Map()): Scene
     const cx = x(ln.lane);
     const cy = y(ln.row);
     const kind = node.kind === "fold" ? "fold" : ln.isMerge ? "merge" : "commit";
+    const tagged = kind !== "fold" && node.tags.length > 0;
     scene.stations.push({
       id: node.id,
       x: cx,
       y: cy,
-      r: kind === "fold" ? FOLD_R : kind === "merge" ? MERGE_R : STATION.r,
+      r: (kind === "fold" ? FOLD_R : kind === "merge" ? MERGE_R : STATION.r) + (tagged ? TAG_GROW : 0),
+      tagged: tagged || undefined,
       stroke: STATION.stroke,
       color: ln.color,
       kind,

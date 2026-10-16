@@ -86,7 +86,7 @@ function Station({ station: s, palette }: { station: SceneStation; palette: Pale
         cx={s.x}
         cy={s.y}
         r={s.r}
-        className={styles.station}
+        className={s.tagged ? `${styles.station} ${styles.tagged}` : styles.station}
         stroke={color}
         strokeWidth={s.stroke}
         strokeDasharray={s.kind === "open" ? "3 3" : undefined}

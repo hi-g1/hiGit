@@ -34,6 +34,8 @@ export type SceneStation = {
   kind: StationKind;
   /** 지금 위치 바깥 고리의 반지름(r-log). */
   ring?: number;
+  /** 태그가 붙은 버전(D-207): 조금 크고 테두리가 본문색. */
+  tagged?: boolean;
   /** 마우스를 올리면 보이는 이름(저장소 글자). */
   title?: string;
 };
