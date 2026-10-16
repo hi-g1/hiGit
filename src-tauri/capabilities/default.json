@@ -11,6 +11,7 @@
     "allow-app-open-git-download",
     "allow-app-open-log-folder",
     "allow-app-open-hosting-page",
+    "allow-app-display-hints",
     "allow-settings-get",
     "allow-settings-set",
     "allow-github-status",

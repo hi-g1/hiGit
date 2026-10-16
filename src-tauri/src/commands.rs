@@ -7,12 +7,12 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
-    ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
-    GitHubStatusView, HomeMapView, HostingContextView, HostingPage, LogPage, LogQuery,
-    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrDetailView,
-    PrDraftView, PrListRequest, PrListView, PreviewView, ProjectOpenResult, ProjectSummaryView,
-    RecentProject, RecoveryView, RewritePlanView, SecretCheckRequest, SecretCheckView,
-    StashListView, StatusView, TrustChoice, UndoResult,
+    ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, ErrorCode, ErrorView,
+    FileDiffView, GitHubStatusView, HomeMapView, HostingContextView, HostingPage, LogPage,
+    LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
+    PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView, ProjectOpenResult,
+    ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView, SecretCheckRequest,
+    SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -80,6 +80,18 @@ pub async fn app_open_hosting_page(
     .await?;
     app.opener()
         .open_url(url, None::<&str>)
+        .map_err(|e| ErrorView {
+            code: ErrorCode::Internal,
+            detail: Some(e.to_string()),
+        })
+}
+
+/// OS 글자 크기·배율·다크(D-147). 저장소를 받지 않는 읽기이고 Core 없이 돈다(Git이 없어도 쓴다).
+#[tauri::command]
+#[specta::specta]
+pub async fn app_display_hints() -> CmdResult<DisplayHintsView> {
+    tauri::async_runtime::spawn_blocking(higit_core::settings::display_hints)
+        .await
         .map_err(|e| ErrorView {
             code: ErrorCode::Internal,
             detail: Some(e.to_string()),

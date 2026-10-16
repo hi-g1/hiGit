@@ -16,6 +16,8 @@ export const commands = {
 	 *  상수와 검사한 값으로 만든다. 검토 요청은 열린 저장소(`folder`)만.
 	 */
 	appOpenHostingPage: (folder: string | null, page: HostingPage) => __TAURI_INVOKE<null>("app_open_hosting_page", { folder, page }),
+	/**  OS 글자 크기·배율·다크(D-147). 저장소를 받지 않는 읽기이고 Core 없이 돈다(Git이 없어도 쓴다). */
+	appDisplayHints: () => __TAURI_INVOKE<DisplayHintsView>("app_display_hints"),
 	/**  앱 설정(D-127). */
 	settingsGet: () => __TAURI_INVOKE<AppSettingsView>("settings_get"),
 	/**  앱 설정의 알려진 칸만 바꾼다. */
@@ -188,14 +190,26 @@ export type AmendInput = {
 	message: string | null,
 };
 
-/**  바꿀 칸만 담는다. 없는 칸은 그대로. */
+/**  바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형과 참·거짓뿐이다. */
 export type AppSettingsPatch = {
 	allowPublishedRewrite?: boolean | null,
+	language?: LanguageSetting | null,
+	fontSize?: FontSizeSetting | null,
+	theme?: ThemeSetting | null,
+	termHelp?: boolean | null,
+	diffWrap?: boolean | null,
 };
 
 export type AppSettingsView = {
 	/**  "올린 버전도 바꾸기". 켜면 덮어쓰며 올리기도 보인다. */
 	allowPublishedRewrite: boolean,
+	language: LanguageSetting,
+	fontSize: FontSizeSetting,
+	theme: ThemeSetting,
+	/**  "용어 설명 보기"(D-140). 끄면 용어 툴팁이 없다. */
+	termHelp: boolean,
+	/**  비교 칸 "줄 바꿈"(D-144). */
+	diffWrap: boolean,
 };
 
 /**  앱 시작 시 확인한 환경. */
@@ -454,6 +468,16 @@ export type DiffRequest = {
 	commit?: string | null,
 };
 
+/**  화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다. */
+export type DisplayHintsView = {
+	/**  OS 기본 본문 글자 크기(px). Windows 14, Ubuntu 15. */
+	bodyPx: number,
+	/**  OS 글자 배율(%). 모르면 100. */
+	textScalePercent: number,
+	/**  OS가 다크 모드인지. 모르면 null(화면은 CSS에 맡긴다). */
+	dark: boolean | null,
+};
+
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
@@ -494,6 +518,9 @@ export type FileResolution = {
 	path: string,
 	choice: FileChoice,
 };
+
+/**  글자 크기 단계(D-138, D-146). */
+export type FontSizeSetting = "small" | "normal" | "large" | "xlarge";
 
 /**  설정의 GitHub 구역이 그리는 상태. 키체인을 건드리지 않고 만든다. */
 export type GitHubStatusView = {
@@ -568,6 +595,9 @@ export type HunkView = {
 	section: string,
 	lines: DiffLineView[],
 };
+
+/**  화면 언어(D-139). 시스템 따라가기는 화면이 웹뷰 언어로 정한다(D-149). */
+export type LanguageSetting = "system" | "ko" | "en";
 
 export type LineKindView = "context" | "added" | "removed";
 
@@ -1023,6 +1053,9 @@ export type TakeOutSource =
 { kind: "parked"; branch: string } | 
 /**  작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085). */
 { kind: "ref"; refname: string };
+
+/**  화면 모드(D-145, D-151). */
+export type ThemeSetting = "system" | "light" | "dark";
 
 /**  신뢰 확인에서 고른 것(D-039). */
 export type TrustChoice = 

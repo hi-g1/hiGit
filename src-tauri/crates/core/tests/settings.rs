@@ -21,11 +21,13 @@ fn published_rewrite_switch_is_off_until_set_and_survives_restart() {
     assert!(!first.settings().allow_published_rewrite);
     let on = first.set_settings(&AppSettingsPatch {
         allow_published_rewrite: Some(true),
+        ..AppSettingsPatch::default()
     });
     assert!(on.allow_published_rewrite);
     assert!(core(dir.path()).settings().allow_published_rewrite);
     let off = first.set_settings(&AppSettingsPatch {
         allow_published_rewrite: Some(false),
+        ..AppSettingsPatch::default()
     });
     assert!(!off.allow_published_rewrite);
     assert!(!core(dir.path()).settings().allow_published_rewrite);
@@ -37,7 +39,8 @@ fn default_core_keeps_settings_in_memory() {
     assert!(!core.settings().allow_published_rewrite);
     assert!(
         core.set_settings(&AppSettingsPatch {
-            allow_published_rewrite: Some(true)
+            allow_published_rewrite: Some(true),
+            ..AppSettingsPatch::default()
         })
         .allow_published_rewrite
     );

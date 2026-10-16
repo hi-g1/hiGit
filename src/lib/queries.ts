@@ -43,6 +43,7 @@ export const queryKeys = {
   prDraft: (repo: string) => ["github", "prDraft", repo] as const,
   cloneDefaults: ["cloneDefaults"] as const,
   settings: ["settings"] as const,
+  displayHints: ["displayHints"] as const,
 };
 
 /** 앱 설정(D-127). */
@@ -51,6 +52,17 @@ export function useAppSettings() {
     queryKey: queryKeys.settings,
     queryFn: api.settings,
     staleTime: Infinity,
+  });
+}
+
+/** OS 글자 크기·배율·다크(D-147). 창으로 돌아오면 5초에 한 번까지 다시 읽어 OS 설정을 따른다. */
+export function useDisplayHints() {
+  return useQuery<Awaited<ReturnType<typeof api.displayHints>>, ApiError>({
+    queryKey: queryKeys.displayHints,
+    queryFn: api.displayHints,
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
+    retry: false,
   });
 }
 

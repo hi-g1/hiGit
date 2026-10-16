@@ -1,24 +1,50 @@
-//! 앱 설정 `settings.json`(D-127). 앱 데이터에만 있어 받은 저장소가 바꿀 수 없다.
+//! 앱 설정 `settings.json`(D-127, D-148). 앱 데이터에만 있어 받은 저장소가 바꿀 수 없다.
 //!
 //! 읽기는 링크가 아니고 4KB 이하·알 수 없는 칸 없음·`v == 1`일 때만, 아니면 기본값. 쓰기는
 //! 임시 파일 뒤 바꿔 넣기(`platform::write_private_file`). 쓰지 못하면 이번 실행 동안만 메모리.
+//! 화면 설정 칸(언어·글자 크기·화면 모드·용어 설명·줄 바꿈)은 없으면 기본값으로 읽어 옛 파일도 읽힌다.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Serialize};
 
-use crate::view::{AppSettingsPatch, AppSettingsView};
+use crate::view::{
+    AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, LanguageSetting,
+    ThemeSetting,
+};
 
 const FILE: &str = "settings.json";
 const MAX_BYTES: u64 = 4096;
 const VERSION: u32 = 1;
 
-/// 실행마다 `ExecCtx`에 주는 설정 복사본.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// 실행마다 `ExecCtx`에 주는 설정 복사본. 실행기는 `allow_published_rewrite`만 읽는다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AppSettings {
     /// "올린 버전도 바꾸기"(D-127). 켜면 올린 버전의 기록도 고치고 덮어쓰며 올릴 수 있다.
     pub allow_published_rewrite: bool,
+    pub language: LanguageSetting,
+    pub font_size: FontSizeSetting,
+    pub theme: ThemeSetting,
+    pub term_help: bool,
+    pub diff_wrap: bool,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            allow_published_rewrite: false,
+            language: LanguageSetting::default(),
+            font_size: FontSizeSetting::default(),
+            theme: ThemeSetting::default(),
+            term_help: true,
+            diff_wrap: true,
+        }
+    }
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(Serialize, Deserialize)]
@@ -26,6 +52,43 @@ pub struct AppSettings {
 struct SettingsFile {
     v: u32,
     allow_published_rewrite: bool,
+    #[serde(default)]
+    language: LanguageSetting,
+    #[serde(default)]
+    font_size: FontSizeSetting,
+    #[serde(default)]
+    theme: ThemeSetting,
+    #[serde(default = "yes")]
+    term_help: bool,
+    #[serde(default = "yes")]
+    diff_wrap: bool,
+}
+
+impl From<AppSettings> for SettingsFile {
+    fn from(s: AppSettings) -> Self {
+        Self {
+            v: VERSION,
+            allow_published_rewrite: s.allow_published_rewrite,
+            language: s.language,
+            font_size: s.font_size,
+            theme: s.theme,
+            term_help: s.term_help,
+            diff_wrap: s.diff_wrap,
+        }
+    }
+}
+
+impl From<SettingsFile> for AppSettings {
+    fn from(f: SettingsFile) -> Self {
+        Self {
+            allow_published_rewrite: f.allow_published_rewrite,
+            language: f.language,
+            font_size: f.font_size,
+            theme: f.theme,
+            term_help: f.term_help,
+            diff_wrap: f.diff_wrap,
+        }
+    }
 }
 
 pub(crate) struct SettingsStore {
@@ -57,20 +120,22 @@ impl SettingsStore {
     /// 알려진 칸만 바꾼다. 값이 같으면 쓰지 않는다. 파일을 못 써도 이번 실행 동안은 바뀐 값을 쓴다.
     pub(crate) fn set(&self, patch: &AppSettingsPatch) -> AppSettings {
         let mut current = self.current.lock().unwrap_or_else(PoisonError::into_inner);
-        let mut next = *current;
-        if let Some(on) = patch.allow_published_rewrite {
-            next.allow_published_rewrite = on;
-        }
+        let next = AppSettings {
+            allow_published_rewrite: patch
+                .allow_published_rewrite
+                .unwrap_or(current.allow_published_rewrite),
+            language: patch.language.unwrap_or(current.language),
+            font_size: patch.font_size.unwrap_or(current.font_size),
+            theme: patch.theme.unwrap_or(current.theme),
+            term_help: patch.term_help.unwrap_or(current.term_help),
+            diff_wrap: patch.diff_wrap.unwrap_or(current.diff_wrap),
+        };
         if next != *current {
             *current = next;
-            if let Some(path) = &self.path {
-                let file = SettingsFile {
-                    v: VERSION,
-                    allow_published_rewrite: next.allow_published_rewrite,
-                };
-                if let Ok(bytes) = serde_json::to_vec(&file) {
-                    let _ = platform::write_private_file(path, &bytes);
-                }
+            if let Some(path) = &self.path
+                && let Ok(bytes) = serde_json::to_vec(&SettingsFile::from(next))
+            {
+                let _ = platform::write_private_file(path, &bytes);
             }
         }
         next
@@ -84,16 +149,29 @@ fn read(path: &Path) -> Option<AppSettings> {
     }
     let bytes = std::fs::read(path).ok()?;
     let file: SettingsFile = serde_json::from_slice(&bytes).ok()?;
-    (file.v == VERSION).then_some(AppSettings {
-        allow_published_rewrite: file.allow_published_rewrite,
-    })
+    (file.v == VERSION).then(|| file.into())
 }
 
 impl From<AppSettings> for AppSettingsView {
     fn from(s: AppSettings) -> Self {
         Self {
             allow_published_rewrite: s.allow_published_rewrite,
+            language: s.language,
+            font_size: s.font_size,
+            theme: s.theme,
+            term_help: s.term_help,
+            diff_wrap: s.diff_wrap,
         }
+    }
+}
+
+/// OS 글자 크기·배율·다크(D-147). Core 없이 돈다(Git이 없어도 "Git 받기" 화면이 OS 배율을 따른다).
+pub fn display_hints() -> DisplayHintsView {
+    let hints = platform::display_hints();
+    DisplayHintsView {
+        body_px: hints.body_px,
+        text_scale_percent: hints.text_scale_percent,
+        dark: hints.dark,
     }
 }
 
@@ -104,7 +182,20 @@ mod tests {
     fn turn_on() -> AppSettingsPatch {
         AppSettingsPatch {
             allow_published_rewrite: Some(true),
+            ..AppSettingsPatch::default()
         }
+    }
+
+    #[test]
+    fn defaults() {
+        let s = AppSettings::default();
+        assert!(!s.allow_published_rewrite);
+        assert_eq!(s.language, LanguageSetting::System);
+        assert_eq!(s.font_size, FontSizeSetting::Normal);
+        assert_eq!(s.theme, ThemeSetting::System);
+        assert!(s.term_help);
+        assert!(s.diff_wrap);
+        assert_eq!(SettingsStore::in_memory().get(), s);
     }
 
     #[test]
@@ -116,15 +207,64 @@ mod tests {
         let again = SettingsStore::open(dir.path());
         assert!(again.get().allow_published_rewrite);
         let text = std::fs::read_to_string(dir.path().join(FILE)).unwrap();
-        assert_eq!(text, r#"{"v":1,"allow_published_rewrite":true}"#);
+        assert_eq!(
+            text,
+            r#"{"v":1,"allow_published_rewrite":true,"language":"system","font_size":"normal","theme":"system","term_help":true,"diff_wrap":true}"#
+        );
         // 빈 패치는 아무것도 바꾸지 않는다.
         assert!(
             again
-                .set(&AppSettingsPatch {
-                    allow_published_rewrite: None
-                })
+                .set(&AppSettingsPatch::default())
                 .allow_published_rewrite
         );
+    }
+
+    #[test]
+    fn display_fields_persist_and_patch_one_at_a_time() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::open(dir.path());
+        store.set(&AppSettingsPatch {
+            language: Some(LanguageSetting::En),
+            font_size: Some(FontSizeSetting::Xlarge),
+            theme: Some(ThemeSetting::Dark),
+            term_help: Some(false),
+            diff_wrap: Some(false),
+            ..AppSettingsPatch::default()
+        });
+        let got = SettingsStore::open(dir.path()).get();
+        assert_eq!(got.language, LanguageSetting::En);
+        assert_eq!(got.font_size, FontSizeSetting::Xlarge);
+        assert_eq!(got.theme, ThemeSetting::Dark);
+        assert!(!got.term_help);
+        assert!(!got.diff_wrap);
+        // 한 칸만 바꿔도 나머지는 그대로.
+        let one = store.set(&AppSettingsPatch {
+            font_size: Some(FontSizeSetting::Small),
+            ..AppSettingsPatch::default()
+        });
+        assert_eq!(one.font_size, FontSizeSetting::Small);
+        assert_eq!(one.language, LanguageSetting::En);
+        assert!(!one.allow_published_rewrite);
+        let text = std::fs::read_to_string(dir.path().join(FILE)).unwrap();
+        assert!(
+            text.contains(r#""language":"en","font_size":"small","theme":"dark""#),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn old_v1_file_reads_new_fields_as_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(FILE),
+            r#"{"v":1,"allow_published_rewrite":true}"#,
+        )
+        .unwrap();
+        let got = SettingsStore::open(dir.path()).get();
+        assert!(got.allow_published_rewrite);
+        assert!(got.term_help);
+        assert!(got.diff_wrap);
+        assert_eq!(got.font_size, FontSizeSetting::Normal);
     }
 
     #[test]
@@ -138,15 +278,17 @@ mod tests {
         for bad in [
             r#"{"v":2,"allow_published_rewrite":true}"#,
             r#"{"v":1,"allow_published_rewrite":true,"extra":1}"#,
+            r#"{"v":1,"allow_published_rewrite":true,"font_size":"huge"}"#,
+            r#"{"v":1,"allow_published_rewrite":true,"language":"fr"}"#,
+            r#"{"v":1,"allow_published_rewrite":true,"term_help":"yes"}"#,
             r#"{"v":1}"#,
             "not json",
             big.as_str(),
         ] {
             std::fs::write(&path, bad).unwrap();
-            assert!(
-                !SettingsStore::open(dir.path())
-                    .get()
-                    .allow_published_rewrite,
+            assert_eq!(
+                SettingsStore::open(dir.path()).get(),
+                AppSettings::default(),
                 "{bad}"
             );
         }
@@ -175,5 +317,12 @@ mod tests {
         assert!(store.get().allow_published_rewrite);
         let memory = SettingsStore::in_memory();
         assert!(memory.set(&turn_on()).allow_published_rewrite);
+    }
+
+    #[test]
+    fn display_hints_pass_through_platform() {
+        let hints = display_hints();
+        assert_eq!(hints.body_px, platform::BODY_PX);
+        assert!((50..=300).contains(&hints.text_scale_percent));
     }
 }

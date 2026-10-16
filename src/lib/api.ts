@@ -32,7 +32,11 @@ export type {
   CommitRow,
   DiffLineView,
   DiffRequest,
+  DisplayHintsView,
   ErrorCode,
+  FontSizeSetting,
+  LanguageSetting,
+  ThemeSetting,
   FileDiffView,
   GitHubStatusView,
   HomeMapView,
@@ -134,6 +138,8 @@ export const api = {
   /** 앱 설정(D-127). */
   settings: () => call(commands.settingsGet()),
   setSettings: (patch: AppSettingsPatch) => call(commands.settingsSet(patch)),
+  /** OS 글자 크기·배율·다크(D-147). Git이 없어도 된다. */
+  displayHints: () => call(commands.appDisplayHints()),
   githubStatus: () => call(commands.githubStatus()),
   githubConnectStart: () => call(commands.githubConnectStart()),
   /** 간격 안이면 core가 네트워크 없이 기다리라고 답한다. */
