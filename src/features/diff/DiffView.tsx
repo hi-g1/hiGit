@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { DiffRequest } from "../../lib/api";
 import { DEFAULT_SETTINGS } from "../../lib/display";
-import { useAppSettings, useDiff, useDiffView } from "../../lib/queries";
+import { useAppSettings, useDiff, useDiffView, useImagePair } from "../../lib/queries";
 import { useDelayedFlag } from "../../lib/useDelayed";
 import { changeSettings } from "../../lib/settingsSave";
 import { useMessages } from "../../messages";
@@ -12,6 +12,7 @@ import type { FileDiffView } from "../../lib/api";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { TermTooltip } from "../../ui/Term";
 import styles from "./DiffView.module.css";
+import { ImageCompare } from "./ImageCompare";
 import { countChanges, toDiffRows } from "./model";
 
 /**
@@ -80,7 +81,7 @@ function DiffBody({ repo, request, view, wrap }: { repo: string; request: DiffRe
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const full = useDiff(repo, { ...request, fullContext: true }, { enabled: expanded.size > 0 });
   if (view.link !== null) return <EmptyState>{m.linkTarget(view.link)}</EmptyState>;
-  if (view.binary) return <EmptyState>{m.binaryFile}</EmptyState>;
+  if (view.binary) return <BinaryBody repo={repo} request={request} />;
   if (view.hunks.length === 0) return <EmptyState>{m.noDiff}</EmptyState>;
   return (
     <>
@@ -134,4 +135,20 @@ function Summary({ added, removed }: { added: number; removed: number }) {
       <span className={styles.sumAdded}>{m.diffAdded(added)}</span>, <span className={styles.sumRemoved}>{m.diffRemoved(removed)}</span>
     </p>
   );
+}
+
+/** 이진 파일: 이미지면 나란히·겹쳐·밀어 보기(D-206), 아니거나 너무 크면 지금 문구. */
+function BinaryBody({ repo, request }: { repo: string; request: DiffRequest }) {
+  const m = useMessages();
+  const pair = useImagePair(
+    repo,
+    { path: request.path, origPath: request.origPath, commit: request.commit ?? null },
+    true,
+  );
+  const data = pair.data;
+  if (data && (data.before || data.after)) {
+    const name = request.path.split("/").pop() ?? request.path;
+    return <ImageCompare name={name} before={data.before} after={data.after} />;
+  }
+  return <EmptyState>{m.binaryFile}</EmptyState>;
 }

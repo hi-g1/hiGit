@@ -203,6 +203,17 @@ export const ko = {
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
   shortcutsTitle: "단축키",
   tipOk: "알겠어요",
+  imageCompare: {
+    modes: "이미지 보기",
+    sideBySide: "나란히",
+    overlay: "겹쳐 보기",
+    swipe: "밀어 보기",
+    oldSide: "이전",
+    newSide: "지금",
+    opacity: "지금 쪽 진하기",
+    position: "가르는 위치",
+    original: "원본 크기",
+  },
   tip: {
     firstBranch: `${josa(t("branch"), "은/는")} 폴더가 아니라 기록이 갈라진 선이에요. 파일은 그대로 이 폴더에 있어요.`,
     firstConflict: "같은 곳을 서로 다르게 고친 거예요. 한 곳씩 남길 쪽을 고르면 돼요. 언제든 그만둘 수 있어요.",

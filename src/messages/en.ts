@@ -178,6 +178,17 @@ export const en: Messages = {
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
   shortcutsTitle: "Shortcuts",
   tipOk: "Got it",
+  imageCompare: {
+    modes: "Image view",
+    sideBySide: "Side by side",
+    overlay: "Overlay",
+    swipe: "Swipe",
+    oldSide: "Before",
+    newSide: "Now",
+    opacity: "Strength of the new side",
+    position: "Split position",
+    original: "Original size",
+  },
   tip: {
     firstBranch: `A ${t("branch").toLowerCase()} isn't a folder; it's a line where history splits. Your files stay in this folder.`,
     firstConflict: "Both sides changed the same place differently. Pick what to keep, one place at a time. You can stop anytime.",

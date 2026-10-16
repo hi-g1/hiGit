@@ -1,0 +1,88 @@
+/* 이미지 비교(D-206): 체커보드 바탕 위에 나란히·겹쳐·밀어 보기 */
+.compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.size {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.figure {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+}
+
+.caption {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 투명한 곳이 보이게 바둑판 바탕 */
+.checker {
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+  background: repeating-conic-gradient(var(--surface-sunken) 0% 25%, var(--surface) 0% 50%) 0 0 / 1rem 1rem;
+  line-height: 0;
+}
+
+.img {
+  max-width: 100%;
+  height: auto;
+}
+
+.original .img {
+  max-width: none;
+}
+
+.original {
+  overflow: auto;
+}
+
+.stack {
+  position: relative;
+  display: inline-grid;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.stack > * {
+  grid-area: 1 / 1;
+}
+
+.top {
+  opacity: var(--top-opacity, 0.5);
+}
+
+.clip {
+  clip-path: inset(0 calc(100% - var(--swipe, 50%)) 0 0);
+}
+
+.range {
+  width: 12rem;
+}

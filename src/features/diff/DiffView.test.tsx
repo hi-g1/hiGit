@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { diff: vi.fn(), setSettings: vi.fn(async (p: object) => p) },
+  api: { diff: vi.fn(), setSettings: vi.fn(async (p: object) => p), imagePair: vi.fn() },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -100,7 +100,19 @@ describe("DiffView", () => {
     expect(api.diff).toHaveBeenCalledWith("/repo", request);
   });
 
+  it("이진 이미지는 이미지 비교, 너무 크면 지금 안내(D-206)", async () => {
+    vi.mocked(api.imagePair).mockResolvedValue({
+      before: { mime: "image/png", data: "AAAA", bytes: 3 },
+      after: { mime: "image/png", data: "BBBB", bytes: 3 },
+      tooLarge: false,
+    });
+    show({ binary: true, truncated: false, hunks: [], link: null });
+    expect(await screen.findByRole("img", { name: "한글 파일.txt · 지금" })).toBeInTheDocument();
+    expect(api.imagePair).toHaveBeenCalledWith("/repo", { path: "src/한글 파일.txt", origPath: null, commit: null });
+  });
+
   it("이진 파일은 내용 대신 안내", async () => {
+    vi.mocked(api.imagePair).mockResolvedValue({ before: null, after: null, tooLarge: true });
     show({ binary: true, truncated: false, hunks: [], link: null });
     expect(await screen.findByText("이진 파일이라 내용을 비교할 수 없어요.")).toBeInTheDocument();
   });
