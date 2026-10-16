@@ -281,7 +281,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::ForcePush(_)
             | ActionInput::RemoteBranchDelete(_)
             | ActionInput::RemoteBranchRename(_)
-            | ActionInput::TagPush(_) => {}
+            | ActionInput::TagPush(_)
+            | ActionInput::Publish(_) => {}
         }
     }
     let paths = PathsInput {
@@ -397,6 +398,12 @@ fn action_input_tags_match_registry() {
             expect_tip: "a".repeat(40),
         }),
         ActionInput::TagPush(higit_core::view::TagPushInput { name: "v1".into() }),
+        ActionInput::Publish(higit_core::view::PublishInput {
+            name: "hello".into(),
+            description: None,
+            visibility: higit_core::view::Visibility::Private,
+            acknowledge_public: false,
+        }),
     ];
     samples.iter().for_each(every_variant);
 

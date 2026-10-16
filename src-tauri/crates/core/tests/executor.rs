@@ -371,6 +371,7 @@ fn registered_actions_match_spec_risk() {
             ("remote-branch-delete", "remote-branch-delete", Risk::Danger),
             ("remote-branch-rename", "remote-branch-rename", Risk::Danger),
             ("tag-push", "tag-push", Risk::Normal),
+            ("publish", "publish", Risk::Normal),
         ]
     );
 }

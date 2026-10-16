@@ -37,6 +37,7 @@ pub(crate) enum Cmd {
     Revert,
     Tag,
     RemoteGetUrl,
+    RemoteAdd,
     Clone,
     /// 2.34.1에서 `--end-of-options`를 경로로 읽는다.
     Checkout,

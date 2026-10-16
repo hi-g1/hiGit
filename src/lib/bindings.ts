@@ -61,6 +61,8 @@ export const commands = {
 	queryForcePushPlan: (repo: string) => __TAURI_INVOKE<ForcePushPlanView>("query_force_push_plan", { repo }),
 	/**  원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 읽기만 한다. */
 	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
+	/**  GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽기만 한다. */
+	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -165,7 +167,9 @@ export type ActionInput_Deserialize =
 /**  원격 브랜치 이름 바꾸기(D-130). */
 { id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
-{ id: "tag-push"; input: TagPushInput };
+{ id: "tag-push"; input: TagPushInput } | 
+/**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
+{ id: "publish"; input: PublishInput };
 
 export type ActionInput_Serialize = 
 /**  관리 시작. 입력 없음. */
@@ -223,7 +227,9 @@ export type ActionInput_Serialize =
 /**  원격 브랜치 이름 바꾸기(D-130). */
 { id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
 /**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
-{ id: "tag-push"; input: TagPushInput };
+{ id: "tag-push"; input: TagPushInput } | 
+/**  GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`. */
+{ id: "publish"; input: PublishInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -259,7 +265,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -588,7 +594,15 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  원격 기본 브랜치는 지우거나 이름을 바꾸지 않는다(D-130). */
 "remoteBranchProtected" | 
 /**  새 이름으로는 올렸지만 옛 이름을 지우지 못했다(D-130). */
-"remoteRenamePartial" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+"remoteRenamePartial" | 
+/**  GitHub에 올리기: 이미 원격이 있다(D-132). */
+"publishHasRemote" | 
+/**  GitHub에 올리기: 저장한 버전이 없다. */
+"publishNoVersions" | 
+/**  GitHub에 같은 이름의 저장소가 있다. */
+"githubRepoExists" | 
+/**  GitHub가 저장소 만들기 입력을 받지 않았다(그 밖의 422, 계획 010 R10). */
+"githubRepoInvalid" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -754,7 +768,9 @@ export type HostingPage =
 /**  앱 권한 페이지(GitHub 쪽 연결 취소). */
 { kind: "appSettings" } | 
 /**  열린 저장소의 검토 요청 하나. */
-{ kind: "pullRequest"; number: number };
+{ kind: "pullRequest"; number: number } | 
+/**  열린 저장소의 GitHub 페이지(GitHub에 올리기 뒤, D-132). */
+{ kind: "repository" };
 
 export type HostingProviderView = "github";
 
@@ -1017,6 +1033,28 @@ export type ProjectSummaryView = {
 	conflictedFiles: number,
 	/**  마지막 버전. 저장한 버전이 없으면 null. */
 	lastCommit: CommitRow | null,
+};
+
+export type PublishDraftView = {
+	/**  폴더 이름에서 만든 저장소 이름 제안(`[A-Za-z0-9._-]`만, 못 만들면 빈 값). */
+	suggestedName: string,
+	/**  지금 브랜치(없으면 특정 버전을 보는 중). */
+	branch: string | null,
+	/**  저장한 버전 수(0이면 올릴 것이 없다, 10000에서 멈춰 셈). */
+	versions: number,
+	/**  원격 수(하나라도 있으면 GitHub에 올리기 대신 동기화). */
+	remotes: number,
+	configured: boolean,
+	connected: boolean,
+	login: string | null,
+};
+
+/**  GitHub에 올리기 입력(D-132). 공개면 `acknowledge_public`이 있어야 받는다(대화상자 안의 한 번 더 확인). */
+export type PublishInput = {
+	name: string,
+	description: string | null,
+	visibility: Visibility,
+	acknowledgePublic?: boolean,
 };
 
 export type RecentProject = {
@@ -1334,6 +1372,9 @@ export type UndoResult = {
 	/**  올린 버전이라 기록을 지우지 않고 되돌리는 새 버전을 만들었다(D-073). 다시 하기는 없다. */
 	reverted: boolean,
 };
+
+/**  새 저장소의 공개 여부(D-132). 기본값이 없어 화면이 꼭 고른다. */
+export type Visibility = "private" | "public";
 
 /**  감시가 켜졌는지. 꺼져 있으면 화면은 창 포커스 때 새로 고침한다. */
 export type WatchStatus = {

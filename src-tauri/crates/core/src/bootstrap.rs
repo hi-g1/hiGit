@@ -414,6 +414,11 @@ impl Core {
                 let repo = self.queries.github_repo(folder)?;
                 self.github.pull_request_url(&repo, number)
             }
+            HostingPage::Repository => {
+                let folder = folder.ok_or(CoreError::NotOpened)?;
+                let repo = self.queries.github_repo(folder)?;
+                self.github.repository_url(&repo)
+            }
         }
     }
 
@@ -720,6 +725,8 @@ impl Core {
             }
             // 이름 바꾸기는 upstream을 다시 잇느라 `.git/config`도 쓴다(계획 010 R8).
             "remote-branch-rename" => Locks::Both,
+            // 저장소를 만든 뒤 `origin`을 더해 `.git/config`를 쓴다(D-132).
+            "publish" => Locks::Both,
             // 잠금 정리는 앱의 다른 작업이 하나도 없을 때만(D-081).
             "pull" | "sync" | "clear-lock" => Locks::Both,
             _ => Locks::Worktree,

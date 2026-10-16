@@ -117,6 +117,14 @@ pub enum CoreError {
     #[error("원격 기본 브랜치입니다")]
     RemoteBranchProtected,
 
+    /// GitHub에 올리기: 이미 원격이 있다(D-132).
+    #[error("이미 원격이 있습니다")]
+    PublishHasRemote,
+
+    /// GitHub에 올리기: 저장한 버전이 없다.
+    #[error("저장한 버전이 없습니다")]
+    PublishNoVersions,
+
     /// 원격에 만들려는 브랜치 이름이 이미 있다(이름 바꾸기, D-130).
     #[error("원격에 같은 이름이 있습니다")]
     RemoteNameTaken,
@@ -221,6 +229,10 @@ pub enum GithubFailure {
     NotPushed,
     /// head와 대상이 같거나 head가 기본 브랜치다.
     PrSameBranch,
+    /// 같은 이름의 저장소가 이미 있다(GitHub에 올리기, D-132).
+    RepoExists,
+    /// 저장소 만들기 입력을 GitHub가 받지 않았다(그 밖의 422).
+    RepoInvalid,
 }
 
 impl CoreError {

@@ -539,6 +539,8 @@ pub enum GitOp {
         name: String,
         auth: AuthMode,
     },
+    /// 원격을 더한다(`remote add`, D-132). 주소는 core가 검사해 만든 값만.
+    RemoteAdd { name: String, url: String },
 }
 
 /// 전역(없으면 시스템) git의 이름·이메일(D-125). 저장소 설정은 섞지 않는다. 앞뒤 공백은 뺀다.

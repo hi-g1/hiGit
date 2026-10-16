@@ -275,3 +275,36 @@ fn remote_urls_apply_instead_of_and_pushurl() {
 
     assert!(backend.remote_urls(&path, "없는원격").is_err());
 }
+
+#[test]
+fn remote_add_reads_names_and_urls_as_values() {
+    let repo = testutil::init_repo();
+    let path = RepoPath::new(repo.path());
+    let b = backend();
+    b.run(
+        &path,
+        &GitOp::RemoteAdd {
+            name: "origin".into(),
+            url: "https://github.com/octo/hello.git".into(),
+        },
+    )
+    .unwrap();
+    let remotes = b.remotes(&path).unwrap();
+    assert_eq!(remotes.len(), 1);
+    assert_eq!(remotes[0].url, "https://github.com/octo/hello.git");
+    // 옵션 같은 이름도 옵션으로 읽지 않는다(--end-of-options). core는 이런 이름을 보내지 않는다.
+    b.run(
+        &path,
+        &GitOp::RemoteAdd {
+            name: "--mirror=fetch".into(),
+            url: "https://github.com/octo/x.git".into(),
+        },
+    )
+    .unwrap();
+    assert!(
+        b.remotes(&path)
+            .unwrap()
+            .iter()
+            .any(|r| r.name == "--mirror=fetch")
+    );
+}

@@ -15,6 +15,7 @@ mod input;
 mod map;
 mod merge;
 mod pending;
+mod publish;
 mod recovery;
 mod remote_branch;
 mod secret;
@@ -43,13 +44,14 @@ pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
     HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput,
-    RemoteBranchInput, RemoteBranchRenameInput, RestoreInput, RewriteInput, RewriteKindInput,
-    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput,
-    TakeOutSource,
+    PublishInput, RemoteBranchInput, RemoteBranchRenameInput, RestoreInput, RewriteInput,
+    RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput,
+    TagPushInput, TakeOutInput, TakeOutSource, Visibility,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
 pub use pending::{OtherOperation, PendingWorkView};
+pub use publish::PublishDraftView;
 pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind};
 pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
@@ -564,6 +566,10 @@ pub enum ActionResult {
     TagPushed {
         name: String,
     },
+    Published {
+        owner: String,
+        name: String,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -643,6 +649,7 @@ impl From<Outcome> for ActionResult {
                 ActionResult::RemoteBranchRenamed { remote, from, to }
             }
             Outcome::TagPushed { name } => ActionResult::TagPushed { name },
+            Outcome::Published { owner, name } => ActionResult::Published { owner, name },
         }
     }
 }
@@ -695,6 +702,14 @@ pub enum ErrorCode {
     RemoteBranchProtected,
     /// 새 이름으로는 올렸지만 옛 이름을 지우지 못했다(D-130).
     RemoteRenamePartial,
+    /// GitHub에 올리기: 이미 원격이 있다(D-132).
+    PublishHasRemote,
+    /// GitHub에 올리기: 저장한 버전이 없다.
+    PublishNoVersions,
+    /// GitHub에 같은 이름의 저장소가 있다.
+    GithubRepoExists,
+    /// GitHub가 저장소 만들기 입력을 받지 않았다(그 밖의 422, 계획 010 R10).
+    GithubRepoInvalid,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -841,6 +856,8 @@ impl From<&CoreError> for ErrorView {
             CoreError::NothingToOverwrite => ErrorCode::NothingToOverwrite,
             CoreError::RemoteBranchProtected => ErrorCode::RemoteBranchProtected,
             CoreError::RemoteNameTaken => ErrorCode::RemoteNameTaken,
+            CoreError::PublishHasRemote => ErrorCode::PublishHasRemote,
+            CoreError::PublishNoVersions => ErrorCode::PublishNoVersions,
             CoreError::RemoteRenamePartial(_) => ErrorCode::RemoteRenamePartial,
             CoreError::HasChanges => ErrorCode::HasChanges,
             CoreError::TagExists => ErrorCode::TagExists,
@@ -894,6 +911,8 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::NotGithubRemote => ErrorCode::NotGithubRemote,
         G::NotPushed => ErrorCode::NotPushed,
         G::PrSameBranch => ErrorCode::PrSameBranch,
+        G::RepoExists => ErrorCode::GithubRepoExists,
+        G::RepoInvalid => ErrorCode::GithubRepoInvalid,
     }
 }
 

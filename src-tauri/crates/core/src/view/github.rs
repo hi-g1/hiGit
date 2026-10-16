@@ -49,6 +49,8 @@ pub enum HostingPage {
     AppSettings,
     /// 열린 저장소의 검토 요청 하나.
     PullRequest { number: u32 },
+    /// 열린 저장소의 GitHub 페이지(GitHub에 올리기 뒤, D-132).
+    Repository,
 }
 
 /// 복제 대화상자의 기본값(D-115). 부모 폴더는 홈 폴더.

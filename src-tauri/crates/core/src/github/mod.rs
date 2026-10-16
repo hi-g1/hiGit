@@ -489,6 +489,14 @@ impl GitHubService {
     }
 
     /// 검토 요청 하나의 페이지. 소유자·이름은 `parse_remote`가 검사한 값이고 번호는 1 이상.
+    /// 저장소 페이지. 소유자·이름은 검사한 값만.
+    pub fn repository_url(&self, repo: &hosting::RemoteRepo) -> Result<String> {
+        if !hosting::valid_owner(&repo.owner) || !hosting::valid_name(&repo.name) {
+            return Err(CoreError::InvalidInput("repository page"));
+        }
+        Ok(format!("{}/{}/{}", self.web_base, repo.owner, repo.name))
+    }
+
     pub fn pull_request_url(&self, repo: &hosting::RemoteRepo, number: u32) -> Result<String> {
         if number == 0 || !hosting::valid_owner(&repo.owner) || !hosting::valid_name(&repo.name) {
             return Err(CoreError::InvalidInput("pull request page"));

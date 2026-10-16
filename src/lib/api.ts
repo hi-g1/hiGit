@@ -186,6 +186,7 @@ export const api = {
   routePreview: (repo: string, limit: number) => call(commands.queryRoutePreview(repo, limit)),
   rewritePlan: (repo: string, oids: string[]) => call(commands.queryRewritePlan(repo, oids)),
   forcePushPlan: (repo: string) => call(commands.queryForcePushPlan(repo)),
+  publishDraft: (repo: string) => call(commands.queryPublishDraft(repo)),
   remoteBranchPlan: (repo: string, remote: string, branch: string) =>
     call(commands.queryRemoteBranchPlan(repo, remote, branch)),
   commitDetail: (repo: string, oid: string) => call(commands.queryCommitDetail(repo, oid)),

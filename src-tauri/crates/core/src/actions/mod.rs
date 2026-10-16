@@ -17,6 +17,7 @@ pub(crate) mod names;
 pub(crate) mod paths;
 mod pick;
 mod pr_create;
+pub(crate) mod publish;
 mod recover_parked;
 pub(crate) mod remote;
 pub(crate) mod remote_branch;
@@ -44,6 +45,7 @@ pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
 pub use pick::PickAction;
 pub use pr_create::PrCreateAction;
+pub use publish::PublishAction;
 pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
 pub use remote_branch::RemoteBranchAction;
@@ -127,6 +129,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(RemoteBranchAction::delete()))?;
     registry.register(Box::new(RemoteBranchAction::rename()))?;
     registry.register(Box::new(TagPushAction::new()))?;
+    registry.register(Box::new(PublishAction::new()))?;
     Ok(())
 }
 

@@ -74,6 +74,8 @@ pub enum ActionInput {
     RemoteBranchRename(RemoteBranchRenameInput),
     /// 태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다.
     TagPush(TagPushInput),
+    /// GitHub에 새 저장소를 만들고 `origin`을 잇는다(D-132). 올리기는 화면이 이어서 `push`.
+    Publish(PublishInput),
 }
 
 impl ActionInput {
@@ -117,6 +119,7 @@ impl ActionInput {
             ActionInput::RemoteBranchDelete(_) => "remote-branch-delete",
             ActionInput::RemoteBranchRename(_) => "remote-branch-rename",
             ActionInput::TagPush(_) => "tag-push",
+            ActionInput::Publish(_) => "publish",
         }
     }
 
@@ -394,6 +397,25 @@ pub struct TagDeleteInput {
 #[serde(rename_all = "camelCase")]
 pub struct OidInput {
     pub oid: String,
+}
+
+/// 새 저장소의 공개 여부(D-132). 기본값이 없어 화면이 꼭 고른다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum Visibility {
+    Private,
+    Public,
+}
+
+/// GitHub에 올리기 입력(D-132). 공개면 `acknowledge_public`이 있어야 받는다(대화상자 안의 한 번 더 확인).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishInput {
+    pub name: String,
+    pub description: Option<String>,
+    pub visibility: Visibility,
+    #[serde(default)]
+    pub acknowledge_public: bool,
 }
 
 /// 태그 올리기 입력(D-131).

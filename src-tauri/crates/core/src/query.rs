@@ -1214,6 +1214,37 @@ impl Queries {
         Ok(view)
     }
 
+    /// GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽는다(GitHub 상태는 키체인을 건드리지 않음).
+    pub fn publish_draft(&self, repo: &Path) -> Result<crate::view::PublishDraftView> {
+        let root = self.opened_repo(repo)?;
+        let git = self.git.as_ref();
+        let folder = root
+            .as_path()
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let versions = git
+            .log(
+                &root,
+                &git::LogQuery {
+                    skip: 0,
+                    limit: 10_000,
+                    rev: None,
+                },
+            )?
+            .len();
+        let status = self.github.status();
+        Ok(crate::view::PublishDraftView {
+            suggested_name: crate::actions::publish::suggest_name(&folder),
+            branch: git.current_branch(&root)?,
+            versions: u32::try_from(versions).unwrap_or(u32::MAX),
+            remotes: u32::try_from(git.remotes(&root)?.len()).unwrap_or(u32::MAX),
+            configured: status.configured,
+            connected: status.connected,
+            login: status.login,
+        })
+    }
+
     /// 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 로컬 추적 ref로 계산한다.
     /// 원격은 목록에 있어야 하고 추적 ref는 목록에서 정확히 같은 이름만 찾는다(계획 010 R14).
     pub fn remote_branch_plan(

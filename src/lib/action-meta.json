@@ -220,5 +220,11 @@
     "glossaryId": "tag-push",
     "risk": "normal",
     "undo": "nothing"
+  },
+  {
+    "id": "publish",
+    "glossaryId": "publish",
+    "risk": "normal",
+    "undo": "nothing"
   }
 ]

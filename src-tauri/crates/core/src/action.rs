@@ -209,6 +209,11 @@ pub enum Outcome {
     TagPushed {
         name: String,
     },
+    /// GitHub에 저장소를 만들고 `origin`을 이었다(D-132).
+    Published {
+        owner: String,
+        name: String,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.
@@ -245,6 +250,7 @@ impl Outcome {
             | Outcome::RemoteBranchDeleted { .. }
             | Outcome::RemoteBranchRenamed { .. }
             | Outcome::TagPushed { .. }
+            | Outcome::Published { .. }
             // 앱 밖 전역 설정이고 옛 값은 입력칸에 보였다(D-125).
             | Outcome::IdentitySaved => JournalMode::Skip,
             // 맡긴 ref를 지웠다. 그 앞의 갈아타기를 되돌리면 맡긴 파일이 엉키므로 경계를 둔다.
