@@ -437,6 +437,12 @@ mod tests {
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {
             unreachable!()
         }
+        fn identity(&self) -> git::Result<git::GitIdentity> {
+            unreachable!()
+        }
+        fn run_global(&self, _: &git::GlobalOp) -> git::Result<OpOutput> {
+            unreachable!()
+        }
     }
 
     struct Noop(ActionMeta);

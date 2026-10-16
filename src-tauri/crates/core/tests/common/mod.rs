@@ -52,6 +52,9 @@ pub struct FakeGit {
     pub push_urls: Mutex<Vec<(String, Vec<String>)>>,
     /// 있으면 다음 `run` 하나가 이 오류로 실패한다.
     pub run_error: Mutex<Option<git::GitError>>,
+    /// 전역 이름·이메일(`identity`)과 `run_global`로 받은 작업.
+    pub identity: Mutex<git::GitIdentity>,
+    pub global_ops: Mutex<Vec<git::GlobalOp>>,
 }
 
 impl FakeGit {
@@ -85,6 +88,8 @@ impl FakeGit {
             helper: Mutex::new(None),
             push_urls: Mutex::new(Vec::new()),
             run_error: Mutex::new(None),
+            identity: Mutex::new(git::GitIdentity::default()),
+            global_ops: Mutex::new(Vec::new()),
         }
     }
 
@@ -472,6 +477,20 @@ impl GitBackend for FakeGit {
             }
             _ => {}
         }
+        Ok(OpOutput::default())
+    }
+
+    fn identity(&self) -> git::Result<git::GitIdentity> {
+        Ok(self.identity.lock().unwrap().clone())
+    }
+
+    fn run_global(&self, op: &git::GlobalOp) -> git::Result<OpOutput> {
+        self.global_ops.lock().unwrap().push(op.clone());
+        let git::GlobalOp::SetIdentity { name, email } = op;
+        *self.identity.lock().unwrap() = git::GitIdentity {
+            name: Some(name.clone()),
+            email: Some(email.clone()),
+        };
         Ok(OpOutput::default())
     }
 }

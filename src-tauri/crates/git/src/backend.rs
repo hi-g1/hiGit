@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff, GitOp,
-    GitVersion, GraphLogQuery, IndexEntry, LogQuery, MergeCheck, MergeSegment, Oid, OpOutput,
-    RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RemoteUrls, RepoPath, Result,
-    StashEntry, Status, TagRef,
+    BlobHead, Branch, Commit, CommitFiles, CommitMessage, CommitStat, DiffTarget, FileDiff,
+    GitIdentity, GitOp, GitVersion, GlobalOp, GraphLogQuery, IndexEntry, LogQuery, MergeCheck,
+    MergeSegment, Oid, OpOutput, RebaseState, RefEntry, RefExpect, ReflogEntry, Remote, RemoteUrls,
+    RepoPath, Result, StashEntry, Status, TagRef,
 };
 
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
@@ -176,4 +176,10 @@ pub trait GitBackend: Send + Sync {
 
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
+
+    /// 전역(없으면 시스템) 설정의 이름·이메일(D-125). 저장소 밖에서 읽는다.
+    fn identity(&self) -> Result<GitIdentity>;
+
+    /// 저장소 밖 전역 설정을 바꾼다(D-125).
+    fn run_global(&self, op: &GlobalOp) -> Result<OpOutput>;
 }

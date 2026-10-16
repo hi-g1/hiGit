@@ -512,6 +512,20 @@ pub enum GitOp {
     },
 }
 
+/// 전역(없으면 시스템) git의 이름·이메일(D-125). 저장소 설정은 섞지 않는다. 앞뒤 공백은 뺀다.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GitIdentity {
+    pub name: Option<String>,
+    pub email: Option<String>,
+}
+
+/// 저장소 밖 전역 설정을 바꾸는 작업(D-125).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GlobalOp {
+    /// `git config --global user.name`·`user.email`. 값은 core가 검사한 것이다.
+    SetIdentity { name: String, email: String },
+}
+
 /// 쓰기 작업의 출력 원문.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OpOutput {

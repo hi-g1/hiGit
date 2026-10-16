@@ -18,6 +18,9 @@ mod graph_tests;
 mod history;
 #[cfg(test)]
 mod history_tests;
+mod identity;
+#[cfg(test)]
+mod identity_tests;
 mod log;
 mod merge_check;
 #[cfg(test)]
@@ -557,6 +560,14 @@ impl GitBackend for CliBackend {
 
     fn has_identity(&self, repo: &RepoPath) -> Result<bool> {
         self.has_identity_impl(repo)
+    }
+
+    fn identity(&self) -> Result<crate::GitIdentity> {
+        self.identity_impl()
+    }
+
+    fn run_global(&self, op: &crate::GlobalOp) -> Result<OpOutput> {
+        self.run_global_impl(op)
     }
 
     fn check_tag_name(&self, name: &str) -> Result<bool> {

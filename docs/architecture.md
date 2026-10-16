@@ -118,6 +118,8 @@ pub trait GitBackend: Send + Sync {
     fn other_git_running(&self) -> bool;         // 앱이 띄우지 않은 git이 시스템에 있는지. 모르면 true
     // 쓰기 작업은 전부 여기로
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;
+    fn identity(&self) -> Result<GitIdentity>; // 전역(없으면 시스템) user.name·user.email, 저장소 밖에서 읽음(D-125)
+    fn run_global(&self, op: &GlobalOp) -> Result<OpOutput>; // 저장소 밖 전역 설정 쓰기: SetIdentity(D-125)
 }
 ```
 

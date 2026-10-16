@@ -27,8 +27,8 @@ pub use error::{GitError, Result};
 pub use failure::FailureKind;
 pub use types::{
     AuthMode, BlobHead, Branch, BranchInfo, BranchKind, Change, Commit, CommitFile, CommitFiles,
-    CommitMessage, CommitStat, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitOp,
-    GitVersion, GraphLogQuery, Hunk, IndexEntry, LineKind, LogQuery, MergeCheck, MergeSegment, Oid,
-    OpOutput, OperationKind, RebaseState, RefEntry, ReflogEntry, Remote, RemoteUrls, RepoPath,
-    RewriteKind, RewriteStep, StashEntry, Status, StatusEntry, TagRef,
+    CommitMessage, CommitStat, DiffKind, DiffLine, DiffTarget, EntryKind, FileDiff, GitIdentity,
+    GitOp, GitVersion, GlobalOp, GraphLogQuery, Hunk, IndexEntry, LineKind, LogQuery, MergeCheck,
+    MergeSegment, Oid, OpOutput, OperationKind, RebaseState, RefEntry, ReflogEntry, Remote,
+    RemoteUrls, RepoPath, RewriteKind, RewriteStep, StashEntry, Status, StatusEntry, TagRef,
 };
