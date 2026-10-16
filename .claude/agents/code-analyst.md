@@ -53,11 +53,17 @@ effort: high
 - [ ] 새 의존성: 필요성, 관리 상태, `cargo-deny` 통과
 - [ ] 기록을 바꾸는 액션(되돌리기·복사·돌아가기·고치기·기록 정리·태그·새 브랜치의 `from`)이 화면이 준 해시를 `core::guard`(`verified_commit`, `rewrite_chain`, `expect_head`)로 다시 확인한다(D-099). 해시는 `Oid`로만 명령줄에 닿는다
 - [ ] 올린 버전을 바꾸거나 빼는 길(고치기·돌아가기·기록 정리와 그 다시 하기)이 `guard::refuse_published`·`is_published`를 거친다. 판정하지 못하면(`None`) 거절한다(D-097)
-- [ ] 셸을 거치는 곳은 기록 정리의 상수 편집기 명령(`GIT_SEQUENCE_EDITOR='printf %s "$HIGIT_TODO" >'`)뿐이고 사용자 데이터는 `HIGIT_*` 환경 변수 값에만 든다. 할 일 목록에 `exec`·`break`·`label`·`reset`·`merge`·`update-ref` 줄이 없다(D-100)
+- [ ] 셸을 거치는 곳은 둘뿐이다: 기록 정리의 상수 편집기 명령(`GIT_SEQUENCE_EDITOR='printf %s "$HIGIT_TODO" >'`)과 credential helper의 상수 설정(`credential.helper=!"$HIGIT_CREDENTIAL_HELPER" --git-credential`). 사용자 데이터는 `HIGIT_*` 환경 변수 값에만 든다(helper는 실행 파일 경로만, 토큰 없음). 할 일 목록에 `exec`·`break`·`label`·`reset`·`merge`·`update-ref` 줄이 없다(D-100)
 - [ ] `OperationContinue`·`OperationSkip`·`OperationAbort`는 서명한 표식(`operation::current`/`read`) + `verify_state` 뒤에만, 기록 정리의 이어가기는 `verify_todo`까지 통과한 뒤에만 부른다(D-102). 조회는 표식을 지우지 않는다
 - [ ] 표식(`core::marker`)은 journal 키로 서명하고 git 폴더 실제 경로에 묶는다. 서명 없는 옛 형식·다른 키·다른 저장소에서 복사한 표식은 읽지 않는다. 키가 이번 실행만의 것(`is_persistent` 거짓)이면 멈춘 작업을 바로 그만둔다
 - [ ] 꺼내기(`take-out`)는 stash 모양 버전의 경로가 모두 안전할 때만 한다(`parked::refuse_unsafe`). 서명이 맞지 않는 journal 줄은 되살리기·새 브랜치로·reflog 가리기에 쓰지 않는다(D-085)
 - [ ] 새 IPC 명령(`query_rewrite_plan`·`query_commit_detail`)이 네 곳에 있고 읽기 전용이며 열린 저장소만 받는다
+- [ ] GitHub 토큰(반복 4, D-040·D-109): `SecretString`과 OS 키체인(`platform::Keychain`)에만 있다. 화면 타입(`core::view`)·로그·오류 detail·`Debug`·명령줄·URL·환경 변수에 없다. `rg "Authorization|Bearer" src-tauri/crates`가 `hosting`의 전송(`ureq_transport.rs`)과 시험에만, `rg "ureq" src-tauri/crates --type rust`가 `hosting`에만
+- [ ] `rg "credential.helper" src-tauri/crates --type rust`가 git의 `cli/network.rs`(상수)와 시험에만 있다. helper는 `Helper` 호출에만 붙고, `auth_for`가 받기·올리기 주소 모두 github.com https·저장소 로컬 `http.*`·`remote.*.proxy` 없음·이번 실행 키체인일 때만 `Helper`를 준다(D-111)
+- [ ] helper(`github/helper.rs`)는 `get`이고 `protocol=https`·`host=github.com`(포트 없음)·사용자 이름 없음을 확인한 **뒤에만** 키체인을 읽고, 그 밖에는 아무것도 쓰지 않고 0으로 끝난다. `main.rs`의 `--git-credential` 분기가 어떤 플러그인·로그보다 먼저다
+- [ ] `hosting`이 `git`·`platform`·`core`를 모른다(`cargo tree -p hosting`). 서버가 준 URL을 열거나 따라가지 않는다(`verification_uri`는 상수 비교만, 리디렉트는 `api_base` 아래만). `app_open_hosting_page`는 주소를 인자로 받지 않는다
+- [ ] 복제(D-115): 주소는 `validate_clone_url`(https·ssh·`git@host:path`), 대상은 부모가 링크·`.git` 안이 아니고 없거나 빈 폴더, 실패 때 지우는 것은 이번 실행이 만든 대상 하나(`remove_created_target`)뿐
+- [ ] 반복 4 새 명령 11개(`app_open_hosting_page`, `github_*` 5개, `query_clone_defaults`, `query_hosting_context`, `query_pr_list`, `query_pr_detail`, `query_pr_draft`)가 네 곳에 있고 `async` + `blocking()`이다. `rg "invoke|fetch\(" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 비어 있다
 
 ## 보고 형식
 ```
