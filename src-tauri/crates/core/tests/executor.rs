@@ -397,7 +397,6 @@ fn irreversible_actions_are_the_confirmed_few() {
         irreversible,
         [
             "clear-lock",
-            "discard",
             "force-push",
             "pr-merge",
             "remote-branch-delete",

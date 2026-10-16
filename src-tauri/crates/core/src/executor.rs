@@ -21,6 +21,8 @@ struct Line<'a> {
     tracked: &'a [String],
     /// 상태가 그대로여도 남긴다.
     always: bool,
+    /// 실행 뒤 상태에 더할 ref(결과가 준 백업 ref).
+    extra_refs: Vec<(String, Option<String>)>,
 }
 
 /// 미리보기를 보여줬다는 증표. 실행 때 한 번만 쓸 수 있다.
@@ -185,6 +187,7 @@ impl Executor {
                 before: before.filter(|_| mode != JournalMode::Barrier),
                 tracked: &tracked,
                 always: mode == JournalMode::Always,
+                extra_refs: outcome.journal_refs(),
             };
             if mode != JournalMode::Skip {
                 let _ = self.record(ctx, repo, line);
@@ -198,7 +201,8 @@ impl Executor {
         let action = line.action;
         let body = match line.before {
             Some(before) => {
-                let after = UndoState::capture_with(ctx.git, repo, line.tracked)?;
+                let mut after = UndoState::capture_with(ctx.git, repo, line.tracked)?;
+                after.refs.extend(line.extra_refs);
                 // 아무것도 바뀌지 않았으면(주고받을 것이 없거나 겹쳐서 멈춘 동기화, 올리기만 한 경우)
                 // 되돌릴 것도 없다. 줄을 남기면 그 앞의 작업을 되돌리지 못하게 막는다.
                 if after == before && !line.always {

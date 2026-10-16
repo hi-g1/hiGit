@@ -36,29 +36,14 @@ afterEach(() => {
 });
 
 describe("비교 칸 아래 줄", () => {
-  it("버리기는 파일 이름을 보여 주는 확인 없이는 실행하지 않는다", async () => {
-    show();
-    vi.mocked(api.previewAction).mockResolvedValue({ token: "p1" });
-    await userEvent.click(screen.getByRole("button", { name: "고친 것 버리기" }));
-    expect(await screen.findByText("화면.tsx의 고친 내용을 버려요.")).toBeInTheDocument();
-    expect(api.executeAction).not.toHaveBeenCalled();
-    // Enter가 버리기가 되지 않게 닫기에 포커스가 있다.
-    expect(screen.getByRole("button", { name: "닫기" })).toHaveFocus();
-    // 닫으면 실행하지 않는다.
-    await userEvent.click(screen.getByRole("button", { name: "닫기" }));
-    expect(api.executeAction).not.toHaveBeenCalled();
-  });
-
-  it("확인하면 토큰과 함께 버리고, 토스트의 작업 내역 단추가 그 화면을 연다", async () => {
-    show();
-    vi.mocked(api.previewAction).mockResolvedValue({ token: "p1" });
+  it("버리기는 확인 창 없이 하고 결과를 되돌리기 토스트로 넘긴다(D-196)", async () => {
+    const onDone = show();
     vi.mocked(api.executeAction).mockResolvedValue({ kind: "discarded", count: 1 });
     await userEvent.click(screen.getByRole("button", { name: "고친 것 버리기" }));
-    await userEvent.click(await screen.findByRole("button", { name: "버리기" }));
-    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["src/화면.tsx"] } }, "p1");
-    await vi.waitFor(() => expect(useToastStore.getState().toast?.text).toBe("버렸어요"));
-    act(() => useToastStore.getState().toast?.action?.onClick());
-    expect(useRepoStore.getState().view).toBe("activity");
+    expect(api.previewAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["src/화면.tsx"] } });
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("버렸어요"));
   });
 
   it("임시 보관하고 목록에서 꺼낸다(고친 파일이 있으면 꺼내기는 꺼짐)", async () => {

@@ -144,7 +144,7 @@ export const en: Glossary = {
     friendly: "Discard changes",
     gitName: "restore",
     command: "git restore",
-    description: "Throw away changes not yet saved as a version and return to the last version",
+    description: "Throw away changes not yet saved as a version and return to the last version. Undo brings them back.",
   },
   pr: {
     friendly: "Review request",

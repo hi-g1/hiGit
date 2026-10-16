@@ -679,7 +679,7 @@ impl From<Outcome> for ActionResult {
             Outcome::Stashed => ActionResult::Stashed,
             Outcome::TookOut => ActionResult::TookOut,
             Outcome::ParkedResolved => ActionResult::ParkedResolved,
-            Outcome::Discarded { count } => ActionResult::Discarded { count },
+            Outcome::Discarded { count, .. } => ActionResult::Discarded { count },
             Outcome::Restored => ActionResult::Restored,
             Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
             Outcome::PrCreated { number } => ActionResult::PrCreated { number },

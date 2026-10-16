@@ -410,9 +410,13 @@ pub enum GitOp {
     /// 고친 파일을 stash로 만든다. 만든 해시는 [`OpOutput::oid`], 맡길 것이 없으면 `None`.
     /// 사용자의 stash 목록에서는 core가 ref를 쓴 뒤 [`GitOp::StashDropIf`]로 뺀다.
     Park { message: String },
-    /// 고른 파일의 고친 내용을 stash로 만들며 작업 폴더·index에서 버린다(고친 것 버리기, D-074).
-    /// 새 파일은 지워진다. 만든 해시는 [`OpOutput::oid`], 바뀐 것이 없으면 `None`.
-    DiscardPaths { paths: Vec<String>, message: String },
+    /// 고른 경로의 지금 모습(index·작업 폴더·새 파일)만 담은 stash 모양 버전을 만든다(D-196). 다른 파일의
+    /// 바뀜은 담지 않아 `stash apply --index`가 그 경로만 되살린다. 저장소는 그대로다. 만든 해시는
+    /// [`OpOutput::oid`], 고른 경로에 바뀐 것이 없으면 `None`.
+    SnapshotPaths { paths: Vec<String>, message: String },
+    /// 고른 경로를 지금 버전 그대로 돌린다(고친 것 버리기, D-074): index와 작업 폴더를 지금 버전으로,
+    /// 새 파일은 지운다. core는 [`GitOp::SnapshotPaths`]를 백업 ref로 남긴 뒤에만 부른다.
+    DiscardPaths { paths: Vec<String> },
     /// stash 목록 맨 위가 이 해시일 때만 뺀다.
     StashDropIf { oid: Oid },
     /// stash 목록에서 이 해시인 항목을 뺀다(위치를 찾고 빼기 직전에 다시 확인한다).
@@ -425,6 +429,10 @@ pub enum GitOp {
     UnparkKeep { oid: Oid },
     /// `UnparkKeep`으로 남긴 상태를 꺼내기 전으로 되돌린다. 바뀐 파일이 모두 그 stash의 경로일 때만.
     UnparkAbort { oid: Oid },
+    /// 버린 파일 되돌리기(D-196). 이 stash가 가진 경로(새 파일 포함)가 지금 모두 깨끗하고 지금 버전이 stash의
+    /// 기준일 때만 그 경로만 되살린다(`stash apply --index`). 다른 고친 파일은 그대로다. 아니면 `WouldOverwrite`,
+    /// 적용이 실패하면 `UnparkConflict`.
+    RestoreDiscarded { oid: Oid },
     /// 원격의 새 버전을 받아 온다(내 파일은 그대로). `remote`가 없으면 모든 원격. prune은 하지 않는다.
     Fetch {
         remote: Option<String>,

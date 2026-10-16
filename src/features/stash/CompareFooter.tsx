@@ -24,7 +24,7 @@ type Props = {
 
 /**
  * 비교 칸 맨 아래 줄(r-mergehint 오른쪽 아래): 임시 보관, 보관 목록, 고친 것 버리기(D-074, D-076).
- * 버리기는 되돌릴 수 없어 파일 이름을 보여 주는 확인을 거친다(D-043).
+ * 버리기는 확인 없이 하고 토스트의 되돌리기로 되살린다(D-196).
  */
 export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const m = useMessages();
@@ -32,7 +32,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const show = useToastStore((s) => s.show);
   const showError = useToastStore((s) => s.showError);
   const stashes = useStashes(repo).data?.items ?? [];
-  const discardFlow = useDiscardFlow(repo);
+  const discardFlow = useDiscardFlow(repo, onDone);
   const [pending, setPending] = useState(false);
   const [now] = useState(() => Date.now());
 
@@ -108,10 +108,9 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
         </Popover.Root>
       )}
       <span className={styles.spacer} />
-      <button type="button" className={styles.discard} disabled={pending || discardFlow.pending} onClick={() => discardFlow.ask(file)}>
+      <button type="button" className={styles.discard} disabled={pending || discardFlow.pending} onClick={() => discardFlow.run(file)}>
         <Term id="discard" focusable={false} />
       </button>
-      {discardFlow.dialog}
     </div>
   );
 }

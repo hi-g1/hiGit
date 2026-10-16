@@ -122,7 +122,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
                   {status.data.files.length === 0 ? (
                     <p className={styles.noFiles}>{m.noChangedFiles}</p>
                   ) : (
-                    <ChangedFiles folder={repo.path} files={status.data.files} />
+                    <ChangedFiles folder={repo.path} files={status.data.files} onDone={notifyDone} />
                   )}
                 </>
               )}

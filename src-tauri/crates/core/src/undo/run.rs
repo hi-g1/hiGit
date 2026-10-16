@@ -130,6 +130,10 @@ pub(crate) fn undo(
             undo_branch_rename(git, repo, &entry)?;
             Undid::Restored
         }
+        UndoKind::Inverse if entry.action == "discard" => {
+            undo_discard(git, repo, &entry)?;
+            Undid::Restored
+        }
         // 올리기·가져오기·동기화는 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042, D-073).
         UndoKind::Inverse if entry.action == "pull" => return Err(CoreError::NothingToUndo),
         UndoKind::Inverse => return Err(CoreError::UndoPushed),
@@ -137,8 +141,8 @@ pub(crate) fn undo(
     };
     let reverted = matches!(undid, Undid::Reverted);
     // 임시 보관 되돌리기는 항목을 꺼내고 목록에서 빼는 것으로 `refs/stash`를, 이름 바꾸기
-    // 되돌리기는 이름을 되돌리는 것으로 두 ref를 이미 되돌렸다.
-    if !reverted && entry.action != "stash" && entry.action != "branch-rename" {
+    // 되돌리기는 이름을 되돌리는 것으로 두 ref를 이미 되돌렸다. 버리기의 백업 ref는 남겨 둔다.
+    if !reverted && !matches!(entry.action.as_str(), "stash" | "branch-rename" | "discard") {
         restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
     }
     if entry.action == "branch-delete" {
@@ -254,6 +258,10 @@ fn restore_refs(
 ) -> Result<()> {
     let oid = |v: &Option<String>| v.as_deref().and_then(Oid::parse);
     for (name, target) in to {
+        // 앱의 ref(백업 등)는 옮기지 않는다. 읽기만 하는 값이다.
+        if name.starts_with("refs/higit/") {
+            continue;
+        }
         let current = from
             .iter()
             .find(|(n, _)| n == name)
@@ -414,6 +422,35 @@ fn undo_stash(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()
     )?;
     git.run(repo, &GitOp::StashDropOid { oid: created })?;
     Ok(())
+}
+
+/// 버린 파일 되돌리기(D-196): 버릴 때 남긴 백업 ref가 그대로 있고 그 파일들이 아직 버린 모습일 때만
+/// 그 파일들만 되살린다. 다른 고친 파일은 그대로다. 다시 하기는 없다(버리기를 다시 누른다).
+fn undo_discard(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let (name, oid) = entry
+        .after
+        .refs
+        .iter()
+        .find(|(name, _)| name.starts_with(backup::BACKUP_PREFIX))
+        .and_then(|(name, v)| Some((name, Oid::parse(v.as_deref()?)?)))
+        .ok_or(CoreError::NothingToUndo)?;
+    // 30일이 지나 정리됐거나 앱 밖에서 바뀐 백업은 쓰지 않는다.
+    if git.resolve_ref(repo, name)? != Some(oid.clone()) {
+        return Err(CoreError::UndoStale);
+    }
+    parked::refuse_unsafe(git, repo, &oid)?;
+    match git.run(repo, &GitOp::RestoreDiscarded { oid }) {
+        Ok(_) => Ok(()),
+        Err(e)
+            if matches!(
+                e.kind(),
+                git::FailureKind::WouldOverwrite | git::FailureKind::UnparkConflict
+            ) =>
+        {
+            Err(CoreError::UndoStale)
+        }
+        Err(e) => Err(e.into()),
+    }
 }
 
 /// 제외할 파일 되돌리기: 덧붙인 규칙 줄이 `.gitignore` 끝에 그대로 있고 index가 그때 그대로일

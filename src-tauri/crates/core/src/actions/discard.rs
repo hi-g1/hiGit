@@ -1,5 +1,5 @@
-//! 고친 것 버리기(`discard`, D-043, D-074). 되돌릴 수 없어 실행 전 확인을 받고, 버리기 전에
-//! 스냅샷을 백업 ref로 남겨 작업 내역에서 꺼낼 수 있게 한다.
+//! 고친 것 버리기(`discard`, D-074, D-196). 버리기 전에 스냅샷을 백업 ref로 남기고, 그 이름과 해시를
+//! 작업 목록(journal)에 남겨 Ctrl+Z로 되살린다. 작업 내역에서도 꺼낼 수 있다. 확인 창은 없다.
 
 use git::GitOp;
 
@@ -21,7 +21,7 @@ impl DiscardAction {
                 id: "discard",
                 glossary_id: "discard",
                 risk: Risk::Caution,
-                undo: crate::undo::UndoKind::Irreversible,
+                undo: crate::undo::UndoKind::Inverse,
             },
         }
     }
@@ -64,24 +64,35 @@ impl Action for DiscardAction {
         let branch = git
             .current_branch(repo)?
             .unwrap_or_else(|| "HEAD".to_string());
-        // stash 한 번으로 버리기와 스냅샷을 함께 한다. 파일을 잃을 틈이 없다.
+        // 고른 경로만 담은 스냅샷을 먼저 백업 ref로 남기고, 그다음에 버린다. 파일을 잃을 틈이 없다.
         let out = git.run(
             repo,
-            &GitOp::DiscardPaths {
+            &GitOp::SnapshotPaths {
                 paths: input.paths.clone(),
                 message: format!("higit discard {branch}"),
             },
         )?;
         let Some(oid) = out.oid else {
-            return Ok(Outcome::Discarded { count: 0 });
+            return Ok(Outcome::Discarded {
+                count: 0,
+                backup: None,
+            });
         };
-        // 백업 ref를 못 쓰면 이미 버렸으므로 stash를 목록에 남기고 알린다(파일은 임시 보관 목록에 있다).
-        if crate::undo::backup::backup_oid(git, repo, &oid, &format!("discard-{branch}")).is_err() {
+        // 백업 ref를 못 쓰면 버리지 않는다.
+        let Ok(name) =
+            crate::undo::backup::backup_oid(git, repo, &oid, &format!("discard-{branch}"))
+        else {
             return Err(CoreError::BackupFailed);
-        }
-        git.run(repo, &GitOp::StashDropOid { oid })?;
+        };
+        git.run(
+            repo,
+            &GitOp::DiscardPaths {
+                paths: input.paths.clone(),
+            },
+        )?;
         Ok(Outcome::Discarded {
             count: u32::try_from(input.paths.len()).unwrap_or(u32::MAX),
+            backup: Some((name, oid)),
         })
     }
 }

@@ -111,11 +111,13 @@ impl UndoState {
         let oid_ok = |o: &Option<String>| o.as_deref().is_none_or(|s| Oid::parse(s).is_some());
         let name_ok =
             |n: &str| names::validate_ref_like(n).is_ok() && !n.contains("..") && !n.contains(' ');
-        // 되돌리기가 옮길 수 있는 ref는 로컬 브랜치·태그와 stash뿐이다.
+        // 되돌리기가 옮길 수 있는 ref는 로컬 브랜치·태그와 stash뿐이다. 백업 ref는 버리기 되돌리기가
+        // 읽기만 한다(D-196).
         let ref_ok = |n: &str| {
             n == "refs/stash"
                 || n.strip_prefix("refs/heads/")
                     .or_else(|| n.strip_prefix("refs/tags/"))
+                    .or_else(|| n.strip_prefix(backup::BACKUP_PREFIX))
                     .is_some_and(|b| !b.is_empty() && name_ok(b))
         };
         oid_ok(&self.head)
@@ -138,7 +140,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tracked_refs_may_be_branches_tags_or_stash() {
+    fn tracked_refs_may_be_branches_tags_stash_or_backups() {
         let with = |name: &str| UndoState {
             refs: vec![(name.into(), Some("c".repeat(40)))],
             ..Default::default()
@@ -148,6 +150,8 @@ mod tests {
             "refs/tags/v1.0",
             "refs/tags/한글",
             "refs/stash",
+            // 버리기 되돌리기가 읽는 백업(D-196).
+            "refs/higit/backup/20261016T000000Z-0/discard-main",
         ] {
             assert!(with(good).is_valid(), "{good}");
         }
@@ -156,7 +160,9 @@ mod tests {
             "refs/tags/a..b",
             "refs/tags/",
             "refs/remotes/origin/main",
-            "refs/higit/backup/x",
+            "refs/higit/backup/",
+            "refs/higit/backup/a..b",
+            "refs/higit/parked/main",
             "HEAD",
         ] {
             assert!(!with(bad).is_valid(), "{bad}");

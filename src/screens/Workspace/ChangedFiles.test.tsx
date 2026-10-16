@@ -23,11 +23,13 @@ const file = (path: string, staged: boolean, extra: Partial<ChangedFile> = {}): 
   ...extra,
 });
 
+const onDone = vi.fn();
+
 function renderList(files: ChangedFile[]) {
   vi.mocked(api.executeAction).mockResolvedValue({ kind: "staged", count: 1 });
   return render(
     <AppProviders client={createQueryClient()}>
-      <ChangedFiles folder="/repo" files={files} />
+      <ChangedFiles folder="/repo" files={files} onDone={onDone} />
     </AppProviders>,
   );
 }
@@ -82,18 +84,18 @@ describe("ChangedFiles", () => {
 
   it("오른쪽 클릭 메뉴: 경로 복사와 이 파일 고친 것 버리기(R13)", async () => {
     const user = userEvent.setup();
-    vi.mocked(api.previewAction).mockResolvedValue({ token: "t1" });
     renderList([file("docs/한글.md", false), file("b.md", false)]);
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "discarded", count: 1 });
     fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
     await user.click(await screen.findByRole("menuitem", { name: "경로 복사" }));
     expect(copyText).toHaveBeenCalledWith("docs/한글.md");
     await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사했어요"));
     fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
     await user.click(await screen.findByRole("menuitem", { name: "이 파일 고친 것 버리기" }));
-    expect(api.previewAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["docs/한글.md"] } });
-    // 되돌릴 수 없어 확인을 거친다(D-043).
-    expect(await screen.findByRole("dialog")).toHaveTextContent("한글.md");
-    expect(api.executeAction).not.toHaveBeenCalled();
+    // 확인 창 없이 버리고 되돌리기 토스트로 넘긴다(D-196).
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["docs/한글.md"] } });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith("버렸어요"));
   });
 
   it("메뉴 키·Shift+F10으로도 연다", async () => {

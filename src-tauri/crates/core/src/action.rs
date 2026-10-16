@@ -170,9 +170,10 @@ pub enum Outcome {
     TookOut,
     /// 꺼내다 겹친 맡긴 파일을 충돌 해결 화면에서 풀었다(고친 파일로 남음, D-083).
     ParkedResolved,
-    /// 고친 것을 버렸다(버린 내용은 백업 ref에).
+    /// 고친 것을 버렸다(버린 내용은 백업 ref에). 백업(이름, 해시)은 작업 목록에 남아 되돌리기가 쓴다.
     Discarded {
         count: u32,
+        backup: Option<(String, git::Oid)>,
     },
     /// 작업 내역의 버전으로 되돌렸다.
     Restored,
@@ -254,10 +255,26 @@ pub enum JournalMode {
 }
 
 impl Outcome {
+    /// 실행 뒤 상태에 더해 journal에 남길 ref(이름, 해시). 이름을 실행 전에 알 수 없는 백업 ref.
+    pub(crate) fn journal_refs(&self) -> Vec<(String, Option<String>)> {
+        match self {
+            Outcome::Discarded {
+                backup: Some((name, oid)),
+                ..
+            } => vec![(name.clone(), Some(oid.to_string()))],
+            _ => Vec::new(),
+        }
+    }
+
     /// 이 결과를 journal에 어떻게 남길지. 합치는 중으로 끝나는 결과들이 쓴다(반복 2).
     pub fn journal_mode(&self) -> JournalMode {
         match self {
             Outcome::Ignored { .. } => JournalMode::Always,
+            // 버려도 HEAD·브랜치·index가 같을 수 있다. 백업이 없으면(버린 것 없음) 남기지 않는다.
+            Outcome::Discarded {
+                backup: Some(_), ..
+            } => JournalMode::Always,
+            Outcome::Discarded { backup: None, .. } => JournalMode::Skip,
             // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
             // 마치기·그만두기가 따로 기록한다. 이어서 멈춘 기록 정리도 끝날 때 한 줄로 남긴다.
             Outcome::MergeConflicts { .. }

@@ -3,10 +3,13 @@
 //! git에는 "목록에 넣지 않는 stash"가 없어 `stash push`로 만든 뒤 core가 ref를 쓰고 목록에서 뺀다.
 //! 사용자의 stash 목록은 건드리지 않는다: push 전후 `refs/stash`가 같으면 맡길 것이 없었던 것이다.
 
+use std::ffi::OsStr;
 use std::path::Path;
 
 use super::CliBackend;
 use super::args::{Cmd, push_revs};
+use super::merge_check::Scratch;
+use super::runner::nul_separated;
 use crate::{FailureKind, GitError, Oid, OpOutput, RepoPath, Result};
 
 impl CliBackend {
@@ -31,42 +34,178 @@ impl CliBackend {
         })
     }
 
-    /// 고른 파일만 stash로 만들어 버린다. 경로는 stdin과 `--literal-pathspecs`로.
-    pub(super) fn discard_paths(
+    /// 고른 경로를 상태에서 나눈다: (추적 중인 바뀐 경로, 새 파일). 바뀌지 않은 경로는 뺀다.
+    /// 이름 바꿈의 옛 이름도 추적 중인 경로로 센다.
+    fn split_changed(
+        &self,
+        repo: &RepoPath,
+        paths: &[String],
+    ) -> Result<(Vec<String>, Vec<String>)> {
+        if let Some(bad) = paths.iter().find(|p| !safe_relative(p)) {
+            return Err(GitError::Parse(format!("저장소 밖 경로: {bad}")));
+        }
+        let status = crate::GitBackend::status(self, repo)?;
+        let mut tracked = Vec::new();
+        let mut untracked = Vec::new();
+        for p in paths {
+            let entry = status
+                .entries
+                .iter()
+                .find(|e| &e.path == p || e.orig_path.as_ref() == Some(p));
+            match entry {
+                Some(e) if e.kind == crate::EntryKind::Untracked => untracked.push(p.clone()),
+                Some(_) => tracked.push(p.clone()),
+                None => {}
+            }
+        }
+        tracked.sort();
+        tracked.dedup();
+        untracked.sort();
+        untracked.dedup();
+        Ok((tracked, untracked))
+    }
+
+    /// 고른 경로만 담은 stash 모양 버전(D-196). 첫 부모는 지금 버전, 두 번째는 지금 버전에 그 경로의
+    /// index 모습만 얹은 버전, 새 파일이 있으면 세 번째 부모. 임시 index로 만들어 저장소는 그대로다.
+    pub(super) fn snapshot_paths(
         &self,
         repo: &RepoPath,
         paths: &[String],
         message: &str,
     ) -> Result<OpOutput> {
-        if let Some(bad) = paths.iter().find(|p| !safe_relative(p)) {
-            return Err(GitError::Parse(format!("저장소 밖 경로: {bad}")));
+        let (tracked, untracked) = self.split_changed(repo, paths)?;
+        if tracked.is_empty() && untracked.is_empty() {
+            return Ok(OpOutput::default());
         }
-        let before = self.stash_top(repo)?;
-        let out = self.runner.run_with_stdin(
-            Some(repo.as_path()),
-            &[
-                "--literal-pathspecs",
-                "stash",
-                "push",
-                "--include-untracked",
-                "-m",
-                message,
-                "--pathspec-from-file=-",
-                "--pathspec-file-nul",
-            ],
-            &super::runner::nul_separated(paths),
-        )?;
-        let after = self.stash_top(repo)?;
-        let created = match (&before, &after) {
-            (_, None) => None,
-            (Some(b), Some(a)) if a == b => None,
-            (_, Some(a)) => Some(a.clone()),
+        let dir = Some(repo.as_path());
+        let head = crate::GitBackend::resolve_ref(self, repo, "HEAD")?
+            .ok_or_else(|| GitError::Parse("HEAD 없음".into()))?;
+        // index 모습: 지금 index에 있으면 그 항목, 없으면(넣은 삭제·이름 바꿈의 옛 이름) 지운다(모드 0).
+        let index = self.ls_index(repo)?;
+        let zero = "0".repeat(head.as_str().len());
+        let mut info = Vec::new();
+        for p in &tracked {
+            let line = match index.iter().find(|e| &e.path == p && e.stage == 0) {
+                Some(e) => format!("{} {}\t{p}\0", e.mode, e.oid),
+                None => format!("0 {zero}\t{p}\0"),
+            };
+            info.extend_from_slice(line.as_bytes());
+        }
+        let scratch = Scratch::new()?;
+        let index_file = scratch.path("index");
+        let env = [("GIT_INDEX_FILE", index_file.as_os_str())];
+        self.runner
+            .run_env(dir, &["read-tree", head.as_str()], &env)?;
+        if !info.is_empty() {
+            self.runner.run_with_stdin_env(
+                dir,
+                &["update-index", "-z", "--index-info"],
+                &info,
+                &env,
+            )?;
+        }
+        let index_tree = self
+            .runner
+            .run_env(dir, &["write-tree"], &env)?
+            .stdout_utf8()?;
+        // 작업 폴더 모습: index 모습 위에 그 경로의 파일(없으면 지운다).
+        if !tracked.is_empty() {
+            self.runner.run_with_stdin_env(
+                dir,
+                &["update-index", "--add", "--remove", "-z", "--stdin"],
+                &nul_separated(&tracked),
+                &env,
+            )?;
+        }
+        let work_tree = self
+            .runner
+            .run_env(dir, &["write-tree"], &env)?
+            .stdout_utf8()?;
+        let branch =
+            crate::GitBackend::current_branch(self, repo)?.unwrap_or_else(|| "HEAD".into());
+        let ident: [(&str, &OsStr); 4] = [
+            ("GIT_AUTHOR_NAME", OsStr::new("hiGit")),
+            ("GIT_AUTHOR_EMAIL", OsStr::new("higit@localhost")),
+            ("GIT_COMMITTER_NAME", OsStr::new("hiGit")),
+            ("GIT_COMMITTER_EMAIL", OsStr::new("higit@localhost")),
+        ];
+        let commit = |tree: &str, parents: &[&str], subject: String| -> Result<String> {
+            let mut args = vec!["commit-tree", "--no-gpg-sign", tree];
+            for p in parents {
+                args.extend(["-p", p]);
+            }
+            args.extend(["-m", subject.as_str()]);
+            Ok(self
+                .runner
+                .run_env(dir, &args, &ident)?
+                .stdout_utf8()?
+                .trim()
+                .to_string())
         };
+        let index_commit = commit(
+            index_tree.trim(),
+            &[head.as_str()],
+            format!("index on {branch}: {message}"),
+        )?;
+        let untracked_commit = if untracked.is_empty() {
+            None
+        } else {
+            let file = scratch.path("untracked");
+            let env = [("GIT_INDEX_FILE", file.as_os_str())];
+            self.runner.run_with_stdin_env(
+                dir,
+                &["update-index", "--add", "-z", "--stdin"],
+                &nul_separated(&untracked),
+                &env,
+            )?;
+            let tree = self
+                .runner
+                .run_env(dir, &["write-tree"], &env)?
+                .stdout_utf8()?;
+            Some(commit(
+                tree.trim(),
+                &[],
+                format!("untracked files on {branch}: {message}"),
+            )?)
+        };
+        let mut parents = vec![head.as_str(), index_commit.as_str()];
+        if let Some(u) = &untracked_commit {
+            parents.push(u.as_str());
+        }
+        let snapshot = commit(
+            work_tree.trim(),
+            &parents,
+            format!("On {branch}: {message}"),
+        )?;
         Ok(OpOutput {
-            stdout: out.stdout_lossy(),
-            stderr: out.stderr_lossy(),
-            oid: created,
+            oid: Oid::parse(&snapshot),
+            ..OpOutput::default()
         })
+    }
+
+    /// 고른 경로를 지금 버전 그대로 돌린다: 추적 중인 경로는 `restore --staged --worktree`(넣은 새 파일·
+    /// 이름 바꿈도 지금 버전 모습으로), 새 파일은 지운다. 경로는 stdin과 `--literal-pathspecs`로.
+    pub(super) fn discard_paths(&self, repo: &RepoPath, paths: &[String]) -> Result<OpOutput> {
+        let (tracked, untracked) = self.split_changed(repo, paths)?;
+        if !tracked.is_empty() {
+            self.runner.run_with_stdin(
+                Some(repo.as_path()),
+                &[
+                    "--literal-pathspecs",
+                    "restore",
+                    "--source=HEAD",
+                    "--staged",
+                    "--worktree",
+                    "--pathspec-from-file=-",
+                    "--pathspec-file-nul",
+                ],
+                &super::runner::nul_separated(&tracked),
+            )?;
+        }
+        for path in &untracked {
+            remove_inside(repo.as_path(), path);
+        }
+        Ok(OpOutput::default())
     }
 
     /// 꺼내되 겹친 곳은 충돌로 남긴다. 겹치지 않으면 `unpark`와 같다.
@@ -130,6 +269,126 @@ impl CliBackend {
             remove_inside(dir, &path);
         }
         Ok(OpOutput::default())
+    }
+
+    /// 버린 파일을 되살린다(D-196). 그 경로가 지금 모두 깨끗할 때만, 다른 파일(넣어 둔 것 포함)은
+    /// 건드리지 않는다. `stash apply`는 넣어 둔 파일이 있으면 거절하므로 경로마다 직접 쓴다:
+    /// index는 두 번째 부모에서(`reset <버전> -- 경로`), 작업 폴더는 stash 버전에서(임시 index와
+    /// `checkout-index`, 지운 파일은 지운다), 새 파일은 세 번째 부모에서.
+    pub(super) fn restore_discarded(&self, repo: &RepoPath, oid: &Oid) -> Result<OpOutput> {
+        let dir = repo.as_path();
+        let refuse = |detail: String| GitError::Refused {
+            kind: FailureKind::WouldOverwrite,
+            detail,
+        };
+        let head = crate::GitBackend::resolve_ref(self, repo, "HEAD")?;
+        let base = crate::GitBackend::resolve_ref(self, repo, &format!("{oid}^1"))?;
+        if head.is_none() || head != base {
+            return Err(refuse(
+                "the version changed since the files were discarded".into(),
+            ));
+        }
+        let worktree = self.name_status(repo, &format!("{oid}^1"), oid.as_str())?;
+        let staged = self.name_status(repo, &format!("{oid}^1"), &format!("{oid}^2"))?;
+        let untracked = self.stash_untracked_paths(repo, oid)?;
+        let mut owned: Vec<String> = worktree
+            .iter()
+            .chain(&staged)
+            .map(|(_, p)| p.clone())
+            .collect();
+        owned.sort();
+        owned.dedup();
+        let status = crate::GitBackend::status(self, repo)?;
+        let touched = status
+            .entries
+            .iter()
+            .flat_map(|e| std::iter::once(&e.path).chain(e.orig_path.as_ref()))
+            .find(|p| owned.contains(p) || untracked.contains(p));
+        if let Some(path) = touched {
+            return Err(refuse(format!("changed again: {path}")));
+        }
+        if let Some(clash) = untracked.iter().find(|p| exists(dir, p)) {
+            return Err(refuse(format!("already exists: {clash}")));
+        }
+        let failed = |e: GitError| GitError::Refused {
+            kind: FailureKind::UnparkConflict,
+            detail: e.detail(),
+        };
+        // stash 버전에 있는 경로: 작업 폴더에서 바뀐 것은 지우지 않은 것, 넣은 것만 바뀐 것은 지금 버전에 있던 것.
+        let present: Vec<String> = owned
+            .iter()
+            .filter(|p| match worktree.iter().find(|(_, w)| w == *p) {
+                Some((status, _)) => *status != 'D',
+                None => staged.iter().any(|(s, i)| i == *p && *s != 'A'),
+            })
+            .cloned()
+            .collect();
+        if !owned.is_empty() {
+            self.runner
+                .run_with_stdin(
+                    Some(dir),
+                    &[
+                        "--literal-pathspecs",
+                        "reset",
+                        "-q",
+                        &format!("{oid}^2"),
+                        "--pathspec-from-file=-",
+                        "--pathspec-file-nul",
+                    ],
+                    &nul_separated(&owned),
+                )
+                .map_err(failed)?;
+        }
+        let scratch = Scratch::new()?;
+        if !present.is_empty() {
+            let file = scratch.path("work");
+            let env = [("GIT_INDEX_FILE", file.as_os_str())];
+            self.runner
+                .run_env(Some(dir), &["read-tree", oid.as_str()], &env)
+                .map_err(failed)?;
+            self.runner
+                .run_with_stdin_env(
+                    Some(dir),
+                    &["checkout-index", "-f", "-z", "--stdin"],
+                    &nul_separated(&present),
+                    &env,
+                )
+                .map_err(failed)?;
+        }
+        for path in owned.iter().filter(|p| !present.contains(p)) {
+            remove_inside(dir, path);
+        }
+        if !untracked.is_empty() {
+            let file = scratch.path("untracked");
+            let env = [("GIT_INDEX_FILE", file.as_os_str())];
+            self.runner
+                .run_env(Some(dir), &["read-tree", &format!("{oid}^3")], &env)
+                .map_err(failed)?;
+            self.runner
+                .run_env(Some(dir), &["checkout-index", "-f", "-a"], &env)
+                .map_err(failed)?;
+        }
+        Ok(OpOutput {
+            oid: Some(oid.clone()),
+            ..OpOutput::default()
+        })
+    }
+
+    /// 두 버전 사이에 바뀐 경로와 그 종류(`A`·`M`·`D`·`T`, 이름 바꿈은 두 경로로).
+    fn name_status(&self, repo: &RepoPath, from: &str, to: &str) -> Result<Vec<(char, String)>> {
+        let mut args = vec!["diff", "--name-status", "-z", "--no-renames"];
+        push_revs(&mut args, Cmd::Diff, self.git_version(), &[from, to]);
+        let out = self.runner.run(Some(repo.as_path()), &args)?;
+        let text = out.stdout_lossy();
+        let mut fields = text.split('\0').filter(|f| !f.is_empty());
+        let mut changes = Vec::new();
+        while let (Some(kind), Some(path)) = (fields.next(), fields.next()) {
+            if !safe_relative(path) {
+                return Err(GitError::Parse(format!("stash 경로: {path}")));
+            }
+            changes.push((kind.chars().next().unwrap_or('M'), path.to_string()));
+        }
+        Ok(changes)
     }
 
     /// stash가 고친 파일 경로(첫 부모와 stash 커밋 사이).

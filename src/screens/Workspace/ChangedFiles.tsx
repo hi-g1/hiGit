@@ -24,14 +24,23 @@ function pathsOf(file: ChangedFile): string[] {
  * 변경 사항 목록. 행 앞 체크 상자로 이번 버전에 넣기·빼기, 행을 누르면 비교할 파일로 고른다.
  * 체크 상자에는 글자가 없고, 이름과 툴팁은 용어표에서 온다.
  */
-export function ChangedFiles({ folder, files }: { folder: string; files: ChangedFile[] }) {
+export function ChangedFiles({
+  folder,
+  files,
+  onDone,
+}: {
+  folder: string;
+  files: ChangedFile[];
+  /** 버리면 결과 토스트와 되돌리기(useUndo의 notifyDone). */
+  onDone: (text: string) => void;
+}) {
   const m = useMessages();
   const includeLabel = useTermLabel("stage");
   const leaveOutLabel = useTermLabel("unstage");
   const selected = useRepoStore((s) => s.selectedPath);
   const select = useRepoStore((s) => s.selectPath);
   const stage = useStageMutation(folder);
-  const discard = useDiscardFlow(folder);
+  const discard = useDiscardFlow(folder, onDone);
   const [menu, setMenu] = useState<{ file: ChangedFile; x: number; y: number } | null>(null);
   /** 메뉴는 목록 안 좌표에 붙는다(누른 자리, 키로 열면 줄의 왼쪽 아래). */
   const openMenu = (file: ChangedFile, list: HTMLElement, at: { clientX: number; clientY: number }) => {
@@ -80,10 +89,9 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
         onClose={() => setMenu(null)}
         onDiscard={(file) => {
           setMenu(null);
-          discard.ask(file);
+          discard.run(file);
         }}
       />
-      {discard.dialog}
       <div className={`${rowStyles.row} ${styles.head}`}>
         <TermTooltip id={all ? "unstage" : "stage"}>
           <Checkbox

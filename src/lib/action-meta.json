@@ -69,7 +69,7 @@
     "id": "discard",
     "glossaryId": "discard",
     "risk": "caution",
-    "undo": "irreversible"
+    "undo": "inverse"
   },
   {
     "id": "restore",

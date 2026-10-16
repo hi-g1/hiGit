@@ -145,7 +145,7 @@ export const ko: Glossary = {
     friendly: "고친 것 버리기",
     gitName: "restore",
     command: "git restore",
-    description: "아직 버전으로 저장하지 않은 변경을 버리고 마지막 버전으로 돌아가기",
+    description: "아직 버전으로 저장하지 않은 변경을 버리고 마지막 버전으로 돌아가기. 되돌리기로 되살릴 수 있어요.",
   },
   pr: {
     friendly: "검토 요청",
