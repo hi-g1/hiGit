@@ -135,7 +135,7 @@ export const en: Glossary = {
     description: "Put unfinished work aside and take it out later",
   },
   park: {
-    friendly: "Park",
+    friendly: "Leave here",
     gitName: "stash",
     command: "git stash -u",
     description: "Keep changed files on a branch when you switch away, and bring them back when you return",

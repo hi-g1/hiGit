@@ -136,7 +136,7 @@ export const ko: Glossary = {
     description: "하던 작업을 잠시 보관했다가 나중에 꺼내기",
   },
   park: {
-    friendly: "맡겨 두기",
+    friendly: "여기 두기",
     gitName: "stash",
     command: "git stash -u",
     description: "브랜치를 바꿀 때 고친 파일을 그 브랜치에 두었다가 돌아오면 꺼내기",

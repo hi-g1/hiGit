@@ -2,7 +2,14 @@ import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, type ActionInput, type BranchListView } from "../../lib/api";
-import { invalidateLog, useBranchNameCheck, useBranches, useHostingContext, useMergeHint } from "../../lib/queries";
+import {
+  invalidateLog,
+  useBranchNameCheck,
+  useBranches,
+  useHostingContext,
+  useMergeHint,
+  useStatus,
+} from "../../lib/queries";
 import { formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
@@ -17,6 +24,8 @@ import { branchColor } from "./color";
 import { RemoteBranchMenu } from "../remote-branch/RemoteBranchMenu";
 import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
+import { SwitchDialog } from "./SwitchDialog";
+import { useSwitch, type SwitchTarget } from "./useSwitch";
 import { Truncate } from "../../ui/Truncate";
 
 type Props = {
@@ -32,52 +41,76 @@ type Props = {
 type Choice = { kind: "switch"; item: ListItem } | { kind: "create"; name: string };
 
 /**
- * 브랜치 목록(D-047, r-branch.png). 고르면 묻지 않고 바로 갈아타고, 찾기 칸에 없는 이름을 쓰고
- * Enter를 누르면 새 브랜치를 만든다. Ctrl+B로 연다.
+ * 브랜치 목록(D-047, r-branch.png). 고르면 바로 갈아타고, 고친 파일이 있으면 목록을 닫고 두고 갈지 옮길지
+ * 묻는다(D-195). 찾기 칸에 없는 이름을 쓰고 Enter를 누르면 새 브랜치를 만든다. Ctrl+B로 연다.
  */
 export function BranchList({ repo, current, onDone, children }: Props) {
   const [open, setOpen] = useState(false);
   // 이름을 바꾸는 줄(로컬 브랜치 이름). Esc는 목록을 닫지 않고 이름 바꾸기만 그만둔다.
   const [renaming, setRenaming] = useState<string | null>(null);
+  // 고친 파일이 있어 묻는 중인 갈아타기. 목록(팝오버) 밖에 두어 목록이 닫혀도 남는다.
+  const [asking, setAsking] = useState<{ target: SwitchTarget; files: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const sw = useSwitch(repo, onDone);
   useShortcut("branches", () => setOpen((o) => !o));
+  const stopAsking = () => {
+    setAsking(null);
+    triggerRef.current?.focus();
+  };
   return (
-    <Popover.Root
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (!o) setRenaming(null);
-      }}
-    >
-      <Popover.Trigger asChild>
-        <button type="button" className={styles.trigger} aria-keyshortcuts="Control+B">
-          {children}
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className={styles.panel}
-          align="start"
-          sideOffset={6}
-          onEscapeKeyDown={(e) => {
-            if (renaming !== null) {
-              e.preventDefault();
-              setRenaming(null);
-            }
+    <>
+      {asking && current !== null && (
+        <SwitchDialog
+          repo={repo}
+          target={asking.target}
+          from={current}
+          files={asking.files}
+          pending={sw.pending === "carry" || sw.pending === "park" ? sw.pending : null}
+          onChoose={(dirty) => {
+            void sw.run(asking.target, dirty).then((ok) => ok && stopAsking());
           }}
-        >
-          {open && (
-            <Panel
-              repo={repo}
-              current={current}
-              onDone={onDone}
-              close={() => setOpen(false)}
-              renaming={renaming}
-              setRenaming={setRenaming}
-            />
-          )}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+          onClose={stopAsking}
+        />
+      )}
+      <Popover.Root
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setRenaming(null);
+        }}
+      >
+        <Popover.Trigger asChild>
+          <button ref={triggerRef} type="button" className={styles.trigger} aria-keyshortcuts="Control+B">
+            {children}
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            className={styles.panel}
+            align="start"
+            sideOffset={6}
+            onEscapeKeyDown={(e) => {
+              if (renaming !== null) {
+                e.preventDefault();
+                setRenaming(null);
+              }
+            }}
+          >
+            {open && (
+              <Panel
+                repo={repo}
+                current={current}
+                onDone={onDone}
+                close={() => setOpen(false)}
+                renaming={renaming}
+                setRenaming={setRenaming}
+                ask={(target, files) => setAsking({ target, files })}
+              />
+            )}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </>
   );
 }
 
@@ -85,9 +118,11 @@ type PanelProps = Omit<Props, "children"> & {
   close: () => void;
   renaming: string | null;
   setRenaming: (name: string | null) => void;
+  /** 고친 파일이 있을 때 갈아타기를 대화상자로 넘긴다. */
+  ask: (target: SwitchTarget, files: number) => void;
 };
 
-function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelProps) {
+function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: PanelProps) {
   const m = useMessages();
   const branches = useBranches(repo);
   const [query, setQuery] = useState("");
@@ -101,6 +136,9 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
   const [expanded, setExpanded] = useState(false);
   const [active, setActive] = useState(0);
   const [pending, setPending] = useState(false);
+  const status = useStatus(repo).data;
+  const sw = useSwitch(repo, onDone);
+  const busy = pending || sw.pending !== null;
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
   const showError = useToastStore((s) => s.showError);
@@ -132,16 +170,24 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       close();
       return;
     }
-    if (choice.kind === "create" && createBlocked) return;
-    const input: ActionInput =
-      choice.kind === "create"
-        ? { id: "branch-create", input: { name: choice.name } }
-        : { id: "switch", input: { branch: choice.item.name, remote: choice.item.remote } };
+    if (choice.kind === "switch") {
+      const target = { branch: choice.item.name, remote: choice.item.remote };
+      // 버전이 없거나 특정 버전을 보는 중이면 core가 맡기지 않으므로 묻지 않는다.
+      const files = status?.branch.name != null && status.branch.hasCommits ? status.files.length : 0;
+      if (files > 0) {
+        close();
+        ask(target, files);
+      } else if (await sw.run(target)) {
+        close();
+      }
+      return;
+    }
+    if (createBlocked) return;
     setPending(true);
     try {
-      await api.executeAction(repo, input);
+      await api.executeAction(repo, { id: "branch-create", input: { name: choice.name } });
       close();
-      onDone(choice.kind === "create" ? m.createdBranch(choice.name) : m.switchedTo(choice.item.name));
+      onDone(m.createdBranch(choice.name));
     } catch (e) {
       showError(e);
     } finally {
@@ -205,7 +251,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
       e.preventDefault();
       const choice = choices[active];
-      if (choice && !pending) void run(choice);
+      if (choice && !busy) void run(choice);
     }
   };
 
@@ -233,7 +279,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
           onPick={(c) => void run(c)}
           repo={repo}
           renaming={renaming}
-          pending={pending}
+          pending={busy}
           onRenameStart={setRenaming}
           onRename={(from, to) => void edit({ id: "branch-rename", input: { from, to } }, m.branchRenamed(to))}
           onDelete={(name) => void edit({ id: "branch-delete", input: { name } }, m.branchDeleted(name))}

@@ -4,11 +4,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { branches: vi.fn(), checkBranchName: vi.fn(), executeAction: vi.fn(), mergeHint: vi.fn() },
+  api: {
+    branches: vi.fn(),
+    checkBranchName: vi.fn(),
+    executeAction: vi.fn(),
+    mergeHint: vi.fn(),
+    status: vi.fn(),
+    switchPlan: vi.fn(),
+  },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
-import { api, type BranchListView, type BranchRow } from "../../lib/api";
+import { api, type BranchListView, type BranchRow, type StatusView } from "../../lib/api";
 import { ApiError } from "../../lib/api";
 import { ko } from "../../messages/ko";
 import { BranchList } from "./BranchList";
@@ -37,7 +44,17 @@ const view: BranchListView = {
   remotes: ["origin"],
 };
 
+const clean: StatusView = {
+  branch: { name: "로그인 기능", hasCommits: true, upstream: null, ahead: 0, behind: 0 },
+  files: [],
+};
+const dirty = (n: number): StatusView => ({
+  ...clean,
+  files: Array.from({ length: n }, (_, i) => ({ path: `f${i}.txt`, origPath: null, change: "modified", staged: false })),
+});
+
 function show(onDone = vi.fn()) {
+  vi.mocked(api.status).mockResolvedValue(clean);
   vi.mocked(api.branches).mockResolvedValue(view);
   vi.mocked(api.checkBranchName).mockResolvedValue({ ok: true, problem: null });
   vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchCreated", name: "x" });
@@ -65,7 +82,7 @@ describe("브랜치 목록", () => {
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("합쳤어요"));
   });
 
-  it("지금 브랜치의 맡긴 파일이 겹쳤으면 겹침 해결", async () => {
+  it("지금 브랜치에 두고 간 파일이 겹쳤으면 겹침 해결", async () => {
     show();
     vi.mocked(api.branches).mockResolvedValue({
       ...view,
@@ -92,7 +109,7 @@ describe("브랜치 목록", () => {
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
     expect(await screen.findByText("최근에 쓴 브랜치")).toBeInTheDocument();
     expect(screen.getByText("새 버전 1개")).toBeInTheDocument();
-    expect(screen.getByText("맡겨 둔 파일 2개")).toBeInTheDocument();
+    expect(screen.getByText("두고 간 파일 2개")).toBeInTheDocument();
   });
 
   it("고르면 바로 갈아타고 결과를 알린다", async () => {
@@ -101,6 +118,75 @@ describe("브랜치 목록", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "switch", input: { branch: "main", remote: null } });
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("main 브랜치로 갈아탔어요"));
+  });
+
+  it("고친 파일이 있으면 목록을 닫고 묻는다 · Enter는 새 브랜치로 옮기기", async () => {
+    const onDone = show();
+    vi.mocked(api.status).mockResolvedValue(dirty(3));
+    vi.mocked(api.switchPlan).mockResolvedValue({ dirtyFiles: 3, canCarry: true, reason: null, blocked: [], blockedTotal: 0 });
+    vi.mocked(api.executeAction).mockResolvedValue({
+      kind: "switched",
+      branch: "main",
+      parkedOn: null,
+      unparked: false,
+      unparkBlocked: false,
+      files: 3,
+      carried: true,
+    });
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await screen.findByText("최근에 쓴 브랜치");
+    await waitFor(() => expect(api.status).toHaveBeenCalled());
+    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    expect(await screen.findByRole("dialog", { name: "고친 파일 3개가 있어요" })).toBeInTheDocument();
+    expect(screen.queryByText("최근에 쓴 브랜치")).not.toBeInTheDocument();
+    const carry = await screen.findByRole("button", { name: "새 브랜치로 옮기기" });
+    await waitFor(() => expect(carry).toHaveFocus());
+    expect(api.switchPlan).toHaveBeenCalledWith("/repo", "main", null);
+    await userEvent.keyboard("{Enter}");
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", {
+      id: "switch",
+      input: { branch: "main", remote: null, dirty: "carry" },
+    });
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("고친 파일 3개를 main 브랜치로 가져왔어요"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("여기 두기는 두고 간 곳과 꺼낸 것을 알린다", async () => {
+    const onDone = show();
+    vi.mocked(api.status).mockResolvedValue(dirty(2));
+    vi.mocked(api.switchPlan).mockResolvedValue({ dirtyFiles: 2, canCarry: true, reason: null, blocked: [], blockedTotal: 0 });
+    vi.mocked(api.executeAction).mockResolvedValue({
+      kind: "switched",
+      branch: "main",
+      parkedOn: "로그인 기능",
+      unparked: true,
+      unparkBlocked: false,
+      files: 2,
+      carried: false,
+    });
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await waitFor(() => expect(api.status).toHaveBeenCalled());
+    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "여기 두기" }));
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", {
+      id: "switch",
+      input: { branch: "main", remote: null, dirty: "park" },
+    });
+    await vi.waitFor(() =>
+      expect(onDone).toHaveBeenCalledWith("고친 파일 2개를 로그인 기능 브랜치에 두고 왔어요 · 두고 간 파일을 꺼냈어요"),
+    );
+  });
+
+  it("닫기는 아무것도 하지 않는다", async () => {
+    show();
+    vi.mocked(api.status).mockResolvedValue(dirty(1));
+    vi.mocked(api.switchPlan).mockResolvedValue({ dirtyFiles: 1, canCarry: true, reason: null, blocked: [], blockedTotal: 0 });
+    await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+    await waitFor(() => expect(api.status).toHaveBeenCalled());
+    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "닫기" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(api.executeAction).not.toHaveBeenCalled();
   });
 
   it("없는 이름을 쓰고 Enter면 새 브랜치", async () => {

@@ -20,6 +20,9 @@ const OLD_TERMS = [
   "잠시 치워두기",
   "겹친 부분",
   "바뀐 내용",
+  // park의 옛 쉬운 이름(D-195).
+  "맡겨",
+  "맡긴",
 ];
 
 function glossaryStrings(glossary: typeof glossaryKo): [string, string][] {

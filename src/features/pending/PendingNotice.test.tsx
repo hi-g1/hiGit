@@ -50,7 +50,7 @@ describe("끝나지 않은 작업 알림", () => {
   it("줄마다 문장과 단추", async () => {
     show(view({ staleLocks: ["index.lock"], leftoverParked: 2, otherOperation: "rebase" }));
     expect(await screen.findByText("멈춘 작업 파일 1개")).toBeInTheDocument();
-    expect(screen.getByText("남은 맡겨 둔 파일 2건")).toBeInTheDocument();
+    expect(screen.getByText("남은 두고 간 파일 2건")).toBeInTheDocument();
     const other = screen.getAllByRole("status")[2]!;
     expect(other).toHaveTextContent("리베이스");
     expect(other).toHaveTextContent("다른 도구에서 시작함");
@@ -93,14 +93,14 @@ describe("끝나지 않은 작업 알림", () => {
     show(view({ leftoverParked: 2 }));
     await userEvent.click(await screen.findByRole("button", { name: "복구하기" }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "recover-parked" });
-    await vi.waitFor(() => expect(useToastStore.getState().toast?.text).toBe("맡겨 둔 파일 2건을 복구했어요"));
+    await vi.waitFor(() => expect(useToastStore.getState().toast?.text).toBe("두고 간 파일 2건을 복구했어요"));
   });
 
   it("닫은 줄은 다시 보이지 않는다", async () => {
     show(view({ leftoverParked: 1, otherOperation: "revert" }));
-    const line = (await screen.findByText("남은 맡겨 둔 파일 1건")).closest("[role=status]") as HTMLElement;
+    const line = (await screen.findByText("남은 두고 간 파일 1건")).closest("[role=status]") as HTMLElement;
     await userEvent.click(within(line).getByRole("button", { name: "닫기" }));
-    expect(screen.queryByText("남은 맡겨 둔 파일 1건")).not.toBeInTheDocument();
+    expect(screen.queryByText("남은 두고 간 파일 1건")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("되돌리기");
   });
 
