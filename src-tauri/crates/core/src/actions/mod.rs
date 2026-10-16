@@ -20,6 +20,7 @@ mod rewrite;
 mod stage;
 pub(crate) mod stash;
 pub(crate) mod switch;
+mod tag;
 
 pub use amend::AmendAction;
 pub use branch_create::BranchCreateAction;
@@ -39,6 +40,7 @@ pub use rewrite::RewriteAction;
 pub use stage::PathsAction;
 pub use stash::StashAction;
 pub use switch::{SwitchAction, SwitchReport};
+pub use tag::TagAction;
 
 use git::RepoPath;
 
@@ -100,6 +102,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(PickAction::cherry_pick()))?;
     registry.register(Box::new(ResetAction::new()))?;
     registry.register(Box::new(RewriteAction::new()))?;
+    registry.register(Box::new(TagAction::create()))?;
+    registry.register(Box::new(TagAction::delete()))?;
     Ok(())
 }
 

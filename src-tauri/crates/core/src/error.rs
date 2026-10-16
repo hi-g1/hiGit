@@ -113,6 +113,10 @@ pub enum CoreError {
     #[error("지울 수 없는 브랜치입니다")]
     BranchProtected,
 
+    /// 주석 태그(태그 객체)라 지우지 않는다(D-104).
+    #[error("주석 태그입니다")]
+    AnnotatedTag,
+
     /// 버전에 남길 이름·이메일이 없다(git을 부르기 전에 알아챔).
     #[error("이름과 이메일이 없습니다")]
     IdentityMissing,

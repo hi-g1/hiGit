@@ -26,7 +26,7 @@ pub use input::{
     ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
     FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, OidInput, PathsInput,
     RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput,
-    TakeOutInput, TakeOutSource,
+    TagDeleteInput, TagInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -439,6 +439,12 @@ pub enum ActionResult {
     Reset {
         dropped: u32,
     },
+    Tagged {
+        name: String,
+    },
+    TagDeleted {
+        name: String,
+    },
     /// 기록을 정리했다. 남은·뺀·묶어 합친 버전 수.
     Rewritten {
         kept: u32,
@@ -525,6 +531,8 @@ impl From<Outcome> for ActionResult {
             }
             Outcome::Picked { short_oid, summary } => ActionResult::Picked { short_oid, summary },
             Outcome::Reset { dropped } => ActionResult::Reset { dropped },
+            Outcome::Tagged { name } => ActionResult::Tagged { name },
+            Outcome::TagDeleted { name } => ActionResult::TagDeleted { name },
             Outcome::Rewritten {
                 kept,
                 dropped,
@@ -615,6 +623,7 @@ pub enum ErrorCode {
     TagExists,
     BranchProtected,
     NoChange,
+    AnnotatedTag,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -706,6 +715,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::BranchProtected => ErrorCode::BranchProtected,
             CoreError::NoChange => ErrorCode::NoChange,
             CoreError::IdentityMissing => ErrorCode::IdentityMissing,
+            CoreError::AnnotatedTag => ErrorCode::AnnotatedTag,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {
                 ErrorCode::Internal

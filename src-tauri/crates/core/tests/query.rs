@@ -270,7 +270,9 @@ fn action_input_tags_match_registry() {
             | ActionInput::Revert(_)
             | ActionInput::CherryPick(_)
             | ActionInput::Reset(_)
-            | ActionInput::RebaseI(_) => {}
+            | ActionInput::RebaseI(_)
+            | ActionInput::Tag(_)
+            | ActionInput::TagDelete(_) => {}
         }
     }
     let paths = PathsInput {
@@ -338,6 +340,14 @@ fn action_input_tags_match_registry() {
             oid: "a".repeat(40),
         }),
         ActionInput::RebaseI(higit_core::view::RewriteInput { steps: vec![] }),
+        ActionInput::Tag(higit_core::view::TagInput {
+            oid: "a".repeat(40),
+            name: "v1".into(),
+        }),
+        ActionInput::TagDelete(higit_core::view::TagDeleteInput {
+            name: "v1".into(),
+            oid: "a".repeat(40),
+        }),
     ];
     samples.iter().for_each(every_variant);
 

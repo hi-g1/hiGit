@@ -340,6 +340,8 @@ fn registered_actions_match_spec_risk() {
             ("cherry-pick", "cherry-pick", Risk::Normal),
             ("reset", "reset", Risk::Danger),
             ("rebase-i", "rebase-i", Risk::Danger),
+            ("tag", "tag", Risk::Safe),
+            ("tag-delete", "tag", Risk::Safe),
         ]
     );
 }

@@ -292,6 +292,7 @@ export const ko = {
     tagExists: `같은 이름의 ${josa(t("tag"), "이/가")} 이미 있어요.`,
     branchProtected: `지금 ${josa(t("branch"), "과/와")} 기본 ${josa(t("branch"), "은/는")} 지울 수 없어요.`,
     noChange: "이미 같은 내용이에요.",
+    annotatedTag: `설명이 달린 ${josa(t("tag"), "은/는")} 앱에서 지우지 않아요.`,
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",
     invalidBranchName: `${t("branch")} 이름으로 쓸 수 없는 글자가 있어요.`,

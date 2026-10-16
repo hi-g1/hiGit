@@ -110,6 +110,12 @@ pub enum Outcome {
     Reset {
         dropped: u32,
     },
+    Tagged {
+        name: String,
+    },
+    TagDeleted {
+        name: String,
+    },
     /// 기록을 정리했다. 남은·뺀·묶어 합친 버전 수.
     Rewritten {
         kept: u32,

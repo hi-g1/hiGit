@@ -52,6 +52,10 @@ pub enum ActionInput {
     Reset(OidInput),
     /// 기록 정리: 고른 구간의 순서 바꾸기·묶기·빼기·메시지 고치기(D-100, D-106).
     RebaseI(RewriteInput),
+    /// 고른 버전에 가벼운 태그를 단다(D-104).
+    Tag(TagInput),
+    /// 태그를 지운다(가벼운 태그만).
+    TagDelete(TagDeleteInput),
 }
 
 impl ActionInput {
@@ -84,6 +88,8 @@ impl ActionInput {
             ActionInput::CherryPick(_) => "cherry-pick",
             ActionInput::Reset(_) => "reset",
             ActionInput::RebaseI(_) => "rebase-i",
+            ActionInput::Tag(_) => "tag",
+            ActionInput::TagDelete(_) => "tag-delete",
         }
     }
 
@@ -291,6 +297,21 @@ pub enum RewriteKindInput {
     /// 바로 아래 단계의 버전에 합친다.
     Squash,
     Drop,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TagInput {
+    pub oid: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TagDeleteInput {
+    pub name: String,
+    /// 화면이 본, 태그가 가리키는 버전.
+    pub oid: String,
 }
 
 /// 노선도에서 고른 버전 해시. core가 다시 확인한다(D-099).

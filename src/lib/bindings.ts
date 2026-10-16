@@ -101,7 +101,11 @@ export type ActionInput =
 /**  지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐). */
 { id: "reset"; input: OidInput } | 
 /**  기록 정리: 고른 구간의 순서 바꾸기·묶기·빼기·메시지 고치기(D-100, D-106). */
-{ id: "rebase-i"; input: RewriteInput };
+{ id: "rebase-i"; input: RewriteInput } | 
+/**  고른 버전에 가벼운 태그를 단다(D-104). */
+{ id: "tag"; input: TagInput } | 
+/**  태그를 지운다(가벼운 태그만). */
+{ id: "tag-delete"; input: TagDeleteInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -117,7 +121,7 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 /**  고른 버전을 지금 브랜치로 복사했다. */
 { kind: "picked"; shortOid: string; summary: string } | 
 /**  지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수. */
-{ kind: "reset"; dropped: number } | 
+{ kind: "reset"; dropped: number } | { kind: "tagged"; name: string } | { kind: "tagDeleted"; name: string } | 
 /**  기록을 정리했다. 남은·뺀·묶어 합친 버전 수. */
 { kind: "rewritten"; kept: number; dropped: number; joined: number } | 
 /**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
@@ -344,7 +348,7 @@ export type DiffRequest = {
 	untracked: boolean,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
 "indexLocked" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
@@ -766,6 +770,17 @@ export type SwitchInput = {
 export type SyncInput = {
 	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
 	locale: string,
+};
+
+export type TagDeleteInput = {
+	name: string,
+	/**  화면이 본, 태그가 가리키는 버전. */
+	oid: string,
+};
+
+export type TagInput = {
+	oid: string,
+	name: string,
 };
 
 export type TakeOutInput = {

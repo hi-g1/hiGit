@@ -154,5 +154,17 @@
     "glossaryId": "rebase-i",
     "risk": "danger",
     "undo": "restoreTree"
+  },
+  {
+    "id": "tag",
+    "glossaryId": "tag",
+    "risk": "safe",
+    "undo": "restoreRef"
+  },
+  {
+    "id": "tag-delete",
+    "glossaryId": "tag",
+    "risk": "safe",
+    "undo": "restoreRef"
   }
 ]

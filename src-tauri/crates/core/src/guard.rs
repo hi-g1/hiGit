@@ -18,7 +18,6 @@ pub(crate) enum Scope {
     /// 로컬 브랜치 끝에서 닿음(복사).
     BranchReachable,
     /// 로컬 브랜치 끝에서 닿거나 작업 내역에 버전으로 있음(태그·새 브랜치의 시작, 이때 파일 보기).
-    #[allow(dead_code)] // 계획 008 E16부터 쓴다.
     BranchOrActivity,
 }
 

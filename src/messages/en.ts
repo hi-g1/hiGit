@@ -263,6 +263,7 @@ export const en: Messages = {
     tagExists: `A ${t("tag").toLowerCase()} with the same name already exists.`,
     branchProtected: `The current and default ${t("branch").toLowerCase()} can't be deleted.`,
     noChange: "It's already the same.",
+    annotatedTag: `A ${t("tag").toLowerCase()} with a description isn't deleted in the app.`,
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",
     invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,
