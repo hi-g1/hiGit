@@ -5,17 +5,17 @@ import { commitNode, type RouteNode } from "../model";
 import { fitText, textWidth } from "./geometry";
 import { branchKey } from "./lanes";
 import { buildRoute } from "./route";
-import { emptyScene, type Scene, type SceneStation } from "./scene";
+import { emptyScene, SCENE_FONT, type Scene, type SceneStation } from "./scene";
 
 export type Density = "home" | "preview" | "mini";
 export type HorizontalLabels = { here: string; changed: (n: number) => string };
 
-/** 높이: 홈·큰 노선도 104, 작은 노선도 28. */
+/** 높이(장면 단위, D-153): 홈·큰 노선도 104, 작은 노선도 28. 화면은 배율을 곱한다. */
 export const MAP_HEIGHT = 104;
 export const MINI_HEIGHT = 28;
 
-/** 노선도 글자 크기(--font-size-sm). */
-const FONT = 13;
+/** 노선도 글자 크기(장면 단위, 배율 1일 때 --font-size-sm과 같음). */
+const FONT = SCENE_FONT;
 const LEFT = 24;
 const STEP = 120;
 const MIN_STEP = 84;
@@ -203,7 +203,8 @@ export function layoutHorizontal(view: HomeMapView, width: number, density: Dens
     scene.stations.push(station(c.oid, { title: c.summary }));
     if (spec.names) scene.texts.push({ x, y: nameY, text: fitText(c.summary, nameRoom(step), FONT), tone: "text", anchor: "middle" });
     if (!mini && view.upstreamOid === c.oid && view.upstreamLabel) {
-      scene.tags.push({ x, y: (spec.names === "above" ? y + 26 : y - 26), text: view.upstreamLabel });
+      const text = view.upstreamLabel;
+      scene.tags.push({ x, y: spec.names === "above" ? y + 26 : y - 26, text, width: textWidth(text, FONT) + 16 });
     }
   });
   if (mini) return scene;

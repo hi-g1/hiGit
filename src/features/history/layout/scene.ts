@@ -1,5 +1,8 @@
-// 노선도 장면(architecture.md "버전 기록 그리기 계층", D-090). 배치가 만든 픽셀 좌표만 갖고 방향을
-// 모른다. 버전 기록(세로)·홈·시작 화면(가로)이 같은 장면을 같은 Renderer로 그린다.
+// 노선도 장면(architecture.md "버전 기록 그리기 계층", D-090). 배치가 만든 좌표(배율 1일 때 px인 단위)만
+// 갖고 방향을 모른다. 버전 기록(세로)·홈·시작 화면(가로)이 같은 장면을 같은 Renderer로 그린다.
+
+/** 장면 글자 크기(단위). SVG `fontSize`로 주고 그릴 때 배율이 한 번 곱해진다(D-153). */
+export const SCENE_FONT = 13;
 
 /** 색 이름. 그리는 쪽이 palette로 CSS 색(`var(--graph-n)` 등)으로 바꾼다. 글자에는 쓰지 않는다(D-031). */
 export type ColorKey = string;
@@ -40,8 +43,8 @@ export type SceneText = {
   anchor: "start" | "middle" | "end";
 };
 
-/** 역 위의 작은 표(예: upstream "GitHub"). */
-export type SceneTag = { x: number; y: number; text: string };
+/** 역 위의 작은 표(예: upstream "GitHub"). `width`는 글자 폭에 맞춘 바탕 폭. */
+export type SceneTag = { x: number; y: number; text: string; width: number };
 
 export type Scene = {
   width: number;

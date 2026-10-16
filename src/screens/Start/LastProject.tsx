@@ -6,6 +6,7 @@ import { pickLastVersion, pickStatus } from "../../features/start/summary";
 import type { ApiError, ProjectSummaryView, RecentProject } from "../../lib/api";
 import { useRoutePreview } from "../../lib/queries";
 import { formatDate, formatRelative } from "../../lib/time";
+import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { useUiStore } from "../../state/uiStore";
@@ -25,6 +26,7 @@ export function LastProject({
 }) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
+  const scale = useUiScale();
   const open = useOpenProject();
   const selectFirstChange = useRepoStore((s) => s.setSelectFirstChange);
   const gone =
@@ -58,7 +60,7 @@ export function LastProject({
       </p>
       {!gone && hasCommits && !preview.isError && (map === undefined || map.currentCommits.length > 0) && (
         // 불러오는 동안에도 같은 높이를 두어 아래가 밀리지 않게 한다.
-        <div className={styles.route} style={{ height: MAP_HEIGHT }}>
+        <div className={styles.route} style={{ height: MAP_HEIGHT * scale }}>
           {map && (
             <RoutePreview
               view={map}

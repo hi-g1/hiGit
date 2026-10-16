@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AppProviders, createQueryClient } from "../../App";
+import { useUiStore } from "../../state/uiStore";
 import { buildRoute, ROW_H, verticalScene } from "./layout/route";
 import { commitNode, type RouteNode } from "./model";
 import { branchPalette } from "./render/palette";
@@ -92,6 +93,22 @@ describe("노선도 목록", () => {
     // 스크롤 막대는 고르지 않는다.
     fireEvent.pointerDown(list, { button: 0, clientX: 790, clientY: 5 });
     expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it("배율 2면 행 높이·그래프 폭이 두 배이고 누른 자리의 행을 고른다", () => {
+    useUiStore.setState({ uiScale: 2 });
+    const onActivate = vi.fn();
+    render(<List list={nodes(5)} onActivate={onActivate} />);
+    const rows = screen.getAllByRole("option");
+    expect(rows[3]!.style.top).toBe(`${3 * ROW_H * 2}px`);
+    expect(rows[3]!.style.height).toBe(`${ROW_H * 2}px`);
+    const svg = document.querySelector("svg")!;
+    expect(Number(svg.getAttribute("height"))).toBe(5 * ROW_H * 2);
+    const list = screen.getByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: ROW_H * 2 * 2 + 5 });
+    expect(onActivate).toHaveBeenCalledWith("c2".padEnd(40, "0"));
   });
 
   it("저장소 글자는 bdi 안에 글자로, 행 이름에 이름·작성자·표시를 담는다", () => {

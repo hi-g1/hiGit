@@ -50,6 +50,9 @@ describe("홈 두 줄 노선도(같은 배치 함수, D-090)", () => {
 
   it("upstream이 가리키는 역에 표시를 단다", () => {
     expect(home(view({ upstreamOid: c(1).oid, upstreamLabel: "GitHub" })).tags[0]?.text).toBe("GitHub");
+    // 이름표 바탕 폭은 글자 폭 + 16(D-153).
+    const long = home(view({ upstreamOid: c(1).oid, upstreamLabel: "회사 저장소" })).tags[0]!;
+    expect(long.width).toBeCloseTo(textWidth("회사 저장소", 13) + 16);
   });
 
   it("첫 역 이름이 왼쪽 끝 밖으로 나가지 않는다(한 줄 보기)", () => {

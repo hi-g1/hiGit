@@ -15,4 +15,6 @@ export type Renderer = (props: {
   /** 스크린 리더 이름. 없으면 장식으로 숨긴다. */
   label?: string;
   viewport?: Viewport;
+  /** 화면 배율(D-153). 장면은 그대로 두고 그린 크기만 곱한다. 기본 1. */
+  scale?: number;
 }) => ReactElement;

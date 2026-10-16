@@ -1,4 +1,4 @@
-import type { SceneStation } from "../layout/scene";
+import { SCENE_FONT, type SceneStation } from "../layout/scene";
 import type { Palette, Renderer, Viewport } from "./Renderer";
 import styles from "./SvgRenderer.module.css";
 
@@ -6,13 +6,14 @@ const inView = (y: number, v: Viewport | undefined, pad: number) => !v || (y >= 
 
 /**
  * 노선도를 SVG로 그린다. 선과 점만 브랜치 색이고, 글자는 --text·--text-muted다(D-031).
- * 역 이름은 저장소에서 온 글자라 React 글자로만 그린다(D-037).
+ * 역 이름은 저장소에서 온 글자라 React 글자로만 그린다(D-037). `scale`은 크기에만 곱하고 `viewBox`는
+ * 장면 그대로라 선·점·글자가 함께 커진다(D-153).
  */
-export const SvgRenderer: Renderer = ({ scene, palette, label, viewport }) => (
+export const SvgRenderer: Renderer = ({ scene, palette, label, viewport, scale = 1 }) => (
   <svg
     className={styles.svg}
-    width={scene.width}
-    height={scene.height}
+    width={scene.width * scale}
+    height={scene.height * scale}
     viewBox={`0 0 ${scene.width} ${scene.height}`}
     role={label ? "img" : undefined}
     aria-label={label}
@@ -39,8 +40,8 @@ export const SvgRenderer: Renderer = ({ scene, palette, label, viewport }) => (
       ))}
     {scene.tags.map((t, i) => (
       <g key={i} className={styles.tag}>
-        <rect x={t.x - 32} y={t.y - 12} width={64} height={18} rx={3} />
-        <text x={t.x} y={t.y + 1} textAnchor="middle">
+        <rect x={t.x - t.width / 2} y={t.y - 12} width={t.width} height={18} rx={3} />
+        <text x={t.x} y={t.y + 1} textAnchor="middle" fontSize={SCENE_FONT}>
           {t.text}
         </text>
       </g>
@@ -48,7 +49,14 @@ export const SvgRenderer: Renderer = ({ scene, palette, label, viewport }) => (
     {scene.texts
       .filter((t) => inView(t.y, viewport, 24))
       .map((t, i) => (
-        <text key={i} x={t.x} y={t.y} textAnchor={t.anchor} className={t.tone === "text" ? styles.text : styles.muted}>
+        <text
+          key={i}
+          x={t.x}
+          y={t.y}
+          textAnchor={t.anchor}
+          fontSize={SCENE_FONT}
+          className={t.tone === "text" ? styles.text : styles.muted}
+        >
           {t.text}
         </text>
       ))}

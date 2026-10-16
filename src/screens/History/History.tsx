@@ -14,6 +14,7 @@ import { RouteList } from "../../features/history/RouteList";
 import { useCommitStats } from "../../features/history/stats";
 import { HISTORY_MAX, useLogPages, useStatus } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
+import { useUiScale } from "../../lib/useUiScale";
 import { useWheelZoom } from "../../lib/wheelZoom";
 import { useMessages } from "../../messages";
 import { useHistoryStore } from "../../state/historyStore";
@@ -44,6 +45,7 @@ export function History({
   otherOperation?: boolean;
 }) {
   const m = useMessages();
+  const scale = useUiScale();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
   const status = useStatus(repo).data;
@@ -107,11 +109,11 @@ export function History({
     auto.current = 0;
   }, [zoom, scope]);
   useEffect(() => {
-    if (shown.length * ROW_H < 2 * 600 && hasNextPage && !isFetchingNextPage && auto.current < AUTO_PAGES) {
+    if (shown.length * ROW_H * scale < 2 * 600 && hasNextPage && !isFetchingNextPage && auto.current < AUTO_PAGES) {
       auto.current += 1;
       void fetchNextPage();
     }
-  }, [shown.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [shown.length, scale, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // "지금 여기": 지금 위치가 아직 안 왔으면 이어 받아 찾는다(최대 25쪽).
   const seeking = useRef(0);
@@ -206,8 +208,9 @@ export function History({
   const selectedNode = selectedRow >= 0 ? shown[selectedRow] : undefined;
   const info = selectedNode ? stationInfo(selectedNode, route.layout.onHeadLine, ancestors) : null;
   const anchor = {
-    x: (scene.stations.find((s) => s.id === selectedId)?.x ?? 0) + 16,
-    y: selectedRow * ROW_H + ROW_H / 2,
+    // 목록 안 좌표(px): 장면 단위에 배율을 곱한다(D-153).
+    x: (scene.stations.find((s) => s.id === selectedId)?.x ?? 0) * scale + 16,
+    y: (selectedRow * ROW_H + ROW_H / 2) * scale,
   };
   const env: MenuEnv = {
     repo,

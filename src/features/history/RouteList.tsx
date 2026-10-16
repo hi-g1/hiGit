@@ -10,6 +10,7 @@ import {
 } from "react";
 import { isExtendClick, listKey } from "../../lib/listKeys";
 import { formatDate } from "../../lib/time";
+import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { rowAt } from "./layout/hit";
@@ -84,6 +85,9 @@ export function RouteList({
 }: Props) {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
+  // 장면은 단위(ROW_H), 화면 행 높이는 배율을 곱한 px(D-153).
+  const scale = useUiScale();
+  const rowPx = ROW_H * scale;
   const box = useRef<HTMLDivElement | null>(null);
   // 코드가 옮긴 스크롤(고른 행 보이기)은 사람의 스크롤이 아니다.
   const programmatic = useRef(false);
@@ -115,7 +119,7 @@ export function RouteList({
       const el = box.current;
       if (!el) return;
       setScrollTop(el.scrollTop);
-      if (onNearEnd && el.scrollTop + viewHeight >= total * ROW_H - 2 * viewHeight) onNearEnd();
+      if (onNearEnd && el.scrollTop + viewHeight >= total * rowPx - 2 * viewHeight) onNearEnd();
     });
   };
 
@@ -127,7 +131,7 @@ export function RouteList({
       onSelect(node.id);
       const el = box.current;
       if (el) {
-        const top = scrollToRow(next, el.scrollTop, viewHeight, ROW_H);
+        const top = scrollToRow(next, el.scrollTop, viewHeight, rowPx);
         if (top !== el.scrollTop) {
           programmatic.current = true;
           el.scrollTop = top;
@@ -135,7 +139,7 @@ export function RouteList({
         }
       }
     },
-    [nodes, total, onSelect, viewHeight],
+    [nodes, total, onSelect, viewHeight, rowPx],
   );
 
   // 역 메뉴는 포털로 그려지지만 React 이벤트는 포털을 넘어 이 목록으로 올라온다. 메뉴 안의 누름·키가
@@ -148,7 +152,7 @@ export function RouteList({
     const move = listKey({ ...e, isComposing: e.nativeEvent.isComposing });
     if (!move) return;
     e.preventDefault();
-    const page = Math.max(1, Math.floor(viewHeight / ROW_H) - 1);
+    const page = Math.max(1, Math.floor(viewHeight / rowPx) - 1);
     const at = selected < 0 ? -1 : selected;
     switch (move) {
       case "open":
@@ -179,7 +183,7 @@ export function RouteList({
     if (!el) return undefined;
     const rect = el.getBoundingClientRect();
     if (e.clientX - rect.left > el.clientWidth) return undefined;
-    const row = rowAt(e.clientY - rect.top + el.scrollTop, ROW_H, total);
+    const row = rowAt(e.clientY - rect.top + el.scrollTop, rowPx, total);
     return row === null ? undefined : nodes[row];
   };
 
@@ -206,7 +210,7 @@ export function RouteList({
   };
 
 
-  const { first, last } = visibleRows(scrollTop, viewHeight, ROW_H, total);
+  const { first, last } = visibleRows(scrollTop, viewHeight, rowPx, total);
   useEffect(() => {
     onWindow?.(first, last);
   }, [first, last, onWindow]);
@@ -214,13 +218,13 @@ export function RouteList({
   useEffect(() => {
     const el = box.current;
     if (!el || selected < 0) return;
-    const top = scrollToRow(selected, el.scrollTop, viewHeight, ROW_H);
+    const top = scrollToRow(selected, el.scrollTop, viewHeight, rowPx);
     if (top !== el.scrollTop) {
       programmatic.current = true;
       el.scrollTop = top;
       setScrollTop(top);
     }
-  }, [selected, viewHeight]);
+  }, [selected, viewHeight, rowPx]);
   const ranged = (rangeIds?.size ?? 0) > 1;
   const shown: number[] = [];
   for (let i = first; i < last; i++) shown.push(i);
@@ -259,11 +263,12 @@ export function RouteList({
       onContextMenu={onContext}
       onScroll={onScroll}
     >
-      <div className={styles.content} style={{ height: total * ROW_H }}>
-        <div className={styles.graph} style={{ width: scene.width }}>
+      <div className={styles.content} style={{ height: total * rowPx }}>
+        <div className={styles.graph} style={{ width: scene.width * scale }}>
           <SvgRenderer
             scene={scene}
             palette={palette}
+            scale={scale}
             viewport={{ top: first * ROW_H, bottom: last * ROW_H }}
           />
         </div>
@@ -279,7 +284,7 @@ export function RouteList({
               aria-setsize={total}
               aria-label={describe(node, i)}
               className={`${styles.row} ${i === selected ? styles.selected : ""} ${rangeIds?.has(node.id) ? styles.inRange : ""}`}
-              style={{ top: i * ROW_H, height: ROW_H, paddingLeft: scene.width }}
+              style={{ top: i * rowPx, height: rowPx, paddingLeft: scene.width * scale }}
             >
               {node.kind === "fold" ? (
                 <span className={styles.fold}>{m.routeFold(node.count)}</span>

@@ -23,14 +23,13 @@
   }
 }
 
+/* 글자 크기는 SVG fontSize 속성(장면 단위)이라 배율이 한 번만 곱해진다(D-153) */
 .text {
   fill: var(--text);
-  font-size: var(--font-size-sm);
 }
 
 .muted {
   fill: var(--text-muted);
-  font-size: var(--font-size-sm);
 }
 
 .tag rect {
@@ -39,5 +38,4 @@
 
 .tag text {
   fill: var(--primary-text);
-  font-size: var(--font-size-sm);
 }

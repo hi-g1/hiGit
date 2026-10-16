@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { emptyScene, type Scene } from "../layout/scene";
+import { emptyScene, SCENE_FONT, type Scene } from "../layout/scene";
 import { SvgRenderer } from "./SvgRenderer";
 
 function scene(): Scene {
@@ -33,6 +33,26 @@ describe("SVG 그리기", () => {
     // 접힌 구간 마름모와 선 경로
     expect([...container.querySelectorAll("path")].some((p) => p.getAttribute("d")?.endsWith("Z"))).toBe(true);
     expect(container.querySelector("circle[r='11']")).not.toBeNull();
+  });
+
+  it("배율은 그린 크기에만 곱하고 장면(viewBox)과 글자 크기는 그대로", () => {
+    const { container } = render(<SvgRenderer scene={scene()} palette={() => "x"} scale={1.5} />);
+    const svg = container.querySelector("svg")!;
+    expect(svg.getAttribute("width")).toBe("300");
+    expect(svg.getAttribute("height")).toBe("1500");
+    expect(svg.getAttribute("viewBox")).toBe("0 0 200 1000");
+    expect(container.querySelector("text")?.getAttribute("font-size")).toBe(String(SCENE_FONT));
+  });
+
+  it("이름표 바탕 폭은 장면의 폭을 따른다", () => {
+    const s = scene();
+    s.tags.push({ x: 100, y: 50, text: "GitHub", width: 60 }, { x: 100, y: 80, text: "origin 저장소", width: 110 });
+    const { container } = render(<SvgRenderer scene={s} palette={() => "x"} />);
+    const rects = [...container.querySelectorAll("rect")];
+    expect(rects.map((r) => [r.getAttribute("x"), r.getAttribute("width")])).toEqual([
+      ["70", "60"],
+      ["45", "110"],
+    ]);
   });
 
   it("이름이 없으면 장식으로 숨긴다", () => {
