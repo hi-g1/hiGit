@@ -74,6 +74,11 @@ effort: high
 - [ ] `Irreversible` 액션이 정확히 `discard`·`clear-lock`·`force-push`·`remote-branch-delete`·`remote-branch-rename`이고 모두 확인 토큰(입력 전체에 묶임)과 화면 `ConfirmDialog`(또는 전용 확인 창)를 거친다. `PublishedRule::Allow`는 앱 설정을 읽는 호출부(`published_rule`)에서만 만든다. 원격 기본 브랜치는 어떤 원격 쓰기에서도 거절된다
 - [ ] `settings.json`에 비밀·저장소 경로가 없다. `publish`는 화면이 이름·설명·공개 여부만 보내고 주소는 core가 만든다. 공개는 `acknowledgePublic` 없이는 거절된다
 - [ ] 반복 4b 새 명령 7개(`settings_get`, `settings_set`, `query_identity`, `query_force_push_plan`, `query_remote_branch_plan`, `query_publish_draft`, `query_github_repos`)가 네 곳에 있다
+- [ ] 반복 4c HTTP 쓰기(D-176): `Method::Put`·`Patch`는 hosting `github.rs`의 `api_write`로만 보낸다. 새 HTTP 쓰기 액션(`pr-comment`·`pr-merge`·`pr-close`·`pr-reopen`)은 원격 잠금만·journal 없음이고 입력을 보내기 전에 core가 검사한다. 서버가 준 글(댓글·저장소 이름)은 잘라서 글자로만, URL 칸은 읽지 않는다
+- [ ] `Irreversible` 집합이 정확히 일곱(`discard`·`clear-lock`·`force-push`·`pr-merge`·`remote-branch-delete`·`remote-branch-rename`·`remote-tag-delete`)이고 모두 확인 토큰과 화면 `ConfirmDialog`를 거친다. `PushDeleteTag`는 값 있는 lease만(`rg -- "--force" src-tauri/crates/git/src`가 `refpush.rs`의 lease 꼴뿐)
+- [ ] 원격 이름 `fork`는 상수 `FORK_REMOTE` 하나이고 주소는 core가 만든다. 계정 이메일 주소가 hosting `account.rs`와 core `GitHubService::email_check` 밖으로 나가지 않는다(화면 타입에 칸 없음)
+- [ ] `auth_for` 호출이 모두 `use_helper`(설정 `gitHelper`)를 넘긴다(`rg "auth_for\(" src-tauri/crates/core/src`). `confirm_branch`는 core에서 바이트 비교한다(`guard::confirm_name`)
+- [ ] 반복 4c 새 명령 5개(`query_github_email_check`, `query_pr_repo`, `query_pr_comments`, `query_branch_protection`)와 `github_connect_start(add)`가 네 곳에 있다
 - [ ] 반복 4 새 명령 11개(`app_open_hosting_page`, `github_*` 5개, `query_clone_defaults`, `query_hosting_context`, `query_pr_list`, `query_pr_detail`, `query_pr_draft`)가 네 곳에 있고 `async` + `blocking()`이다. `rg "invoke|fetch\(" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 비어 있다
 
 ## 보고 형식
