@@ -303,3 +303,17 @@ fn rename_checks_names_and_allows_case_only_changes() {
             .any(|l| l == "Feature")
     );
 }
+
+#[test]
+fn rename_refuses_names_too_long_for_parked_files() {
+    let (t, _) = repo();
+    let dir = dir_of(&t);
+    let core = core(&dir);
+    // 한글 70자 = 210바이트: git 이름으로는 되지만 맡긴 ref 한 조각(200바이트)을 넘는다.
+    let long = "가".repeat(70);
+    assert_eq!(
+        code(&rename(&core, &dir, "기능", &long).unwrap_err()),
+        ErrorCode::InvalidInput
+    );
+    assert!(git(&dir, &["branch", "--list", "기능"]).contains("기능"));
+}

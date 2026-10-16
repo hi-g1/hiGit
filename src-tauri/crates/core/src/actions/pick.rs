@@ -83,12 +83,18 @@ impl Action for PickAction {
         let merge = |oid: &Oid| -> Result<bool> {
             Ok(git.resolve_ref(repo, &format!("{oid}^2"))?.is_some())
         };
-        let op = match self.kind {
+        let (op, picked) = match self.kind {
             OpKind::Revert => {
                 let oid = guard::verified_commit(git, repo, oid, Scope::HeadAncestor)?;
                 // 합친 버전은 첫 부모 쪽을 기준으로 되돌린다.
                 let mainline = merge(&oid)?.then_some(1);
-                GitOp::RevertStart { oid, mainline }
+                (
+                    GitOp::RevertStart {
+                        oid: oid.clone(),
+                        mainline,
+                    },
+                    oid,
+                )
             }
             _ => {
                 let oid = guard::verified_commit(git, repo, oid, Scope::BranchReachable)?;
@@ -100,16 +106,12 @@ impl Action for PickAction {
                         "이미 지금 브랜치에 있는 버전이에요",
                     ));
                 }
-                GitOp::CherryPickStart { oid }
+                (GitOp::CherryPickStart { oid: oid.clone() }, oid)
             }
         };
         if !git.has_identity(repo)? {
             return Err(CoreError::IdentityMissing);
         }
-        let picked = match &op {
-            GitOp::RevertStart { oid, .. } | GitOp::CherryPickStart { oid } => oid.clone(),
-            _ => unreachable!(),
-        };
         let git_dir = git.git_dir(repo)?;
         operation::write(
             &git_dir,

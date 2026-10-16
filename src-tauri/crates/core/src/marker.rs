@@ -25,7 +25,6 @@ pub(crate) enum Name {
     /// 맡겨 둔 파일 꺼내기의 겹침(D-083).
     Unpark,
     /// 복사·되돌리기·기록 정리(D-101).
-    #[allow(dead_code)] // 계획 008 E9부터 쓴다.
     Operation,
 }
 

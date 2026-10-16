@@ -257,8 +257,8 @@ pub(crate) fn drive(
                 None => Ok(None),
             };
         };
-        if !operation::verify_state(git, repo, marker)? {
-            // 표식과 다른 정리다. 건드리지 않는다.
+        // 표식과 다른 정리이거나 남은 할 일 목록이 앱이 쓴 모양이 아니면 건드리지 않는다(D-102).
+        if !operation::verify_state(git, repo, marker)? || !operation::verify_todo(&state, marker) {
             return Err(CoreError::OperationInProgress);
         }
         let paths = crate::actions::merge::conflict_paths(git, repo)?;

@@ -114,6 +114,13 @@ impl Action for BranchEditAction {
                 if to == from {
                     return Err(CoreError::NoChange);
                 }
+                // 맡긴 ref 이름 한 조각의 한도(맡기기와 같은 기준). git 이름 바꾸기 뒤에 맡긴 ref를
+                // 옮기다 실패하지 않게 먼저 본다.
+                let parked = crate::parked::ref_name(&to);
+                if parked.len() - crate::parked::PARKED_PREFIX.len() > crate::parked::MAX_NAME_BYTES
+                {
+                    return Err(CoreError::InvalidInput("브랜치 이름이 너무 길어요"));
+                }
                 // 대소문자만 다른 이름은 Windows에서 같은 파일이다. 같은 브랜치의 대소문자만 바꾸는
                 // 것은 `-M`으로 한다.
                 let case_only = to.to_lowercase() == from.to_lowercase();
