@@ -27,6 +27,7 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term, TermTooltip } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./History.module.css";
+import { isEscape } from "../../lib/keys";
 
 /** 접혀서 행이 모자랄 때 저절로 이어 받는 쪽 수. */
 const AUTO_PAGES = 10;
@@ -69,7 +70,7 @@ export function History({
   useEffect(() => {
     // Esc: 열린 메뉴(Radix가 처리) → 고른 구간 지우기 → 홈.
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (!isEscape(e) || e.defaultPrevented) return;
       if (useHistoryStore.getState().rangeIds.length > 0) {
         e.preventDefault();
         useHistoryStore.getState().clearRange();

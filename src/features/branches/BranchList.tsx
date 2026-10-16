@@ -35,6 +35,7 @@ import { useBranchListStore } from "./branchListStore";
 import { SwitchDialog } from "./SwitchDialog";
 import { useSwitch, type SwitchTarget } from "./useSwitch";
 import { Truncate } from "../../ui/Truncate";
+import { isEnter } from "../../lib/keys";
 
 type Props = {
   repo: string;
@@ -291,9 +292,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
-    } else if (e.key === "Enter") {
-      // 한글 조합 중 Enter는 글자를 확정하는 키라서 실행하지 않는다.
-      if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+    } else if (isEnter(e)) {
       e.preventDefault();
       const choice = choices[active];
       if (choice && !busy) void run(choice);
@@ -572,7 +571,7 @@ function RenameField({
         onFocus={(e) => e.currentTarget.select()}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Enter" || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+          if (!isEnter(e)) return;
           e.preventDefault();
           if (ready) onSubmit(name);
         }}

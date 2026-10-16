@@ -12,6 +12,7 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./Rewrite.module.css";
+import { isEscape } from "../../lib/keys";
 
 type Props = {
   repo: string;
@@ -50,7 +51,7 @@ export function Rewrite({ repo, onDone }: Props) {
   // 정리하는 동안에는 화면을 떠나지 않는다(끝나면 버전 기록으로 돌아간다).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented && !busy) setView("history");
+      if (isEscape(e) && !e.defaultPrevented && !busy) setView("history");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

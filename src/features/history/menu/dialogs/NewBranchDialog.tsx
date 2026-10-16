@@ -4,8 +4,9 @@ import { useBranchNameCheck } from "../../../../lib/queries";
 import { useMessages } from "../../../../messages";
 import { Button } from "../../../../ui/Button";
 import { runAction, type RunCtx } from "../run";
-import { composing, DialogFrame } from "../../../../ui/DialogFrame";
+import { DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./Dialogs.module.css";
+import { isEnter } from "../../../../lib/keys";
 
 type Props = {
   /** 시작할 버전과 그 이름(역 메뉴의 역, 작업 내역의 버전). */
@@ -54,7 +55,7 @@ export function NewBranchDialog({ oid, shortOid, summary, ctx, onClose }: Props)
         autoFocus
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Enter" || composing(e)) return;
+          if (!isEnter(e)) return;
           e.preventDefault();
           if (name.trim() && !busy && problem === null) void create();
         }}

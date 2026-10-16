@@ -19,6 +19,7 @@ import { Tooltip } from "../../ui/Tooltip";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./Activity.module.css";
 import { Truncate } from "../../ui/Truncate";
+import { isEscape } from "../../lib/keys";
 
 type Props = {
   repo: string;
@@ -47,7 +48,7 @@ export function Activity({ repo, onDone }: Props) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setView("home");
+      if (isEscape(e) && !e.defaultPrevented) setView("home");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

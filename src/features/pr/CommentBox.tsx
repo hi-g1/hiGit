@@ -8,6 +8,7 @@ import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./PrRow.module.css";
+import { isEscape } from "../../lib/keys";
 
 /**
  * 댓글 쓰기 칸(D-178). 확인 없이 단다(D-043). Ctrl+Enter도 되고 한글 조합 중에는 무시한다(단축키 표).
@@ -50,7 +51,7 @@ export function CommentBox({ repo, number }: { repo: string; number: number }) {
         disabled={pending}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Escape") e.stopPropagation();
+          if (!isEscape(e)) e.stopPropagation();
           if (matches("commit", e.nativeEvent)) {
             e.preventDefault();
             void send();

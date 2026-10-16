@@ -1,4 +1,5 @@
 import { useEffect, useState, type PointerEvent } from "react";
+import { isEscape } from "../../lib/keys";
 
 export type Drag = { from: number; to: number };
 
@@ -14,7 +15,7 @@ export function useDrag(count: number, rectOf: (i: number) => DOMRect | null, on
   useEffect(() => {
     if (!drag) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (!isEscape(e)) return;
       e.preventDefault();
       e.stopPropagation();
       setDrag(null);

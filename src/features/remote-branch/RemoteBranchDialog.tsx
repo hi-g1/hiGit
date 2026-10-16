@@ -5,7 +5,6 @@ import { queryKeys, useBranchNameCheck, useGitHubStatus, usePrForBranch, useRemo
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
-import { composing } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Loading } from "../../ui/Loading";
 import { Term } from "../../ui/Term";
@@ -15,6 +14,7 @@ import { CANCEL_AFTER_SECS, useProgress } from "../progress/useProgress";
 import styles from "../force-push/ForcePushDialog.module.css";
 import { NameConfirmField } from "./NameConfirmField";
 import { useRemoteBranchStore, type RemoteBranchTarget } from "./remoteBranchStore";
+import { isBlockedEnter } from "../../lib/keys";
 
 /**
  * 원격 브랜치 지우기·이름 바꾸기 확인 창(D-130, design.md "확인 대화상자"). 계획 조회가 준 `tip`만 입력에
@@ -127,7 +127,7 @@ function Dialog({ repo, target }: { repo: string; target: RemoteBranchTarget }) 
           onChange={(e) => setTo(e.target.value)}
           // 이름 칸의 Enter는 아무것도 하지 않는다(되돌릴 수 없는 일은 단추로만).
           onKeyDown={(e) => {
-            if (e.key === "Enter" || composing(e)) e.preventDefault();
+            if (isBlockedEnter(e)) e.preventDefault();
           }}
         />
       )}

@@ -3,10 +3,11 @@ import type { DirtyChoice, SwitchPlanView } from "../../lib/api";
 import { useSwitchPlan } from "../../lib/queries";
 import { useMessages, type Messages } from "../../messages";
 import { Button } from "../../ui/Button";
-import { DialogFrame, composing } from "../../ui/DialogFrame";
+import { DialogFrame } from "../../ui/DialogFrame";
 import { TermTooltip, useTermLabel } from "../../ui/Term";
 import styles from "./SwitchDialog.module.css";
 import type { SwitchTarget } from "./useSwitch";
+import { isComposingEnter } from "../../lib/keys";
 
 type Props = {
   repo: string;
@@ -63,7 +64,7 @@ export function SwitchDialog({ repo, target, from, files, pending, onChoose, onC
   }, [plan.isError]);
 
   const ignoreComposing = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && composing(e)) e.preventDefault();
+    if (isComposingEnter(e)) e.preventDefault();
   };
 
   return (

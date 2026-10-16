@@ -5,7 +5,7 @@ import { useAppStatus, useCloneDefaults, useGitHubStatus } from "../../lib/queri
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { Checkbox } from "../../ui/Checkbox";
-import { composing, DialogFrame } from "../../ui/DialogFrame";
+import { DialogFrame } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { useOpenProject } from "../open-project/useOpenProject";
@@ -18,6 +18,7 @@ import { RepoList } from "./RepoList";
 import { ProgressCount } from "../progress/ProgressCount";
 import styles from "./CloneDialog.module.css";
 import { Truncate } from "../../ui/Truncate";
+import { isEnter } from "../../lib/keys";
 
 /** 복제 대화상자(D-115). 열린 동안만 그린다. */
 export function CloneDialog() {
@@ -123,7 +124,7 @@ function CloneForm() {
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !composing(e)) void run();
+            if (isEnter(e)) void run();
           }}
         />
       </label>
@@ -155,7 +156,7 @@ function CloneForm() {
             setNameEdited(true);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !composing(e)) void run();
+            if (isEnter(e)) void run();
           }}
         />
       </label>

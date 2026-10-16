@@ -61,6 +61,26 @@ describe("화면 코드 린트", () => {
     expect(legacy.messages.filter((m) => m.severity === 2)).toEqual([]);
   });
 
+  it.each([
+    ["Escape 비교", `export const f = (e: KeyboardEvent) => e.key === "Escape";`],
+    ["Enter 아님 비교", `export const f = (e: KeyboardEvent) => e.key !== "Enter";`],
+    ["거꾸로 쓴 비교", `export const f = (e: KeyboardEvent) => "Enter" === e.key;`],
+    ["switch case", `export function f(e: KeyboardEvent) { switch (e.key) { case "Escape": return 1; } return 0; }`],
+  ])("화면 코드의 %s는 오류(D-137)", async (_name, code) => {
+    expect((await errors(code)).length).toBeGreaterThan(0);
+  });
+
+  it("src/lib에서는 키 비교가 통과하지만 다른 막는 문법은 그대로", async () => {
+    const [keys] = await eslint.lintText(`export const f = (e: KeyboardEvent) => e.key === "Escape";`, {
+      filePath: `${ROOT}src/lib/keys.ts`,
+    });
+    expect(keys.messages.filter((m) => m.severity === 2)).toEqual([]);
+    const [html] = await eslint.lintText(`export function f(el: HTMLElement, s: string) { el.innerHTML = s; }`, {
+      filePath: `${ROOT}src/lib/keys.ts`,
+    });
+    expect(html.messages.filter((m) => m.severity === 2).length).toBeGreaterThan(0);
+  });
+
   it("평범한 JSX 글자는 통과", async () => {
     expect(await errors(`export const A = (p: { s: string }) => <p>{p.s}</p>;`)).toEqual([]);
   });

@@ -4,7 +4,7 @@ import { ApiError, api, toApiError, type Visibility } from "../../lib/api";
 import { invalidateLog, queryKeys, usePublishDraft } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
-import { composing, DialogFrame } from "../../ui/DialogFrame";
+import { DialogFrame } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
@@ -13,6 +13,7 @@ import styles from "./PublishDialog.module.css";
 import { useSettingsStore } from "../settings/settingsStore";
 import { usePublishStore } from "./publishStore";
 import { useOwners } from "./useOwners";
+import { isBlockedEnter, isEnter } from "../../lib/keys";
 
 /** GitHub 저장소 이름 모양. 화면은 바로 안내만 하고 최종 검사는 core가 한다. */
 const NAME = /^[A-Za-z0-9._-]{1,100}$/;
@@ -161,7 +162,7 @@ function Dialog({ repo }: { repo: string }) {
             disabled={busy || created}
             onChange={(e) => setOtherOrg(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || composing(e)) e.preventDefault();
+              if (isBlockedEnter(e)) e.preventDefault();
             }}
           />
         </label>
@@ -177,7 +178,7 @@ function Dialog({ repo }: { repo: string }) {
           disabled={busy || created}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key !== "Enter" || composing(e)) return;
+            if (!isEnter(e)) return;
             e.preventDefault();
             submit();
           }}

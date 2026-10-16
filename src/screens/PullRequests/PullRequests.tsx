@@ -14,6 +14,7 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import styles from "./PullRequests.module.css";
 import { Truncate } from "../../ui/Truncate";
+import { isEscape } from "../../lib/keys";
 
 const FILTERS: PrStateFilterView[] = ["open", "closed", "all"];
 
@@ -39,7 +40,7 @@ export function PullRequests({ repo }: { repo: string }) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setView("home");
+      if (isEscape(e) && !e.defaultPrevented) setView("home");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

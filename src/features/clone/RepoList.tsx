@@ -7,9 +7,9 @@ import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
-import { composing } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import styles from "./CloneDialog.module.css";
+import { composing, isEnter } from "../../lib/keys";
 
 /** 찾기 칸에 글자가 있을 때 저절로 더 읽는 쪽 수(50개씩, 500개까지, D-185). */
 const SEARCH_PAGES = 10;
@@ -80,7 +80,7 @@ export function RepoList({ onPick }: { onPick: (repo: GitHubRepoRowView) => void
             e.preventDefault();
             list.current?.focus();
             move(0);
-          } else if (e.key === "Enter" && rows[active]) {
+          } else if (isEnter(e) && rows[active]) {
             e.preventDefault();
             onPick(rows[active]);
           }

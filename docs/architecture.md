@@ -39,7 +39,7 @@
 │  ├─ features/<action-id>/   액션·기능별 화면(예: identity, force-push, remote-branch, publish, clone, pr)
 │  ├─ ui/                    공용 부품(Button, Term, Tooltip, DialogFrame(대화상자 틀·키 차단·`composing`), ConfirmDialog(되돌릴 수 없는 일의 확인, 포커스는 "닫기"), ErrorNotice …)
 │  ├─ glossary/              ko.ts, en.ts  (용어 원본은 docs/spec.md 표)
-│  ├─ lib/                   api.ts(백엔드 호출, invoke는 lib/ 안에서만), events.ts(이벤트 구독), queries.ts(TanStack Query), useRepoWatch.ts, dialog.ts, copy.ts(클립보드), shortcuts.ts·useShortcut.ts(단축키 표와 판정은 여기만, D-056), bindings.ts·action-meta.json(생성물)
+│  ├─ lib/                   api.ts(백엔드 호출, invoke는 lib/ 안에서만), events.ts(이벤트 구독), keys.ts(Escape·Enter 판정과 한글 조합, 화면의 키 이름 비교는 ESLint가 막음, D-137), queries.ts(TanStack Query), useRepoWatch.ts, dialog.ts, copy.ts(클립보드), shortcuts.ts·useShortcut.ts(단축키 표와 판정은 여기만, D-056), bindings.ts·action-meta.json(생성물)
 │  ├─ messages/              ko.ts, en.ts 화면 문구(copy-rules.test.ts가 문구 규칙 확인)
 │  └─ styles/tokens.css      docs/design.md 토큰
 └─ src-tauri/               app 크레이트 겸 워크스페이스 루트(D-018)

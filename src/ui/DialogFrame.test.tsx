@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { composing, DialogFrame } from "./DialogFrame";
+import { composing } from "../lib/keys";
+import { DialogFrame } from "./DialogFrame";
 
 describe("DialogFrame", () => {
   it("제목·부제를 보이고 Esc로 닫는다", () => {

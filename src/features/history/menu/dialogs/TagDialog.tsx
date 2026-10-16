@@ -8,8 +8,9 @@ import { Term } from "../../../../ui/Term";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
 import { runAction } from "../run";
-import { composing, DialogFrame } from "../../../../ui/DialogFrame";
+import { DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./Dialogs.module.css";
+import { isEnter } from "../../../../lib/keys";
 
 type Props = { info: StationInfo; ctx: MenuCtx; onClose: () => void };
 
@@ -81,7 +82,7 @@ export function TagDialog({ info, ctx, onClose }: Props) {
         autoFocus
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Enter" || composing(e)) return;
+          if (!isEnter(e)) return;
           e.preventDefault();
           if (name.trim() && !busy) void create();
         }}

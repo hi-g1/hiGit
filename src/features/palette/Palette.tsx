@@ -26,6 +26,7 @@ import { useSync } from "../sync/useSync";
 import { buildCommands, searchCommands, type Command, type OpenTarget } from "./commands";
 import styles from "./Palette.module.css";
 import { usePaletteStore } from "./paletteStore";
+import { composing, isEnter } from "../../lib/keys";
 
 type Props = {
   /** 열린 저장소. 시작 화면이면 null(폴더 열기·복제·최근 프로젝트·설정만). */
@@ -87,8 +88,8 @@ function PaletteDialog({ repo, merging, onDone, close }: Required<Props> & { clo
       close();
       return;
     }
-    // 한글 조합 중 Enter는 글자를 확정하는 키라서 실행하지 않는다(WebKitGTK는 keyCode 229).
-    if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+    // 한글 조합 중 Enter는 글자를 확정하는 키라서 실행하지 않는다.
+    if (composing(e)) return;
     const move = listKey(e.nativeEvent);
     const last = shown.length - 1;
     const page = 8;
@@ -98,7 +99,7 @@ function PaletteDialog({ repo, merging, onDone, close }: Required<Props> & { clo
       pageNext: Math.min(active + page, last),
       pagePrev: Math.max(active - page, 0),
     };
-    if (move === "open" && e.key === "Enter") {
+    if (move === "open" && isEnter(e)) {
       e.preventDefault();
       choose(shown[active]);
     } else if (move && move in to) {

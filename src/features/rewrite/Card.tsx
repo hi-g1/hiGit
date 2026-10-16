@@ -5,6 +5,7 @@ import { useMessages } from "../../messages";
 import type { Card as CardModel, CardStatus } from "./model";
 import styles from "./CardMap.module.css";
 import { Truncate } from "../../ui/Truncate";
+import { isEscape } from "../../lib/keys";
 
 export type CardAction = "up" | "down" | "join" | "split" | "drop" | "edit";
 
@@ -55,8 +56,7 @@ function Editor({ initial, onMessage, onClose }: { initial: string; onMessage: (
       onKeyDown={(e) => {
         // 글상자 안의 키는 카드·화면으로 가지 않는다. Esc·Ctrl+Enter는 닫기(한글 조합 중 제외).
         e.stopPropagation();
-        const composing = e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229;
-        if ((e.key === "Escape" && !composing) || matches("commit", e.nativeEvent)) {
+        if (isEscape(e) || matches("commit", e.nativeEvent)) {
           e.preventDefault();
           onClose();
         }

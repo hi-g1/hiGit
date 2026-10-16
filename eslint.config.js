@@ -4,6 +4,32 @@ import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
+// 화면 코드에서 막는 문법. src/lib는 키 판정만 풀어 준다.
+const htmlAndDate = [
+  ...[
+    "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    "MemberExpression[property.name=/^(innerHTML|outerHTML)$/]",
+    "CallExpression[callee.property.name='insertAdjacentHTML']",
+    "CallExpression[callee.object.name='document'][callee.property.name=/^write(ln)?$/]",
+  ].map((selector) => ({
+    selector,
+    message: "저장소에서 온 글자는 React로 그대로 그립니다(D-037).",
+  })),
+  {
+    selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
+    message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150).",
+  },
+];
+// Escape·Enter는 src/lib/keys.ts로 판정한다(한글 조합 처리, D-137).
+const keyNames = [
+  "BinaryExpression[left.property.name='key'][right.value=/^(Escape|Enter)$/]",
+  "BinaryExpression[right.property.name='key'][left.value=/^(Escape|Enter)$/]",
+  "SwitchCase[test.value=/^(Escape|Enter)$/]",
+].map((selector) => ({
+  selector,
+  message: "Escape·Enter는 src/lib/keys.ts의 isEscape·isEnter로 판정합니다(한글 조합, D-137).",
+}));
+
 export default defineConfig(
   { ignores: ["dist/", "src-tauri/", "src/lib/bindings.ts"] },
   js.configs.recommended,
@@ -18,22 +44,7 @@ export default defineConfig(
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-script-url": "error",
-      "no-restricted-syntax": [
-        "error",
-        ...[
-          "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-          "MemberExpression[property.name=/^(innerHTML|outerHTML)$/]",
-          "CallExpression[callee.property.name='insertAdjacentHTML']",
-          "CallExpression[callee.object.name='document'][callee.property.name=/^write(ln)?$/]",
-        ].map((selector) => ({
-          selector,
-          message: "저장소에서 온 글자는 React로 그대로 그립니다(D-037).",
-        })),
-        {
-          selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
-          message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150).",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...htmlAndDate, ...keyNames],
       // 날짜·시각 형식은 src/lib/time.ts, OS 언어는 src/lib/locale.ts에서만(D-149, D-150).
       "no-restricted-properties": [
         "error",
@@ -66,6 +77,10 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    files: ["src/lib/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-syntax": ["error", ...htmlAndDate] },
   },
   {
     files: ["src/lib/**/*.{ts,tsx}"],

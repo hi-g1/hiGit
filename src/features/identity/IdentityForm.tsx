@@ -4,11 +4,11 @@ import { api } from "../../lib/api";
 import { queryKeys, useIdentity } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
-import { composing } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./IdentityForm.module.css";
+import { isComposingEnter } from "../../lib/keys";
 
 /**
  * 버전에 남길 이름과 이메일(D-125). 전역 Git 설정에 "저장"을 누를 때만 쓴다. 값은 core가 다시 검사하고,
@@ -41,7 +41,7 @@ export function IdentityForm({ onSaved }: { onSaved?: () => void }) {
   });
   // 한글 조합 중 Enter는 글자를 확정하는 키라 보내지 않는다.
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && composing(e)) e.preventDefault();
+    if (isComposingEnter(e)) e.preventDefault();
   };
 
   return (

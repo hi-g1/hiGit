@@ -1,7 +1,7 @@
 import { useBranchProtection } from "../../lib/queries";
 import { useMessages } from "../../messages";
-import { composing } from "../../ui/DialogFrame";
 import styles from "../force-push/ForcePushDialog.module.css";
+import { isBlockedEnter } from "../../lib/keys";
 
 type Props = {
   repo: string;
@@ -34,7 +34,7 @@ export function NameConfirmField({ repo, remote, branch, needsName, value, onCha
             aria-label={m.nameConfirm.label(branch)}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || composing(e)) e.preventDefault();
+              if (isBlockedEnter(e)) e.preventDefault();
             }}
           />
         </label>

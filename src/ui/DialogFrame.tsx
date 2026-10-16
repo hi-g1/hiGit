@@ -1,6 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import type { ReactNode, RefObject } from "react";
 import styles from "./DialogFrame.module.css";
+import { composing } from "../lib/keys";
 
 type Props = {
   title: ReactNode;
@@ -30,6 +31,10 @@ export function DialogFrame({ title, subtitle, onClose, children, size, classNam
           aria-describedby={undefined}
           aria-modal="true"
           onKeyDown={(e) => e.stopPropagation()}
+          // 한글 조합을 끝내는 Esc로는 닫지 않는다.
+          onEscapeKeyDown={(e) => {
+            if (composing(e)) e.preventDefault();
+          }}
           onOpenAutoFocus={(e) => {
             if (!initialFocus) return;
             e.preventDefault();
@@ -45,9 +50,4 @@ export function DialogFrame({ title, subtitle, onClose, children, size, classNam
       </Dialog.Portal>
     </Dialog.Root>
   );
-}
-
-/** 한글 조합 중 Enter는 글자를 확정하는 키라서 실행하지 않는다. */
-export function composing(e: { nativeEvent: KeyboardEvent }): boolean {
-  return e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229;
 }
