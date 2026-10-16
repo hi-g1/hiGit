@@ -1,13 +1,15 @@
 import { create } from "zustand";
+import type { ScopeAdd } from "../../lib/api";
 
 type SettingsState = {
   open: boolean;
   /** 열자마자 GitHub 연결을 시작한다(복제·검토 요청의 "GitHub 연결" 단추). */
   connect: boolean;
-  /** 연결을 `repo workflow` 권한으로 시작한다(D-135, "워크플로 권한 추가"). `connect`와 함께 켠다. */
-  workflow: boolean;
+  /** 연결을 이 권한을 더해 시작한다(D-135, D-186). `connect`와 함께 켠다. */
+  add: ScopeAdd | null;
   openSettings: (connect?: boolean) => void;
-  openWorkflowConnect: () => void;
+  /** "워크플로 권한 추가"·"이메일 확인 권한 추가": 설정을 열고 그 권한으로 다시 연결한다. */
+  openScopeConnect: (add: ScopeAdd) => void;
   close: () => void;
 };
 
@@ -15,8 +17,8 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>((set) => ({
   open: false,
   connect: false,
-  workflow: false,
-  openSettings: (connect = false) => set({ open: true, connect, workflow: false }),
-  openWorkflowConnect: () => set({ open: true, connect: true, workflow: true }),
-  close: () => set({ open: false, connect: false, workflow: false }),
+  add: null,
+  openSettings: (connect = false) => set({ open: true, connect, add: null }),
+  openScopeConnect: (add) => set({ open: true, connect: true, add }),
+  close: () => set({ open: false, connect: false, add: null }),
 }));

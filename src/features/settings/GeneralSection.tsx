@@ -7,6 +7,7 @@ import { useMessages } from "../../messages";
 import { Checkbox } from "../../ui/Checkbox";
 import { Choice } from "../../ui/Choice";
 import { IdentityForm } from "../identity/IdentityForm";
+import { EmailCheckLine } from "./EmailCheckLine";
 import styles from "./SettingsDialog.module.css";
 
 const LANGUAGES = ["system", "ko", "en"] as const;
@@ -23,6 +24,7 @@ export function GeneralSection() {
         {m.settings.general}
       </h3>
       <IdentityForm />
+      <EmailCheckLine />
       <div className={styles.field}>
         <span className={styles.fieldName}>{m.settings.fontSize}</span>
         <Choice

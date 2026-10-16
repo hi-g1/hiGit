@@ -45,6 +45,7 @@ export const queryKeys = {
   prDetail: (repo: string, number: number) => ["github", "prDetail", repo, number] as const,
   prDraft: (repo: string) => ["github", "prDraft", repo] as const,
   githubRepos: ["github", "repos"] as const,
+  emailCheck: ["github", "emailCheck"] as const,
   cloneDefaults: ["cloneDefaults"] as const,
   settings: ["settings"] as const,
   displayHints: ["displayHints"] as const,
@@ -111,6 +112,16 @@ export function usePrPages(repo: string, state: PrStateFilterView, enabled: bool
     queryFn: ({ pageParam }) => api.prList(repo, { state, branch: null, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+/** 전역 이메일이 GitHub 계정의 것인지(D-186). 설정 "일반"이 열렸고 연결됐을 때만, 60초 동안 새로 읽지 않는다. */
+export function useEmailCheck(enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.githubEmailCheck>>, ApiError>({
+    queryKey: queryKeys.emailCheck,
+    queryFn: api.githubEmailCheck,
     staleTime: 60_000,
     enabled,
   });

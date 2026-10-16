@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, toApiError, type ApiError } from "../../lib/api";
+import { api, toApiError, type ApiError, type ScopeAdd } from "../../lib/api";
 
 export type ConnectState =
   | { kind: "idle" }
@@ -47,11 +47,11 @@ function createController(setState: (state: ConnectState) => void) {
       setState({ kind: "error", error: toApiError(error) });
     }
   };
-  const start = async (workflow = false) => {
+  const start = async (add: ScopeAdd | null = null) => {
     clear();
     setState({ kind: "starting" });
     try {
-      const challenge = await api.githubConnectStart(workflow ? "workflow" : null);
+      const challenge = await api.githubConnectStart(add);
       active = true;
       setState({ kind: "waiting", code: challenge.userCode, expiresAt: Date.now() + challenge.expiresInSecs * 1000 });
       // 코드를 넣는 페이지(주소는 core 상수). 열지 못해도 코드는 보인다.

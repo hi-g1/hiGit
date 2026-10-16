@@ -34,6 +34,7 @@ export function IdentityForm({ onSaved }: { onSaved?: () => void }) {
       setName(null);
       setEmail(null);
       await client.invalidateQueries({ queryKey: queryKeys.identity });
+      void client.invalidateQueries({ queryKey: queryKeys.emailCheck });
       showToast(m.identity.saved);
       onSaved?.();
     },
