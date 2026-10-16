@@ -33,6 +33,23 @@ export function TagDialog({ info, ctx, onClose }: Props) {
         { done: () => ctx.m.tagged, onError: setError },
       ),
     );
+  // 올리기는 덧붙이기만 해 되돌리기 없이 알린다(D-131). 창은 그대로 둔다.
+  const push = async (tag: string) => {
+    setBusy(true);
+    setError(null);
+    await runAction(
+      ctx,
+      { id: "tag-push", input: { name: tag } },
+      {
+        done: () => {
+          ctx.toast(m.tagPush.done);
+          return null;
+        },
+        onError: setError,
+      },
+    );
+    setBusy(false);
+  };
   const remove = (tag: string) =>
     act(() =>
       runAction(
@@ -75,9 +92,14 @@ export function TagDialog({ info, ctx, onClose }: Props) {
           {info.tags.map((tag) => (
             <li key={tag} className={styles.listItem}>
               <bdi>{tag}</bdi>
-              <Button variant="text" disabled={busy} onClick={() => void remove(tag)}>
-                {m.deleteTag}
-              </Button>
+              <span>
+                <Button variant="text" disabled={busy} onClick={() => void push(tag)}>
+                  {m.tagPush.push}
+                </Button>
+                <Button variant="text" disabled={busy} onClick={() => void remove(tag)}>
+                  {m.deleteTag}
+                </Button>
+              </span>
             </li>
           ))}
         </ul>

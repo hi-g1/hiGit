@@ -409,6 +409,20 @@ export const ko = {
   copyPath: "경로 복사",
   thisFile: "이 파일",
   earlierVersions: (n: number) => `이전 ${n}개`,
+  // 원격 브랜치 지우기·이름 바꾸기(D-130)
+  remoteBranch: {
+    onlyHere: (n: number) => `이 브랜치에만 있는 버전 ${n}개`,
+    byOthers: (n: number) => `다른 사람의 버전 ${n}개`,
+    upstreamOfCurrent: "지금 브랜치가 올리는 곳이에요",
+    noTrackingRef: `${josa(t("fetch"), "을/를")} 한 뒤 다시 해 주세요`,
+    newName: "새 이름",
+    deleteConfirm: "지우기",
+    renameConfirm: "이름 바꾸기",
+    deleted: `${t("remote")} 브랜치를 지웠어요`,
+    renamed: "이름을 바꿨어요",
+  },
+  // 태그 올리기(D-131)
+  tagPush: { push: "올리기", done: "태그를 올렸어요" },
   // 덮어쓰며 올리기(D-128, D-129)
   forcePush: {
     ahead: (n: number) => `올라가는 버전 ${n}개`,

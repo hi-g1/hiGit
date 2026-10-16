@@ -376,6 +376,18 @@ export const en: Messages = {
   copyPath: "Copy path",
   thisFile: "This file:",
   earlierVersions: (n: number) => `${n} earlier`,
+  remoteBranch: {
+    onlyHere: (n: number) => `${n} version${n === 1 ? "" : "s"} only on this branch`,
+    byOthers: (n: number) => `${n} by other people`,
+    upstreamOfCurrent: "Your current branch uploads here",
+    noTrackingRef: `Use ${t("fetch")} first, then try again`,
+    newName: "New name",
+    deleteConfirm: "Delete",
+    renameConfirm: "Rename",
+    deleted: "Remote branch deleted",
+    renamed: "Renamed",
+  },
+  tagPush: { push: "Upload", done: "Tag uploaded" },
   forcePush: {
     ahead: (n: number) => `${n} version${n === 1 ? "" : "s"} going up`,
     dropped: (n: number) => `${n} version${n === 1 ? "" : "s"} disappearing`,

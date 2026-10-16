@@ -70,6 +70,18 @@ fn lists_branches_with_default_parked_and_orphans() {
     assert!(!feature.park_blocked);
     assert!(list.remote.iter().any(|b| b.name == "origin/trunk"));
     assert!(list.orphan_parked.contains(&"old".to_string()));
+    // 원격 줄도 기본 브랜치(원격 HEAD)를 알린다. 다른 원격 브랜치는 아니다(D-130).
+    git(dir, &["push", "-q", "origin", "기능/한글"]);
+    let list = core.queries().branches(dir).unwrap();
+    let remote_row = |name: &str| {
+        list.remote
+            .iter()
+            .find(|b| b.name == name)
+            .unwrap()
+            .is_default
+    };
+    assert!(remote_row("origin/trunk"));
+    assert!(!remote_row("origin/기능/한글"));
 }
 
 #[test]

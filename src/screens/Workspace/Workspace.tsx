@@ -27,6 +27,7 @@ import { PullRequests } from "../PullRequests/PullRequests";
 import { CreatePrDialog } from "../../features/pr/CreatePrDialog";
 import { ForcePushDialog } from "../../features/force-push/ForcePushDialog";
 import { RewriteNotice } from "../../features/force-push/RewriteNotice";
+import { RemoteBranchDialog } from "../../features/remote-branch/RemoteBranchDialog";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
 import { TopBar } from "./TopBar";
@@ -73,6 +74,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
     <div className={styles.workspace}>
       <CreatePrDialog repo={repo.path} />
       <ForcePushDialog repo={repo.path} />
+      <RemoteBranchDialog repo={repo.path} />
       <TopBar repo={repo} status={status.data} onDone={notifyDone} merging={merging} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">

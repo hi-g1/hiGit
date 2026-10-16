@@ -14,6 +14,7 @@ import { PrSlot } from "../pr/PrSlot";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./BranchList.module.css";
 import { branchColor } from "./color";
+import { RemoteBranchMenu } from "../remote-branch/RemoteBranchMenu";
 import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
 import { Truncate } from "../../ui/Truncate";
@@ -236,6 +237,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
           onRenameStart={setRenaming}
           onRename={(from, to) => void edit({ id: "branch-rename", input: { from, to } }, m.branchRenamed(to))}
           onDelete={(name) => void edit({ id: "branch-delete", input: { name } }, m.branchDeleted(name))}
+          onClose={close}
         />
       )}
       {!query.trim() && view?.local.some((b) => b.isHead && b.parkBlocked) && current !== null && (
@@ -289,6 +291,7 @@ function List({
   onRenameStart,
   onRename,
   onDelete,
+  onClose,
 }: {
   view: BranchListView;
   choices: Choice[];
@@ -301,6 +304,8 @@ function List({
   onRenameStart: (name: string) => void;
   onRename: (from: string, to: string) => void;
   onDelete: (name: string) => void;
+  /** 원격 줄 메뉴가 확인 창을 열기 전에 목록을 닫는다. */
+  onClose: () => void;
 }) {
   const m = useMessages();
   const branchLabel = useTermLabel("branch");
@@ -335,6 +340,7 @@ function List({
               ? m.recentSection
               : null;
         const local = c.kind === "switch" && c.item.remote === null ? c.item : null;
+        const remoteRow = c.kind === "switch" && c.item.remote !== null ? c.item : null;
         if (local && renaming === local.name) {
           return (
             <li key={`/${local.name}`}>
@@ -346,7 +352,7 @@ function List({
         return (
           <li
             key={c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`}
-            className={local ? `${styles.rowWrap} ${i === active ? styles.activeWrap : ""}` : undefined}
+            className={local || remoteRow ? `${styles.rowWrap} ${i === active ? styles.activeWrap : ""}` : undefined}
           >
             {header && <p className={styles.section}>{header}</p>}
             <button
@@ -370,6 +376,9 @@ function List({
             </button>
             {local && (
               <BranchRowMenu row={local.row} onRename={() => onRenameStart(local.name)} onDelete={() => onDelete(local.name)} />
+            )}
+            {remoteRow?.remote && (
+              <RemoteBranchMenu row={remoteRow.row} remote={remoteRow.remote} branch={remoteRow.name} onChosen={onClose} />
             )}
           </li>
         );

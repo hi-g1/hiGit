@@ -346,6 +346,7 @@ export type BranchRow = {
 	/**  원격 브랜치면 원격 이름. */
 	remote: string | null,
 	isHead: boolean,
+	/**  기본 브랜치(로컬은 기본 브랜치, 원격 줄은 그 원격의 HEAD와 `main`·`master`·`init.defaultBranch`). 지우기를 흐린다. */
 	isDefault: boolean,
 	upstream: string | null,
 	ahead: number,

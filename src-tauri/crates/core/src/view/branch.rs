@@ -25,6 +25,7 @@ pub struct BranchRow {
     /// 원격 브랜치면 원격 이름.
     pub remote: Option<String>,
     pub is_head: bool,
+    /// 기본 브랜치(로컬은 기본 브랜치, 원격 줄은 그 원격의 HEAD와 `main`·`master`·`init.defaultBranch`). 지우기를 흐린다.
     pub is_default: bool,
     pub upstream: Option<String>,
     pub ahead: u32,

@@ -49,3 +49,13 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+.field {
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-code);
+}

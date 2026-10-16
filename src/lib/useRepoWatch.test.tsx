@@ -67,6 +67,7 @@ describe("useRepoWatch", () => {
       "mergeState",
       "pendingWork",
       "recovery",
+      "remoteBranchPlan",
       "rewritePlan",
       "stashes",
       "status",

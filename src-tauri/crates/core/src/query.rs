@@ -748,6 +748,19 @@ impl Queries {
         for b in &branches {
             let is_local = b.kind == git::BranchKind::Local;
             let count = if is_local { parked_count(&b.name) } else { 0 };
+            // 원격 줄의 기본 브랜치: 그 원격의 HEAD와 늘 지키는 이름(D-130, 계획 010 R1). 지우기·이름 바꾸기를 흐린다.
+            let is_default = match &b.kind {
+                git::BranchKind::Local => default_branch.as_deref() == Some(b.name.as_str()),
+                git::BranchKind::Remote { remote, branch } => {
+                    branch == "HEAD"
+                        || crate::guard::protected_branch(
+                            self.git.as_ref(),
+                            &root,
+                            Some(remote),
+                            branch,
+                        )?
+                }
+            };
             let row = BranchRow {
                 name: b.name.clone(),
                 remote: match &b.kind {
@@ -755,7 +768,7 @@ impl Queries {
                     git::BranchKind::Local => None,
                 },
                 is_head: b.is_head,
-                is_default: is_local && default_branch.as_deref() == Some(b.name.as_str()),
+                is_default,
                 upstream: b.upstream.clone(),
                 ahead: b.ahead,
                 behind: b.behind,

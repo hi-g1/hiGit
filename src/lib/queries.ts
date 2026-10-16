@@ -25,6 +25,7 @@ export const queryKeys = {
   commitDetail: (repo: string, oid: string) => ["commitDetail", repo, oid] as const,
   rewritePlan: (repo: string, oids: readonly string[]) => ["rewritePlan", repo, oids.join(",")] as const,
   forcePushPlan: (repo: string) => ["forcePushPlan", repo] as const,
+  remoteBranchPlan: (repo: string, remote: string, branch: string) => ["remoteBranchPlan", repo, remote, branch] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -298,6 +299,15 @@ export function useForcePushPlan(repo: string, enabled: boolean) {
   return useQuery<Awaited<ReturnType<typeof api.forcePushPlan>>, ApiError>({
     queryKey: queryKeys.forcePushPlan(repo),
     queryFn: () => api.forcePushPlan(repo),
+    enabled,
+  });
+}
+
+/** 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 창이 열렸을 때만 읽는다. */
+export function useRemoteBranchPlan(repo: string, remote: string, branch: string, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.remoteBranchPlan>>, ApiError>({
+    queryKey: queryKeys.remoteBranchPlan(repo, remote, branch),
+    queryFn: () => api.remoteBranchPlan(repo, remote, branch),
     enabled,
   });
 }
