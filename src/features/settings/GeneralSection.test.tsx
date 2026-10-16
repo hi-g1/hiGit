@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const setSettings = vi.fn();
@@ -71,6 +71,23 @@ describe("설정 일반 구역", () => {
     expect(document.documentElement.lang).toBe("en");
     await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
     expect(setSettings).toHaveBeenCalledWith({ language: "en" });
+  });
+
+  it("화면 모드를 고르면 바로 바뀌고 저장된다", async () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.settings, { ...DEFAULTS });
+    render(
+      <AppProviders client={client}>
+        <DisplaySync />
+        <GeneralSection />
+      </AppProviders>,
+    );
+    const group = screen.getByRole("radiogroup", { name: "화면 모드" });
+    fireEvent.click(within(group).getByRole("radio", { name: "다크" }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
+    expect(setSettings).toHaveBeenCalledWith({ theme: "dark" });
+    delete document.documentElement.dataset.theme;
   });
 
   it("용어 설명 보기를 끄면 저장된다", async () => {

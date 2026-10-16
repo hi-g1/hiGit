@@ -365,6 +365,8 @@ export const en: Messages = {
     termHelp: "Show term tips",
     language: "Language",
     languages: { system: "Follow system", ko: "한국어", en: "English" },
+    theme: "Appearance",
+    themes: { system: "Follow system", light: "Light", dark: "Dark" },
     github: "GitHub",
     notConfigured: "GitHub connection isn't set up in this app",
     connect: "Connect GitHub",

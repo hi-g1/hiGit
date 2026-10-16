@@ -9,8 +9,9 @@ import { Choice } from "../../ui/Choice";
 import styles from "./SettingsDialog.module.css";
 
 const LANGUAGES = ["system", "ko", "en"] as const;
+const THEMES = ["system", "light", "dark"] as const;
 
-/** 설정의 "일반" 구역(D-145, D-160): 글자 크기, 언어, 용어 설명 보기. 고르면 바로 바뀌고 저장된다. */
+/** 설정의 "일반" 구역(D-145, D-160): 글자 크기, 언어, 화면 모드, 용어 설명 보기. 고르면 바로 바뀌고 저장된다. */
 export function GeneralSection() {
   const m = useMessages();
   const client = useQueryClient();
@@ -36,6 +37,15 @@ export function GeneralSection() {
           value={settings.language}
           options={LANGUAGES.map((language) => ({ value: language, label: m.settings.languages[language] }))}
           onChange={(language) => changeSettings(client, { language })}
+        />
+      </div>
+      <div className={styles.field}>
+        <span className={styles.fieldName}>{m.settings.theme}</span>
+        <Choice
+          label={m.settings.theme}
+          value={settings.theme}
+          options={THEMES.map((theme) => ({ value: theme, label: m.settings.themes[theme] }))}
+          onChange={(theme) => changeSettings(client, { theme })}
         />
       </div>
       <label className={styles.field}>
