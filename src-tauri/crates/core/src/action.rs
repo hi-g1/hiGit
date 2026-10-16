@@ -145,6 +145,10 @@ pub enum Outcome {
     },
     /// 합치기를 마쳤다.
     ConflictFinished,
+    /// 기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳐 멈췄다(표식이 남아 있다).
+    ConflictContinued {
+        paths: Vec<String>,
+    },
     /// 합치기를 그만뒀다.
     ConflictAborted,
     /// 임시 보관했다.
@@ -188,9 +192,10 @@ impl Outcome {
         match self {
             Outcome::Ignored { .. } => JournalMode::Always,
             // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
-            Outcome::MergeConflicts { .. } | Outcome::OperationConflicts { .. } => {
-                JournalMode::Skip
-            }
+            // 마치기·그만두기가 따로 기록한다. 이어서 멈춘 기록 정리도 끝날 때 한 줄로 남긴다.
+            Outcome::MergeConflicts { .. }
+            | Outcome::OperationConflicts { .. }
+            | Outcome::ConflictContinued { .. } => JournalMode::Skip,
             Outcome::Synced(r) if r.merge_started => JournalMode::Skip,
             // 꺼내기는 HEAD를 바꾸지 않아 앞선 되돌리기를 막지 않는다.
             Outcome::TookOut => JournalMode::Skip,

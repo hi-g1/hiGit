@@ -134,6 +134,23 @@ pub(crate) fn verify_state(git: &dyn GitBackend, repo: &RepoPath, op: &OpMarker)
     }
 }
 
+/// 멈춘 기록 정리의 남은 할 일 목록이 앱이 쓴 모양 그대로인지(D-100, D-102). 줄마다
+/// `pick`·`fixup`·`drop`·`edit`과 표식에 있는 버전 해시(앞 7자 이상)여야 한다. `exec`·`break`·
+/// `label`·`reset`·`merge`·`update-ref` 같은 줄이 하나라도 있으면(받은 저장소에 심어 둔 명령)
+/// 이어가지 않는다.
+pub(crate) fn verify_todo(state: &git::RebaseState, op: &OpMarker) -> bool {
+    state.todo.iter().all(|line| {
+        let mut parts = line.split_whitespace();
+        let (Some(command), Some(hash)) = (parts.next(), parts.next()) else {
+            return false;
+        };
+        matches!(command, "pick" | "fixup" | "drop" | "edit")
+            && hash.len() >= 7
+            && hash.bytes().all(|b| b.is_ascii_hexdigit())
+            && op.oids.iter().any(|o| o.starts_with(hash))
+    })
+}
+
 /// 표식과 맞는 앱의 작업이 멈춰 있으면 그 표식.
 pub(crate) fn current(
     git: &dyn GitBackend,

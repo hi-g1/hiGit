@@ -487,6 +487,10 @@ pub enum ActionResult {
     },
     /// 합치기를 마쳤다(합친 버전을 만들었다).
     ConflictFinished,
+    /// 기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다.
+    ConflictContinued {
+        paths: Vec<String>,
+    },
     /// 합치기를 그만뒀다.
     ConflictAborted,
     Stashed,
@@ -558,6 +562,7 @@ impl From<Outcome> for ActionResult {
             },
             Outcome::MergeConflicts { paths } => ActionResult::MergeConflicts { paths },
             Outcome::ConflictFinished => ActionResult::ConflictFinished,
+            Outcome::ConflictContinued { paths } => ActionResult::ConflictContinued { paths },
             Outcome::ConflictAborted => ActionResult::ConflictAborted,
             Outcome::Stashed => ActionResult::Stashed,
             Outcome::TookOut => ActionResult::TookOut,

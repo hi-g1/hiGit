@@ -271,3 +271,115 @@ fn leftover_marker_is_tidied_by_pending_work_only() {
     core.pending_work(dir).unwrap();
     assert!(!file.exists());
 }
+
+#[test]
+fn todo_lines_must_be_ours() {
+    let a = "a".repeat(40);
+    let b = "b".repeat(40);
+    let marker = OpMarker {
+        oids: vec![a.clone(), b.clone()],
+        ..op(
+            OpKind::Rebase,
+            &Oid::parse(&a).unwrap(),
+            Some(&Oid::parse(&b).unwrap()),
+            &[],
+        )
+    };
+    let state = |todo: &[&str]| git::RebaseState {
+        head_name: "refs/heads/main".into(),
+        onto: None,
+        orig_head: None,
+        stopped_at_edit: false,
+        todo: todo.iter().map(|s| s.to_string()).collect(),
+        done: Vec::new(),
+    };
+    let ok = |todo: &[&str]| crate::operation::verify_todo(&state(todo), &marker);
+    assert!(ok(&[]));
+    assert!(ok(&[
+        &format!("pick {a}"),
+        "fixup bbbbbbb 제목",
+        "drop aaaaaaaaaa",
+        "edit bbbbbbbbbbbbb"
+    ]));
+    for bad in [
+        "exec touch x",
+        "x touch x",
+        "break",
+        "label onto",
+        "reset onto",
+        "merge -C aaaaaaa x",
+        "update-ref refs/heads/x",
+        "pick ccccccc",
+        "pick aaaa",
+        "squash aaaaaaa",
+        "pick",
+    ] {
+        assert!(!ok(&[bad]), "{bad}");
+    }
+}
+
+#[test]
+fn restarting_at_an_edit_stop_finishes_with_the_saved_message() {
+    let repo = init();
+    let dir = repo.path();
+    let base = commit(dir, "a.txt", "a\n", "처음");
+    let b = commit(dir, "b.txt", "b\n", "둘");
+    let c = commit(dir, "c.txt", "c\n", "셋");
+    let keys = tempfile::tempdir().unwrap();
+    {
+        // 앱이 표식을 쓰고 정리를 시작했고, `edit`으로 멈춘 채 꺼졌다.
+        let core = Core::with_backend(Arc::new(backend()) as Arc<dyn GitBackend>)
+            .unwrap()
+            .with_key_dir_for_tests(keys.path());
+        mark(
+            &core,
+            dir,
+            &OpMarker {
+                messages: vec![(b.to_string(), "고친 둘".into())],
+                ..op(OpKind::Rebase, &c, Some(&base), &[&b, &c])
+            },
+        );
+        backend()
+            .run(
+                &RepoPath::new(dir),
+                &git::GitOp::RewriteHistory {
+                    base: base.clone(),
+                    steps: vec![
+                        RewriteStep {
+                            oid: b.clone(),
+                            kind: RewriteKind::Edit,
+                        },
+                        RewriteStep {
+                            oid: c.clone(),
+                            kind: RewriteKind::Pick,
+                        },
+                    ],
+                },
+            )
+            .unwrap();
+        assert!(dir.join(".git/rebase-merge").exists());
+    }
+    let core = Core::with_backend(Arc::new(backend()) as Arc<dyn GitBackend>)
+        .unwrap()
+        .with_key_dir_for_tests(keys.path());
+    core.open_project(dir, OpenHow::Picked).unwrap();
+    let state = core.conflict_state(dir).unwrap();
+    assert!(state.active && state.context == ConflictContext::Rebase && state.files.is_empty());
+    let r = core
+        .execute(
+            dir,
+            &crate::view::ActionInput::ConflictFinish(crate::view::ConflictFinishInput {
+                resolutions: Vec::new(),
+                locale: "ko".into(),
+            }),
+            None,
+        )
+        .unwrap();
+    assert_eq!(r, crate::view::ActionResult::ConflictFinished);
+    assert_eq!(
+        git(dir, &["log", "--reverse", "--format=%s"]),
+        "처음\n고친 둘\n셋"
+    );
+    assert!(!dir.join(".git/rebase-merge").exists());
+    assert!(!dir.join(".git/higit/operation.json").exists());
+}

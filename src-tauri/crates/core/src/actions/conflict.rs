@@ -66,13 +66,26 @@ fn back_up_conflicts(
     repo: &git::RepoPath,
     conflicts: &[ConflictPath],
 ) -> Result<()> {
-    if conflicts.is_empty() {
+    back_up_files(
+        git,
+        repo,
+        conflicts.iter().map(|c| c.path.clone()).collect(),
+    )
+}
+
+/// 고른 파일의 지금 작업 폴더 내용을 `conflict-files-<브랜치>` 백업 ref로 남긴다.
+fn back_up_files(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    paths: Vec<String>,
+) -> Result<()> {
+    if paths.is_empty() {
         return Ok(());
     }
     let out = git.run(
         repo,
         &GitOp::SnapshotFiles {
-            paths: conflicts.iter().map(|c| c.path.clone()).collect(),
+            paths,
             message: "higit conflict files".into(),
         },
     )?;
@@ -111,6 +124,29 @@ impl Action for ConflictAction {
 
     fn moves_head(&self) -> bool {
         self.meta.id == "conflict-finish"
+    }
+
+    /// 기록 정리를 마치면 정리 중 떨어진 HEAD(브랜치 없음)가 아니라 정리를 시작할 때의 끝과 브랜치를
+    /// 되돌리기 기준으로 남긴다(표식의 `head_before`, D-100).
+    fn journal_before(
+        &self,
+        ctx: &ExecCtx<'_>,
+        _input: &ActionInput,
+        captured: crate::undo::UndoState,
+    ) -> crate::undo::UndoState {
+        let Some(repo) = ctx.state.repo.as_ref() else {
+            return captured;
+        };
+        match crate::conflict::context(ctx.git, repo, ctx.key) {
+            Ok(Some(Context::Operation(op))) if op.kind == OpKind::Rebase => {
+                crate::undo::UndoState {
+                    head: Some(op.head_before),
+                    branch: Some(op.branch),
+                    ..captured
+                }
+            }
+            _ => captured,
+        }
     }
 
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
@@ -156,6 +192,38 @@ impl Action for ConflictAction {
                 finish_pick(git, repo, &op)?;
                 Ok(Outcome::ConflictFinished)
             }
+            ("conflict-abort", ActionInput::ConflictAbort, Context::Operation(op)) => {
+                // 기록 정리를 그만두면 git이 원래 끝으로 되돌리므로(`reset --hard`) 충돌 파일뿐
+                // 아니라 그사이 고친 추적 파일도 모두 백업한다.
+                let mut paths: Vec<String> = conflicts.iter().map(|c| c.path.clone()).collect();
+                for e in git.status(repo)?.entries {
+                    let changed = |c: git::Change| {
+                        !matches!(c, git::Change::Unmodified | git::Change::Untracked)
+                    };
+                    if (changed(e.index) || changed(e.worktree)) && !paths.contains(&e.path) {
+                        paths.push(e.path);
+                    }
+                }
+                paths.truncate(MAX_FILES);
+                back_up_files(git, repo, paths)?;
+                git.run(
+                    repo,
+                    &GitOp::OperationAbort {
+                        kind: op.kind.git(),
+                    },
+                )?;
+                operation::clear(&git.git_dir(repo)?);
+                Ok(Outcome::ConflictAborted)
+            }
+            ("conflict-finish", ActionInput::ConflictFinish(input), Context::Operation(op)) => {
+                // 할 일 목록이 앱이 쓴 모양이 아니면 아무것도 쓰지 않는다.
+                verify_rewrite(git, repo, &op)?;
+                write_resolutions(git, repo, &conflicts, input, flip)?;
+                match finish_rewrite(ctx, repo, &op)? {
+                    Some(paths) => Ok(Outcome::ConflictContinued { paths }),
+                    None => Ok(Outcome::ConflictFinished),
+                }
+            }
             ("conflict-finish", ActionInput::ConflictFinish(input), Context::Merge) => {
                 write_resolutions(git, repo, &conflicts, input, flip)?;
                 commit_merge(git, repo, &input.locale)?;
@@ -169,6 +237,51 @@ impl Action for ConflictAction {
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }
     }
+}
+
+/// 멈춘 기록 정리가 표식과 맞고 남은 할 일 목록이 앱이 쓴 모양 그대로인지.
+fn verify_rewrite(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    op: &OpMarker,
+) -> Result<git::RebaseState> {
+    let state = git.rebase_state(repo)?.ok_or(CoreError::ConflictChanged)?;
+    if !operation::verify_state(git, repo, op)? || !operation::verify_todo(&state, op) {
+        return Err(CoreError::OperationInProgress);
+    }
+    Ok(state)
+}
+
+/// 기록 정리를 이어간다. 표식 서명·git 상태·남은 할 일 목록이 모두 맞을 때만 git을 부른다(D-102).
+/// `edit`으로 멈춰 있으면(앱이 꺼졌던 경우) 표식의 메시지로 고친 뒤 이어간다. 해결한 결과가 비면 그
+/// 버전은 건너뛴다. 끝나면 `None`, 다시 충돌로 멈추면 그 경로.
+fn finish_rewrite(
+    ctx: &ExecCtx<'_>,
+    repo: &git::RepoPath,
+    op: &OpMarker,
+) -> Result<Option<Vec<String>>> {
+    let git = ctx.git;
+    let state = verify_rewrite(git, repo, op)?;
+    let unmerged = |git: &dyn git::GitBackend| -> Result<bool> {
+        Ok(git.index_entries(repo)?.iter().any(|e| e.stage > 0))
+    };
+    if state.stopped_at_edit && !unmerged(git)? {
+        return crate::actions::rewrite::drive(ctx, repo, op, None);
+    }
+    let kind = git::OperationKind::Rebase;
+    let mut error = git.run(repo, &GitOp::OperationContinue { kind }).err();
+    if error.is_some() && git.rebase_state(repo)?.is_some() && !unmerged(git)? {
+        let staged = git
+            .status(repo)?
+            .entries
+            .iter()
+            .any(|e| !matches!(e.index, git::Change::Unmodified | git::Change::Untracked));
+        if !staged {
+            // 해결한 결과가 정리된 기록과 같아 비었다. 그 버전을 빼고 이어간다.
+            error = git.run(repo, &GitOp::OperationSkip { kind }).err();
+        }
+    }
+    crate::actions::rewrite::drive(ctx, repo, op, error)
 }
 
 /// 복사·되돌리기를 이어서 새 버전을 만들고 표식을 지운다. 해결한 결과가 지금과 같으면 그 버전은

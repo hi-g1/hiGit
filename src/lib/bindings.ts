@@ -134,6 +134,8 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 { kind: "mergeConflicts"; paths: string[] } | 
 /**  합치기를 마쳤다(합친 버전을 만들었다). */
 { kind: "conflictFinished" } | 
+/**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
+{ kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
 { kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "parkedRecovered"; count: number };
 
