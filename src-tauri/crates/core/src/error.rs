@@ -113,6 +113,18 @@ pub enum CoreError {
     #[error("덮어쓸 것이 없습니다")]
     NothingToOverwrite,
 
+    /// 원격 기본 브랜치는 지우거나 이름을 바꾸지 않는다(D-130).
+    #[error("원격 기본 브랜치입니다")]
+    RemoteBranchProtected,
+
+    /// 원격에 만들려는 브랜치 이름이 이미 있다(이름 바꾸기, D-130).
+    #[error("원격에 같은 이름이 있습니다")]
+    RemoteNameTaken,
+
+    /// 새 이름으로는 올렸지만 옛 이름을 지우지 못했다(D-130). 원문은 "자세히 보기".
+    #[error("새 이름으로 올렸지만 옛 이름은 남았습니다")]
+    RemoteRenamePartial(String),
+
     /// 올린 버전의 기록을 바꿔 원격과 갈라졌다. 원격의 옛 버전을 다시 들여오지 않게 멈춘다(D-129).
     #[error("올린 기록을 바꿔 원격과 갈라졌습니다")]
     RewrotePublished,
@@ -221,6 +233,7 @@ impl CoreError {
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
             CoreError::ParkBlocked(detail) => Some(detail.clone()),
             CoreError::Github { detail, .. } => detail.clone(),
+            CoreError::RemoteRenamePartial(detail) => Some(detail.clone()),
             _ => None,
         }
     }

@@ -59,6 +59,8 @@ export const commands = {
 	queryRewritePlan: (repo: string, oids: string[]) => __TAURI_INVOKE<RewritePlanView>("query_rewrite_plan", { repo, oids }),
 	/**  덮어쓰며 올리기 확인 창의 값(D-128). 네트워크 없이 읽기만 한다. */
 	queryForcePushPlan: (repo: string) => __TAURI_INVOKE<ForcePushPlanView>("query_force_push_plan", { repo }),
+	/**  원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 읽기만 한다. */
+	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -98,7 +100,7 @@ export const commands = {
 /* Constants */
 export const OP_PROGRESS_EVENT = "op-progress" as const;
 
-export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push"] as const;
+export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename"] as const;
 
 export const REPO_CHANGED_EVENT = "repo-changed" as const;
 
@@ -157,7 +159,11 @@ export type ActionInput_Deserialize =
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
 { id: "branch-rename"; input: BranchRenameInput } | 
 /**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
-{ id: "force-push"; input: ForcePushInput };
+{ id: "force-push"; input: ForcePushInput } | 
+/**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
+{ id: "remote-branch-delete"; input: RemoteBranchInput } | 
+/**  원격 브랜치 이름 바꾸기(D-130). */
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput };
 
 export type ActionInput_Serialize = 
 /**  관리 시작. 입력 없음. */
@@ -209,7 +215,11 @@ export type ActionInput_Serialize =
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
 { id: "branch-rename"; input: BranchRenameInput } | 
 /**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
-{ id: "force-push"; input: ForcePushInput };
+{ id: "force-push"; input: ForcePushInput } | 
+/**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
+{ id: "remote-branch-delete"; input: RemoteBranchInput } | 
+/**  원격 브랜치 이름 바꾸기(D-130). */
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -245,7 +255,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -569,7 +579,11 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  원격 기본 브랜치는 덮어쓰거나 지우지 않는다(D-128). */
 "forcePushProtected" | 
 /**  덮어쓸 것이 없다(그냥 올리면 된다). */
-"nothingToOverwrite" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+"nothingToOverwrite" | 
+/**  원격 기본 브랜치는 지우거나 이름을 바꾸지 않는다(D-130). */
+"remoteBranchProtected" | 
+/**  새 이름으로는 올렸지만 옛 이름을 지우지 못했다(D-130). */
+"remoteRenamePartial" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -1050,6 +1064,44 @@ export type RefLabelView = {
 	oid: string,
 	kind: RefLabelKind,
 	name: string,
+};
+
+/**  지우거나 이름을 바꿀 수 없는 까닭. */
+export type RemoteBranchBlock = 
+/**  원격 기본 브랜치(`main`·`master`·`init.defaultBranch`·원격 HEAD). */
+"protected" | 
+/**  로컬에 그 원격 브랜치의 추적 ref가 없다(원격 확인 뒤 다시). */
+"noTrackingRef" | 
+/**  그런 원격이 없다. */
+"noRemote";
+
+/**  원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다. */
+export type RemoteBranchInput = {
+	remote: string,
+	branch: string,
+	expectTip: string,
+};
+
+export type RemoteBranchPlanView = {
+	remote: string,
+	branch: string,
+	/**  추적 ref가 가리키는 버전(실행 입력의 기대 값). */
+	tip: string | null,
+	/**  이 브랜치에만 있는 버전 수(원격 기본 브랜치·다른 추적 브랜치·로컬 브랜치에서 닿지 않음, 200개까지 셈). */
+	onlyHere: number,
+	/**  그 가운데 다른 사람이 만든 것(작성자 이메일이 내 이메일과 다름, 모르면 모두). */
+	byOthers: number,
+	blocked: RemoteBranchBlock | null,
+	/**  지금 브랜치의 upstream이다(지우면 upstream이 사라진다). */
+	isUpstreamOfCurrent: boolean,
+};
+
+/**  원격 브랜치 이름 바꾸기 입력(D-130). */
+export type RemoteBranchRenameInput = {
+	remote: string,
+	from: string,
+	to: string,
+	expectTip: string,
 };
 
 /**  저장소 파일이 바뀌었다. `worktree`면 바뀐 내용·비교를, `git`이면 바뀐 내용·저장 기록을 다시 읽는다. */

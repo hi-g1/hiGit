@@ -45,6 +45,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_route_preview,
             commands::query_rewrite_plan,
             commands::query_force_push_plan,
+            commands::query_remote_branch_plan,
             commands::query_commit_detail,
             commands::query_diff,
             commands::query_branches,

@@ -368,11 +368,13 @@ fn registered_actions_match_spec_risk() {
             ("pr-create", "pr", Risk::Safe),
             ("identity-set", "identity", Risk::Normal),
             ("force-push", "force-push", Risk::Danger),
+            ("remote-branch-delete", "remote-branch-delete", Risk::Danger),
+            ("remote-branch-rename", "remote-branch-rename", Risk::Danger),
         ]
     );
 }
 
-/// 되돌릴 수 없어 실행 전 확인을 받는 액션(D-043). 원격 브랜치 지우기·이름 바꾸기는 010-H11이 더한다.
+/// 되돌릴 수 없어 실행 전 확인을 받는 액션(D-043, 계획 010 H9·H11).
 #[test]
 fn irreversible_actions_are_the_confirmed_few() {
     let mut registry = Registry::new();
@@ -383,5 +385,14 @@ fn irreversible_actions_are_the_confirmed_few() {
         .map(|m| m.id)
         .collect();
     irreversible.sort_unstable();
-    assert_eq!(irreversible, ["clear-lock", "discard", "force-push"]);
+    assert_eq!(
+        irreversible,
+        [
+            "clear-lock",
+            "discard",
+            "force-push",
+            "remote-branch-delete",
+            "remote-branch-rename"
+        ]
+    );
 }

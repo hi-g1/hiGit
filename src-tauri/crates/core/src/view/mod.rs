@@ -16,6 +16,7 @@ mod map;
 mod merge;
 mod pending;
 mod recovery;
+mod remote_branch;
 mod secret;
 mod settings;
 mod stash;
@@ -42,13 +43,15 @@ pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
     HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput,
-    RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput,
-    TagDeleteInput, TagInput, TakeOutInput, TakeOutSource,
+    RemoteBranchInput, RemoteBranchRenameInput, RestoreInput, RewriteInput, RewriteKindInput,
+    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TakeOutInput,
+    TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
 pub use pending::{OtherOperation, PendingWorkView};
 pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind};
+pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use settings::{
     AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, LanguageSetting,
@@ -549,6 +552,15 @@ pub enum ActionResult {
     ForcePushed {
         dropped: u32,
     },
+    RemoteBranchDeleted {
+        remote: String,
+        branch: String,
+    },
+    RemoteBranchRenamed {
+        remote: String,
+        from: String,
+        to: String,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -621,6 +633,12 @@ impl From<Outcome> for ActionResult {
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
             Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },
+            Outcome::RemoteBranchDeleted { remote, branch } => {
+                ActionResult::RemoteBranchDeleted { remote, branch }
+            }
+            Outcome::RemoteBranchRenamed { remote, from, to } => {
+                ActionResult::RemoteBranchRenamed { remote, from, to }
+            }
         }
     }
 }
@@ -669,6 +687,10 @@ pub enum ErrorCode {
     ForcePushProtected,
     /// 덮어쓸 것이 없다(그냥 올리면 된다).
     NothingToOverwrite,
+    /// 원격 기본 브랜치는 지우거나 이름을 바꾸지 않는다(D-130).
+    RemoteBranchProtected,
+    /// 새 이름으로는 올렸지만 옛 이름을 지우지 못했다(D-130).
+    RemoteRenamePartial,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -813,6 +835,9 @@ impl From<&CoreError> for ErrorView {
             CoreError::ForcePushDisabled => ErrorCode::ForcePushDisabled,
             CoreError::ForcePushProtected => ErrorCode::ForcePushProtected,
             CoreError::NothingToOverwrite => ErrorCode::NothingToOverwrite,
+            CoreError::RemoteBranchProtected => ErrorCode::RemoteBranchProtected,
+            CoreError::RemoteNameTaken => ErrorCode::RemoteNameTaken,
+            CoreError::RemoteRenamePartial(_) => ErrorCode::RemoteRenamePartial,
             CoreError::HasChanges => ErrorCode::HasChanges,
             CoreError::TagExists => ErrorCode::TagExists,
             CoreError::BranchProtected => ErrorCode::BranchProtected,

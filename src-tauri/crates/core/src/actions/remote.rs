@@ -259,6 +259,42 @@ impl Net<'_> {
         )
     }
 
+    /// 원격 브랜치를 `expect`일 때만 지운다(D-130).
+    pub(crate) fn push_delete(&self, remote: &str, branch: &str, expect: &Oid) -> Result<OpOutput> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        self.run(
+            auth,
+            &GitOp::PushDelete {
+                remote: remote.to_string(),
+                branch: branch.to_string(),
+                expect: expect.clone(),
+                auth,
+            },
+        )
+    }
+
+    /// 원격에 그 이름이 없을 때만 새 브랜치를 만든다(D-130).
+    pub(crate) fn push_new_ref(&self, remote: &str, branch: &str, oid: &Oid) -> Result<OpOutput> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        self.run(
+            auth,
+            &GitOp::PushNewRef {
+                remote: remote.to_string(),
+                branch: branch.to_string(),
+                oid: oid.clone(),
+                auth,
+            },
+        )
+    }
+
+    /// 서버에 지금 있는 브랜치 끝(`ls-remote`). 없으면 `None`.
+    pub(crate) fn server_branch(&self, remote: &str, branch: &str) -> Result<Option<Oid>> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        Ok(self
+            .git
+            .ls_remote(self.repo, remote, &format!("refs/heads/{branch}"), auth)?)
+    }
+
     /// 서버가 알려 주는 원격 기본 브랜치(`ls-remote --symref`).
     pub(crate) fn server_head(&self, remote: &str) -> Result<Option<String>> {
         let auth = self.github.auth_for(self.git, self.repo, remote, false);

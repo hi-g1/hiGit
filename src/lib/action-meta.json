@@ -202,5 +202,17 @@
     "glossaryId": "force-push",
     "risk": "danger",
     "undo": "irreversible"
+  },
+  {
+    "id": "remote-branch-delete",
+    "glossaryId": "remote-branch-delete",
+    "risk": "danger",
+    "undo": "irreversible"
+  },
+  {
+    "id": "remote-branch-rename",
+    "glossaryId": "remote-branch-rename",
+    "risk": "danger",
+    "undo": "irreversible"
   }
 ]

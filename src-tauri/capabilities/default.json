@@ -37,6 +37,7 @@
     "allow-query-route-preview",
     "allow-query-rewrite-plan",
     "allow-query-force-push-plan",
+    "allow-query-remote-branch-plan",
     "allow-query-commit-detail",
     "allow-query-diff",
     "allow-query-branches",

@@ -278,7 +278,9 @@ fn action_input_tags_match_registry() {
             | ActionInput::TagDelete(_)
             | ActionInput::BranchDelete(_)
             | ActionInput::BranchRename(_)
-            | ActionInput::ForcePush(_) => {}
+            | ActionInput::ForcePush(_)
+            | ActionInput::RemoteBranchDelete(_)
+            | ActionInput::RemoteBranchRename(_) => {}
         }
     }
     let paths = PathsInput {
@@ -381,6 +383,17 @@ fn action_input_tags_match_registry() {
             branch: "기능".into(),
             expect_remote: "a".repeat(40),
             expect_head: "b".repeat(40),
+        }),
+        ActionInput::RemoteBranchDelete(higit_core::view::RemoteBranchInput {
+            remote: "origin".into(),
+            branch: "옆".into(),
+            expect_tip: "a".repeat(40),
+        }),
+        ActionInput::RemoteBranchRename(higit_core::view::RemoteBranchRenameInput {
+            remote: "origin".into(),
+            from: "옆".into(),
+            to: "곁".into(),
+            expect_tip: "a".repeat(40),
         }),
     ];
     samples.iter().for_each(every_variant);

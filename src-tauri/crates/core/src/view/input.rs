@@ -68,6 +68,10 @@ pub enum ActionInput {
     BranchRename(BranchRenameInput),
     /// 덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다.
     ForcePush(ForcePushInput),
+    /// 원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다.
+    RemoteBranchDelete(RemoteBranchInput),
+    /// 원격 브랜치 이름 바꾸기(D-130).
+    RemoteBranchRename(RemoteBranchRenameInput),
 }
 
 impl ActionInput {
@@ -108,6 +112,8 @@ impl ActionInput {
             ActionInput::BranchDelete(_) => "branch-delete",
             ActionInput::BranchRename(_) => "branch-rename",
             ActionInput::ForcePush(_) => "force-push",
+            ActionInput::RemoteBranchDelete(_) => "remote-branch-delete",
+            ActionInput::RemoteBranchRename(_) => "remote-branch-rename",
         }
     }
 
@@ -385,6 +391,25 @@ pub struct TagDeleteInput {
 #[serde(rename_all = "camelCase")]
 pub struct OidInput {
     pub oid: String,
+}
+
+/// 원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteBranchInput {
+    pub remote: String,
+    pub branch: String,
+    pub expect_tip: String,
+}
+
+/// 원격 브랜치 이름 바꾸기 입력(D-130).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteBranchRenameInput {
+    pub remote: String,
+    pub from: String,
+    pub to: String,
+    pub expect_tip: String,
 }
 
 /// 덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해

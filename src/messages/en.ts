@@ -464,6 +464,8 @@ export const en: Messages = {
     forcePushDisabled: `Turn on "Change uploaded versions" in Settings, Advanced.`,
     forcePushProtected: `The default ${t("branch").toLowerCase()} on the ${t("remote").toLowerCase()} can't be overwritten or deleted.`,
     nothingToOverwrite: `Nothing to overwrite. Press ${t("sync")}.`,
+    remoteBranchProtected: `The default ${t("branch").toLowerCase()} on the ${t("remote").toLowerCase()} can't be deleted or renamed.`,
+    remoteRenamePartial: "Uploaded under the new name. The old name is still there.",
     hasChanges: `You have changed files. Use ${t("commit")} or ${t("stash")} first.`,
     tagExists: `A ${t("tag").toLowerCase()} with the same name already exists.`,
     branchProtected: `The current ${t("branch").toLowerCase()}, the default one and those used by another working folder can't be deleted.`,

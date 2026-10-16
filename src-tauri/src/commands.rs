@@ -11,8 +11,9 @@ use higit_core::view::{
     FileDiffView, ForcePushPlanView, GitHubStatusView, HomeMapView, HostingContextView,
     HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView,
     OpenHow, PendingWorkView, PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView,
-    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, RemoteBranchPlanView,
+    RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
+    UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -394,6 +395,22 @@ pub async fn query_force_push_plan(
 ) -> CmdResult<ForcePushPlanView> {
     blocking(state, move |core| {
         core.force_push_plan(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 읽기만 한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_remote_branch_plan(
+    state: State<'_, AppState>,
+    repo: String,
+    remote: String,
+    branch: String,
+) -> CmdResult<RemoteBranchPlanView> {
+    blocking(state, move |core| {
+        core.queries()
+            .remote_branch_plan(&PathBuf::from(repo), &remote, &branch)
     })
     .await
 }

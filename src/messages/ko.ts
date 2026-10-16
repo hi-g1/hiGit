@@ -498,6 +498,8 @@ export const ko = {
     forcePushDisabled: `설정 "고급"에서 "올린 버전도 바꾸기"를 켜 주세요.`,
     forcePushProtected: `${t("remote")}의 기본 ${josa(t("branch"), "은/는")} 덮어쓰거나 지울 수 없어요.`,
     nothingToOverwrite: `덮어쓸 것이 없어요. ${josa(t("sync"), "을/를")} 눌러 주세요.`,
+    remoteBranchProtected: `${t("remote")}의 기본 ${josa(t("branch"), "은/는")} 지우거나 이름을 바꿀 수 없어요.`,
+    remoteRenamePartial: "새 이름으로는 올렸어요. 옛 이름은 아직 남았어요.",
     hasChanges: `고친 파일이 있어요. 먼저 ${josa(t("commit"), "을/를")} 하거나 ${josa(t("stash"), "을/를")} 해 주세요.`,
     tagExists: `같은 이름의 ${josa(t("tag"), "이/가")} 이미 있어요.`,
     branchProtected: `지금 ${t("branch")}, 기본 ${t("branch")}, 다른 작업 폴더가 쓰는 ${josa(t("branch"), "은/는")} 지울 수 없어요.`,

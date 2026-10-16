@@ -19,6 +19,7 @@ mod pick;
 mod pr_create;
 mod recover_parked;
 pub(crate) mod remote;
+pub(crate) mod remote_branch;
 mod reset;
 mod restore;
 mod rewrite;
@@ -44,6 +45,7 @@ pub use pick::PickAction;
 pub use pr_create::PrCreateAction;
 pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
+pub use remote_branch::RemoteBranchAction;
 pub use reset::ResetAction;
 pub use restore::RestoreAction;
 pub use rewrite::RewriteAction;
@@ -120,6 +122,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(PrCreateAction::new()))?;
     registry.register(Box::new(IdentityAction::new()))?;
     registry.register(Box::new(ForcePushAction::new()))?;
+    registry.register(Box::new(RemoteBranchAction::delete()))?;
+    registry.register(Box::new(RemoteBranchAction::rename()))?;
     Ok(())
 }
 

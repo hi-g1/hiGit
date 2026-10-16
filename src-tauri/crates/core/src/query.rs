@@ -1201,6 +1201,82 @@ impl Queries {
         Ok(view)
     }
 
+    /// 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 로컬 추적 ref로 계산한다.
+    /// 원격은 목록에 있어야 하고 추적 ref는 목록에서 정확히 같은 이름만 찾는다(계획 010 R14).
+    pub fn remote_branch_plan(
+        &self,
+        repo: &Path,
+        remote: &str,
+        branch: &str,
+    ) -> Result<crate::view::RemoteBranchPlanView> {
+        use crate::view::{RemoteBranchBlock as B, RemoteBranchPlanView};
+        /// 이 브랜치에만 있는 버전을 세는 상한.
+        const READ: u32 = 200;
+        let root = self.opened_repo(repo)?;
+        let git = self.git.as_ref();
+        let mut view = RemoteBranchPlanView {
+            remote: remote.to_string(),
+            branch: branch.to_string(),
+            tip: None,
+            only_here: 0,
+            by_others: 0,
+            blocked: None,
+            is_upstream_of_current: false,
+        };
+        if crate::actions::remote_branch::checked_remote(git, &root, remote).is_err() {
+            view.blocked = Some(B::NoRemote);
+            return Ok(view);
+        }
+        crate::actions::names::validate_ref_like(branch)?;
+        let Some(tip) = crate::actions::remote_branch::tracking_tip(git, &root, remote, branch)?
+        else {
+            view.blocked = Some(B::NoTrackingRef);
+            return Ok(view);
+        };
+        view.tip = Some(tip.to_string());
+        view.is_upstream_of_current = git.status(&root)?.branch.upstream.as_deref()
+            == Some(format!("{remote}/{branch}").as_str());
+        if branch == "HEAD" || crate::guard::protected_branch(git, &root, Some(remote), branch)? {
+            view.blocked = Some(B::Protected);
+        }
+        // 이 브랜치에만 있는 버전: 다른 원격 추적 브랜치와 로컬 브랜치에서 닿지 않는 것.
+        let own = format!("refs/remotes/{remote}/{branch}");
+        let exclude: Vec<git::Oid> = git
+            .list_refs(&root, "refs/remotes/")?
+            .into_iter()
+            .chain(git.list_refs(&root, "refs/heads/")?)
+            .filter(|r| r.name != own && !r.name.ends_with("/HEAD"))
+            .filter_map(|r| git::Oid::parse(&r.oid))
+            .collect();
+        let only = git.log_graph(
+            &root,
+            &git::GraphLogQuery {
+                tips: vec![tip],
+                exclude,
+                skip: 0,
+                limit: READ,
+            },
+        )?;
+        let mine = git
+            .local_config(&root)?
+            .into_iter()
+            .rev()
+            .find(|(k, _)| k == "user.email")
+            .map(|(_, v)| v)
+            .or(git.identity()?.email);
+        view.only_here = u32::try_from(only.len()).unwrap_or(u32::MAX);
+        view.by_others = u32::try_from(
+            only.iter()
+                .filter(|c| match &mine {
+                    Some(me) => !c.author_email.eq_ignore_ascii_case(me),
+                    None => true,
+                })
+                .count(),
+        )
+        .unwrap_or(u32::MAX);
+        Ok(view)
+    }
+
     /// 기록 정리 카드 지도의 처음 모습(D-100, D-106). 고른 버전이 정리할 수 있는 구간이 아니면
     /// `blocked`로 까닭을 알린다. 실행할 때 core가 같은 검사를 다시 한다. 읽기만 한다.
     /// `allow_published_rewrite`는 앱 설정(D-127)이고 `Core::rewrite_plan`이 넣는다.
