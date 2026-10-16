@@ -759,6 +759,7 @@ mod secrets {
     fn git(dir: &Path, args: &[&str]) {
         let ok = std::process::Command::new("git")
             .args(["-c", "core.autocrlf=false"])
+            .args(["-c", "user.name=t", "-c", "user.email=t@t"])
             .args(args)
             .current_dir(dir)
             .status()
