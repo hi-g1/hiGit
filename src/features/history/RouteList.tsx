@@ -8,7 +8,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { listKey } from "../../lib/listKeys";
+import { isExtendClick, listKey } from "../../lib/listKeys";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -187,7 +187,7 @@ export function RouteList({
     if (e.button !== 0 || !fromList(e)) return;
     const node = nodeAt(e);
     if (!node) return;
-    if (e.shiftKey && onExtendTo) {
+    if (isExtendClick(e) && onExtendTo) {
       onExtendTo(node.id);
       return;
     }

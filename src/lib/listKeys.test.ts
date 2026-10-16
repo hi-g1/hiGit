@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listKey } from "./listKeys";
+import { isExtendClick, listKey } from "./listKeys";
 
 const k = (key: string, mods: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean; isComposing: boolean }> = {}) => ({
   key,
@@ -38,5 +38,11 @@ describe("목록 조작 키", () => {
     expect(listKey(k("ArrowUp", { shiftKey: true }))).toBe("extendPrev");
     expect(listKey(k("ArrowUp", { shiftKey: true, isComposing: true }))).toBeNull();
     expect(listKey(k("Home", { shiftKey: true }))).toBeNull();
+  });
+
+  it("구간을 넓히는 누름은 Shift만 누른 클릭", () => {
+    expect(isExtendClick(k("", { shiftKey: true }))).toBe(true);
+    expect(isExtendClick(k("", { shiftKey: true, ctrlKey: true }))).toBe(false);
+    expect(isExtendClick(k(""))).toBe(false);
   });
 });

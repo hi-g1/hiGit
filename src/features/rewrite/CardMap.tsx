@@ -73,11 +73,14 @@ export function CardMap({ cards, original, onChange, readOnly }: Props) {
         return;
       }
       case "join":
+        setAnnounce(m.cardAnnounce(card.summary, m.cardStatus.joined));
         return onChange(joinWithBelow(cards, index));
       case "split":
+        setAnnounce(m.cardAnnounce(card.summary, m.cardSplit));
         return onChange(split(cards, index));
       case "drop":
         if (editing === card.oid) setEditing(null);
+        setAnnounce(m.cardAnnounce(card.summary, card.state === "drop" ? m.cardKeep : m.cardStatus.dropped));
         return onChange(toggleDrop(cards, index));
       case "edit":
         return setEditing(card.oid);

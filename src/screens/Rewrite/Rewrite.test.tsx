@@ -108,6 +108,7 @@ describe("기록 정리 화면", () => {
     expect(screen.getByText(ko.rewriteSummary(3, 0, 0))).toBeInTheDocument();
     fireEvent.keyDown(cardsOf()[1]!, { key: "Delete" });
     expect(screen.getByText(ko.rewriteSummary(2, 1, 0))).toBeInTheDocument();
+    expect(screen.getByText(ko.cardAnnounce("셋", ko.cardStatus.dropped))).toBeInTheDocument();
     fireEvent.keyDown(cardsOf()[1]!, { key: "ArrowDown" });
     await waitFor(() => expect(cardsOf()[2]).toHaveFocus());
     fireEvent.keyDown(cardsOf()[2]!, { key: "Enter" });

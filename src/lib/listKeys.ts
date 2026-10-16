@@ -39,3 +39,8 @@ export function listKey(e: KeyLike): ListMove | null {
   if (e.shiftKey) return EXTEND[e.key] ?? null;
   return MOVES[e.key] ?? null;
 }
+
+/** 구간을 넓히는 누름(Shift+클릭, 다른 수정키 없이). 여러 역 선택(D-106). */
+export function isExtendClick(e: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }): boolean {
+  return e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
+}

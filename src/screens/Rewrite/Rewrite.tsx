@@ -46,13 +46,14 @@ export function Rewrite({ repo, onDone }: Props) {
   const dirty = changed(cards, original);
   const counts = summary(cards);
 
+  // 정리하는 동안에는 화면을 떠나지 않는다(끝나면 버전 기록으로 돌아간다).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setView("history");
+      if (e.key === "Escape" && !e.defaultPrevented && !busy) setView("history");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setView]);
+  }, [setView, busy]);
 
   const ctx: RunCtx = { repo, toast, queryClient, onDone, openActivity: () => setView("activity"), m };
   const run = async () => {
@@ -69,7 +70,7 @@ export function Rewrite({ repo, onDone }: Props) {
         <h2 className={styles.title}>
           <Term id="rebase-i" focusable={false} />
         </h2>
-        <Button variant="text" onClick={() => setView("history")}>
+        <Button variant="text" disabled={busy} onClick={() => setView("history")}>
           {m.backToLog}
         </Button>
         <span className={styles.spacer} />

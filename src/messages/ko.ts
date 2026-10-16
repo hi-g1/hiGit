@@ -217,6 +217,7 @@ export const ko = {
   cardLabel: (summary: string, position: number, total: number, status: string | null) =>
     [summary, status, `${total}개 중 ${position}번째`].filter(Boolean).join(", "),
   cardMovedTo: (summary: string, position: number) => `${summary}, ${position}번째`,
+  cardAnnounce: (summary: string, what: string) => `${summary}, ${what}`,
   cardList: "정리할 버전",
   rewriteSummary: (after: number, dropped: number, joined: number) =>
     `정리 후 ${after}개 · 빠지는 버전 ${dropped}개 · 합쳐지는 버전 ${joined}개`,
@@ -364,7 +365,7 @@ export const ko = {
     publishedHistory: `이미 올린 버전이 있어서 기록을 바꿀 수 없어요. ${josa(t("revert"), "을/를")} 써 보세요.`,
     hasChanges: `고친 파일이 있어요. 먼저 ${josa(t("commit"), "을/를")} 하거나 ${josa(t("stash"), "을/를")} 해 주세요.`,
     tagExists: `같은 이름의 ${josa(t("tag"), "이/가")} 이미 있어요.`,
-    branchProtected: `지금 ${josa(t("branch"), "과/와")} 기본 ${josa(t("branch"), "은/는")} 지울 수 없어요.`,
+    branchProtected: `지금 ${t("branch")}, 기본 ${t("branch")}, 다른 작업 폴더가 쓰는 ${josa(t("branch"), "은/는")} 지울 수 없어요.`,
     noChange: "이미 같은 내용이에요.",
     annotatedTag: `설명이 달린 ${josa(t("tag"), "은/는")} 앱에서 지우지 않아요.`,
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
