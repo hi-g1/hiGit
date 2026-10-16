@@ -25,7 +25,7 @@ export function AdvancedSection() {
       </h3>
       <div className={styles.field}>
         <span className={styles.fieldName}>{m.settings.gitPath}</span>
-        <code className={styles.gitPath}>
+        <code className={styles.gitPath} data-selectable>
           <Truncate from="start">{gitPath}</Truncate>
         </code>
       </div>

@@ -34,7 +34,7 @@
   background: none;
   color: var(--text-muted);
   font-size: var(--font-size-md);
-  cursor: pointer;
+  cursor: default;
 }
 
 .filter:hover {

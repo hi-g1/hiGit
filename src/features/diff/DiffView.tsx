@@ -88,7 +88,7 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
                         <td className={styles.sign} aria-hidden="true">
                           {row.sign}
                         </td>
-                        <td className={styles.code}>
+                        <td className={styles.code} data-selectable>
                           {row.text}
                           {row.noNewlineAtEnd && <span className={styles.eof}>{m.noNewlineAtEnd}</span>}
                         </td>

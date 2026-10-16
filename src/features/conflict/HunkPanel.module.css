@@ -110,7 +110,7 @@
 .base summary {
   color: var(--text-muted);
   font-size: var(--font-size-sm);
-  cursor: pointer;
+  cursor: default;
 }
 
 .preview {

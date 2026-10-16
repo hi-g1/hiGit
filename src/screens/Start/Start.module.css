@@ -35,7 +35,7 @@
   color: var(--text);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
-  cursor: pointer;
+  cursor: default;
 }
 
 .textAction:disabled {
@@ -159,7 +159,7 @@
   color: inherit;
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
 }
 
 .rowButton:focus-visible {

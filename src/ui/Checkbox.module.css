@@ -8,7 +8,7 @@
   border: var(--border-width) solid var(--border-strong);
   border-radius: var(--space-1);
   background: var(--surface);
-  cursor: pointer;
+  cursor: default;
   appearance: none;
 }
 

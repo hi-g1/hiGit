@@ -74,7 +74,7 @@
 }
 
 .raw summary {
-  cursor: pointer;
+  cursor: default;
 }
 
 /* 되돌린 작업은 투명도 대신 글자색으로 흐리게(design.md "흐린 줄") */

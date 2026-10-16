@@ -21,7 +21,7 @@
   background: none;
   color: var(--text-muted);
   font: inherit;
-  cursor: pointer;
+  cursor: default;
 }
 
 .discard:hover:not(:disabled) {

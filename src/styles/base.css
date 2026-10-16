@@ -10,6 +10,12 @@ body,
   height: 100%;
 }
 
+/* 데스크톱 프로그램처럼(D-171, D-189): 화면 끝에서 튕기지 않는다 */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -19,6 +25,38 @@ body {
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height);
   -webkit-font-smoothing: antialiased;
+
+  /* 한국어는 낱말 중간에서 끊지 않고, 개수·시각 숫자는 같은 폭(D-189 ⑥) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 경로·해시·코드는 어디서든 끊는다 */
+code,
+pre,
+samp,
+[data-selectable] {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+/* 버튼·목록 줄·메뉴 항목은 커서가 화살표이고 글자가 끌려 선택되지 않는다(D-189 ①②). 링크 모양만 손가락 */
+:where(button, [role="button"], [role="option"], [role="tab"], [role="menuitem"], [role="radio"], [role="row"], summary, label, kbd) {
+  cursor: default;
+  user-select: none;
+}
+
+/* 선택되게 둘 곳: 비교 칸 코드, 오류 원문, 버전 번호·경로, 입력칸 */
+:where([data-selectable], pre, input, textarea) {
+  user-select: text;
+}
+
+/* 이미지·링크를 끌어 내지 않는다(D-189 ③) */
+img,
+svg,
+a {
+  -webkit-user-drag: none;
 }
 
 h1,

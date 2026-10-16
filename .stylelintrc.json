@@ -1,29 +1,72 @@
 {
-  "extends": ["stylelint-config-standard"],
+  "extends": [
+    "stylelint-config-standard"
+  ],
   "rules": {
     "color-no-hex": true,
     "color-named": "never",
-    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color", "color-mix"],
+    "function-disallowed-list": [
+      "rgb",
+      "rgba",
+      "hsl",
+      "hsla",
+      "hwb",
+      "lab",
+      "lch",
+      "oklab",
+      "oklch",
+      "color",
+      "color-mix"
+    ],
     "selector-class-pattern": null,
-    "selector-pseudo-class-no-unknown": [true, { "ignorePseudoClasses": ["global"] }],
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": [
+          "global"
+        ]
+      }
+    ],
     "declaration-property-value-disallowed-list": {
-      "/^text-decoration(-line)?$/": ["/underline/"],
-      "/^border(-(top|right|bottom|left))?$/": ["/dotted/"],
-      "/^border(-(top|right|bottom|left))?-style$/": ["/dotted/"]
+      "/^text-decoration(-line)?$/": [
+        "/underline/"
+      ],
+      "/^border(-(top|right|bottom|left))?$/": [
+        "/dotted/",
+        "/(^|\\s)0?\\.\\d+px/"
+      ],
+      "/^border(-(top|right|bottom|left))?-style$/": [
+        "/dotted/"
+      ],
+      "/^(border(-(top|right|bottom|left))?-width|outline(-width)?)$/": [
+        "/(^|\\s)0?\\.\\d+px/"
+      ],
+      "/^outline$/": [
+        "/(^|\\s)0?\\.\\d+px/"
+      ],
+      "cursor": [
+        "/pointer/"
+      ]
     },
     "declaration-property-unit-disallowed-list": {
-      "/^(font-size|line-height|width|height|min-width|min-height|max-width|max-height|padding.*|margin.*|gap|row-gap|column-gap|top|right|bottom|left|inset.*|grid-template-.*|grid-auto-.*|flex-basis|border-radius|letter-spacing|transform)$/": ["px"]
+      "/^(font-size|line-height|width|height|min-width|min-height|max-width|max-height|padding.*|margin.*|gap|row-gap|column-gap|top|right|bottom|left|inset.*|grid-template-.*|grid-auto-.*|flex-basis|border-radius|letter-spacing|transform)$/": [
+        "px"
+      ]
     }
   },
   "overrides": [
     {
-      "files": ["src/ui/linkStyle.module.css"],
+      "files": [
+        "src/ui/linkStyle.module.css"
+      ],
       "rules": {
         "declaration-property-value-disallowed-list": null
       }
     },
     {
-      "files": ["src/styles/tokens.css"],
+      "files": [
+        "src/styles/tokens.css"
+      ],
       "rules": {
         "color-no-hex": null,
         "color-named": null,

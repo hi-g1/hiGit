@@ -8,7 +8,7 @@
   padding: var(--space-2) var(--space-4);
   border-bottom: var(--border-width) solid var(--border);
   border-left: 2px solid transparent;
-  cursor: pointer;
+  cursor: default;
 }
 
 .row:hover {

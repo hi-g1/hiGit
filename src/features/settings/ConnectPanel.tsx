@@ -36,7 +36,7 @@ export function ConnectPanel({
     return (
       <div className={styles.panel}>
         <div className={styles.codeRow}>
-          <code className={styles.code} aria-label={m.settings.code}>
+          <code className={styles.code} aria-label={m.settings.code} data-selectable>
             {state.code}
           </code>
           <Button

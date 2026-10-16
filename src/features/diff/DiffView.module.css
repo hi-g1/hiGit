@@ -46,7 +46,7 @@
   background: none;
   color: var(--text-muted);
   font-size: var(--font-size-sm);
-  cursor: pointer;
+  cursor: default;
 }
 
 .wrapToggle:hover {
@@ -138,7 +138,7 @@
   background: none;
   color: inherit;
   font: inherit;
-  cursor: pointer;
+  cursor: default;
 }
 
 .foldButton:hover {
