@@ -309,6 +309,18 @@ export const en: Messages = {
   noCommits: "No versions saved yet.",
   moreCommits: (limit: number) => `Showing the latest ${limit} only.`,
   renamedFrom: (path: string) => `Renamed from ${path}`,
+  clone: {
+    url: "Address",
+    urlPlaceholder: "https://github.com/name/repository",
+    saveIn: "Save in",
+    change: "Change",
+    folderName: "Folder name",
+    oldGit: "Git is outdated · clone anyway",
+    run: t("clone"),
+    running: (secs: number) => `${t("clone")} · ${secs}s`,
+    cancel: "Cancel",
+    close: "Close",
+  },
   settings: {
     title: "Settings",
     github: "GitHub",

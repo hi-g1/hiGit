@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
+import { CloneDialog } from "./features/clone/CloneDialog";
+import { useCloneStore } from "./features/clone/cloneStore";
 import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
@@ -46,6 +48,9 @@ function Screens() {
   const openFolder = useOpenFolder();
   // Ctrl+O: 시작 화면과 작업 공간 어디서나 폴더 열기(D-033)
   useShortcut("openFolder", openFolder.pick, gitReady);
+  // Ctrl+Shift+O: 어디서나 복제(D-115)
+  const openClone = useCloneStore((s) => s.openClone);
+  useShortcut("clone", openClone, gitReady);
   // 마지막 프로젝트를 여는 동안은 빈 바탕(시작 화면이 잠깐 보였다 사라지지 않게)
   const ready = useStartup();
   if (!ready) return null;
@@ -54,6 +59,7 @@ function Screens() {
       {repo ? <Workspace repo={repo} /> : <Start />}
       <TrustDialog />
       <SettingsDialog />
+      <CloneDialog />
     </>
   );
 }

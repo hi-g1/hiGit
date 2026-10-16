@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ActionButton } from "../../features/actions/ActionButton";
+import { useCloneStore } from "../../features/clone/cloneStore";
 import { useOpenFolder } from "../../features/open-project/useOpenFolder";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { api, type RecentProject } from "../../lib/api";
@@ -10,6 +11,7 @@ import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Kbd } from "../../ui/Kbd";
+import { Term } from "../../ui/Term";
 import { LastProject } from "./LastProject";
 import { ProjectRow } from "./ProjectRow";
 import styles from "./Start.module.css";
@@ -26,6 +28,7 @@ export function Start() {
   const openFolder = useOpenFolder();
   const openRepo = useRepoStore((s) => s.openRepo);
   const openSettings = useSettingsStore((s) => s.openSettings);
+  const openClone = useCloneStore((s) => s.openClone);
   const pendingInit = useRepoStore((s) => s.pendingInit);
   const setPendingInit = useRepoStore((s) => s.setPendingInit);
   const startNotice = useRepoStore((s) => s.startNotice);
@@ -41,6 +44,15 @@ export function Start() {
       <header className={styles.bar}>
         <span className={styles.barTitle}>{m.startTitle}</span>
         <span className={styles.spacer} />
+        <button
+          type="button"
+          className={styles.textAction}
+          disabled={!gitReady}
+          onClick={openClone}
+          aria-keyshortcuts="Control+Shift+O"
+        >
+          <Term id="clone" focusable={false} /> <Kbd>{SHORTCUTS.clone.label}</Kbd>
+        </button>
         <button
           type="button"
           className={styles.textAction}

@@ -187,6 +187,10 @@ describe("시작 화면", () => {
     expect(await screen.findByText("✓ Git을 찾았어요 · 버전 2.45.0")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "이어서 하기" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^폴더 열기/ })).toHaveTextContent("Ctrl+O");
+    const clone = screen.getByRole("button", { name: /^복제/ });
+    expect(clone).toHaveTextContent("Ctrl+Shift+O");
+    expect(clone).toHaveAttribute("aria-keyshortcuts", "Control+Shift+O");
+    expect(screen.getByRole("button", { name: "설정" })).toBeInTheDocument();
   });
 
   it("Git이 보안 수정 기준보다 낮으면 업데이트 안내와 내려받기", async () => {

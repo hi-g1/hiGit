@@ -338,6 +338,19 @@ export const ko = {
   noCommits: "아직 저장한 버전이 없어요.",
   moreCommits: (limit: number) => `최근 ${limit}개만 보여요.`,
   renamedFrom: (path: string) => `${path}에서 이름 바꿈`,
+  // 복제(D-115)
+  clone: {
+    url: "주소",
+    urlPlaceholder: "https://github.com/이름/저장소",
+    saveIn: "저장할 곳",
+    change: "바꾸기",
+    folderName: "폴더 이름",
+    oldGit: "Git이 오래됐어요 · 그래도 복제",
+    run: t("clone"),
+    running: (secs: number) => `${t("clone")} 중 · ${secs}초`,
+    cancel: "취소",
+    close: "닫기",
+  },
   // 설정과 GitHub 연결(D-109, D-116)
   settings: {
     title: "설정",

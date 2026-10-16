@@ -36,6 +36,15 @@ export const queryKeys = {
   cloneDefaults: ["cloneDefaults"] as const,
 };
 
+/** 복제 대화상자의 부모 폴더 기본값(홈 폴더). */
+export function useCloneDefaults() {
+  return useQuery<Awaited<ReturnType<typeof api.cloneDefaults>>, ApiError>({
+    queryKey: queryKeys.cloneDefaults,
+    queryFn: api.cloneDefaults,
+    staleTime: Infinity,
+  });
+}
+
 /** 설정의 GitHub 구역 상태(키체인을 건드리지 않는다). */
 export function useGitHubStatus() {
   return useQuery<Awaited<ReturnType<typeof api.githubStatus>>, ApiError>({

@@ -1,0 +1,75 @@
+/* 복제 대화상자(design.md "복제 대화상자") */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.field {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+}
+
+.field:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 긴 경로는 앞쪽을 줄인다(끝의 폴더 이름이 보이게). */
+.parent {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  direction: rtl;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.target {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-md);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.progress {
+  margin-right: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

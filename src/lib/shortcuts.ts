@@ -32,6 +32,8 @@ export const SHORTCUTS = {
   commit: { keys: [ctrl("Enter")], label: "Ctrl+Enter", scope: "field", inTextField: "app" },
   /** 폴더 열기(어디서나) */
   openFolder: { keys: [ctrl("KeyO")], label: "Ctrl+O", scope: "global", inTextField: "app" },
+  /** 복제(어디서나, D-115) */
+  clone: { keys: [ctrl("KeyO", true)], label: "Ctrl+Shift+O", scope: "global", inTextField: "app" },
   /** 방금 한 일 되돌리기(D-042). 입력칸에서는 글자 되돌리기 */
   undo: { keys: [ctrl("KeyZ")], label: "Ctrl+Z", scope: "global", inTextField: "native" },
   /** 다시 하기. Windows 사용자에게 익숙한 Ctrl+Y도 받는다(D-056) */
@@ -71,7 +73,6 @@ export const SHORTCUTS = {
 
 /** 아직 표에 없지만 계획된 단축키. 겹침 검사에 넣는다. */
 export const PLANNED: readonly Key[] = [
-  ctrl("KeyO", true), // 반복 4: 복제
   ctrl("KeyK"), // 명령 팔레트
 ];
 
