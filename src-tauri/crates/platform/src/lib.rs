@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod app_dir;
+mod display;
 mod exe;
 mod git_exe;
 mod link;
@@ -14,6 +15,7 @@ mod process;
 mod secret;
 
 pub use app_dir::{DATA_DIR_ENV, app_data_dir, home_dir, open_private_append, write_private_file};
+pub use display::{BODY_PX, DisplayHints, display_hints};
 pub use exe::current_exe_path;
 pub use git_exe::{GitBuild, find_git, git_build, git_download_url};
 pub use link::{symlink_dir, symlink_file};

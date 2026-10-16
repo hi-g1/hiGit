@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: **다듬기**(계획 011, 사용자 결정 D-138~D-145, 근거 `docs/research/polish.md`). 반복 4b는 010-H2까지 하고 멈춤(다듬기 뒤 010-H3부터).
-- 단계: 011-P3 끝(노선도·목록이 `uiScale` 하나로 커짐, 아직 값은 1)
-- 마지막 커밋: (이 갱신과 같은 커밋) history: scale the route map with the root font size
-- 다음 할 일: 011-P4 platform OS 글자 배율·다크 읽기(검토 반영 R7: gsettings 둘을 함께, stdin·stderr 버림, kill 뒤 wait. Windows 다크는 읽지 않음) → P5 → … → P9 스크린샷
+- 단계: 011-P4 끝(`platform::display_hints()`)
+- 마지막 커밋: (이 갱신과 같은 커밋) platform: read os text scale and color scheme
+- 다음 할 일: 011-P5 설정 칸 다섯·`app_display_hints`(검토 반영 R2: Core 없이 도는 명령, R6: bool 기본 참 함수·Patch `Default`) → P6 → P7 → P8 → P9 스크린샷
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 4b(010-H2까지) → **다듬기**(2026-10-16 사용자 추가) → 4b 나머지 → 4c → 5.
@@ -207,7 +207,8 @@
 - [x] 011-P1 결정 D-146~D-161·문서
 - [x] 011-P2 rem 토큰·CSS 단위·린트(인라인 `code`는 둘레 글자 크기를 따르고, 코드 본문(비교·충돌·파일 목록)만 `--font-size-code`. 시험 `mono-size.test.ts`)
 - [x] 011-P3 노선도·목록 배율(`uiStore.uiScale`, `SvgRenderer scale`, `SCENE_FONT`, 이름표 폭은 글자 폭 + 16. `hitTest`는 화면에서 부르는 곳이 없어 바꿀 것 없음)
-- [ ] 011-P4 OS 글자 배율·다크 읽기(platform) / 011-P5 설정 칸·`app_display_hints`
+- [x] 011-P4 OS 글자 배율·다크 읽기(platform, 이 컴퓨터는 `text-scaling-factor` 1.25라 Ubuntu 본문이 15×1.25px가 된다)
+- [ ] 011-P5 설정 칸·`app_display_hints`
 - [ ] 011-P6 글자 크기 적용·설정·Ctrl+=·−·0 / 011-P7 상단 바 테두리·줄 바꿈 / 011-P8 밑줄·용어 설명 보기
 - [ ] 011-P9 Ubuntu 스크린샷(`docs/research/img/polish/`)
 - [ ] 011-P10 언어·시각 / 011-P11 화면 모드

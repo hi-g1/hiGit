@@ -436,6 +436,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 | git 끝내기(D-080) | `taskkill /T`, 2초 뒤 `taskkill /T /F` | 새 프로세스 그룹에 SIGTERM, 2초 뒤 SIGKILL |
 | 도는 git 찾기(D-081) | `tasklist`의 `git.exe`·`git-*.exe` | `/proc/*/comm`이 `git`이거나 `git-`로 시작 |
 | 비밀 저장 | 자격 증명 관리자 (`keyring-core` + `windows-native-keyring-store`) | Secret Service (`keyring-core` + `zbus-secret-service-keyring-store`, 순수 Rust) |
+| 글자 크기·다크 읽기(D-147, `display_hints`) | 본문 14px. `%SystemRoot%\System32\reg.exe query HKCU\Software\Microsoft\Accessibility /v TextScaleFactor`(100~225%). 다크는 읽지 않음(WebView2가 스스로 따름) | 본문 15px. `/usr/bin/gsettings get org.gnome.desktop.interface text-scaling-factor`·`color-scheme`(함께 읽음). 둘 다 절대 경로·1.5초·출력 256바이트까지, 실패하면 배율 100·다크 모름 |
 | 웹뷰 | WebView2 | WebKitGTK 4.1 |
 
 우클릭 메뉴 등록·해제는 설정 화면 토글로 하고, 설치 프로그램에서는 기본 등록한다.
