@@ -4,11 +4,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { Messages } from "../../../messages";
+import { Term } from "../../../ui/Term";
 import type { ToastAction } from "../../../ui/toastStore";
 import type { Zoom } from "../layout/simplify";
 import type { StationDialog } from "./ask";
 import { copyText } from "./copy";
 import type { StationInfo } from "./info";
+import { runAction } from "./run";
 
 /** 역 밖의 화면 상태. 항목이 보일지·흐릴지 정할 때 쓴다. */
 export type MenuEnv = {
@@ -53,6 +55,13 @@ export type StationMenuItem = {
   run: (info: StationInfo, ctx: MenuCtx) => void | Promise<void>;
 };
 
+/** 기록을 바꾸는 항목이 공통으로 흐려지는 까닭(다른 도구의 작업, 브랜치 없음). 없으면 null. */
+function blockedByState(env: MenuEnv): Availability | null {
+  if (env.operation === "other") return { disabled: (m) => m.whyOtherOperation };
+  if (env.currentBranch === null) return { disabled: (m) => m.whyDetached };
+  return null;
+}
+
 export const STATION_ITEMS: readonly StationMenuItem[] = [
   {
     id: "copy-id",
@@ -61,6 +70,55 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     availability: () => "show",
     run: async (info, ctx) => {
       ctx.toast((await copyText(info.oid)) ? ctx.m.copied : ctx.m.copyFailed);
+    },
+  },
+  {
+    // 지금 위치의 조상(합쳐 들어온 곁가지 포함)만. 그 변경을 취소하는 새 버전을 만든다.
+    id: "revert",
+    group: "main",
+    label: () => <Term id="revert" focusable={false} />,
+    actionId: "revert",
+    availability: (info, env) => {
+      if (!info.isAncestorOfHead) return "hide";
+      if (env.stagedFiles > 0) return { disabled: (m) => m.whyStaged };
+      return blockedByState(env) ?? "show";
+    },
+    run: async (info, ctx) => {
+      await runAction(ctx, { id: "revert", input: { oid: info.oid } }, { done: () => ctx.m.reverted });
+    },
+  },
+  {
+    // 다른 브랜치의 버전만(지금 위치의 조상은 이미 있다).
+    id: "cherry-pick",
+    group: "more",
+    label: () => <Term id="cherry-pick" focusable={false} />,
+    actionId: "cherry-pick",
+    availability: (info, env) => {
+      if (info.isAncestorOfHead) return "hide";
+      if (info.isMerge) return { disabled: (m) => m.whyMergeCopy };
+      if (env.stagedFiles > 0) return { disabled: (m) => m.whyStaged };
+      return blockedByState(env) ?? "show";
+    },
+    run: async (info, ctx) => {
+      await runAction(ctx, { id: "cherry-pick", input: { oid: info.oid } }, { done: () => ctx.m.picked });
+    },
+  },
+  {
+    // 지금 위치의 조상이고 지금 위치가 아닌 버전. 빠지는 버전이 올라갔는지는 core가 본다.
+    id: "reset",
+    group: "more",
+    label: () => <Term id="reset" focusable={false} />,
+    actionId: "reset",
+    availability: (info, env) => {
+      if (!info.isAncestorOfHead || info.isHead) return "hide";
+      return blockedByState(env) ?? "show";
+    },
+    run: async (info, ctx) => {
+      await runAction(
+        ctx,
+        { id: "reset", input: { oid: info.oid } },
+        { done: (r) => (r.kind === "reset" ? ctx.m.resetDone(r.dropped) : null) },
+      );
     },
   },
 ];

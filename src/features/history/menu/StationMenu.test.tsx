@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 describe("역 메뉴", () => {
-  it("Enter로 열고, 버전 번호 복사 하나만 있고 더 보기는 없다", async () => {
+  it("Enter로 열고, 지금 위치에는 버전 번호 복사와 되돌리기가 있고 더 보기는 없다", async () => {
     serve();
     showHistory();
     const list = await screen.findByRole("listbox");
@@ -74,6 +74,7 @@ describe("역 메뉴", () => {
     fireEvent.keyDown(list, { key: "Enter" });
     const menu = await screen.findByRole("menu", { name: "버전 메뉴" });
     expect(menu).toHaveTextContent("버전 번호 복사");
+    expect(menu).toHaveTextContent("되돌리기");
     expect(screen.queryByText("더 보기")).not.toBeInTheDocument();
   });
 
@@ -284,11 +285,10 @@ describe("역 메뉴 항목 표", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
-  it("2b 실제 표에는 버전 번호 복사뿐이고, 액션 항목은 action-meta에 있는 id여야 한다", () => {
-    expect(STATION_ITEMS.map((i) => i.id)).toEqual(["copy-id"]);
+  it("액션 항목은 action-meta에 있는 id여야 한다", () => {
     const ids = new Set(actionMeta.map((a) => a.id));
     for (const i of STATION_ITEMS) if (i.actionId) expect(ids.has(i.actionId), i.id).toBe(true);
-    expect(STATION_ITEMS.every((i) => i.availability(info, env) !== "hide")).toBe(true);
+    expect(item("x", "main", () => "show").availability(info, env)).toBe("show");
   });
 
   it("역 정보: 합치기·첫 버전·지금 위치·조상·이름들", () => {
