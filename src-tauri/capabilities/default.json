@@ -31,6 +31,8 @@
     "allow-file-reveal",
     "allow-file-open",
     "allow-project-reveal",
+    "allow-app-open-licenses",
+    "allow-app-open-guide",
     "allow-project-allow-owner",
     "allow-recent-list",
     "allow-recent-remove",

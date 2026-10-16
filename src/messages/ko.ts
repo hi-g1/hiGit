@@ -681,6 +681,8 @@ export const ko = {
     theme: "화면 모드",
     themes: { system: "시스템 따라가기", light: "라이트", dark: "다크" },
     info: "정보",
+    guide: "사용법",
+    licenses: "오픈 소스 라이선스",
     advanced: "고급",
     gitPath: "Git 위치",
     allowPublishedRewrite: "올린 버전도 바꾸기",

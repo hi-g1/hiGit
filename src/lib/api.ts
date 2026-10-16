@@ -188,6 +188,9 @@ export const api = {
   fileReveal: (repo: string, path: string) => call(commands.fileReveal(repo, path)),
   fileOpen: (repo: string, path: string) => call(commands.fileOpen(repo, path)),
   projectReveal: (repo: string) => call(commands.projectReveal(repo)),
+  /** 함께 설치된 서드파티 라이선스 고지·사용법을 OS 기본 앱으로 연다(D-220). */
+  openLicenses: () => call(commands.appOpenLicenses()),
+  openGuide: (locale: "ko" | "en") => call(commands.appOpenGuide(locale)),
   /** 폴더 오른쪽 클릭 메뉴(D-214). `label`은 화면 언어의 항목 이름. */
   shellMenuStatus: (label: string) => call(commands.appShellMenuStatus(label)),
   shellMenuSync: (label: string) => call(commands.appShellMenuSync(label)),

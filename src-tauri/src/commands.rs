@@ -307,6 +307,36 @@ pub async fn project_reveal(
         .map_err(open_failed)
 }
 
+/// 묶음 자원 파일을 OS 기본 앱으로 연다. 이름은 core의 상수뿐이고 화면이 경로를 넘기지 않는다(D-220).
+fn open_resource(app: &AppHandle, name: &str) -> CmdResult<()> {
+    use tauri::Manager;
+    use tauri_plugin_opener::OpenerExt;
+    let path = app
+        .path()
+        .resolve(name, tauri::path::BaseDirectory::Resource)
+        .map_err(open_failed)?;
+    if !path.is_file() {
+        return Err(ErrorView::from(&higit_core::CoreError::OpenMissing));
+    }
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(open_failed)
+}
+
+/// 설정 "정보"의 "오픈 소스 라이선스": 함께 설치된 서드파티 고지를 연다.
+#[tauri::command]
+#[specta::specta]
+pub fn app_open_licenses(app: AppHandle) -> CmdResult<()> {
+    open_resource(&app, higit_core::view::LICENSES_RESOURCE)
+}
+
+/// 설정 "정보"의 "사용법": 함께 설치된 사용법 문서(화면 언어)를 연다.
+#[tauri::command]
+#[specta::specta]
+pub fn app_open_guide(app: AppHandle, locale: higit_core::view::GuideLocale) -> CmdResult<()> {
+    open_resource(&app, locale.resource())
+}
+
 /// 폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름이고 core가 검사한다.
 #[tauri::command]
 #[specta::specta]

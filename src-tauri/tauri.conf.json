@@ -41,6 +41,8 @@
       "../LICENSE": "LICENSE",
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../THIRD_PARTY_LICENSES.txt": "THIRD_PARTY_LICENSES.txt",
+      "../docs/guide/index.html": "guide/index.html",
+      "../docs/guide/en.html": "guide/en.html",
       "../assets/fonts/licenses/Pretendard-OFL.txt": "licenses/Pretendard-OFL.txt",
       "../assets/fonts/licenses/JetBrainsMono-OFL.txt": "licenses/JetBrainsMono-OFL.txt",
       "../src/assets/fonts/D2Coding-OFL.txt": "licenses/D2Coding-OFL.txt"

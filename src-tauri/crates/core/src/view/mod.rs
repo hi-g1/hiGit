@@ -64,8 +64,9 @@ pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind, Undo
 pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use settings::{
-    AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, LanguageSetting,
-    ShellMenuKindView, ShellMenuView, ThemeSetting, TipId, TipsSeenView,
+    AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, GuideLocale,
+    LICENSES_RESOURCE, LanguageSetting, ShellMenuKindView, ShellMenuView, ThemeSetting, TipId,
+    TipsSeenView,
 };
 pub use stash::{StashItem, StashListView};
 

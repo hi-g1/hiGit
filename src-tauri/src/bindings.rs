@@ -39,6 +39,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::file_reveal,
             commands::file_open,
             commands::project_reveal,
+            commands::app_open_licenses,
+            commands::app_open_guide,
             commands::project_allow_owner,
             commands::recent_list,
             commands::recent_remove,

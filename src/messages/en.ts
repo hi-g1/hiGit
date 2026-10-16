@@ -635,6 +635,8 @@ export const en: Messages = {
     theme: "Appearance",
     themes: { system: "Follow system", light: "Light", dark: "Dark" },
     info: "About",
+    guide: "User guide",
+    licenses: "Open source licenses",
     advanced: "Advanced",
     gitPath: "Git location",
     allowPublishedRewrite: "Change uploaded versions",

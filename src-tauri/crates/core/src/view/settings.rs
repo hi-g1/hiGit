@@ -165,3 +165,24 @@ pub struct ShellMenuView {
     pub kind: ShellMenuKindView,
     pub installed: bool,
 }
+
+/// 사용법 문서의 언어(D-220). 앱 화면 언어와 같다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum GuideLocale {
+    Ko,
+    En,
+}
+
+impl GuideLocale {
+    /// 묶음 자원 안의 사용법 파일.
+    pub fn resource(self) -> &'static str {
+        match self {
+            GuideLocale::Ko => "guide/index.html",
+            GuideLocale::En => "guide/en.html",
+        }
+    }
+}
+
+/// 묶음 자원 안의 서드파티 라이선스 고지.
+pub const LICENSES_RESOURCE: &str = "THIRD_PARTY_LICENSES.txt";

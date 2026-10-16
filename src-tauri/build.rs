@@ -26,6 +26,8 @@ const COMMANDS: &[&str] = &[
     "file_reveal",
     "file_open",
     "project_reveal",
+    "app_open_licenses",
+    "app_open_guide",
     "project_allow_owner",
     "recent_list",
     "recent_remove",

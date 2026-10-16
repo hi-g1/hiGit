@@ -57,6 +57,10 @@ export const commands = {
 	fileOpen: (folder: string, path: string) => __TAURI_INVOKE<null>("file_open", { folder, path }),
 	/**  열린 저장소의 폴더를 파일 관리자로 연다("폴더 위치 열기", D-216). */
 	projectReveal: (folder: string) => __TAURI_INVOKE<null>("project_reveal", { folder }),
+	/**  설정 "정보"의 "오픈 소스 라이선스": 함께 설치된 서드파티 고지를 연다. */
+	appOpenLicenses: () => __TAURI_INVOKE<null>("app_open_licenses"),
+	/**  설정 "정보"의 "사용법": 함께 설치된 사용법 문서(화면 언어)를 연다. */
+	appOpenGuide: (locale: GuideLocale) => __TAURI_INVOKE<null>("app_open_guide", { locale }),
 	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
@@ -931,6 +935,9 @@ export type GitHubStatusView = {
 
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
 export type GitSecurity = "ok" | "outdated" | "distroManaged";
+
+/**  사용법 문서의 언어(D-220). 앱 화면 언어와 같다. */
+export type GuideLocale = "ko" | "en";
 
 /**  main과 지금 브랜치 두 줄(지금 브랜치가 main이면 한 줄)을 그리는 데 필요한 것만. */
 export type HomeMapView = {
