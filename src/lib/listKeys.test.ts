@@ -28,8 +28,15 @@ describe("목록 조작 키", () => {
 
   it("수정키·조합 중·다른 키는 아니다", () => {
     expect(listKey(k("ArrowDown", { ctrlKey: true }))).toBeNull();
-    expect(listKey(k("ArrowDown", { shiftKey: true }))).toBeNull();
+    expect(listKey(k("ArrowDown", { shiftKey: true, ctrlKey: true }))).toBeNull();
     expect(listKey(k("ArrowDown", { isComposing: true }))).toBeNull();
     expect(listKey(k("a"))).toBeNull();
+  });
+
+  it("Shift+↑↓는 구간 넓히기, 한글 조합 중에는 아니다", () => {
+    expect(listKey(k("ArrowDown", { shiftKey: true }))).toBe("extendNext");
+    expect(listKey(k("ArrowUp", { shiftKey: true }))).toBe("extendPrev");
+    expect(listKey(k("ArrowUp", { shiftKey: true, isComposing: true }))).toBeNull();
+    expect(listKey(k("Home", { shiftKey: true }))).toBeNull();
   });
 });

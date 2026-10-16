@@ -51,6 +51,8 @@ function open(stagedFiles = 0) {
     onDone: vi.fn(),
     ask: vi.fn(),
     openActivity: vi.fn(),
+    openRewrite: vi.fn(),
+    headLine: () => [],
     m: ko,
   };
   const onClose = vi.fn();

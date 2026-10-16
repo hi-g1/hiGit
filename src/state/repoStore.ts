@@ -4,8 +4,8 @@ import type { RepoInfo } from "../lib/api";
 /** 마지막 프로젝트를 열지 못해 시작 화면에 온 까닭(D-032). */
 export type StartNotice = { kind: "lastMissing" | "lastNotRepo"; name: string };
 
-/** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085). */
-export type WorkspaceView = "home" | "history" | "activity";
+/** 작업 공간 화면: 홈(고친 파일과 비교), 버전 기록(D-058), 작업 내역(D-085), 기록 정리(D-106). */
+export type WorkspaceView = "home" | "history" | "activity" | "rewrite";
 
 type RepoState = {
   /** 작업 공간에 열린 저장소. 없으면 홈 화면. */
@@ -18,6 +18,8 @@ type RepoState = {
   startNotice: StartNotice | null;
   /** 시작 화면의 "바뀐 파일 N개 보기": 작업 공간이 열리면 첫 바뀐 파일을 고른다. */
   selectFirstChange: boolean;
+  /** 기록 정리 화면에서 고친다: 고른 버전(새 것부터). */
+  rewriteOids: readonly string[];
   openRepo: (repo: RepoInfo) => void;
   closeRepo: () => void;
   setView: (view: WorkspaceView) => void;
@@ -25,6 +27,8 @@ type RepoState = {
   setPendingInit: (folder: string | null) => void;
   setStartNotice: (notice: StartNotice | null) => void;
   setSelectFirstChange: (on: boolean) => void;
+  /** 고른 버전으로 기록 정리 화면을 연다. */
+  openRewrite: (oids: readonly string[]) => void;
 };
 
 export const useRepoStore = create<RepoState>()((set) => ({
@@ -34,6 +38,7 @@ export const useRepoStore = create<RepoState>()((set) => ({
   pendingInit: null,
   startNotice: null,
   selectFirstChange: false,
+  rewriteOids: [],
   openRepo: (repo) =>
     set({ repo, view: "home", selectedPath: null, pendingInit: null, startNotice: null }),
   closeRepo: () => set({ repo: null, selectedPath: null, startNotice: null }),
@@ -42,4 +47,5 @@ export const useRepoStore = create<RepoState>()((set) => ({
   setPendingInit: (pendingInit) => set({ pendingInit }),
   setStartNotice: (startNotice) => set({ startNotice }),
   setSelectFirstChange: (selectFirstChange) => set({ selectFirstChange }),
+  openRewrite: (rewriteOids) => set({ rewriteOids, view: "rewrite" }),
 }));

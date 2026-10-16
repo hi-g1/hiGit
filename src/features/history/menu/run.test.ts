@@ -21,6 +21,8 @@ function context() {
     onDone: vi.fn(),
     ask: vi.fn(),
     openActivity: vi.fn(),
+    openRewrite: vi.fn(),
+    headLine: () => [],
     m: ko,
   };
   return { ctx, invalidate };

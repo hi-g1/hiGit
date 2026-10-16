@@ -11,6 +11,7 @@ import type { StationDialog } from "./ask";
 import { copyText } from "./copy";
 import type { StationInfo } from "./info";
 import { runAction } from "./run";
+import { MAX_RANGE } from "../range";
 
 /** 역 밖의 화면 상태. 항목이 보일지·흐릴지 정할 때 쓴다. */
 export type MenuEnv = {
@@ -26,6 +27,8 @@ export type MenuEnv = {
   upstream: string | null;
   defaultBranch: string | null;
   zoom: Zoom;
+  /** 지금 브랜치 첫 부모 선의 역 id(새 것부터, 보이는 노드 기준). */
+  headLine: readonly string[];
 };
 
 export type MenuCtx = {
@@ -38,6 +41,10 @@ export type MenuCtx = {
   ask: (dialog: StationDialog) => void;
   /** 작업 내역 화면으로. */
   openActivity: () => void;
+  /** 고른 버전(새 것부터)으로 기록 정리 화면을 연다. */
+  openRewrite: (oids: readonly string[]) => void;
+  /** 지금 브랜치 첫 부모 선(새 것부터). */
+  headLine: () => readonly string[];
   m: Messages;
 };
 
@@ -135,6 +142,25 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     },
     run: async (info, ctx) => {
       await runAction(ctx, { id: "cherry-pick", input: { oid: info.oid } }, { done: () => ctx.m.picked });
+    },
+  },
+  {
+    // 그 역부터 지금 위치까지를 고른 구간으로 기록 정리 화면을 연다(D-106). 지금 위치 하나는 고치기로.
+    id: "rewrite-from",
+    group: "more",
+    label: (m) => m.rewriteFromHere,
+    actionId: "rebase-i",
+    availability: (info, env) => {
+      const at = env.headLine.indexOf(info.oid);
+      if (!info.onHeadLine || info.isHead || info.isMerge || info.isRoot || at < 0 || at + 1 > MAX_RANGE) return "hide";
+      if (env.zoom !== "all") return { disabled: (m) => m.whyZoomAll };
+      if (env.operation === "other") return { disabled: (m) => m.whyOtherOperation };
+      if (env.changedFiles > 0) return { disabled: (m) => m.whyChanged };
+      return "show";
+    },
+    run: (info, ctx) => {
+      // 열기 직전의 선(메뉴가 연 그 순간)에서 구간을 잡는다.
+      ctx.openRewrite(ctx.headLine().slice(0, ctx.headLine().indexOf(info.oid) + 1));
     },
   },
   {

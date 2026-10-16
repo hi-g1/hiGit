@@ -5,6 +5,7 @@ import { simplify, ZOOMS, type Zoom } from "../../features/history/layout/simpli
 import type { StationDialog } from "../../features/history/menu/ask";
 import { StationDialogs } from "../../features/history/menu/dialogs/StationDialogs";
 import { headAncestors, stationInfo } from "../../features/history/menu/info";
+import { eligible, extend, headLine, rangeIds as rangeBetween } from "../../features/history/range";
 import type { MenuCtx, MenuEnv } from "../../features/history/menu/items";
 import { StationMenu } from "../../features/history/menu/StationMenu";
 import { toRouteNodes } from "../../features/history/model";
@@ -49,7 +50,9 @@ export function History({
   const changedFiles = status?.files.length ?? 0;
   const stagedFiles = status?.files.filter((f) => f.staged).length ?? 0;
   const setView = useRepoStore((s) => s.setView);
-  const { selectedId, zoom, scope, expanded, select, setZoom, setScope, expand } = useHistoryStore();
+  const { selectedId, anchorId, rangeIds, zoom, scope, expanded, select, selectRange, setZoom, setScope, expand } =
+    useHistoryStore();
+  const openRewrite = useRepoStore((s) => s.openRewrite);
   const log = useLogPages(repo, scope);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = log;
   const pages = log.data?.pages;
@@ -58,8 +61,15 @@ export function History({
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Esc: 열린 메뉴(Radix가 처리) → 고른 구간 지우기 → 홈.
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setView("home");
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (useHistoryStore.getState().rangeIds.length > 0) {
+        e.preventDefault();
+        useHistoryStore.getState().clearRange();
+        return;
+      }
+      setView("home");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -173,6 +183,25 @@ export function History({
   );
   const [dialog, setDialog] = useState<StationDialog | null>(null);
   const ancestors = useMemo(() => headAncestors(shown), [shown]);
+  const line = useMemo(() => headLine(shown), [shown]);
+  const rangeSet = useMemo(() => new Set(rangeIds), [rangeIds]);
+  // 여러 역 선택(D-106): 지금 브랜치 선 위에서만, 곁가지 행은 건너뛴다.
+  const onExtend = (dir: "next" | "prev") => {
+    const anchor = anchorId ?? selectedId;
+    if (anchor === null || selectedId === null || !line.includes(anchor) || !line.includes(selectedId)) return;
+    setMenuOpen(false);
+    const next = extend(line, selectedId, dir);
+    const ids = rangeBetween(line, anchor, next);
+    selectRange(anchor, next, ids.length > 1 ? ids : []);
+  };
+  const onExtendTo = (id: string) => {
+    const anchor = anchorId ?? selectedId ?? id;
+    const ids = rangeBetween(line, anchor, id);
+    setMenuOpen(false);
+    if (ids.length > 1) selectRange(anchor, id, ids);
+    else select(id);
+  };
+  const canRewrite = eligible(rangeIds, shown, zoom);
   const selectedRow = selectedId === null ? -1 : shown.findIndex((n) => n.id === selectedId);
   const selectedNode = selectedRow >= 0 ? shown[selectedRow] : undefined;
   const info = selectedNode ? stationInfo(selectedNode, route.layout.onHeadLine, ancestors) : null;
@@ -189,6 +218,7 @@ export function History({
     upstream: status?.branch.upstream ?? null,
     defaultBranch: first?.defaultBranch ?? null,
     zoom,
+    headLine: line,
   };
   const ctx: MenuCtx = {
     repo,
@@ -200,6 +230,8 @@ export function History({
       setDialog(d);
     },
     openActivity: () => setView("activity"),
+    openRewrite,
+    headLine: () => line,
     m,
   };
 
@@ -233,6 +265,11 @@ export function History({
           ))}
         </div>
         <span className={styles.spacer} />
+        {canRewrite && (
+          <button type="button" className={styles.here} onClick={() => openRewrite(rangeIds)}>
+            {m.rangeRewrite(rangeIds.length)}
+          </button>
+        )}
         {first?.head && (
           <button type="button" className={styles.here} onClick={goHere}>
             {m.hereNow}
@@ -282,6 +319,9 @@ export function History({
             onSelect={select}
             onActivate={onActivate}
             onContextMenu={onContextMenu}
+            rangeIds={rangeSet}
+            onExtend={onExtend}
+            onExtendTo={onExtendTo}
             onNearEnd={more}
             onWindow={onWindow}
             onUserScroll={() => setMenuOpen(false)}

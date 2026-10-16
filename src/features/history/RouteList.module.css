@@ -5,6 +5,9 @@
   min-height: 0;
   overflow: auto;
   outline: none;
+
+  /* Shift+클릭으로 구간을 고를 때 글자 선택으로 번지지 않게 */
+  user-select: none;
 }
 
 .list:focus-visible {
@@ -36,6 +39,12 @@
 }
 
 .selected {
+  background: var(--surface-hover);
+}
+
+/* 고른 구간(여러 역 선택): 바탕과 왼쪽 막대 */
+.inRange {
+  box-shadow: inset var(--selected-bar) 0 0 var(--accent);
   background: var(--surface-hover);
 }
 

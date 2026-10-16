@@ -36,6 +36,12 @@ type Props = {
   onActivate: (id: string) => void;
   /** 마우스 오른쪽 클릭(웹뷰 기본 메뉴는 막는다). 눌린 행은 이미 골라져 있다. */
   onContextMenu?: (id: string) => void;
+  /** 고른 구간(여러 역 선택, D-106). 있으면 목록이 여러 선택을 알린다. */
+  rangeIds?: ReadonlySet<string>;
+  /** Shift+↑↓: 구간의 움직이는 끝을 옮긴다. */
+  onExtend?: (dir: "next" | "prev") => void;
+  /** Shift+클릭: 그 역까지 구간을 고른다. */
+  onExtendTo?: (id: string) => void;
   /** 끝에서 두 화면 안으로 스크롤하면(다음 쪽 받기). */
   onNearEnd?: () => void;
   /** 그리는 행 범위가 바뀌면(줄 수 늦게 받기). */
@@ -65,6 +71,9 @@ export function RouteList({
   onSelect,
   onActivate,
   onContextMenu,
+  rangeIds,
+  onExtend,
+  onExtendTo,
   onNearEnd,
   onWindow,
   onUserScroll,
@@ -157,6 +166,10 @@ export function RouteList({
         return moveTo(0);
       case "last":
         return moveTo(total - 1);
+      case "extendNext":
+      case "extendPrev":
+        onExtend?.(move === "extendNext" ? "next" : "prev");
+        return;
     }
   };
 
@@ -174,6 +187,10 @@ export function RouteList({
     if (e.button !== 0 || !fromList(e)) return;
     const node = nodeAt(e);
     if (!node) return;
+    if (e.shiftKey && onExtendTo) {
+      onExtendTo(node.id);
+      return;
+    }
     onSelect(node.id);
     onActivate(node.id);
   };
@@ -204,6 +221,7 @@ export function RouteList({
       setScrollTop(top);
     }
   }, [selected, viewHeight]);
+  const ranged = (rangeIds?.size ?? 0) > 1;
   const shown: number[] = [];
   for (let i = first; i < last; i++) shown.push(i);
   // 고른 행은 창 밖이어도 그려 aria-activedescendant가 있는 요소를 가리키게 한다.
@@ -235,6 +253,7 @@ export function RouteList({
       aria-label={label}
       tabIndex={0}
       aria-activedescendant={selected >= 0 ? `route-row-${selected}` : undefined}
+      aria-multiselectable={ranged ? true : undefined}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onContextMenu={onContext}
@@ -255,11 +274,11 @@ export function RouteList({
               key={node.id}
               id={`route-row-${i}`}
               role="option"
-              aria-selected={i === selected}
+              aria-selected={i === selected || (rangeIds?.has(node.id) ?? false)}
               aria-posinset={i + 1}
               aria-setsize={total}
               aria-label={describe(node, i)}
-              className={`${styles.row} ${i === selected ? styles.selected : ""}`}
+              className={`${styles.row} ${i === selected ? styles.selected : ""} ${rangeIds?.has(node.id) ? styles.inRange : ""}`}
               style={{ top: i * ROW_H, height: ROW_H, paddingLeft: scene.width }}
             >
               {node.kind === "fold" ? (

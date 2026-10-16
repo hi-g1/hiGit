@@ -39,6 +39,7 @@ const env = (over: Partial<MenuEnv> = {}): MenuEnv => ({
   upstream: null,
   defaultBranch: "main",
   zoom: "all",
+  headLine: [],
   ...over,
 });
 const item = (id: string) => STATION_ITEMS.find((i) => i.id === id)!;
@@ -76,6 +77,14 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     ["new-branch", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["tag", info({ isAncestorOfHead: false }), env({ currentBranch: null }), "show"],
     ["files", info({ isAncestorOfHead: false }), env({ operation: "other", currentBranch: null }), "show"],
+    ["rewrite-from", info(), env({ headLine: ["h".repeat(40), oid] }), "show"],
+    ["rewrite-from", info({ isHead: true }), env({ headLine: [oid] }), "hide"],
+    ["rewrite-from", info({ onHeadLine: false }), env({ headLine: ["h".repeat(40), oid] }), "hide"],
+    ["rewrite-from", info({ isMerge: true }), env({ headLine: ["h".repeat(40), oid] }), "hide"],
+    ["rewrite-from", info(), env({ headLine: [...Array.from({ length: 50 }, (_, i) => `${i}`.padStart(40, "0")), oid] }), "hide"],
+    ["rewrite-from", info(), env({ headLine: ["h".repeat(40), oid], zoom: "key" }), ko.whyZoomAll],
+    ["rewrite-from", info(), env({ headLine: ["h".repeat(40), oid], changedFiles: 1 }), ko.whyChanged],
+    ["rewrite-from", info(), env({ headLine: ["h".repeat(40), oid], operation: "other" }), ko.whyOtherOperation],
     ["tag", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["amend", info({ isHead: true }), env(), "show"],
     ["amend", info(), env(), "hide"],
@@ -100,6 +109,8 @@ describe("되돌리기·복사·돌아가기 항목", () => {
       onDone: vi.fn(),
       ask: vi.fn(),
       openActivity: vi.fn(),
+      openRewrite: vi.fn(),
+      headLine: () => [],
       m: ko,
     };
     await item(id).run(info(), ctx);
@@ -133,5 +144,15 @@ describe("대화상자를 여는 항목", () => {
     const ctx = { ask } as unknown as MenuCtx;
     void item(id).run(info(), ctx);
     expect(ask).toHaveBeenCalledWith({ kind, info: info() });
+  });
+});
+
+describe("여기부터 기록 정리", () => {
+  it("그 역부터 지금 위치까지(새 것부터)로 화면을 연다", () => {
+    const openRewrite = vi.fn();
+    const line = ["h".repeat(40), "g".repeat(40), oid, "b".repeat(40)];
+    const ctx = { openRewrite, headLine: () => line } as unknown as MenuCtx;
+    void item("rewrite-from").run(info(), ctx);
+    expect(openRewrite).toHaveBeenCalledWith(["h".repeat(40), "g".repeat(40), oid]);
   });
 });

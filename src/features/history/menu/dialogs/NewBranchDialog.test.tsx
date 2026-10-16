@@ -24,6 +24,8 @@ function open() {
     onDone: vi.fn(),
     ask: vi.fn(),
     openActivity: vi.fn(),
+    openRewrite: vi.fn(),
+    headLine: () => [],
     m: ko,
   };
   const onClose = vi.fn();

@@ -58,7 +58,7 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   act(() => {
-    useHistoryStore.setState({ selectedId: null, zoom: "all", scope: "all", expanded: new Set() });
+    useHistoryStore.setState({ selectedId: null, anchorId: null, rangeIds: [], zoom: "all", scope: "all", expanded: new Set() });
     useToastStore.setState({ toast: null });
     useRepoStore.setState({ view: "history" });
   });
@@ -204,6 +204,59 @@ describe("역 메뉴", () => {
   });
 });
 
+describe("여러 역 선택", () => {
+  it("Shift+↓로 지금 브랜치 선 위 구간을 넓히고, 머리 단추가 기록 정리 화면을 연다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+    expect(useHistoryStore.getState().rangeIds).toEqual([oid(0), oid(1)]);
+    expect(list).toHaveAttribute("aria-multiselectable", "true");
+    expect(document.getElementById("route-row-0")).toHaveAttribute("aria-selected", "true");
+    expect(document.getElementById("route-row-1")).toHaveAttribute("aria-selected", "true");
+    // 첫 버전(부모 없음)이 들면 정리할 수 없어 단추가 사라진다.
+    fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+    expect(useHistoryStore.getState().rangeIds).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: /개 선택/ })).not.toBeInTheDocument();
+    fireEvent.keyDown(list, { key: "ArrowUp", shiftKey: true });
+    await userEvent.click(screen.getByRole("button", { name: "2개 선택 · 기록 정리" }));
+    expect(useRepoStore.getState().view).toBe("rewrite");
+    expect(useRepoStore.getState().rewriteOids).toEqual([oid(0), oid(1)]);
+  });
+
+  it("Esc는 구간을 먼저 지우고, 한 번 더 누르면 홈. 그냥 화살표도 구간을 지운다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+    await userEvent.keyboard("{Escape}");
+    expect(useHistoryStore.getState().rangeIds).toEqual([]);
+    expect(useRepoStore.getState().view).toBe("history");
+    fireEvent.keyDown(list, { key: "ArrowDown", shiftKey: true });
+    expect(useHistoryStore.getState().rangeIds).toHaveLength(2);
+    fireEvent.keyDown(list, { key: "ArrowUp" });
+    expect(useHistoryStore.getState().rangeIds).toEqual([]);
+    await userEvent.keyboard("{Escape}");
+    expect(useRepoStore.getState().view).toBe("home");
+  });
+
+  it("Shift+클릭은 그 역까지 고른다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 20 });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70, shiftKey: true });
+    expect(useHistoryStore.getState().rangeIds).toEqual([oid(0), oid(1)]);
+    expect(screen.getByRole("button", { name: "2개 선택 · 기록 정리" })).toBeInTheDocument();
+  });
+});
+
 describe("역 메뉴 항목 표", () => {
   const info = stationInfo(commitNode(oid(1), [oid(2)], { summary: "a" }), new Set(), new Set())!;
   const env: MenuEnv = {
@@ -215,6 +268,7 @@ describe("역 메뉴 항목 표", () => {
     upstream: null,
     defaultBranch: "main",
     zoom: "all",
+    headLine: [],
   };
   const ctx: MenuCtx = {
     repo: "/r",
@@ -223,6 +277,8 @@ describe("역 메뉴 항목 표", () => {
     onDone: () => {},
     ask: () => {},
     openActivity: () => {},
+    openRewrite: () => {},
+    headLine: () => [],
     m: ko,
   };
   const item = (id: string, group: "main" | "more", availability: StationMenuItem["availability"]): StationMenuItem => ({
