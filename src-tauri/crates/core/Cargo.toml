@@ -20,6 +20,8 @@ thiserror = { workspace = true }
 hmac = "0.12"
 sha2 = "0.10"
 getrandom = "0.3"
+# 이미지 비교 데이터(D-206). 트리에 이미 있는 버전.
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = { workspace = true }

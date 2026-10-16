@@ -3,6 +3,7 @@ import { type InfiniteData, type QueryClient, useInfiniteQuery, useQuery } from 
 import {
   api,
   type ApiError,
+  type ImageRequest,
   type DiffRequest,
   type GitHubRepoListView,
   type LogPage,
@@ -28,6 +29,8 @@ export const queryKeys = {
   forcePushPlan: (repo: string) => ["forcePushPlan", repo] as const,
   remoteBranchPlan: (repo: string, remote: string, branch: string) => ["remoteBranchPlan", repo, remote, branch] as const,
   switchPlan: (repo: string, branch: string, remote: string | null) => ["switchPlan", repo, branch, remote] as const,
+  imagePair: (repo: string, path: string, origPath: string | null, commit: string | null) =>
+    ["imagePair", repo, path, origPath, commit] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -386,6 +389,15 @@ export function useRemoteBranchPlan(repo: string, remote: string, branch: string
   return useQuery<Awaited<ReturnType<typeof api.remoteBranchPlan>>, ApiError>({
     queryKey: queryKeys.remoteBranchPlan(repo, remote, branch),
     queryFn: () => api.remoteBranchPlan(repo, remote, branch),
+    enabled,
+  });
+}
+
+/** 이미지 비교의 두 쪽(D-206). 이진 파일 비교에서 이미지일 때만 부른다. */
+export function useImagePair(repo: string, request: ImageRequest, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.imagePair>>, ApiError>({
+    queryKey: queryKeys.imagePair(repo, request.path, request.origPath ?? null, request.commit ?? null),
+    queryFn: () => api.imagePair(repo, request),
     enabled,
   });
 }

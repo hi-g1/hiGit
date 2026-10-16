@@ -11,6 +11,7 @@ mod github;
 mod history;
 mod hosting;
 mod identity;
+mod image;
 mod input;
 mod map;
 mod merge;
@@ -44,6 +45,7 @@ pub use hosting::{
     PrRepoView, PrRowView, PrStateFilterView, PrStateView, ReviewsView,
 };
 pub use identity::IdentityView;
+pub use image::{ImageBlob, ImageMime, ImagePairView, ImageRequest};
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, DirtyChoice, FetchInput, FileChoice, FileResolution,

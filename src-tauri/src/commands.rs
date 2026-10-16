@@ -9,12 +9,12 @@ use higit_core::view::{
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
     ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, EmailCheckView, ErrorCode,
     ErrorView, FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
-    HostingContextView, HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView,
-    LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrCommentsView, PrDetailView,
-    PrDraftView, PrListRequest, PrListView, PrRepoView, PreviewView, ProjectOpenResult,
-    ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView,
-    RewritePlanView, ScopeAdd, SecretCheckRequest, SecretCheckView, StashListView, StatusView,
-    SwitchPlanView, TrustChoice, UndoResult,
+    HostingContextView, HostingPage, IdentityView, ImagePairView, ImageRequest, LogPage, LogQuery,
+    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrCommentsView,
+    PrDetailView, PrDraftView, PrListRequest, PrListView, PrRepoView, PreviewView,
+    ProjectOpenResult, ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView,
+    RemoteBranchPlanView, RewritePlanView, ScopeAdd, SecretCheckRequest, SecretCheckView,
+    StashListView, StatusView, SwitchPlanView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -505,6 +505,20 @@ pub async fn query_publish_draft(
 ) -> CmdResult<PublishDraftView> {
     blocking(state, move |core| {
         core.queries().publish_draft(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 이미지 비교의 두 쪽(D-206). 읽기만 하고 한쪽 3MB까지.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_image_pair(
+    state: State<'_, AppState>,
+    repo: String,
+    request: ImageRequest,
+) -> CmdResult<ImagePairView> {
+    blocking(state, move |core| {
+        core.queries().image_pair(&PathBuf::from(repo), &request)
     })
     .await
 }

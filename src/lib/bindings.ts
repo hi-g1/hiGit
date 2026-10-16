@@ -72,6 +72,8 @@ export const commands = {
 	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
 	/**  브랜치 바꾸기 대화상자의 값(D-195). 고친 파일 수와 새 브랜치로 옮길 수 있는지. 네트워크 없이 읽기만 한다. */
 	querySwitchPlan: (repo: string, branch: string, remote: string | null) => __TAURI_INVOKE<SwitchPlanView>("query_switch_plan", { repo, branch, remote }),
+	/**  이미지 비교의 두 쪽(D-206). 읽기만 하고 한쪽 3MB까지. */
+	queryImagePair: (repo: string, request: ImageRequest) => __TAURI_INVOKE<ImagePairView>("query_image_pair", { repo, request }),
 	/**  GitHub에 올리기 대화상자의 처음 값(D-132). */
 	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
 	/**  내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다. */
@@ -959,6 +961,31 @@ export type IdentityView = {
 	complete: boolean,
 	/**  GitHub에 기억한 연결이 있으면 가림 이메일. 화면은 칸에 채우기만 한다(D-126). */
 	noreplyEmail: string | null,
+};
+
+export type ImageBlob = {
+	mime: ImageMime,
+	/**  base64. */
+	data: string,
+	bytes: number,
+};
+
+/**  내용 머리로 정한 형식. 화면은 `data:` 주소의 형식으로 그대로 쓴다. */
+export type ImageMime = "image/png" | "image/jpeg" | "image/gif" | "image/webp" | "image/svg+xml";
+
+/**  두 쪽. 한쪽이 이미지가 아니면 둘 다 없고(화면은 "이진 파일"), 한쪽이 3MB를 넘으면 `too_large`. */
+export type ImagePairView = {
+	before: ImageBlob | null,
+	after: ImageBlob | null,
+	tooLarge: boolean,
+};
+
+/**  비교할 이미지 쌍. `commit`이 있으면 그 버전과 첫 부모, 없으면 지금 버전(HEAD)과 작업 폴더. */
+export type ImageRequest = {
+	path: string,
+	/**  이름 바꿈의 원래 경로(이전 쪽). */
+	origPath?: string | null,
+	commit?: string | null,
 };
 
 /**  화면 언어(D-139). 시스템 따라가기는 화면이 웹뷰 언어로 정한다(D-149). */

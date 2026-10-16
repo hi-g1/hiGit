@@ -594,6 +594,98 @@ impl Queries {
         Ok(self.git.status(&self.opened_repo(repo)?)?.into())
     }
 
+    /// 이미지 비교의 두 쪽(D-206). 읽기만 한다. 이전 쪽은 object database의 블롭, 지금 쪽은 버전 안 비교면
+    /// 그 버전의 블롭, 아니면 상태에 바뀐 파일로 있는 작업 폴더의 일반 파일(링크·저장소 밖은 읽지 않는다).
+    /// 한쪽이 3MB를 넘으면 `too_large`, 한쪽이라도 이미지가 아니면 두 쪽 모두 없다(화면은 "이진 파일").
+    pub fn image_pair(
+        &self,
+        repo: &Path,
+        request: &crate::view::ImageRequest,
+    ) -> Result<crate::view::ImagePairView> {
+        use crate::view::{ImageBlob, ImagePairView};
+        use base64::Engine as _;
+        let root = self.opened_repo(repo)?;
+        let git = self.git.as_ref();
+        for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
+            paths::validate_one(path)?;
+            if !git::safe_relative(path) {
+                return Err(CoreError::InvalidInput("저장소 밖 경로예요"));
+            }
+        }
+        let before_path = request.orig_path.as_deref().unwrap_or(&request.path);
+        let blob = |rev: &str, path: &str| -> Result<Option<ImageRead>> {
+            let Some(oid) = git.blob_at(&root, rev, path)? else {
+                return Ok(None);
+            };
+            Ok(git
+                .read_blob(&root, &oid, IMAGE_MAX_BYTES)?
+                .map(|(_, bytes)| match bytes {
+                    Some(b) => ImageRead::Bytes(b),
+                    None => ImageRead::TooLarge,
+                }))
+        };
+        let (before, after) = match &request.commit {
+            Some(commit) => {
+                let oid = crate::guard::verified_commit(
+                    git,
+                    &root,
+                    commit,
+                    crate::guard::Scope::BranchOrActivity,
+                )?;
+                // 첫 버전이면 첫 부모가 없어 이전 쪽도 없다.
+                (
+                    blob(&format!("{oid}^1"), before_path)?,
+                    blob(oid.as_str(), &request.path)?,
+                )
+            }
+            None => {
+                let before = match git.resolve_ref(&root, "HEAD")? {
+                    Some(_) => blob("HEAD", before_path)?,
+                    None => None,
+                };
+                let listed = git
+                    .status(&root)?
+                    .entries
+                    .iter()
+                    .any(|e| e.path == request.path);
+                let after = if listed {
+                    worktree_image(root.as_path(), &request.path)
+                } else {
+                    None
+                };
+                (before, after)
+            }
+        };
+        let mut view = ImagePairView {
+            before: None,
+            after: None,
+            too_large: false,
+        };
+        if matches!(before, Some(ImageRead::TooLarge)) || matches!(after, Some(ImageRead::TooLarge))
+        {
+            view.too_large = true;
+            return Ok(view);
+        }
+        let encode = |read: Option<ImageRead>| -> std::result::Result<Option<ImageBlob>, ()> {
+            match read {
+                Some(ImageRead::Bytes(bytes)) => {
+                    let mime = crate::image::sniff(&bytes).ok_or(())?;
+                    Ok(Some(ImageBlob {
+                        mime,
+                        bytes: u32::try_from(bytes.len()).unwrap_or(u32::MAX),
+                        data: base64::engine::general_purpose::STANDARD.encode(&bytes),
+                    }))
+                }
+                _ => Ok(None),
+            }
+        };
+        if let (Ok(b), Ok(a)) = (encode(before), encode(after)) {
+            view.before = b;
+            view.after = a;
+        }
+        Ok(view)
+    }
+
     /// 파일 하나를 마지막 저장과 비교한다(넣은 것과 안 넣은 것을 합쳐서).
     pub fn diff(&self, repo: &Path, request: &DiffRequest) -> Result<FileDiffView> {
         // 새 파일 비교(--no-index)는 git이 경로를 저장소로 묶지 않으므로 여기서 막는다.
@@ -1664,6 +1756,46 @@ pub(crate) fn default_branch(
         .into_iter()
         .find(|n| has_local(n))
         .map(str::to_string))
+}
+
+/// 이미지 비교에서 한쪽 상한(D-206).
+const IMAGE_MAX_BYTES: u64 = 3 * 1024 * 1024;
+
+/// 이미지 비교 한쪽을 읽은 결과.
+enum ImageRead {
+    Bytes(Vec<u8>),
+    TooLarge,
+}
+
+/// 작업 폴더의 일반 파일을 읽는다. 중간 폴더가 링크(정션 포함)거나 마지막이 링크·일반 파일이 아니면 읽지 않는다.
+fn worktree_image(root: &Path, rel: &str) -> Option<ImageRead> {
+    use std::io::Read as _;
+    let mut at = root.to_path_buf();
+    let mut parts = rel.split('/').peekable();
+    while let Some(part) = parts.next() {
+        at.push(part);
+        if parts.peek().is_some() {
+            // `FileType::is_dir`은 링크(정션 포함)이면 거짓이다.
+            let meta = std::fs::symlink_metadata(&at).ok()?;
+            if !meta.file_type().is_dir() {
+                return None;
+            }
+        }
+    }
+    let file = platform::open_regular_no_follow(&at).ok()?;
+    let size = file.metadata().ok()?.len();
+    if size > IMAGE_MAX_BYTES {
+        return Some(ImageRead::TooLarge);
+    }
+    let mut bytes = Vec::new();
+    // 연 뒤에 커졌어도 상한 + 1바이트까지만 읽는다.
+    file.take(IMAGE_MAX_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    if bytes.len() as u64 > IMAGE_MAX_BYTES {
+        return Some(ImageRead::TooLarge);
+    }
+    Some(ImageRead::Bytes(bytes))
 }
 
 #[cfg(test)]

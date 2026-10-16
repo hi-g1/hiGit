@@ -16,6 +16,7 @@ pub mod git_security;
 pub mod github;
 mod guard;
 mod history;
+pub mod image;
 mod locks;
 pub mod log;
 mod marker;

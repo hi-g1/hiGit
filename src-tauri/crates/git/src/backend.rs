@@ -166,6 +166,23 @@ pub trait GitBackend: Send + Sync {
     /// 없는 해시는 결과에서 빠진다. 프로세스는 둘(`cat-file --batch-check`, `--batch`)만 띄운다.
     fn read_blobs(&self, repo: &RepoPath, oids: &[Oid], max_bytes: usize) -> Result<Vec<BlobHead>>;
 
+    /// `rev` 버전 트리에서 `path`(정확히 그 경로)의 일반 파일 블롭. 없거나 블롭이 아니면(링크·서브모듈) `None`.
+    fn blob_at(&self, repo: &RepoPath, rev: &str, path: &str) -> Result<Option<Oid>> {
+        let _ = (repo, rev, path);
+        Ok(None)
+    }
+
+    /// 블롭 하나의 크기와, `max_bytes` 이하이면 내용. 크기를 먼저 보고 넘으면 읽지 않는다. 없으면 `None`.
+    fn read_blob(
+        &self,
+        repo: &RepoPath,
+        oid: &Oid,
+        max_bytes: u64,
+    ) -> Result<Option<(u64, Option<Vec<u8>>)>> {
+        let _ = (repo, oid, max_bytes);
+        Ok(None)
+    }
+
     /// 세 쪽 내용(`base`는 없으면 빈 값)을 줄 단위로 합쳐 구간으로 나눈다(`merge-file --diff3`).
     /// 이진 파일이거나, 내용에 충돌 표시와 같은 줄이 있어 구간을 믿을 수 없으면 오류.
     fn merge_segments(

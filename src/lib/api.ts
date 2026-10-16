@@ -7,6 +7,7 @@ import {
   type AppSettingsPatch,
   type ErrorView,
   type HostingPage,
+  type ImageRequest,
   type LogQuery,
   type OpenHow,
   type PrListRequest,
@@ -25,6 +26,10 @@ export type {
   BranchRow,
   CarryBlock,
   DirtyChoice,
+  ImageBlob,
+  ImageMime,
+  ImagePairView,
+  ImageRequest,
   TipId,
   SwitchPlanView,
   GitHubRepoListView,
@@ -218,6 +223,8 @@ export const api = {
     call(commands.queryRemoteBranchPlan(repo, remote, branch)),
   switchPlan: (repo: string, branch: string, remote: string | null) =>
     call(commands.querySwitchPlan(repo, branch, remote)),
+  /** 이미지 비교의 두 쪽(D-206). 한쪽 3MB까지. */
+  imagePair: (repo: string, request: ImageRequest) => call(commands.queryImagePair(repo, request)),
   branchProtection: (repo: string, remote: string, branch: string) =>
     call(commands.queryBranchProtection(repo, remote, branch)),
   commitDetail: (repo: string, oid: string) => call(commands.queryCommitDetail(repo, oid)),

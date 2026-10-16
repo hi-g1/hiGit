@@ -73,6 +73,80 @@ impl CliBackend {
     }
 }
 
+impl CliBackend {
+    /// `ls-tree -z <rev> -- <path>`의 정확히 그 경로 줄. 일반 파일(100644·100755)의 블롭만.
+    pub(super) fn blob_at_impl(
+        &self,
+        repo: &RepoPath,
+        rev: &str,
+        path: &str,
+    ) -> Result<Option<Oid>> {
+        if !super::park::safe_relative(path) {
+            return Err(GitError::Parse(format!("저장소 밖 경로: {path}")));
+        }
+        let mut args = vec!["--literal-pathspecs", "ls-tree", "-z"];
+        super::args::push_revs(
+            &mut args,
+            super::args::Cmd::LsTree,
+            self.git_version(),
+            &[rev],
+        );
+        args.extend(["--", path]);
+        let out = match self.runner.run(Some(repo.as_path()), &args) {
+            Ok(out) => out,
+            // 버전이 없으면(첫 부모가 없음 등) 블롭도 없다.
+            Err(_) => return Ok(None),
+        };
+        for record in out.stdout_lossy().split('\0').filter(|r| !r.is_empty()) {
+            let Some((meta, name)) = record.split_once('\t') else {
+                continue;
+            };
+            let mut parts = meta.split(' ');
+            if let (Some(mode), Some("blob"), Some(oid)) =
+                (parts.next(), parts.next(), parts.next())
+                && name == path
+                && matches!(mode, "100644" | "100755")
+            {
+                return Ok(Oid::parse(oid));
+            }
+        }
+        Ok(None)
+    }
+
+    /// 크기를 먼저 보고(`--batch-check`) `max_bytes` 이하일 때만 읽는다(`--batch`).
+    pub(super) fn read_blob_impl(
+        &self,
+        repo: &RepoPath,
+        oid: &Oid,
+        max_bytes: u64,
+    ) -> Result<Option<(u64, Option<Vec<u8>>)>> {
+        let dir = Some(repo.as_path());
+        let line = format!("{oid}\n");
+        let check =
+            self.runner
+                .run_with_stdin(dir, &["cat-file", "--batch-check"], line.as_bytes())?;
+        let text = check.stdout_lossy();
+        let mut parts = text.trim_end().split(' ');
+        let (Some(_), Some("blob"), Some(size)) = (parts.next(), parts.next(), parts.next()) else {
+            return Ok(None);
+        };
+        let size: u64 = size
+            .parse()
+            .map_err(|_| GitError::Parse(format!("cat-file: {text}")))?;
+        if size > max_bytes {
+            return Ok(Some((size, None)));
+        }
+        let out = self
+            .runner
+            .run_with_stdin(dir, &["cat-file", "--batch"], line.as_bytes())?;
+        let bytes = parse_batch(&out.stdout)?
+            .into_iter()
+            .find(|(o, _)| o == oid)
+            .map(|(_, b)| b);
+        Ok(bytes.map(|b| (size, Some(b))))
+    }
+}
+
 pub(super) fn parse_index(text: &str) -> Result<Vec<IndexEntry>> {
     let mut entries = Vec::new();
     for record in text.split('\0').filter(|r| !r.is_empty()) {

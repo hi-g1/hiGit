@@ -834,6 +834,19 @@ impl GitBackend for CliBackend {
         self.blob_heads(repo, oids, max_bytes)
     }
 
+    fn blob_at(&self, repo: &RepoPath, rev: &str, path: &str) -> Result<Option<Oid>> {
+        self.blob_at_impl(repo, rev, path)
+    }
+
+    fn read_blob(
+        &self,
+        repo: &RepoPath,
+        oid: &Oid,
+        max_bytes: u64,
+    ) -> Result<Option<(u64, Option<Vec<u8>>)>> {
+        self.read_blob_impl(repo, oid, max_bytes)
+    }
+
     fn merge_segments(
         &self,
         repo: &RepoPath,
