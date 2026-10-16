@@ -1,0 +1,63 @@
+/* 명령 팔레트(D-170, D-199): 위쪽에 뜬 넓은 판, 찾기 칸과 결과 목록 */
+.palette[role="dialog"] {
+  top: 12vh;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  transform: translate(-50%, 0);
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--font-size-md);
+}
+
+.list {
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-control);
+  cursor: default;
+}
+
+.active {
+  background: var(--surface-hover);
+}
+
+.label {
+  flex: none;
+}
+
+.disabled .label {
+  color: var(--text-muted);
+}
+
+.detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--text-muted);
+}

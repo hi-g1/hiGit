@@ -287,10 +287,11 @@ export function useActions() {
   });
 }
 
-export function useStatus(repo: string) {
+export function useStatus(repo: string, enabled = true) {
   return useQuery<Awaited<ReturnType<typeof api.status>>, ApiError>({
     queryKey: queryKeys.status(repo),
     queryFn: () => api.status(repo),
+    enabled,
   });
 }
 

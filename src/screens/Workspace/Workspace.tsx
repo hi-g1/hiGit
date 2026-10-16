@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { Palette } from "../../features/palette/Palette";
 import { PendingNotice } from "../../features/pending/PendingNotice";
 import { StuckNotice } from "../../features/progress/StuckNotice";
 import { useProgressEvents } from "../../features/progress/useProgress";
@@ -78,6 +79,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       <ForcePushDialog repo={repo.path} />
       <RemoteBranchDialog repo={repo.path} />
       <PublishDialog repo={repo.path} />
+      <Palette repo={repo.path} merging={merging} onDone={notifyDone} />
       <TopBar repo={repo} status={status.data} onDone={notifyDone} merging={merging} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">

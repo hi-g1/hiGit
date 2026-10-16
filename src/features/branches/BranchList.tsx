@@ -27,6 +27,7 @@ import { branchColor } from "./color";
 import { RemoteBranchMenu } from "../remote-branch/RemoteBranchMenu";
 import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
+import { useBranchListStore } from "./branchListStore";
 import { SwitchDialog } from "./SwitchDialog";
 import { useSwitch, type SwitchTarget } from "./useSwitch";
 import { Truncate } from "../../ui/Truncate";
@@ -48,11 +49,9 @@ type Choice = { kind: "switch"; item: ListItem } | { kind: "create"; name: strin
  * 묻는다(D-195). 찾기 칸에 없는 이름을 쓰고 Enter를 누르면 새 브랜치를 만든다. Ctrl+B로 연다.
  */
 export function BranchList({ repo, current, onDone, children }: Props) {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, asking, setAsking } = useBranchListStore();
   // 이름을 바꾸는 줄(로컬 브랜치 이름). Esc는 목록을 닫지 않고 이름 바꾸기만 그만둔다.
   const [renaming, setRenaming] = useState<string | null>(null);
-  // 고친 파일이 있어 묻는 중인 갈아타기. 목록(팝오버) 밖에 두어 목록이 닫혀도 남는다.
-  const [asking, setAsking] = useState<{ target: SwitchTarget; files: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sw = useSwitch(repo, onDone);
   const m = useMessages();

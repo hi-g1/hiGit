@@ -146,6 +146,7 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
       >
         <input
           ref={nameRef}
+          id="version-name"
           className={styles.name}
           value={name}
           placeholder={suggestion}

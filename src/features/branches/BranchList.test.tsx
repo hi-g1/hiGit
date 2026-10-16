@@ -19,6 +19,7 @@ import { api, type BranchListView, type BranchRow, type StatusView } from "../..
 import { ApiError } from "../../lib/api";
 import { ko } from "../../messages/ko";
 import { BranchList } from "./BranchList";
+import { useBranchListStore } from "./branchListStore";
 
 const row = (name: string, over: Partial<BranchRow> = {}): BranchRow => ({
   name,
@@ -69,7 +70,10 @@ function show(onDone = vi.fn()) {
   return onDone;
 }
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  useBranchListStore.setState({ open: false, asking: null });
+});
 
 describe("브랜치 목록", () => {
   it("지금 브랜치만 앞서 있으면 main에 합치기", async () => {

@@ -171,6 +171,9 @@ export const en: Messages = {
   overlapFiles: (n: number) => `${n} overlapping files`,
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
   shortcutsTitle: "Shortcuts",
+  paletteSearch: "A command or branch name",
+  paletteEmpty: "No matching command",
+  paletteDone: (label: string) => `${label}: done`,
   palette: {
     noRemote: `No ${t("remote").toLowerCase()} is connected`,
     noUpstream: `This ${t("branch").toLowerCase()} isn't linked to a ${t("remote").toLowerCase()}`,

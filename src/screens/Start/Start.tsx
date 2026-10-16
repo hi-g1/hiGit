@@ -1,4 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Palette } from "../../features/palette/Palette";
+import { useToastStore } from "../../ui/toastStore";
 import { useEffect, useState } from "react";
 import { ActionButton } from "../../features/actions/ActionButton";
 import { useCloneStore } from "../../features/clone/cloneStore";
@@ -35,6 +37,7 @@ export function Start() {
   const setPendingInit = useRepoStore((s) => s.setPendingInit);
   const startNotice = useRepoStore((s) => s.startNotice);
   const gitReady = appStatus.isSuccess;
+  const show = useToastStore((s) => s.show);
   const projects = recent.data ?? [];
   // 위쪽 자리에 둘 프로젝트. 맨 앞 폴더가 사라졌거나 저장소가 아니면 다음 것으로 넘긴다.
   const [topIndex, setTopIndex] = useState(0);
@@ -53,6 +56,7 @@ export function Start() {
 
   return (
     <div className={styles.start}>
+      <Palette repo={null} onDone={show} />
       <header className={styles.bar}>
         <Logo size="start" />
         <span className={styles.barTitle}>{m.startTitle}</span>

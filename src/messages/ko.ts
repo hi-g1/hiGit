@@ -196,6 +196,9 @@ export const ko = {
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
   shortcutsTitle: "단축키",
+  paletteSearch: "명령이나 브랜치 이름",
+  paletteEmpty: "찾는 명령이 없어요",
+  paletteDone: (label: string) => `${josa(label, "을/를")} 했어요`,
   palette: {
     noRemote: `연결된 ${josa(t("remote"), "이/가")} 없어요`,
     noUpstream: `${josa(t("remote"), "과/와")} 이어지지 않은 ${t("branch")}예요`,
