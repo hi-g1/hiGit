@@ -155,7 +155,19 @@
 /* 로컬 줄: 줄 단추와 오른쪽 `…`(호버·포커스·고른 줄에서만 보임, D-103) */
 .rowWrap {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+}
+
+/* 묶음 제목("지금", "최근에 쓴 브랜치")은 줄 위에 한 줄로 */
+.rowWrap > .section {
+  flex: 1 0 100%;
+}
+
+.rowWrap > .row {
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }
 
 .rowMenu {
