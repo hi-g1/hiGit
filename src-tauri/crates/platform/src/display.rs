@@ -1,6 +1,6 @@
-//! OS 글자 설정 읽기(D-147, D-162). 앱이 루트 글자 크기에 곱할 OS 글자 배율과 다크 여부를 읽는다.
+//! OS 글자 설정 읽기(D-147, D-162, D-218). 앱이 루트 글자 크기에 곱할 OS 글자 배율과 다크 여부를 읽는다.
 //! Ubuntu의 WebKitGTK는 GNOME 글자 배율(Xft.dpi)로 이미 화면 전체를 키우므로 배율은 100으로 두고
-//! 다크만 읽는다(두 번 커지지 않게).
+//! 다크와 인터페이스 글꼴 크기(pt → 본문 px)만 읽는다(두 번 커지지 않게).
 //!
 //! 실행 파일은 절대 경로만 쓰고(PATH 바꿔치기 방지) 인자는 상수다. 출력은 숫자 파서로만 쓰고 로그나
 //! 화면에 그대로 내보내지 않는다. 읽지 못하면 기본값(배율 100, 다크 모름)으로 내려간다.
@@ -102,6 +102,24 @@ pub(crate) fn parse_color_scheme(text: &str) -> Option<bool> {
     }
 }
 
+/// gsettings `font-name` 값(`'Ubuntu 11'`, `'Cantarell 11.5'`)의 끝 숫자(pt). 4~72 밖이면 `None`.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn parse_font_pt(text: &str) -> Option<f32> {
+    let inner = text.trim().strip_prefix('\'')?.strip_suffix('\'')?;
+    let pt: f32 = inner.rsplit(' ').next()?.parse().ok()?;
+    (pt.is_finite() && (4.0..=72.0).contains(&pt)).then_some(pt)
+}
+
+/// 본문 글자 px = round(pt × 4/3), 13~20(D-218).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn body_px_from_pt(pt: f32) -> u8 {
+    let px = (pt * 4.0 / 3.0).round().clamp(13.0, 20.0);
+    // 위에서 13~20으로 잘랐다.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let px = px as u8;
+    px
+}
+
 /// `reg query … /v <name>` 출력에서 `<name>    REG_DWORD    0x96` 줄의 값.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn parse_reg_dword(text: &str, name: &str) -> Option<u32> {
@@ -130,7 +148,7 @@ pub(crate) fn text_scale_from_reg(text: &str) -> Option<u16> {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::{DisplayHints, parse_color_scheme, run_limited};
+    use super::{DisplayHints, body_px_from_pt, parse_color_scheme, parse_font_pt, run_limited};
     use std::path::Path;
     use std::process::Command;
 
@@ -147,11 +165,15 @@ mod linux {
     }
 
     pub(super) fn read() -> DisplayHints {
-        // 글자 배율은 WebKitGTK가 Xft.dpi로 이미 반영한다(D-162). 다크만 읽는다.
+        // 글자 배율은 WebKitGTK가 Xft.dpi로 이미 반영한다(D-162). 다크와 글꼴 크기만 읽는다(D-218).
         DisplayHints {
             dark: gsettings("color-scheme")
                 .as_deref()
                 .and_then(parse_color_scheme),
+            body_px: gsettings("font-name")
+                .as_deref()
+                .and_then(parse_font_pt)
+                .map_or(super::BODY_PX, body_px_from_pt),
             ..DisplayHints::default()
         }
     }
@@ -207,6 +229,22 @@ mod tests {
     }
 
     #[test]
+    fn font_pt_table() {
+        assert_eq!(parse_font_pt("'Ubuntu 11'\n"), Some(11.0));
+        assert_eq!(parse_font_pt("'Cantarell 11.5'"), Some(11.5));
+        assert_eq!(parse_font_pt("'Noto Sans CJK KR Bold 12'"), Some(12.0));
+        assert_eq!(parse_font_pt("'Ubuntu'"), None);
+        assert_eq!(parse_font_pt("'Ubuntu 0'"), None);
+        assert_eq!(parse_font_pt("'Ubuntu 100'"), None);
+        assert_eq!(parse_font_pt("Ubuntu 11"), None);
+        assert_eq!(parse_font_pt(""), None);
+        assert_eq!(body_px_from_pt(11.0), 15);
+        assert_eq!(body_px_from_pt(9.0), 13);
+        assert_eq!(body_px_from_pt(16.0), 20);
+        assert_eq!(body_px_from_pt(12.0), 16);
+    }
+
+    #[test]
     fn reg_dword_table() {
         let out = "\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Accessibility\r\n    TextScaleFactor    REG_DWORD    0x96\r\n\r\n";
         assert_eq!(parse_reg_dword(out, "TextScaleFactor"), Some(150));
@@ -249,7 +287,11 @@ mod tests {
     #[test]
     fn display_hints_never_fails_and_stays_in_range() {
         let hints = display_hints();
-        assert_eq!(hints.body_px, BODY_PX);
+        if cfg!(target_os = "linux") {
+            assert!((13..=20).contains(&hints.body_px), "{hints:?}");
+        } else {
+            assert_eq!(hints.body_px, BODY_PX);
+        }
         assert!((50..=300).contains(&hints.text_scale_percent));
         if cfg!(windows) {
             assert_eq!(hints.dark, None);
