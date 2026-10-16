@@ -1170,7 +1170,7 @@
 - 영향: D-138, design.md "글꼴"·"간격과 모양"(계획 011 C1, 검토 반영 R1·R11).
 
 ## D-147 OS 글자 배율·다크는 `platform::display_hints()` 한 곳에서 (자동 결정)
-- 상태: 확정
+- 상태: 확정 (Ubuntu 글자 배율은 D-162로 바뀜)
 - 날짜: 2026-10-16
 - 결정: `DisplayHints { body_px, text_scale_percent, dark }`. `body_px`는 Windows 14, Linux 15, 그 밖 14(상수). `text_scale_percent`는 Ubuntu `/usr/bin/gsettings get org.gnome.desktop.interface text-scaling-factor`, Windows `%SystemRoot%\System32\reg.exe query HKCU\Software\Microsoft\Accessibility /v TextScaleFactor`(없으면 100). `dark`는 Ubuntu만 `gsettings … color-scheme`로 읽고 Windows는 `None`(WebView2의 `prefers-color-scheme`이 OS를 바로 따른다). 절대 경로만, 출력 256바이트까지, 1.5초 제한(넘기면 kill 뒤 wait), stdin·stderr 버림, Linux 두 읽기는 함께, 실패·범위 밖은 기본(100, `None`). 명령 `app_display_hints`는 Core 없이 도는 무상태 읽기라 Git이 없어도 쓴다. 화면은 시작 때와 창 포커스 때(5초에 한 번까지) 읽는다.
 - 이유: OS 판단은 `crates/platform`에만(D-002). 웹뷰는 OS 글자 배율을 반영하지 않고 WebKitGTK 22.04는 GNOME 다크를 못 볼 수 있다. 새 의존성 없이 이미 쓰는 `Command` 방식이고 절대 경로는 PATH 바꿔치기를 막는다.
@@ -1288,3 +1288,11 @@
 - 이유: 범위를 줄여 polish.md 1~5장과 D-138~D-145를 끝낸다.
 - 대안: 이번에 모두.
 - 영향: roadmap "반복 5"(계획 011 C16, 검토 반영 R13·R14).
+
+## D-162 Ubuntu에서는 OS 글자 배율을 곱하지 않는다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-16
+- 결정: Ubuntu의 WebKitGTK는 GNOME 글자 배율(`text-scaling-factor`, Xft.dpi)로 화면 전체를 이미 키운다. 그래서 `display_hints()`는 Linux에서 `text_scale_percent`를 100으로 두고 `gsettings`로는 다크(`color-scheme`)만 읽는다. Windows는 D-147대로 `TextScaleFactor`를 곱한다(WebView2가 반영하는지는 손 확인, 반영하면 같은 방식으로 100으로 둔다).
+- 이유: 이 컴퓨터(Xft.dpi 120, 배율 1.25)에서 노선도 역 간격이 장면 단위당 1.675px로, 앱 배율 1.339(15/14 × 1.25)에 1.25가 한 번 더 곱해져 있었다. D-138의 "OS 배율 따르기"는 유지하되 한 번만 커지게 한다(D-138 문장의 "웹뷰가 스스로 반영하지 않음"은 WebKitGTK에서는 맞지 않았다).
+- 대안: 웹뷰 확대를 1/배율로 되돌리고 앱이 곱하기(설정·권한이 늘어남).
+- 영향: D-138, D-146, D-147, 계획 011 "위험"의 첫 항목.

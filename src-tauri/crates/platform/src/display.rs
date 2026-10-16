@@ -1,4 +1,6 @@
-//! OS 글자 설정 읽기(D-147). 웹뷰는 OS 글자 배율을 반영하지 않으므로 앱이 읽어 루트 글자 크기에 곱한다.
+//! OS 글자 설정 읽기(D-147, D-162). 앱이 루트 글자 크기에 곱할 OS 글자 배율과 다크 여부를 읽는다.
+//! Ubuntu의 WebKitGTK는 GNOME 글자 배율(Xft.dpi)로 이미 화면 전체를 키우므로 배율은 100으로 두고
+//! 다크만 읽는다(두 번 커지지 않게).
 //!
 //! 실행 파일은 절대 경로만 쓰고(PATH 바꿔치기 방지) 인자는 상수다. 출력은 숫자 파서로만 쓰고 로그나
 //! 화면에 그대로 내보내지 않는다. 읽지 못하면 기본값(배율 100, 다크 모름)으로 내려간다.
@@ -20,7 +22,7 @@ pub const BODY_PX: u8 = if cfg!(target_os = "linux") { 15 } else { 14 };
 pub struct DisplayHints {
     /// OS 기본 본문 글자 크기(px).
     pub body_px: u8,
-    /// OS 글자 배율(%). Windows 접근성 "텍스트 크기", Ubuntu `text-scaling-factor`. 모르면 100.
+    /// 앱이 곱할 OS 글자 배율(%). Windows 접근성 "텍스트 크기". Ubuntu는 웹뷰가 이미 반영해 100. 모르면 100.
     pub text_scale_percent: u16,
     /// OS가 다크 모드인지. Windows는 웹뷰가 스스로 따르므로 읽지 않는다(`None`).
     pub dark: Option<bool>,
@@ -90,22 +92,6 @@ fn run_limited(mut cmd: Command) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
-/// `1.25` → 125. 0.5~3.0 밖이나 숫자가 아니면 `None`(쉼표 소수점도 `None`).
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) fn parse_scaling_factor(text: &str) -> Option<u16> {
-    let text = text.trim();
-    if text.is_empty() || text.len() > 8 || !text.bytes().all(|b| b.is_ascii_digit() || b == b'.') {
-        return None;
-    }
-    let value: f64 = text.parse().ok()?;
-    if !(0.5..=3.0).contains(&value) {
-        return None;
-    }
-    let percent = (value * 100.0).round();
-    // 범위를 위에서 확인해 50~300이다.
-    Some(percent as u16)
-}
-
 /// gsettings `color-scheme` 값. `'prefer-dark'`면 참, `'default'`·`'prefer-light'`면 거짓.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn parse_color_scheme(text: &str) -> Option<bool> {
@@ -144,7 +130,7 @@ pub(crate) fn text_scale_from_reg(text: &str) -> Option<u16> {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::{DisplayHints, parse_color_scheme, parse_scaling_factor, run_limited};
+    use super::{DisplayHints, parse_color_scheme, run_limited};
     use std::path::Path;
     use std::process::Command;
 
@@ -161,18 +147,11 @@ mod linux {
     }
 
     pub(super) fn read() -> DisplayHints {
-        // 콜드 dbus에서 느릴 수 있어 두 값을 함께 읽는다.
-        let (scale, scheme) = std::thread::scope(|s| {
-            let scale = s.spawn(|| gsettings("text-scaling-factor"));
-            let scheme = s.spawn(|| gsettings("color-scheme"));
-            (scale.join().ok().flatten(), scheme.join().ok().flatten())
-        });
+        // 글자 배율은 WebKitGTK가 Xft.dpi로 이미 반영한다(D-162). 다크만 읽는다.
         DisplayHints {
-            text_scale_percent: scale
+            dark: gsettings("color-scheme")
                 .as_deref()
-                .and_then(parse_scaling_factor)
-                .unwrap_or(100),
-            dark: scheme.as_deref().and_then(parse_color_scheme),
+                .and_then(parse_color_scheme),
             ..DisplayHints::default()
         }
     }
@@ -217,27 +196,6 @@ mod windows {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn scaling_factor_table() {
-        for (text, want) in [
-            ("1.25\n", Some(125)),
-            ("1.0\n", Some(100)),
-            ("1\n", Some(100)),
-            ("0.5", Some(50)),
-            ("3.0", Some(300)),
-            ("1.333", Some(133)),
-            ("1,25", None),
-            ("0.4", None),
-            ("3.5", None),
-            ("", None),
-            ("abc", None),
-            ("-1.0", None),
-            ("1.2.3", None),
-        ] {
-            assert_eq!(parse_scaling_factor(text), want, "{text:?}");
-        }
-    }
 
     #[test]
     fn color_scheme_table() {
@@ -295,6 +253,9 @@ mod tests {
         assert!((50..=300).contains(&hints.text_scale_percent));
         if cfg!(windows) {
             assert_eq!(hints.dark, None);
+        }
+        if cfg!(target_os = "linux") {
+            assert_eq!(hints.text_scale_percent, 100);
         }
     }
 
