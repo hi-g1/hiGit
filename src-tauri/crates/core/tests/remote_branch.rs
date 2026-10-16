@@ -138,6 +138,11 @@ fn plan_counts_versions_only_on_that_branch() {
         plan.tip.as_deref(),
         Some(git(dir, &["rev-parse", "origin/feature/login"]).as_str())
     );
+    // 새 git(2.48~)은 받기 때 원격 HEAD를 저절로 기록한다. 기록이 없는 경우를 보려고 지운다.
+    git(
+        dir,
+        &["update-ref", "--no-deref", "-d", "refs/remotes/origin/HEAD"],
+    );
     let main = core
         .queries()
         .remote_branch_plan(dir, "origin", "main")
