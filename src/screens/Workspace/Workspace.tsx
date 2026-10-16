@@ -25,6 +25,8 @@ import { Rewrite } from "../Rewrite/Rewrite";
 import { History } from "../History/History";
 import { PullRequests } from "../PullRequests/PullRequests";
 import { CreatePrDialog } from "../../features/pr/CreatePrDialog";
+import { ForcePushDialog } from "../../features/force-push/ForcePushDialog";
+import { RewriteNotice } from "../../features/force-push/RewriteNotice";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
 import { TopBar } from "./TopBar";
@@ -70,6 +72,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
   return (
     <div className={styles.workspace}>
       <CreatePrDialog repo={repo.path} />
+      <ForcePushDialog repo={repo.path} />
       <TopBar repo={repo} status={status.data} onDone={notifyDone} merging={merging} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">
@@ -83,6 +86,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       {/* 합치는 중이면 충돌 해결 화면이 대신 알린다(D-082). */}
       {!merging && <PendingNotice repo={repo.path} otherConflicts={conflict?.otherOperation ?? false} />}
       <SyncNotice repo={repo.path} />
+      {!merging && <RewriteNotice repo={repo.path} />}
       {merging && conflict ? (
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
       ) : view === "rewrite" ? (

@@ -1,0 +1,11 @@
+/* 알림 줄(작업 공간 상단 바 아래, 감시 알림 줄과 같은 모양) */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

@@ -32,5 +32,8 @@ export function StationDialogs({ dialog, onClose, env, ctx }: Props) {
       return <AmendDialog info={dialog.info} stagedFiles={env.stagedFiles} ctx={ctx} onClose={onClose} />;
     case "files":
       return <FilesDialog info={dialog.info} ctx={ctx} onClose={onClose} />;
+    // 작업 공간의 ForcePushDialog가 그린다.
+    case "forcePush":
+      return null;
   }
 }

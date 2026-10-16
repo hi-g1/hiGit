@@ -26,6 +26,10 @@ export type MenuEnv = {
   /** 지금 브랜치의 upstream 이름. */
   upstream: string | null;
   defaultBranch: string | null;
+  /** 설정 "올린 버전도 바꾸기"(D-127). 켜지면 덮어쓰며 올리기 항목이 보인다. */
+  allowPublishedRewrite: boolean;
+  /** 올린 버전의 기록을 바꿔도 되는지: 설정이 켜졌고 지금 브랜치가 기본 브랜치가 아님(core가 다시 본다). */
+  publishedRewrite: boolean;
   zoom: Zoom;
   /** 지금 브랜치 첫 부모 선의 역 id(새 것부터, 보이는 노드 기준). */
   headLine: readonly string[];
@@ -102,7 +106,7 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     actionId: "amend",
     availability: (info, env) => {
       if (!info.isHead) return "hide";
-      if (env.upstream !== null && !info.unpushed) return { disabled: (m) => m.whyPublished };
+      if (env.upstream !== null && !info.unpushed && !env.publishedRewrite) return { disabled: (m) => m.whyPublished };
       return blockedByState(env) ?? "show";
     },
     run: (info, ctx) => ctx.ask({ kind: "amend", info }),
@@ -197,5 +201,19 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
         { done: (r) => (r.kind === "reset" ? ctx.m.resetDone(r.dropped) : null) },
       );
     },
+  },
+  {
+    // 덮어쓰며 올리기(D-128): 설정이 켜졌고 지금 위치이고 올린 곳이 있을 때만. 되돌릴 수 없어 확인 창을 연다.
+    // 막힌 까닭(기본 브랜치·덮어쓸 것 없음 등)은 확인 창이 계획 조회로 보인다.
+    id: "force-push",
+    group: "more",
+    label: () => <Term id="force-push" focusable={false} />,
+    actionId: "force-push",
+    confirms: true,
+    availability: (info, env) => {
+      if (!env.allowPublishedRewrite || !info.isHead || env.upstream === null) return "hide";
+      return blockedByState(env) ?? "show";
+    },
+    run: (info, ctx) => ctx.ask({ kind: "forcePush", info }),
   },
 ];

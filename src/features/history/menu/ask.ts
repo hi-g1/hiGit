@@ -6,4 +6,6 @@ export type StationDialog =
   | { kind: "tag"; info: StationInfo }
   | { kind: "newBranch"; info: StationInfo }
   | { kind: "amend"; info: StationInfo }
-  | { kind: "files"; info: StationInfo };
+  | { kind: "files"; info: StationInfo }
+  /** 덮어쓰며 올리기 확인 창. 작업 공간이 한 곳에서 그린다(`forcePushStore`). */
+  | { kind: "forcePush"; info: StationInfo };

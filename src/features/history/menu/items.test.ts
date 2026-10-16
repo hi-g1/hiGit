@@ -38,6 +38,8 @@ const env = (over: Partial<MenuEnv> = {}): MenuEnv => ({
   operation: "none",
   upstream: null,
   defaultBranch: "main",
+  allowPublishedRewrite: false,
+  publishedRewrite: false,
   zoom: "all",
   headLine: [],
   ...over,
@@ -92,6 +94,14 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     ["amend", info({ isHead: true, unpushed: false }), env(), "show"],
     ["amend", info({ isHead: true }), env({ operation: "other" }), ko.whyOtherOperation],
     ["amend", info({ isHead: true }), env({ currentBranch: null }), ko.whyDetached],
+    // 설정 "올린 버전도 바꾸기"가 켜지고 기본 브랜치가 아니면 흐리지 않는다(D-127).
+    ["amend", info({ isHead: true, unpushed: false }), env({ upstream: "origin/기능", publishedRewrite: true }), "show"],
+    // 덮어쓰며 올리기: 설정이 켜졌고 지금 위치이고 올린 곳이 있을 때만(D-128).
+    ["force-push", info({ isHead: true }), env({ upstream: "origin/기능" }), "hide"],
+    ["force-push", info({ isHead: true }), env({ upstream: "origin/기능", allowPublishedRewrite: true }), "show"],
+    ["force-push", info(), env({ upstream: "origin/기능", allowPublishedRewrite: true }), "hide"],
+    ["force-push", info({ isHead: true }), env({ allowPublishedRewrite: true }), "hide"],
+    ["force-push", info({ isHead: true }), env({ upstream: "origin/기능", allowPublishedRewrite: true, operation: "other" }), ko.whyOtherOperation],
   ] as const)("%s", (id, i, e, expected) => {
     expect(state(id, i, e)).toBe(expected);
   });

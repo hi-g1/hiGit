@@ -299,6 +299,8 @@ describe("역 메뉴 항목 표", () => {
     operation: "none",
     upstream: null,
     defaultBranch: "main",
+    allowPublishedRewrite: false,
+    publishedRewrite: false,
     zoom: "all",
     headLine: [],
   };

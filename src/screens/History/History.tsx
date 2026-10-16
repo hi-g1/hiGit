@@ -12,7 +12,9 @@ import { toRouteNodes } from "../../features/history/model";
 import { branchPalette } from "../../features/history/render/palette";
 import { RouteList } from "../../features/history/RouteList";
 import { useCommitStats } from "../../features/history/stats";
-import { HISTORY_MAX, useLogPages, useStatus } from "../../lib/queries";
+import { useForcePushStore } from "../../features/force-push/forcePushStore";
+import { DEFAULT_SETTINGS } from "../../lib/display";
+import { HISTORY_MAX, useAppSettings, useForcePushPlan, useLogPages, useStatus } from "../../lib/queries";
 import { useShortcut } from "../../lib/useShortcut";
 import { useUiScale } from "../../lib/useUiScale";
 import { useWheelZoom } from "../../lib/wheelZoom";
@@ -186,6 +188,10 @@ export function History({
     [shown, onActivate],
   );
   const [dialog, setDialog] = useState<StationDialog | null>(null);
+  // 올린 버전 다루기(D-127): 설정과, 기본 브랜치인지(계획 조회가 core 규칙으로 알려 줌).
+  const allowPublishedRewrite = (useAppSettings().data ?? DEFAULT_SETTINGS).allowPublishedRewrite;
+  const forcePushPlan = useForcePushPlan(repo, allowPublishedRewrite).data;
+  const openForcePush = useForcePushStore((s) => s.openDialog);
   const ancestors = useMemo(() => headAncestors(shown), [shown]);
   const line = useMemo(() => headLine(shown), [shown]);
   const rangeSet = useMemo(() => new Set(rangeIds), [rangeIds]);
@@ -222,6 +228,8 @@ export function History({
     operation: otherOperation ? "other" : "none",
     upstream: status?.branch.upstream ?? null,
     defaultBranch: first?.defaultBranch ?? null,
+    allowPublishedRewrite,
+    publishedRewrite: allowPublishedRewrite && forcePushPlan?.blocked !== "defaultBranch" && forcePushPlan?.blocked !== "detached",
     zoom,
     headLine: line,
   };
@@ -233,7 +241,8 @@ export function History({
     onDone,
     ask: (d) => {
       setMenuOpen(false);
-      setDialog(d);
+      if (d.kind === "forcePush") openForcePush();
+      else setDialog(d);
     },
     openActivity: () => setView("activity"),
     openRewrite,

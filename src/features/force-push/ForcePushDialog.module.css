@@ -1,0 +1,51 @@
+/* 덮어쓰며 올리기 확인 창(design.md "덮어쓰며 올리기 확인 대화상자") */
+.counts,
+.sample {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.others {
+  color: var(--deleted);
+  font-size: var(--font-size-sm);
+}
+
+.version {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.oid {
+  flex: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.summary {
+  flex: 1;
+  color: var(--text);
+}
+
+.author {
+  flex: none;
+  max-width: 8rem;
+  color: var(--text-muted);
+}
+
+.more,
+.blocked,
+.running {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

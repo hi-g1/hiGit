@@ -24,6 +24,7 @@ export const queryKeys = {
     ["diff", repo, path, untracked, commit, fullContext] as const,
   commitDetail: (repo: string, oid: string) => ["commitDetail", repo, oid] as const,
   rewritePlan: (repo: string, oids: readonly string[]) => ["rewritePlan", repo, oids.join(",")] as const,
+  forcePushPlan: (repo: string) => ["forcePushPlan", repo] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -289,6 +290,15 @@ export function useRewritePlan(repo: string, oids: readonly string[]) {
     queryKey: queryKeys.rewritePlan(repo, oids),
     queryFn: () => api.rewritePlan(repo, [...oids]),
     enabled: oids.length > 0,
+  });
+}
+
+/** 덮어쓰며 올리기 확인 창의 값(D-128). 설정이 켜졌을 때만 읽는다(꺼져 있으면 진입점이 없다). */
+export function useForcePushPlan(repo: string, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.forcePushPlan>>, ApiError>({
+    queryKey: queryKeys.forcePushPlan(repo),
+    queryFn: () => api.forcePushPlan(repo),
+    enabled,
   });
 }
 

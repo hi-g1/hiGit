@@ -75,6 +75,7 @@ export type {
   RewriteCardView,
   RewriteKindInput,
   RewritePlanView,
+  ForcePushPlanView,
   RewriteStepInput,
   RiskView,
   MergeHintView,

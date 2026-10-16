@@ -60,6 +60,7 @@ describe("useRepoWatch", () => {
       "branches",
       "conflictFile",
       "diff",
+      "forcePushPlan",
       "homeMap",
       "log",
       "mergeHint",

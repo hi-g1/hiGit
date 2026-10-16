@@ -85,3 +85,16 @@
   font-weight: var(--font-weight-bold);
   user-select: all;
 }
+
+/* 줄 하나와 그 아래 설명 한 줄 */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

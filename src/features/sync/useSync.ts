@@ -10,7 +10,7 @@ import { useSyncStore } from "./syncStore";
  * 동기화 실행(D-045). 버튼이 여럿이어도(상단 바, 다 저장한 화면, 멈춤 안내 줄) 같은 작업을 본다.
  * 결과 처리는 useMutation 옵션에 두어, 누른 버튼이 사라져도 이어진다.
  */
-export function useSync(repo: string): { run: () => void; running: boolean } {
+export function useSync(repo: string): { run: () => void; runAnyway: () => void; running: boolean } {
   const m = useMessages();
   const locale = useUiStore((s) => s.locale);
   const queryClient = useQueryClient();
@@ -20,7 +20,9 @@ export function useSync(repo: string): { run: () => void; running: boolean } {
 
   const sync = useMutation({
     mutationKey,
-    mutationFn: () => api.executeAction(repo, { id: "sync", input: { locale } }),
+    // "그래도 합치기"(D-129)일 때만 칸을 보낸다.
+    mutationFn: (mergeAnyway: boolean) =>
+      api.executeAction(repo, { id: "sync", input: mergeAnyway ? { locale, mergeAnyway } : { locale } }),
     onMutate: () => set({ paused: false, error: null }),
     onSuccess: (result) => {
       if (result.kind !== "synced") return;
@@ -43,7 +45,10 @@ export function useSync(repo: string): { run: () => void; running: boolean } {
   const running = useIsMutating({ mutationKey }) > 0;
   return {
     run: () => {
-      if (!running) sync.mutate();
+      if (!running) sync.mutate(false);
+    },
+    runAnyway: () => {
+      if (!running) sync.mutate(true);
     },
     running,
   };
