@@ -14,6 +14,7 @@ import { useDisplaySync } from "./lib/useDisplaySync";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
+import { RemoteRefusedFix } from "./features/github/RemoteRefusedFix";
 import { WorkflowFix } from "./features/github/WorkflowFix";
 import { ErrorActionsContext, type ErrorActions } from "./ui/errorActions";
 import { ToastHost } from "./ui/Toast";
@@ -33,6 +34,7 @@ const ERROR_ACTIONS: ErrorActions = {
   identityMissing: <IdentityFix />,
   privateEmailBlocked: <IdentityFix />,
   githubWorkflowScope: <WorkflowFix />,
+  remoteRefused: <RemoteRefusedFix />,
 };
 
 export function AppProviders({ children, client }: { children: ReactNode; client?: QueryClient }) {

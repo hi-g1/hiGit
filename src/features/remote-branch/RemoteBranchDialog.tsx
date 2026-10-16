@@ -13,6 +13,7 @@ import { useToastStore } from "../../ui/toastStore";
 import { stateLabel } from "../pr/model";
 import { CANCEL_AFTER_SECS, useProgress } from "../progress/useProgress";
 import styles from "../force-push/ForcePushDialog.module.css";
+import { NameConfirmField } from "./NameConfirmField";
 import { useRemoteBranchStore, type RemoteBranchTarget } from "./remoteBranchStore";
 
 /**
@@ -39,17 +40,25 @@ function Dialog({ repo, target }: { repo: string; target: RemoteBranchTarget }) 
   const [to, setTo] = useState(target.branch);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [typed, setTyped] = useState("");
   const name = to.trim();
   const check = useBranchNameCheck(repo, target.mode === "rename" && name !== target.branch ? name : "");
 
   const data = plan.data;
   const blocked = data?.blocked ?? null;
   const nameOk = target.mode === "delete" || (name !== "" && name !== target.branch && check.data?.ok === true);
+  // 이름만 기본 브랜치 같은 원격 브랜치는 이름을 똑같이 입력해야 한다(D-183).
+  const needsName = data?.needsNameConfirm === true;
+  const confirmed = !needsName || typed === target.branch;
+  const confirm = needsName ? { confirmBranch: typed } : {};
   const input: ActionInput | null =
-    data?.tip && !blocked && nameOk
+    data?.tip && !blocked && nameOk && confirmed
       ? target.mode === "delete"
-        ? { id: "remote-branch-delete", input: { remote: target.remote, branch: target.branch, expectTip: data.tip } }
-        : { id: "remote-branch-rename", input: { remote: target.remote, from: target.branch, to: name, expectTip: data.tip } }
+        ? { id: "remote-branch-delete", input: { remote: target.remote, branch: target.branch, expectTip: data.tip, ...confirm } }
+        : {
+            id: "remote-branch-rename",
+            input: { remote: target.remote, from: target.branch, to: name, expectTip: data.tip, ...confirm },
+          }
       : null;
   const openPr = prs.data?.items.find((r) => r.head === target.branch && r.state === "open") ?? null;
 
@@ -132,6 +141,16 @@ function Dialog({ repo, target }: { repo: string; target: RemoteBranchTarget }) 
           {data.isUpstreamOfCurrent && <li>{m.remoteBranch.upstreamOfCurrent}</li>}
           {openPr && <li>{m.pr.slotExisting(openPr.number, stateLabel(openPr, m) ?? m.pr.draftLabel)}</li>}
         </ul>
+      )}
+      {data && !blocked && (
+        <NameConfirmField
+          repo={repo}
+          remote={target.remote}
+          branch={target.branch}
+          needsName={needsName}
+          value={typed}
+          onChange={setTyped}
+        />
       )}
       {pending && (
         <p className={styles.running} role="status">

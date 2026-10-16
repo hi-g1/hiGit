@@ -441,6 +441,13 @@ export const ko = {
   thisFile: "이 파일",
   earlierVersions: (n: number) => `이전 ${n}개`,
   // 원격 브랜치 지우기·이름 바꾸기(D-130)
+  // 원격 기본 브랜치의 이름 입력 확인과 서버 보호 규칙(D-183)
+  nameConfirm: {
+    label: (name: string) => `${t("branch")} 이름을 똑같이 입력해 주세요: ${name}`,
+    protectedOnServer: `GitHub가 보호하는 ${t("branch")}예요. 서버가 거절할 수 있어요.`,
+    viewOnGithub: "GitHub에서 보기",
+    adminOnly: "저장소 관리자만 바꿀 수 있어요",
+  },
   remoteBranch: {
     onlyHere: (n: number) => `이 브랜치에만 있는 버전 ${n}개`,
     byOthers: (n: number) => `다른 사람의 버전 ${n}개`,
@@ -521,7 +528,7 @@ export const ko = {
     advanced: "고급",
     gitPath: "Git 위치",
     allowPublishedRewrite: "올린 버전도 바꾸기",
-    allowPublishedRewriteHint: `${t("force-push")}도 켜져요. ${t("remote")}의 기본 ${josa(t("branch"), "은/는")} 바꾸지 않아요.`,
+    allowPublishedRewriteHint: `${t("force-push")}도 켜져요. ${t("remote")}의 기본 ${josa(t("branch"), "은/는")} 이름을 입력해야 덮어써요.`,
     github: "GitHub",
     notConfigured: "이 앱에는 GitHub 연결이 준비되지 않았어요",
     connect: "GitHub 연결",

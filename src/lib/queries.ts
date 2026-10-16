@@ -374,6 +374,16 @@ export function useRemoteBranchPlan(repo: string, remote: string, branch: string
   });
 }
 
+/** 서버가 이 원격 브랜치를 보호하는지(D-183 ④). 확인 창이 열릴 때 한 번, 다시 읽지 않는다. */
+export function useBranchProtection(repo: string, remote: string | null, branch: string | null, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.branchProtection>>, ApiError>({
+    queryKey: ["github", "branchProtection", repo, remote, branch],
+    queryFn: () => api.branchProtection(repo, remote ?? "", branch ?? ""),
+    enabled: enabled && remote !== null && branch !== null,
+    staleTime: Infinity,
+  });
+}
+
 /** 버전 상세(D-105). 버전은 바뀌지 않으므로 다시 받지 않는다. */
 export function useCommitDetail(repo: string, oid: string | null) {
   return useQuery<Awaited<ReturnType<typeof api.commitDetail>>, ApiError>({

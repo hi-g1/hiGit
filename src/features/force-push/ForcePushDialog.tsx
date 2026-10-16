@@ -12,6 +12,7 @@ import { Term } from "../../ui/Term";
 import { Truncate } from "../../ui/Truncate";
 import { useToastStore } from "../../ui/toastStore";
 import { CANCEL_AFTER_SECS, useProgress } from "../progress/useProgress";
+import { NameConfirmField } from "../remote-branch/NameConfirmField";
 import styles from "./ForcePushDialog.module.css";
 import { useForcePushStore } from "./forcePushStore";
 
@@ -31,12 +32,17 @@ export function ForcePushDialog({ repo }: { repo: string }) {
   const tick = useProgress(repo);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [typed, setTyped] = useState("");
   if (!open) return null;
 
   const data = plan.data;
   const blocked = allowed ? (data?.blocked ?? null) : "disabled";
+  // 원격 기본 브랜치로 보이면(로컬 규칙, 또는 서버가 그렇다고 해 거절됨) 이름을 똑같이 입력해야 한다(D-183).
+  const needsName =
+    data?.needsNameConfirm === true || (error instanceof ApiError && error.code === "nameConfirmMismatch");
+  const nameOk = !needsName || typed === data?.remoteBranch;
   const input: ActionInput | null =
-    data && !blocked && data.remote && data.remoteBranch && data.expectRemote && data.expectHead
+    data && !blocked && nameOk && data.remote && data.remoteBranch && data.expectRemote && data.expectHead
       ? {
           id: "force-push",
           input: {
@@ -44,6 +50,7 @@ export function ForcePushDialog({ repo }: { repo: string }) {
             branch: data.remoteBranch,
             expectRemote: data.expectRemote,
             expectHead: data.expectHead,
+            ...(needsName ? { confirmBranch: typed } : {}),
           },
         }
       : null;
@@ -56,6 +63,7 @@ export function ForcePushDialog({ repo }: { repo: string }) {
   };
   const finish = () => {
     setError(null);
+    setTyped("");
     close();
   };
   const run = async () => {
@@ -124,6 +132,16 @@ export function ForcePushDialog({ repo }: { repo: string }) {
             ))}
           </ul>
           {data.dropped > data.sample.length && <p className={styles.more}>{m.forcePush.more(data.dropped - data.sample.length)}</p>}
+          {data.remote && data.remoteBranch && (
+            <NameConfirmField
+              repo={repo}
+              remote={data.remote}
+              branch={data.remoteBranch}
+              needsName={needsName}
+              value={typed}
+              onChange={setTyped}
+            />
+          )}
         </>
       )}
       {pending && (

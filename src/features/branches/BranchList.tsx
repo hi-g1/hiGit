@@ -378,7 +378,7 @@ function List({
               <BranchRowMenu row={local.row} onRename={() => onRenameStart(local.name)} onDelete={() => onDelete(local.name)} />
             )}
             {remoteRow?.remote && (
-              <RemoteBranchMenu row={remoteRow.row} remote={remoteRow.remote} branch={remoteRow.name} onChosen={onClose} />
+              <RemoteBranchMenu remote={remoteRow.remote} branch={remoteRow.name} onChosen={onClose} />
             )}
           </li>
         );

@@ -48,7 +48,7 @@ describe("설정 고급 구역(D-160)", () => {
     show();
     const box = await screen.findByRole("checkbox", { name: "올린 버전도 바꾸기" });
     expect(box).not.toBeChecked();
-    expect(box).toHaveAccessibleDescription("덮어쓰며 올리기도 켜져요. 원격 저장소의 기본 브랜치는 바꾸지 않아요.");
+    expect(box).toHaveAccessibleDescription("덮어쓰며 올리기도 켜져요. 원격 저장소의 기본 브랜치는 이름을 입력해야 덮어써요.");
     await userEvent.click(box);
     expect(box).toBeChecked();
     expect(screen.queryByRole("dialog")).toBeNull();

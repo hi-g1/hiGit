@@ -206,6 +206,8 @@ export const api = {
   publishDraft: (repo: string) => call(commands.queryPublishDraft(repo)),
   remoteBranchPlan: (repo: string, remote: string, branch: string) =>
     call(commands.queryRemoteBranchPlan(repo, remote, branch)),
+  branchProtection: (repo: string, remote: string, branch: string) =>
+    call(commands.queryBranchProtection(repo, remote, branch)),
   commitDetail: (repo: string, oid: string) => call(commands.queryCommitDetail(repo, oid)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),

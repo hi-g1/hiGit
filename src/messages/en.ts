@@ -405,6 +405,12 @@ export const en: Messages = {
   copyPath: "Copy path",
   thisFile: "This file:",
   earlierVersions: (n: number) => `${n} earlier`,
+  nameConfirm: {
+    label: (name: string) => `Type the ${t("branch").toLowerCase()} name exactly: ${name}`,
+    protectedOnServer: `GitHub protects this ${t("branch").toLowerCase()}. The server may refuse.`,
+    viewOnGithub: "View on GitHub",
+    adminOnly: "Only repository admins can change this",
+  },
   remoteBranch: {
     onlyHere: (n: number) => `${n} version${n === 1 ? "" : "s"} only on this branch`,
     byOthers: (n: number) => `${n} by other people`,
@@ -481,7 +487,7 @@ export const en: Messages = {
     advanced: "Advanced",
     gitPath: "Git location",
     allowPublishedRewrite: "Change uploaded versions",
-    allowPublishedRewriteHint: `Also turns on ${t("force-push").toLowerCase()}. The default ${t("branch").toLowerCase()} on the ${t("remote").toLowerCase()} never changes.`,
+    allowPublishedRewriteHint: `Also turns on ${t("force-push").toLowerCase()}. The default ${t("branch").toLowerCase()} on the ${t("remote").toLowerCase()} is overwritten only after you type its name.`,
     github: "GitHub",
     notConfigured: "GitHub connection isn't set up in this app",
     connect: "Connect GitHub",
