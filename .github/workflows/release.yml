@@ -1,0 +1,159 @@
+name: Release
+
+# 태그 v*를 올리면 시험판 릴리스(pre-release)를, 수동 실행이면 초안(draft)을 만든다(D-221).
+# 릴리스는 CI에서만 만든다(D-038). 서명 비밀이 없으면 서명을 건너뛰고 이름에 "서명 없는 시험판"을 붙인다.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    name: 버전 확인
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: v
+        name: 태그와 앱 버전이 같은지
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: echo "version=$(node scripts/release-version.mjs "$TAG")" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: 설치 파일 ${{ matrix.os }}
+    needs: version
+    # 서명 비밀은 GitHub Environment `release`에만 둔다.
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # GitHub 연결용 공개 client id(D-109). 없으면 앱의 GitHub 연결이 "준비 안 됨"이다.
+      HIGIT_GITHUB_CLIENT_ID: ${{ secrets.HIGIT_GITHUB_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ubuntu 시스템 패키지
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libssl-dev build-essential libxdo-dev libayatana-appindicator3-dev file
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Rust 도구 (rust-toolchain.toml)
+        run: rustup toolchain install
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 서드파티 고지가 최신인지
+        if: runner.os == 'Linux'
+        run: node scripts/notices.mjs --check
+
+      - name: Ubuntu 설치 파일 (deb, AppImage)
+        if: runner.os == 'Linux'
+        run: pnpm tauri build --bundles deb,appimage
+
+      - name: Windows 설치 파일 (NSIS, 서명 비밀이 있으면 서명)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_SIGN_COMMAND: ${{ secrets.WINDOWS_SIGN_COMMAND }}
+        run: |
+          if ($env:WINDOWS_SIGN_COMMAND) {
+            # 서명 명령은 저장소에 쓰지 않고 비밀에서만 온다. 따옴표는 node가 JSON으로 감싼다.
+            node -e "require('fs').writeFileSync('src-tauri/tauri.sign.json', JSON.stringify({ bundle: { windows: { signCommand: process.env.WINDOWS_SIGN_COMMAND } } }))"
+            pnpm tauri build --bundles nsis --config src-tauri/tauri.sign.json
+            Remove-Item src-tauri/tauri.sign.json
+          } else {
+            Write-Host "WINDOWS_SIGN_COMMAND가 없어 서명하지 않습니다."
+            pnpm tauri build --bundles nsis
+          }
+
+      - name: 설치 파일 모으기
+        shell: bash
+        run: |
+          mkdir -p out
+          cp src-tauri/target/release/bundle/deb/*.deb out/ 2>/dev/null || true
+          cp src-tauri/target/release/bundle/appimage/*.AppImage out/ 2>/dev/null || true
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe out/ 2>/dev/null || true
+          ls -l out
+          test -n "$(ls out)"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ runner.os }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: 릴리스 만들기
+    needs: [version, build]
+    runs-on: ubuntu-22.04
+    environment: release
+    # 쓰기 권한은 이 작업 하나뿐이다. 산출물은 러너의 gh로 받는다(새 액션 없음).
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 산출물 받기
+        run: |
+          gh run download "${{ github.run_id }}" --dir dl
+          mkdir -p release
+          find dl -type f -exec cp {} release/ \;
+          cp docs/guide/index.html release/hiGit-guide.html
+          ls -l release
+
+      - name: SHA256SUMS (GPG 키가 있으면 서명)
+        env:
+          LINUX_GPG_KEY: ${{ secrets.LINUX_GPG_KEY }}
+        run: |
+          cd release
+          sha256sum -- * > ../SHA256SUMS
+          mv ../SHA256SUMS .
+          cat SHA256SUMS
+          if [ -n "$LINUX_GPG_KEY" ]; then
+            printf '%s\n' "$LINUX_GPG_KEY" | gpg --batch --import
+            gpg --batch --yes --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          else
+            echo "LINUX_GPG_KEY가 없어 SHA256SUMS에 서명하지 않습니다."
+          fi
+
+      - name: GitHub 릴리스
+        env:
+          SIGNED: ${{ secrets.WINDOWS_SIGN_COMMAND != '' && 'yes' || '' }}
+        run: |
+          title="hiGit ${VERSION}"
+          if [ -z "$SIGNED" ]; then title="${title} (서명 없는 시험판)"; fi
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            gh release create "${{ github.ref_name }}" release/* --prerelease --title "$title" --notes-file packaging/RELEASE_NOTES.md
+          else
+            # 수동 실행은 초안만 만든다(사람이 보고 지운다).
+            gh release create "v${VERSION}-draft-${{ github.run_number }}" release/* --draft --prerelease \
+              --target "${{ github.sha }}" --title "$title (초안)" --notes-file packaging/RELEASE_NOTES.md
+          fi

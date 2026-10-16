@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { appVersion, tagMatches } from "./release-version.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const read = (rel) => readFileSync(`${ROOT}${rel}`, "utf8");
@@ -15,5 +16,12 @@ describe("버전 맞춤", () => {
     expect(pkg).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/);
     expect(tauri).toBe(pkg);
     expect(cargo).toBe(pkg);
+  });
+
+  it("릴리스 태그는 v와 앱 버전이다(D-221)", () => {
+    expect(tagMatches(`v${appVersion()}`, appVersion())).toBe(true);
+    expect(tagMatches("v0.1.0", "0.1.0")).toBe(true);
+    expect(tagMatches("v0.1.1", "0.1.0")).toBe(false);
+    expect(tagMatches("0.1.0", "0.1.0")).toBe(false);
   });
 });
