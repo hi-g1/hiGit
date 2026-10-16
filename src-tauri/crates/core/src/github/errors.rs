@@ -24,7 +24,10 @@ pub(crate) fn from_hosting(err: &HostingError, secrets: &[&str]) -> CoreError {
         HostingErrorKind::Validation(ValidationKind::Invalid) => GithubFailure::PrInvalid,
         HostingErrorKind::Unreachable => GithubFailure::Unreachable,
         HostingErrorKind::Unavailable => GithubFailure::Unavailable,
-        HostingErrorKind::BadResponse => GithubFailure::BadResponse,
+        // 맥락이 있는 곳(합치기 등)은 부른 쪽이 먼저 나눈다(D-176).
+        HostingErrorKind::BadResponse
+        | HostingErrorKind::NotAllowed
+        | HostingErrorKind::Conflict => GithubFailure::BadResponse,
         HostingErrorKind::Cancelled => GithubFailure::Cancelled,
     };
     let detail = err.detail().map(|d| scrub(d, secrets));

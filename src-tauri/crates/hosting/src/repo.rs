@@ -36,6 +36,20 @@ pub struct RepoSummary {
     pub pushed_at: Option<i64>,
 }
 
+/// 저장소 정보(D-177). 합치기 방법 칸이 응답에 없으면 `None`(쓰기 권한이 없으면 빠질 수 있다).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepoInfo {
+    /// 토큰 주인이 올릴 수 있는지(`permissions.push`, 없으면 거짓).
+    pub can_push: bool,
+    pub archived: bool,
+    pub fork: bool,
+    pub allow_merge_commit: Option<bool>,
+    pub allow_squash_merge: Option<bool>,
+    pub allow_rebase_merge: Option<bool>,
+    /// 포크면 원래 저장소(소유자·이름을 검사한 것).
+    pub parent: Option<crate::remote::RemoteRepo>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepoPage {
     pub items: Vec<RepoSummary>,
@@ -62,6 +76,36 @@ struct RepoJson {
     #[serde(default)]
     private: bool,
     pushed_at: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PermissionsJson {
+    #[serde(default)]
+    push: bool,
+}
+
+#[derive(Deserialize)]
+struct ParentJson {
+    name: String,
+    owner: OwnerJson,
+}
+
+#[derive(Deserialize)]
+struct InfoJson {
+    #[serde(default)]
+    archived: bool,
+    #[serde(default)]
+    fork: bool,
+    permissions: Option<PermissionsJson>,
+    allow_merge_commit: Option<bool>,
+    allow_squash_merge: Option<bool>,
+    allow_rebase_merge: Option<bool>,
+    parent: Option<ParentJson>,
+}
+
+#[derive(Deserialize)]
+struct BranchJson {
+    protected: Option<bool>,
 }
 
 fn invalid(detail: &str) -> HostingError {
@@ -109,6 +153,37 @@ pub(crate) fn parse_created(body: &[u8]) -> Result<CreatedRepo, HostingError> {
         owner: parsed.owner.login,
         name: parsed.name,
     })
+}
+
+/// `GET repos/{o}/{r}`. 원래 저장소의 소유자·이름이 이상하면 `BadResponse`.
+pub(crate) fn parse_info(body: &[u8]) -> Result<RepoInfo, HostingError> {
+    let parsed: InfoJson =
+        serde_json::from_slice(body).map_err(|_| bad("repository is not JSON"))?;
+    let parent = match parsed.parent {
+        Some(p) if valid_owner(&p.owner.login) && valid_name(&p.name) => {
+            Some(crate::remote::RemoteRepo {
+                host: crate::remote::GITHUB_HOST.to_owned(),
+                owner: p.owner.login,
+                name: p.name,
+            })
+        }
+        Some(_) => return Err(bad("unexpected parent repository")),
+        None => None,
+    };
+    Ok(RepoInfo {
+        can_push: parsed.permissions.is_some_and(|p| p.push),
+        archived: parsed.archived,
+        fork: parsed.fork,
+        allow_merge_commit: parsed.allow_merge_commit,
+        allow_squash_merge: parsed.allow_squash_merge,
+        allow_rebase_merge: parsed.allow_rebase_merge,
+        parent,
+    })
+}
+
+/// `GET repos/{o}/{r}/branches/{b}`의 `protected`. 읽지 못하면 `None`.
+pub(crate) fn parse_protected(body: &[u8]) -> Option<bool> {
+    serde_json::from_slice::<BranchJson>(body).ok()?.protected
 }
 
 /// 목록. 소유자·이름 모양이 틀린 항목은 뺀다.
@@ -189,6 +264,67 @@ mod tests {
                 "{body}"
             );
         }
+    }
+
+    #[test]
+    fn info_reads_permissions_methods_and_parent() {
+        let mine = parse_info(
+            br#"{"name":"a","owner":{"login":"me"},"archived":false,"fork":false,
+            "permissions":{"admin":true,"push":true,"pull":true},
+            "allow_merge_commit":true,"allow_squash_merge":false,"allow_rebase_merge":true}"#,
+        )
+        .unwrap();
+        assert!(mine.can_push && !mine.fork && mine.parent.is_none());
+        assert_eq!(
+            (
+                mine.allow_merge_commit,
+                mine.allow_squash_merge,
+                mine.allow_rebase_merge
+            ),
+            (Some(true), Some(false), Some(true))
+        );
+        // 쓰기 권한이 없으면 방법 칸이 빠질 수 있다.
+        let theirs =
+            parse_info(br#"{"name":"a","owner":{"login":"o"},"permissions":{"push":false}}"#)
+                .unwrap();
+        assert!(!theirs.can_push && theirs.allow_merge_commit.is_none());
+        let no_perm = parse_info(br#"{"name":"a","owner":{"login":"o"},"archived":true}"#).unwrap();
+        assert!(!no_perm.can_push && no_perm.archived);
+        let fork = parse_info(
+            br#"{"fork":true,"parent":{"name":"hello","owner":{"login":"octo"},"clone_url":"https://evil"}}"#,
+        )
+        .unwrap();
+        let parent = fork.parent.unwrap();
+        assert_eq!(
+            (parent.owner.as_str(), parent.name.as_str()),
+            ("octo", "hello")
+        );
+        assert!(parent.is_github());
+        for body in [
+            r#"{"parent":{"name":"..","owner":{"login":"octo"}}}"#,
+            r#"{"parent":{"name":"x","owner":{"login":"-bad"}}}"#,
+            "not json",
+        ] {
+            assert_eq!(
+                parse_info(body.as_bytes()).unwrap_err().kind(),
+                HostingErrorKind::BadResponse,
+                "{body}"
+            );
+        }
+    }
+
+    #[test]
+    fn protected_flag() {
+        assert_eq!(
+            parse_protected(br#"{"name":"main","protected":true}"#),
+            Some(true)
+        );
+        assert_eq!(
+            parse_protected(br#"{"name":"main","protected":false}"#),
+            Some(false)
+        );
+        assert_eq!(parse_protected(br#"{"name":"main"}"#), None);
+        assert_eq!(parse_protected(b"nope"), None);
     }
 
     #[test]

@@ -30,7 +30,8 @@ pub use pr::{
 };
 pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
 pub use repo::{
-    CreatedRepo, NewRepo, REPO_DESCRIPTION_MAX_BYTES, REPO_PAGE_MAX, RepoPage, RepoSummary,
+    CreatedRepo, NewRepo, REPO_DESCRIPTION_MAX_BYTES, REPO_PAGE_MAX, RepoInfo, RepoPage,
+    RepoSummary,
 };
 pub use secrecy::{ExposeSecret, SecretString};
 pub use ureq_transport::{BODY_MAX_BYTES, CONNECT_TIMEOUT, TOTAL_TIMEOUT, UreqTransport};
@@ -78,4 +79,13 @@ pub trait HostingProvider: Send + Sync {
         page: u32,
         per_page: u32,
     ) -> Result<RepoPage, HostingError>;
+    /// 저장소 정보: 토큰 주인의 올릴 권한, 허용된 합치기 방법, 포크면 원래 저장소(D-177).
+    fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError>;
+    /// 브랜치를 서버가 보호하는지(D-183 ④). 볼 수 없거나 없으면 `None`.
+    fn branch_protected(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        branch: &str,
+    ) -> Result<Option<bool>, HostingError>;
 }

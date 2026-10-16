@@ -347,6 +347,8 @@ pub trait HostingProvider: Send + Sync {          // 블로킹. core가 작업 �
     fn create_pr(&self, token: &SecretString, repo: &RemoteRepo, new: &NewPr) -> Result<PullRequest, HostingError>;
     fn create_repo(&self, token: &SecretString, new: &NewRepo) -> Result<CreatedRepo, HostingError>; // POST /user/repos, 빈 저장소(D-132)
     fn list_repos(&self, token: &SecretString, page: u32, per_page: u32) -> Result<RepoPage, HostingError>; // 50개씩(D-133)
+    fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError>; // 올릴 권한·합치기 방법·포크의 원래 저장소(D-177)
+    fn branch_protected(&self, token: &SecretString, repo: &RemoteRepo, branch: &str) -> Result<Option<bool>, HostingError>; // 403·404는 None(D-183)
 }
 // pr_detail은 리뷰 요약(사람마다 마지막 승인·변경 요청, 100개 넘거나 볼 수 없으면 None)과 댓글 수를 함께 읽는다(D-134).
 // LoginPoll::Granted { token, workflow }: 받은 권한에 workflow가 들었는지만 본다.
@@ -357,6 +359,7 @@ pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, �
 ```
 - `GitHub::new(transport, GitHubConfig)`. 주소는 설정 상수(`https://github.com`, `https://api.github.com`)만 쓰고 서버가 준 URL을 열거나 따라가지 않는다(`verification_uri`는 상수와 같은지만 본다). 리디렉트는 `api_base` 바로 아래일 때만 같은 요청으로 3번까지.
 - `UreqTransport`: https만, 상태 코드를 오류로 바꾸지 않음, 리디렉트 0, 연결 5초·전체 15초·본문 2MB, 환경 변수 프록시, rustls(ring) + OS 인증서 저장소. `Authorization: Bearer`는 `HttpRequest.bearer`에서만 만든다. 요청·응답·오류의 `Debug`·`Display`에 토큰과 본문이 없다.
+- 쓰기 요청(D-176)은 `GitHub::api_write(method, token, path, json)` 하나로 보낸다(`Method::{Post, Put, Patch}`, `Content-Type: application/json`, 본문은 `serde_json`으로만). 상태 표는 401 `Unauthorized`, 403·429·451 `Forbidden`, 404·410 `NotFound`, 405 `NotAllowed`, 409 `Conflict`, 422 `Validation`, 3xx `Moved`, 5xx `Unavailable`.
 - `HostingError`는 종류(`HostingErrorKind`)와 앞 200자 설명. core가 한 함수(`github::from_hosting`)에서 `ErrorCode`로 바꾸고 서비스가 쥔 토큰·`device_code`를 설명에서 지운다.
 
 ### GitHub 연결 (core::github, D-109·D-111·D-121)

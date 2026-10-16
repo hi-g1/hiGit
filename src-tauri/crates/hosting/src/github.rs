@@ -14,7 +14,7 @@ use crate::pr::{
     self, CHECK_RUNS_PAGE, NewPr, PR_PAGE_MAX, PrDetail, PrPage, PrQuery, PullRequest,
 };
 use crate::remote::{RemoteRepo, parse_remote, valid_name, valid_owner};
-use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoPage};
+use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoInfo, RepoPage};
 
 const DEVICE_GRANT: &str = "urn:ietf:params:oauth:grant-type:device_code";
 /// 같은 API 주소 안의 리디렉트를 따르는 최대 횟수.
@@ -132,6 +132,23 @@ impl GitHub {
             .header("Accept", API_ACCEPT)
             .header(API_VERSION_HEADER, API_VERSION)
             .bearer(token.clone())
+    }
+
+    /// API 주소에 JSON 본문(없으면 빈 본문)을 실어 쓰기 요청(POST·PUT·PATCH, D-176). 2xx만 응답으로 준다.
+    fn api_write(
+        &self,
+        method: Method,
+        token: &SecretString,
+        path: &str,
+        json: Option<Vec<u8>>,
+    ) -> Result<HttpResponse, HostingError> {
+        let mut req = self.api_request(method, token, path);
+        if let Some(body) = json {
+            req = req.header("Content-Type", "application/json").body(body);
+        }
+        let res = self.api_send(req)?;
+        api::check_status(&res)?;
+        Ok(res)
     }
 
     /// API 주소(`api_base`)에 토큰을 실어 GET. 2xx만 응답으로 준다.
@@ -265,12 +282,8 @@ impl HostingProvider for GitHub {
     ) -> Result<PullRequest, HostingError> {
         pr::check_new_pr(new)?;
         let body = pr::new_pr_json(new)?;
-        let req = self
-            .api_request(Method::Post, token, &format!("{}/pulls", repo_path(repo)?))
-            .header("Content-Type", "application/json")
-            .body(body);
-        let res = self.api_send(req)?;
-        api::check_status(&res)?;
+        let path = format!("{}/pulls", repo_path(repo)?);
+        let res = self.api_write(Method::Post, token, &path, Some(body))?;
         pr::parse_one(&res.body, &repo.owner)
     }
 
@@ -281,13 +294,41 @@ impl HostingProvider for GitHub {
     ) -> Result<CreatedRepo, HostingError> {
         repo::check_new_repo(new)?;
         let body = repo::new_repo_json(new)?;
-        let req = self
-            .api_request(Method::Post, token, "/user/repos")
-            .header("Content-Type", "application/json")
-            .body(body);
-        let res = self.api_send(req)?;
-        api::check_status(&res)?;
+        let res = self.api_write(Method::Post, token, "/user/repos", Some(body))?;
         repo::parse_created(&res.body)
+    }
+
+    fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError> {
+        let res = self.api_get(token, &repo_path(repo)?)?;
+        repo::parse_info(&res.body)
+    }
+
+    fn branch_protected(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        branch: &str,
+    ) -> Result<Option<bool>, HostingError> {
+        if !pr::valid_branch(branch) {
+            return Err(invalid_input("branch name"));
+        }
+        let path = format!("{}/branches/{}", repo_path(repo)?, encode(branch));
+        match self.api_get(token, &path) {
+            Ok(res) => Ok(repo::parse_protected(&res.body)),
+            // 볼 수 없거나 없으면 모른다(안내만 빠진다).
+            Err(err)
+                if matches!(
+                    err.kind(),
+                    HostingErrorKind::Forbidden {
+                        rate_limited: false,
+                        sso: false,
+                    } | HostingErrorKind::NotFound
+                ) =>
+            {
+                Ok(None)
+            }
+            Err(err) => Err(err),
+        }
     }
 
     fn list_repos(
@@ -618,6 +659,8 @@ mod tests {
                 response(422, &[], r#"{"errors":[{"code":"custom"}]}"#),
                 HostingErrorKind::Validation(V::Invalid),
             ),
+            (response(405, &[], "{}"), HostingErrorKind::NotAllowed),
+            (response(409, &[], "{}"), HostingErrorKind::Conflict),
             (response(500, &[], "oops"), HostingErrorKind::Unavailable),
         ];
         for (res, want) in cases {
@@ -849,6 +892,93 @@ mod tests {
         };
         assert!(github(&fake).create_repo(&token(), &bad).is_err());
         assert!(fake.requests().is_empty());
+    }
+
+    #[test]
+    fn repository_info_and_branch_protection() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(
+            200,
+            r#"{"name":"hello","owner":{"login":"octo"},"permissions":{"push":true},"allow_squash_merge":true}"#,
+        );
+        fake.push_json(200, r#"{"name":"main","protected":true}"#);
+        fake.push_json(403, "{}");
+        fake.push_json(404, "{}");
+        fake.push_json(401, "{}");
+        let gh = github(&fake);
+        let info = gh.repo_info(&token(), &octo()).unwrap();
+        assert!(info.can_push && info.allow_squash_merge == Some(true));
+        assert_eq!(
+            gh.branch_protected(&token(), &octo(), "main").unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            gh.branch_protected(&token(), &octo(), "feature/x").unwrap(),
+            None
+        );
+        assert_eq!(
+            gh.branch_protected(&token(), &octo(), "기능").unwrap(),
+            None
+        );
+        assert_eq!(
+            gh.branch_protected(&token(), &octo(), "main")
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::Unauthorized
+        );
+        // 이상한 브랜치 이름은 보내지 않는다.
+        assert!(gh.branch_protected(&token(), &octo(), "a b").is_err());
+        let reqs = fake.requests();
+        assert_eq!(reqs.len(), 5);
+        assert!(reqs.iter().all(|r| r.method == Method::Get));
+        assert_eq!(reqs[0].url, "https://api.github.com/repos/octo/hello");
+        assert_eq!(
+            reqs[1].url,
+            "https://api.github.com/repos/octo/hello/branches/main"
+        );
+        assert_eq!(
+            reqs[2].url,
+            "https://api.github.com/repos/octo/hello/branches/feature%2Fx"
+        );
+        assert_eq!(
+            reqs[3].url,
+            "https://api.github.com/repos/octo/hello/branches/%EA%B8%B0%EB%8A%A5"
+        );
+        assert!(reqs.iter().all(|r| !r.url.contains(TOKEN)));
+    }
+
+    #[test]
+    fn writes_send_json_once() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(200, "{}");
+        fake.push_json(409, r#"{"message":"Head branch was modified."}"#);
+        let gh = github(&fake);
+        let res = gh
+            .api_write(
+                Method::Put,
+                &token(),
+                "/repos/octo/hello/pulls/1/merge",
+                Some(br#"{"sha":"a"}"#.to_vec()),
+            )
+            .unwrap();
+        assert_eq!(res.status, 200);
+        let err = gh
+            .api_write(
+                Method::Patch,
+                &token(),
+                "/repos/octo/hello/pulls/1",
+                Some(b"{}".to_vec()),
+            )
+            .unwrap_err();
+        assert_eq!(err.kind(), HostingErrorKind::Conflict);
+        let reqs = fake.requests();
+        assert_eq!(
+            (reqs[0].method, reqs[1].method),
+            (Method::Put, Method::Patch)
+        );
+        assert_eq!(header(&reqs[0], "Content-Type"), Some("application/json"));
+        assert_eq!(body(&reqs[0]), r#"{"sha":"a"}"#);
+        assert!(!format!("{err} {err:?}").contains(TOKEN));
     }
 
     #[test]

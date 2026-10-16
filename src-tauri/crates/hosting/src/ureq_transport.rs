@@ -65,31 +65,10 @@ impl UreqTransport {
 impl HttpTransport for UreqTransport {
     fn send(&self, req: &HttpRequest) -> Result<HttpResponse, TransportError> {
         let result = match req.method {
-            Method::Get => {
-                let mut builder = self.agent.get(&req.url);
-                for (name, value) in &req.headers {
-                    builder = builder.header(name, value);
-                }
-                if let Some(token) = &req.bearer {
-                    builder = builder
-                        .header("Authorization", format!("Bearer {}", token.expose_secret()));
-                }
-                builder.call()
-            }
-            Method::Post => {
-                let mut builder = self.agent.post(&req.url);
-                for (name, value) in &req.headers {
-                    builder = builder.header(name, value);
-                }
-                if let Some(token) = &req.bearer {
-                    builder = builder
-                        .header("Authorization", format!("Bearer {}", token.expose_secret()));
-                }
-                match &req.body {
-                    Some(body) => builder.send(&body[..]),
-                    None => builder.send_empty(),
-                }
-            }
+            Method::Get => with_headers(self.agent.get(&req.url), req).call(),
+            Method::Post => send_body(with_headers(self.agent.post(&req.url), req), req),
+            Method::Put => send_body(with_headers(self.agent.put(&req.url), req), req),
+            Method::Patch => send_body(with_headers(self.agent.patch(&req.url), req), req),
         };
         let mut res = result.map_err(map_error)?;
         let status = res.status().as_u16();
@@ -114,6 +93,30 @@ impl HttpTransport for UreqTransport {
             headers,
             body,
         })
+    }
+}
+
+/// 요청 헤더와 베어러 토큰을 붙인다. `Authorization`은 여기서만 만든다.
+fn with_headers<B>(
+    mut builder: ureq::RequestBuilder<B>,
+    req: &HttpRequest,
+) -> ureq::RequestBuilder<B> {
+    for (name, value) in &req.headers {
+        builder = builder.header(name, value);
+    }
+    if let Some(token) = &req.bearer {
+        builder = builder.header("Authorization", format!("Bearer {}", token.expose_secret()));
+    }
+    builder
+}
+
+fn send_body(
+    builder: ureq::RequestBuilder<ureq::typestate::WithBody>,
+    req: &HttpRequest,
+) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
+    match &req.body {
+        Some(body) => builder.send(&body[..]),
+        None => builder.send_empty(),
     }
 }
 
@@ -253,6 +256,29 @@ mod tests {
             !seen.to_ascii_lowercase().contains("authorization"),
             "{seen}"
         );
+    }
+
+    #[test]
+    fn puts_and_patches_body_with_bearer_once() {
+        for (method, word) in [(Method::Put, "PUT"), (Method::Patch, "PATCH")] {
+            let (base, rx) = serve(reply("200 OK", &[], b"{}"), Duration::ZERO);
+            let req = HttpRequest::new(method, format!("{base}/pulls/1"))
+                .header("Content-Type", "application/json")
+                .bearer(SecretString::from(TOKEN.to_owned()))
+                .body(br#"{"state":"closed"}"#.to_vec());
+            assert_eq!(transport().send(&req).unwrap().status, 200);
+            let seen = rx.recv().unwrap();
+            assert!(
+                seen.starts_with(&format!("{word} /pulls/1 HTTP/1.1")),
+                "{seen}"
+            );
+            assert!(seen.ends_with(r#"{"state":"closed"}"#), "{seen}");
+            assert_eq!(
+                seen.to_ascii_lowercase().matches("authorization:").count(),
+                1,
+                "{seen}"
+            );
+        }
     }
 
     #[test]

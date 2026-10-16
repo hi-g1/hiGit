@@ -11,6 +11,8 @@ use secrecy::SecretString;
 pub enum Method {
     Get,
     Post,
+    Put,
+    Patch,
 }
 
 impl Method {
@@ -18,6 +20,8 @@ impl Method {
         match self {
             Self::Get => "GET",
             Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Patch => "PATCH",
         }
     }
 }

@@ -36,6 +36,8 @@ pub(crate) fn status_error(res: &HttpResponse) -> HostingError {
             sso: false,
         },
         301 | 302 | 303 | 307 | 308 => HostingErrorKind::Moved,
+        405 => HostingErrorKind::NotAllowed,
+        409 => HostingErrorKind::Conflict,
         422 => return crate::pr::validation_error(&res.body),
         500..=599 => HostingErrorKind::Unavailable,
         _ => HostingErrorKind::BadResponse,

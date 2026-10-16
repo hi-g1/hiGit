@@ -34,6 +34,10 @@ pub enum HostingErrorKind {
     Moved,
     /// 서버가 입력을 거절했다(422).
     Validation(ValidationKind),
+    /// 지금 상태에서는 할 수 없는 요청이다(405, 합칠 수 없는 검토 요청 등).
+    NotAllowed,
+    /// 그사이 서버 상태가 바뀌어 맞지 않는다(409, 합치기의 head 불일치 등).
+    Conflict,
     /// 연결하지 못했거나 시간이 지났다.
     Unreachable,
     /// 서버 쪽 문제(5xx)나 잠시 쓸 수 없음.
@@ -110,6 +114,8 @@ impl fmt::Display for HostingError {
             HostingErrorKind::Validation(ValidationKind::AlreadyExists) => "already exists",
             HostingErrorKind::Validation(ValidationKind::NoDifference) => "no difference",
             HostingErrorKind::Validation(ValidationKind::Invalid) => "invalid request",
+            HostingErrorKind::NotAllowed => "not allowed",
+            HostingErrorKind::Conflict => "conflict",
             HostingErrorKind::Unreachable => "unreachable",
             HostingErrorKind::Unavailable => "service unavailable",
             HostingErrorKind::BadResponse => "unexpected response",
