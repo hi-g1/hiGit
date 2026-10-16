@@ -73,6 +73,19 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     },
   },
   {
+    // 고른 버전에서 새 브랜치를 만들고 갈아탄다. 지금 위치가 아니면 고친 파일이 섞이므로 흐린다.
+    id: "new-branch",
+    group: "main",
+    label: (m) => m.newBranchHere,
+    actionId: "branch-create",
+    availability: (info, env) => {
+      if (env.operation === "other") return { disabled: (m) => m.whyOtherOperation };
+      if (!info.isHead && env.changedFiles > 0) return { disabled: (m) => m.whyChanged };
+      return "show";
+    },
+    run: (info, ctx) => ctx.ask({ kind: "newBranch", info }),
+  },
+  {
     // 지금 위치의 조상(합쳐 들어온 곁가지 포함)만. 그 변경을 취소하는 새 버전을 만든다.
     id: "revert",
     group: "main",
@@ -102,6 +115,16 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     run: async (info, ctx) => {
       await runAction(ctx, { id: "cherry-pick", input: { oid: info.oid } }, { done: () => ctx.m.picked });
     },
+  },
+  {
+    // 태그 달기·지우기는 대화상자에서. 기록을 바꾸지 않아 다른 도구의 작업 중에만 흐린다.
+    id: "tag",
+    group: "more",
+    label: () => <Term id="tag" focusable={false} />,
+    actionId: "tag",
+    availability: (_info, env) =>
+      env.operation === "other" ? { disabled: (m) => m.whyOtherOperation } : "show",
+    run: (info, ctx) => ctx.ask({ kind: "tag", info }),
   },
   {
     // 지금 위치의 조상이고 지금 위치가 아닌 버전. 빠지는 버전이 올라갔는지는 core가 본다.

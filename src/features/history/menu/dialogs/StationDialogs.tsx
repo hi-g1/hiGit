@@ -1,5 +1,7 @@
 import type { StationDialog } from "../ask";
 import type { MenuCtx, MenuEnv } from "../items";
+import { NewBranchDialog } from "./NewBranchDialog";
+import { TagDialog } from "./TagDialog";
 
 type Props = {
   dialog: StationDialog | null;
@@ -8,8 +10,23 @@ type Props = {
   ctx: MenuCtx;
 };
 
-/** 역 메뉴가 연 대화상자를 그린다(태그·새 브랜치·고치기·파일 보기는 계획 008 E23~E25에서 채운다). */
-export function StationDialogs({ dialog }: Props) {
+/** 역 메뉴가 연 대화상자를 그린다. */
+export function StationDialogs({ dialog, onClose, ctx }: Props) {
   if (dialog === null) return null;
-  return null;
+  switch (dialog.kind) {
+    case "tag":
+      return <TagDialog info={dialog.info} ctx={ctx} onClose={onClose} />;
+    case "newBranch":
+      return (
+        <NewBranchDialog
+          oid={dialog.info.oid}
+          shortOid={dialog.info.shortOid}
+          summary={dialog.info.summary}
+          ctx={ctx}
+          onClose={onClose}
+        />
+      );
+    default:
+      return null;
+  }
 }

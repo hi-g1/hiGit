@@ -65,7 +65,7 @@ afterEach(() => {
 });
 
 describe("역 메뉴", () => {
-  it("Enter로 열고, 지금 위치에는 버전 번호 복사와 되돌리기가 있고 더 보기는 없다", async () => {
+  it("Enter로 열고, 지금 위치에는 복사·새 브랜치·되돌리기와 더 보기(태그)가 있다", async () => {
     serve();
     showHistory();
     const list = await screen.findByRole("listbox");
@@ -75,7 +75,10 @@ describe("역 메뉴", () => {
     const menu = await screen.findByRole("menu", { name: "버전 메뉴" });
     expect(menu).toHaveTextContent("버전 번호 복사");
     expect(menu).toHaveTextContent("되돌리기");
-    expect(screen.queryByText("더 보기")).not.toBeInTheDocument();
+    expect(menu).toHaveTextContent("여기서 새 브랜치");
+    expect(screen.getByText("더 보기")).toBeInTheDocument();
+    // 지금 위치에는 돌아가기·복사가 없다.
+    expect(menu).not.toHaveTextContent("이 버전으로 돌아가기");
   });
 
   it("Esc는 메뉴만 닫고 목록에 포커스를 돌려준다. 한 번 더 누르면 홈", async () => {

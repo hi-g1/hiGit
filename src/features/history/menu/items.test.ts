@@ -70,6 +70,12 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     ["reset", info(), env({ changedFiles: 3 }), "show"],
     ["reset", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["reset", info(), env({ currentBranch: null }), ko.whyDetached],
+    ["new-branch", info(), env(), "show"],
+    ["new-branch", info(), env({ changedFiles: 1 }), ko.whyChanged],
+    ["new-branch", info({ isHead: true }), env({ changedFiles: 1 }), "show"],
+    ["new-branch", info(), env({ operation: "other" }), ko.whyOtherOperation],
+    ["tag", info({ isAncestorOfHead: false }), env({ currentBranch: null }), "show"],
+    ["tag", info(), env({ operation: "other" }), ko.whyOtherOperation],
   ] as const)("%s", (id, i, e, expected) => {
     expect(state(id, i, e)).toBe(expected);
   });
@@ -106,5 +112,17 @@ describe("항목 표 가드", () => {
       expect(m, i.id).toBeDefined();
       expect(m!.undo, i.id).not.toBe("irreversible");
     }
+  });
+});
+
+describe("대화상자를 여는 항목", () => {
+  it.each([
+    ["tag", "tag"],
+    ["new-branch", "newBranch"],
+  ] as const)("%s는 대화상자를 연다", (id, kind) => {
+    const ask = vi.fn();
+    const ctx = { ask } as unknown as MenuCtx;
+    void item(id).run(info(), ctx);
+    expect(ask).toHaveBeenCalledWith({ kind, info: info() });
   });
 });
