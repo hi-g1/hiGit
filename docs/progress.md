@@ -3,10 +3,10 @@
 이 파일만 읽고 이어서 할 수 있게 단계마다 갱신한다.
 
 ## 지금
-- 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: 반복 4 끝 점검 고침 완료(위반 1건·참고 2건 고침)
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: record iteration 4 review fixes
-- 다음 할 일: push·CI 초록 확인 → 반복 4b(planner 계획 `docs/plans/010-*.md` → code-analyst 검토 → 구현) (바뀐 순서는 계획 009 검토 반영 절)
+- 반복: 4b (계획 010, 끝의 "검토 반영" 절이 단계 설명보다 우선. 단계 이름은 계획 005와 겹치므로 "010-H3"처럼 적는다)
+- 단계: 010-H1 끝 (결정 D-124~D-137, 용어 6개, spec 위험도·화면 행, roadmap 반복 4c)
+- 마지막 커밋: (이 갱신과 같은 커밋) docs: add iteration 4b decisions and terms
+- 다음 할 일: 010-H2 앱 설정 저장과 `ExecCtx.settings`(+`ExecCtx::new`) → 010-H3 전역 이름·이메일(git) → …
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -193,14 +193,24 @@
 - [x] G18 `features/pr/CreatePrDialog`·`prDialogStore`, `usePrDraft`, 올리지 않은 버전이 있으면 `push` → `pr-create`, 이미 열린 요청·차이 없음이면 만들기 꺼짐, 성공 토스트 "열기"
 - [x] G19 `features/pr/PrSlot`(미연결 → 연결 패널, 있으면 번호·상태 → 검토 요청 화면의 그 줄, 없으면 새 검토 요청), 브랜치 목록의 "main에 합치기" 자리
 - [x] G20 문서: architecture(HostingProvider·HttpTransport·GitHub 연결 절, 셸 두 곳, 시간 제한 표, 취소 깃발, 액션 32개, 명령 11개, 보안 표 세 줄, 입력 상한), spec 화면 행, roadmap, code-analyst 점검 줄 6개
+- [x] 반복 4 CI 4774d69 두 OS·기본 git·deny 초록
 - [x] 반복 4 끝 점검(code-analyst 규칙·보안): 핵심 보안 항목 위반 없음. 고침: 검토 요청 문구의 "브랜치" 직접 사용(34d215c, 합칠 대상은 "대상 브랜치"로), 로그인 폴링 오류 뒤 간격(759a680), 복제 실패 정리는 git이 만든 폴더만(08ae587), 점검표 문구(trust.rs 예외, 복제의 감시 실행)
 
 ### 반복 4 끝 점검에서 다음으로 넘긴 것
 - 화면의 `e.key === "Escape"`·`"Enter"` 판정이 `src/lib` 밖에 있다(PullRequests·CloneDialog, 기존 Activity·Rewrite·이름 대화상자와 같은 방식). D-056을 엄격히 읽으면 `src/lib`로 옮길 후보 → 반복 5-0
 - Windows 릴리스 exe(GUI 하위 시스템)에서 helper 표준 입출력과 Git for Windows `sh`의 공백 경로 풀기는 손 확인("사람이 할 일")
 
+## 반복 4b 단계 (계획 010, 검토 반영 순서)
+- [x] 계획 0dcaa22(planner + code-analyst 검토 17건 반영)
+- [x] 010-H1 결정·용어
+- [ ] 010-H2 앱 설정 / 010-H3 전역 이름·이메일(git) / 010-H4 identity-set·query_identity / 010-H5 처음 실행 패널·설정 구역
+- [ ] 010-H6 공용 확인 대화상자 / 010-H7a 원격 ref 실패 분류 / 010-H7b lease push·ref 삭제·태그·ls-remote
+- [ ] 010-H8 D-097 완화·rewrote 표식 / 010-H9 force-push / 010-H10 고급 설정·덮어쓰며 올리기 화면
+- [ ] 010-H11 원격 브랜치 지우기·이름 바꾸기 / 010-H12 tag-push / 010-H13 원격 브랜치 메뉴·태그 올리기 화면
+- [ ] 010-H14 hosting 저장소·리뷰·권한 / 010-H15 publish / 010-H16 저장소 목록·권한·리뷰 / 010-H17~H19 화면 / 010-H20 마무리
+
 ## 다음 반복
-- [ ] 반복 4b: 설정과 GitHub 넓히기
+- [ ] 반복 4c: GitHub 쓰기(D-124)
 - [ ] 반복 5: OS 통합과 배포(5-0 배포 전 보안 묶음부터)
 
 ## 사람이 할 일

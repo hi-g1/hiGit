@@ -73,7 +73,19 @@ export const en: Glossary = {
     gitName: "branch -m",
     command: "git branch -m",
     description: "Change a branch name. The remote branch with the old name stays.",
+  },  "remote-branch-delete": {
+    friendly: "Delete remote branch",
+    gitName: "push --delete",
+    command: "git push <원격> --delete <브랜치>",
+    description: "Delete a branch on the remote repository. It disappears for others too.",
   },
+  "remote-branch-rename": {
+    friendly: "Rename remote branch",
+    gitName: "push + push --delete",
+    command: null,
+    description: "Upload under a new name on the remote and delete the old name. Others using the old name lose it.",
+  },
+
   switch: {
     friendly: "Switch branch",
     gitName: "switch",
@@ -151,19 +163,37 @@ export const en: Glossary = {
     gitName: "checks",
     command: null,
     description: "Results of the tests and checks run automatically on an uploaded version",
+  },  review: {
+    friendly: "Review",
+    gitName: "review",
+    command: null,
+    description: "An approval or change request a teammate leaves on a review request",
   },
+
   clone: {
     friendly: "Clone",
     gitName: "clone",
     command: "git clone",
     description: "Copy a remote repository to your computer",
+  },  publish: {
+    friendly: "Publish to GitHub",
+    gitName: "new repository",
+    command: "git push -u",
+    description: "Create a new GitHub repository from this project and upload it. The app can't delete the repository.",
   },
+
   init: {
     friendly: "Start version control",
     gitName: "init",
     command: "git init",
     description: "Start managing this folder's versions with Git",
+  },  identity: {
+    friendly: "Name and email",
+    gitName: "user.name, user.email",
+    command: "git config --global user.name",
+    description: "The name and email recorded in every saved version",
   },
+
   amend: {
     friendly: "Fix last version",
     gitName: "amend",
@@ -205,7 +235,13 @@ export const en: Glossary = {
     gitName: "tag",
     command: "git tag",
     description: "Give this version a name like v1.0",
+  },  "tag-push": {
+    friendly: "Push tag",
+    gitName: "push tag",
+    command: "git push <원격> <태그>",
+    description: "Send this tag to the remote repository. A tag with the same name isn't overwritten.",
   },
+
   blame: {
     friendly: "Line history",
     gitName: "blame",

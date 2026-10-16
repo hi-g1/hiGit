@@ -74,7 +74,19 @@ export const ko: Glossary = {
     gitName: "branch -m",
     command: "git branch -m",
     description: "브랜치 이름을 바꾸기. 원격의 같은 이름은 그대로예요.",
+  },  "remote-branch-delete": {
+    friendly: "원격 브랜치 지우기",
+    gitName: "push --delete",
+    command: "git push <원격> --delete <브랜치>",
+    description: "원격 저장소의 브랜치를 지우기. 다른 사람의 목록에서도 사라져요.",
   },
+  "remote-branch-rename": {
+    friendly: "원격 브랜치 이름 바꾸기",
+    gitName: "push + push --delete",
+    command: null,
+    description: "원격 저장소에 새 이름으로 올리고 옛 이름을 지우기. 다른 사람이 쓰던 옛 이름은 끊겨요.",
+  },
+
   switch: {
     friendly: "브랜치 바꾸기",
     gitName: "switch",
@@ -152,19 +164,37 @@ export const ko: Glossary = {
     gitName: "checks",
     command: null,
     description: "올린 버전에 자동으로 돌린 시험과 검사의 결과",
+  },  review: {
+    friendly: "리뷰",
+    gitName: "review",
+    command: null,
+    description: "검토 요청에 팀원이 남기는 승인이나 변경 요청",
   },
+
   clone: {
     friendly: "복제",
     gitName: "clone",
     command: "git clone",
     description: "원격 저장소를 내 컴퓨터로 복사",
+  },  publish: {
+    friendly: "GitHub에 올리기",
+    gitName: "new repository",
+    command: "git push -u",
+    description: "이 프로젝트로 GitHub에 새 저장소를 만들고 올리기. 만든 저장소는 앱에서 지울 수 없어요.",
   },
+
   init: {
     friendly: "버전 관리 시작",
     gitName: "init",
     command: "git init",
     description: "이 폴더를 Git으로 버전 관리하기 시작",
+  },  identity: {
+    friendly: "이름과 이메일",
+    gitName: "user.name, user.email",
+    command: "git config --global user.name",
+    description: "저장한 버전마다 남는 이름과 이메일",
   },
+
   amend: {
     friendly: "마지막 버전 고치기",
     gitName: "amend",
@@ -206,7 +236,13 @@ export const ko: Glossary = {
     gitName: "tag",
     command: "git tag",
     description: "이 버전에 v1.0 같은 이름 붙이기",
+  },  "tag-push": {
+    friendly: "태그 올리기",
+    gitName: "push tag",
+    command: "git push <원격> <태그>",
+    description: "이 태그를 원격 저장소로 보내기. 같은 이름의 태그를 덮어쓰지 않아요.",
   },
+
   blame: {
     friendly: "줄별 기록",
     gitName: "blame",
