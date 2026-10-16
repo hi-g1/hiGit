@@ -164,6 +164,8 @@ export type AppStatus = {
 
 export type BranchCreateInput = {
 	name: string,
+	/**  시작할 버전(노선도의 역, 작업 내역). 없으면 지금 버전에서 만들고 고친 파일이 따라간다. */
+	from?: string | null,
 };
 
 export type BranchListView = {

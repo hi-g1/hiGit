@@ -321,6 +321,7 @@ fn action_input_tags_match_registry() {
         }),
         ActionInput::BranchCreate(higit_core::view::BranchCreateInput {
             name: "새것".into(),
+            from: None,
         }),
         ActionInput::Fetch(higit_core::view::FetchInput { background: true }),
         ActionInput::Pull,

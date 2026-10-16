@@ -152,6 +152,7 @@ fn disable_really_turns_hooks_off() {
         dir,
         &ActionInput::BranchCreate(BranchCreateInput {
             name: "새-갈래".into(),
+            from: None,
         }),
         None,
     )

@@ -578,18 +578,19 @@ fn undo_create(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
     Ok(())
 }
 
+/// 다시 하기: 고른 버전에서 만들었으면(만든 끝이 그때 지금 위치와 다름) 같은 해시에서 만든다.
 fn redo_create(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
     let ActionInput::BranchCreate(input) = &entry.input else {
         return Err(CoreError::NothingToUndo);
     };
-    git.run(
-        repo,
-        &GitOp::CreateAndSwitch {
-            name: input.name.trim().to_string(),
-        },
-    )
-    .map(|_| ())
-    .map_err(Into::into)
+    let name = input.name.trim().to_string();
+    let op = match entry.after.head_oid() {
+        Some(oid) if entry.before.head_oid().as_ref() != Some(&oid) => {
+            GitOp::CreateAndSwitchAt { name, oid }
+        }
+        _ => GitOp::CreateAndSwitch { name },
+    };
+    git.run(repo, &op).map(|_| ()).map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -1,4 +1,6 @@
-//! 새 브랜치(D-047). 지금 버전에서 만들고 바로 갈아탄다. 고친 파일은 따라간다.
+//! 새 브랜치(D-047). 지금 버전에서 만들고 바로 갈아탄다. 고친 파일은 따라간다. 노선도의 역이나
+//! 작업 내역에서 고른 버전(`from`)에서도 만든다(D-098, D-099). 그때는 추적 중인 파일을 고쳤으면
+//! 하지 않는다(새 브랜치의 내용과 섞인다).
 
 use git::GitOp;
 
@@ -57,12 +59,37 @@ impl Action for BranchCreateAction {
             return Err(CoreError::BranchExists);
         }
         super::switch::refuse_during_operation(ctx.git, repo)?;
-        ctx.git.run(
-            repo,
-            &GitOp::CreateAndSwitch {
-                name: name.to_string(),
-            },
-        )?;
+        let head = ctx.git.resolve_ref(repo, "HEAD")?;
+        let start = match &input.from {
+            Some(from) => {
+                let oid = crate::guard::verified_commit(
+                    ctx.git,
+                    repo,
+                    from,
+                    crate::guard::Scope::BranchOrActivity,
+                )?;
+                (Some(&oid) != head.as_ref()).then_some(oid)
+            }
+            None => None,
+        };
+        match start {
+            Some(oid) => {
+                crate::guard::refuse_dirty(ctx.git, repo)?;
+                ctx.git.run(
+                    repo,
+                    &GitOp::CreateAndSwitchAt {
+                        name: name.to_string(),
+                        oid,
+                    },
+                )?
+            }
+            None => ctx.git.run(
+                repo,
+                &GitOp::CreateAndSwitch {
+                    name: name.to_string(),
+                },
+            )?,
+        };
         Ok(Outcome::BranchCreated {
             name: name.to_string(),
         })

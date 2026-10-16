@@ -294,7 +294,10 @@ fn new_branch_carries_edits_and_undo_deletes_it() {
     let create = |name: &str| {
         core.execute(
             dir,
-            &ActionInput::BranchCreate(BranchCreateInput { name: name.into() }),
+            &ActionInput::BranchCreate(BranchCreateInput {
+                name: name.into(),
+                from: None,
+            }),
             None,
         )
     };
