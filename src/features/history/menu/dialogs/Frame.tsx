@@ -24,6 +24,8 @@ export function Frame({ title, station, onClose, children, className }: Props) {
           className={`${styles.dialog} ${className ?? ""}`}
           aria-describedby={undefined}
           onKeyDown={(e) => e.stopPropagation()}
+          // 열기 전 포커스 자리(메뉴 항목)는 이미 사라졌다. 닫은 뒤 포커스는 부른 쪽이 돌려준다.
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <Dialog.Title className={styles.title}>{title}</Dialog.Title>
           <p className={styles.station}>{station}</p>

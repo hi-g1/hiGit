@@ -347,7 +347,8 @@ export function History({
         dialog={dialog}
         onClose={() => {
           setDialog(null);
-          listEl.current?.focus();
+          // 대화상자가 사라진 다음에 목록으로 돌아간다.
+          setTimeout(() => listEl.current?.focus(), 0);
         }}
         env={env}
         ctx={ctx}

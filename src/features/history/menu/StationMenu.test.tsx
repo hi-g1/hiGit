@@ -9,6 +9,7 @@ vi.mock("../../../lib/api", async (importOriginal) => ({
     log: vi.fn(),
     logStats: vi.fn(async () => []),
     status: vi.fn(async () => ({ branch: { name: "main", hasCommits: true, upstream: null, ahead: 0, behind: 0 }, files: [] })),
+    commitDetail: vi.fn(async () => ({ oid: "", shortOid: "", message: "", author: "", time: 0, parents: [], files: [], moreFiles: 0 })),
   },
 }));
 
@@ -205,6 +206,21 @@ describe("역 메뉴", () => {
     fireEvent.click(list, { button: 0, clientX: 300, clientY: 70 });
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
+  it("대화상자를 닫으면 목록으로 포커스가 돌아온다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "이때 파일 보기" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(list).toHaveFocus());
+    expect(useRepoStore.getState().view).toBe("history");
   });
 
   it("같은 역을 다시 누르면 닫는다", async () => {

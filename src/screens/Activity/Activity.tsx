@@ -117,7 +117,12 @@ export function Activity({ repo, onDone }: Props) {
                       </Button>
                       {/* 서명이 맞는 줄·git 기록·백업처럼 되살릴 수 있는 버전만(core가 해시를 다시 본다, E18). */}
                       {item.restore === "version" && item.oid && (
-                        <Button variant="text" disabled={pending !== null} onClick={() => setBranchFrom(item)}>
+                        <Button
+                          variant="text"
+                          data-new-branch={item.id}
+                          disabled={pending !== null}
+                          onClick={() => setBranchFrom(item)}
+                        >
                           {m.toNewBranch}
                         </Button>
                       )}
@@ -135,7 +140,12 @@ export function Activity({ repo, onDone }: Props) {
           shortOid={branchFrom.oid.slice(0, 7)}
           summary={branchFrom.summary}
           ctx={ctx}
-          onClose={() => setBranchFrom(null)}
+          onClose={() => {
+            const id = branchFrom.id;
+            setBranchFrom(null);
+            // 닫으면 그 카드의 "새 브랜치로"로 돌아간다.
+            setTimeout(() => document.querySelector<HTMLElement>(`[data-new-branch="${CSS.escape(id)}"]`)?.focus(), 0);
+          }}
         />
       )}
       <div className={styles.footer}>

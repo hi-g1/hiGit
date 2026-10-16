@@ -6,6 +6,7 @@ import { useCommitDetail } from "../../../../lib/queries";
 import { formatDate } from "../../../../lib/time";
 import { useMessages } from "../../../../messages";
 import { useUiStore } from "../../../../state/uiStore";
+import { Button } from "../../../../ui/Button";
 import { ErrorNotice } from "../../../../ui/ErrorNotice";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
@@ -108,6 +109,11 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
             </div>
           </div>
         ))}
+      <div className={styles.actions}>
+        <Button variant="text" onClick={onClose}>
+          {m.close}
+        </Button>
+      </div>
     </Frame>
   );
 }
