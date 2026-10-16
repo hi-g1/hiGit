@@ -251,7 +251,7 @@ mod tests {
         let text = std::fs::read_to_string(dir.path().join(FILE)).unwrap();
         assert_eq!(
             text,
-            r#"{"v":1,"allow_published_rewrite":true,"language":"system","font_size":"normal","theme":"system","term_help":true,"diff_wrap":true}"#
+            r#"{"v":1,"allow_published_rewrite":true,"language":"system","font_size":"normal","theme":"system","term_help":true,"diff_wrap":true,"git_helper":true}"#
         );
         // 빈 패치는 아무것도 바꾸지 않는다.
         assert!(
