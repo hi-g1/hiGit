@@ -1,4 +1,5 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
+import { useRef } from "react";
 import type { BranchRow } from "../../lib/api";
 import { useMessages } from "../../messages";
 import { Term } from "../../ui/Term";
@@ -18,6 +19,12 @@ type Props = {
 export function BranchRowMenu({ row, onRename, onDelete }: Props) {
   const m = useMessages();
   const protectedRow = row.isHead || row.isDefault;
+  // 항목을 골랐으면 목록이 포커스를 정한다(이름 입력칸, 지운 뒤 찾기 칸). 그냥 닫으면 `…`로 돌아간다.
+  const chose = useRef(false);
+  const choose = (run: () => void) => () => {
+    chose.current = true;
+    run();
+  };
   return (
     <Menu.Root modal={false}>
       <Menu.Trigger asChild>
@@ -26,8 +33,16 @@ export function BranchRowMenu({ row, onRename, onDelete }: Props) {
         </button>
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Content className={styles.menu} align="end" sideOffset={4}>
-          <Menu.Item className={styles.menuItem} onSelect={onRename}>
+        <Menu.Content
+          className={styles.menu}
+          align="end"
+          sideOffset={4}
+          onCloseAutoFocus={(e) => {
+            if (chose.current) e.preventDefault();
+            chose.current = false;
+          }}
+        >
+          <Menu.Item className={styles.menuItem} onSelect={choose(onRename)}>
             <Term id="branch-rename" focusable={false} />
           </Menu.Item>
           {protectedRow ? (
@@ -37,7 +52,7 @@ export function BranchRowMenu({ row, onRename, onDelete }: Props) {
               </Menu.Item>
             </Tooltip>
           ) : (
-            <Menu.Item className={styles.menuItem} onSelect={onDelete}>
+            <Menu.Item className={styles.menuItem} onSelect={choose(onDelete)}>
               <Term id="branch-delete" focusable={false} />
             </Menu.Item>
           )}

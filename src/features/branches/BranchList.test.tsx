@@ -99,7 +99,7 @@ describe("브랜치 목록", () => {
   it("고르면 바로 갈아타고 결과를 알린다", async () => {
     const onDone = show();
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
-    await userEvent.click(await screen.findByRole("option", { name: /main/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "switch", input: { branch: "main", remote: null } });
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("main 브랜치로 갈아탔어요"));
   });
@@ -155,6 +155,7 @@ describe("브랜치 목록", () => {
       await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 지우기" }));
       expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-delete", input: { name: "결제 수정" } });
       await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchDeleted("결제 수정")));
+      expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus();
     });
 
     it("지금 브랜치와 기본 브랜치는 지우기가 흐리고 아무것도 하지 않는다", async () => {
@@ -183,6 +184,7 @@ describe("브랜치 목록", () => {
         expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-rename", input: { from: "결제 수정", to: "결제" } });
       });
       await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchRenamed("결제")));
+      await waitFor(() => expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
     });
 
     it("이름 바꾸기 중 Esc는 목록을 닫지 않는다", async () => {
@@ -192,7 +194,9 @@ describe("브랜치 목록", () => {
       const field = await screen.findByRole("textbox", { name: "결제 수정 메뉴" });
       await userEvent.type(field, "{Escape}");
       await waitFor(() => expect(screen.queryByRole("textbox", { name: "결제 수정 메뉴" })).not.toBeInTheDocument());
-      expect(screen.getByRole("listbox")).toBeInTheDocument();
+      expect(screen.getByRole("list", { name: "브랜치" })).toBeInTheDocument();
+      // 이름 바꾸기를 그만두면 찾기 칸으로 돌아간다.
+      await waitFor(() => expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
     });
 
     it("core 오류는 토스트로", async () => {

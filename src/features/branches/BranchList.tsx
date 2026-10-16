@@ -1,6 +1,6 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
 import { invalidateLog, useBranchNameCheck, useBranches, useMergeHint } from "../../lib/queries";
 import { formatDate } from "../../lib/time";
@@ -88,6 +88,13 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
   const m = useMessages();
   const branches = useBranches(repo);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  // 이름 바꾸기가 끝나거나 그만두면(입력칸이 사라지면) 찾기 칸으로 포커스를 돌린다.
+  const wasRenaming = useRef(renaming);
+  useEffect(() => {
+    if (wasRenaming.current !== null && renaming === null) searchRef.current?.focus();
+    wasRenaming.current = renaming;
+  }, [renaming]);
   const [expanded, setExpanded] = useState(false);
   const [active, setActive] = useState(0);
   const [pending, setPending] = useState(false);
@@ -147,6 +154,8 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
       await api.executeAction(repo, input);
       setRenaming(null);
       onDone(done);
+      // 지운 줄의 `…`이 사라지므로 찾기 칸으로 돌아간다.
+      searchRef.current?.focus();
     } catch (e) {
       show(m.errors[e instanceof ApiError ? e.code : "internal"]);
     } finally {
@@ -197,6 +206,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
   return (
     <div className={styles.inner}>
       <input
+        ref={searchRef}
         className={styles.search}
         value={query}
         placeholder={m.branchSearch}
@@ -306,7 +316,9 @@ function List({
   const s = sections(view);
   const searching = query.trim() !== "";
   return (
-    <ul className={styles.list} role="listbox" aria-label={branchLabel}>
+    // 줄 단추 옆에 `…` 단추와 이름 입력칸이 있어 listbox가 아니라 목록이다. 찾기 칸의 ↑↓가 고른 줄은
+    // `aria-current`로 알린다.
+    <ul className={styles.list} aria-label={branchLabel}>
       {choices.map((c, i) => {
         const first = s.recent[0];
         const header =
@@ -318,7 +330,7 @@ function List({
         const local = c.kind === "switch" && c.item.remote === null ? c.item : null;
         if (local && renaming === local.name) {
           return (
-            <li key={`/${local.name}`} role="presentation">
+            <li key={`/${local.name}`}>
               {header && <p className={styles.section}>{header}</p>}
               <RenameField repo={repo} from={local.name} pending={pending} onSubmit={(to) => onRename(local.name, to)} />
             </li>
@@ -327,14 +339,12 @@ function List({
         return (
           <li
             key={c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`}
-            role="presentation"
             className={local ? `${styles.rowWrap} ${i === active ? styles.activeWrap : ""}` : undefined}
           >
             {header && <p className={styles.section}>{header}</p>}
             <button
               type="button"
-              role="option"
-              aria-selected={i === active}
+              aria-current={i === active ? "true" : undefined}
               className={`${styles.row} ${i === active ? styles.active : ""} ${c.kind === "create" ? styles.create : ""}`}
               onClick={() => onPick(c)}
             >
