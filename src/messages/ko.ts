@@ -353,6 +353,11 @@ export const ko = {
   noNewlineAtEnd: "파일 끝 줄바꿈 없음",
   loading: "불러오는 중…",
   showDetail: "자세히 보기",
+  copyDetail: "복사",
+  // 오류의 공용 해결 버튼 이름(D-194). 문구 속 행동 이름과 같다
+  fix: {
+    openHistory: t("log"),
+  },
   notARepo: "이 폴더는 아직 Git으로 관리하지 않는 폴더예요.",
   noChanges: "마지막 버전 이후 바뀐 파일이 없어요.",
   noCommits: "아직 저장한 버전이 없어요.",

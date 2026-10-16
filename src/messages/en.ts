@@ -322,6 +322,10 @@ export const en: Messages = {
   noNewlineAtEnd: "no newline at end of file",
   loading: "Loading…",
   showDetail: "Show details",
+  copyDetail: "Copy",
+  fix: {
+    openHistory: t("log"),
+  },
   notARepo: "This folder is not managed with Git yet.",
   noChanges: "No files changed since the last version.",
   noCommits: "No versions saved yet.",

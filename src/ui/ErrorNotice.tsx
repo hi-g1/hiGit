@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { toApiError } from "../lib/api";
+import { copyText } from "../lib/copy";
 import { useMessages } from "../messages";
 import { useErrorAction } from "./errorActions";
 import styles from "./ErrorNotice.module.css";
@@ -31,6 +32,9 @@ export function ErrorNotice({ error, children, codeAction = true }: Props) {
         <details className={styles.details}>
           <summary className={link.link}>{m.showDetail}</summary>
           <pre className={styles.detail}>{detail}</pre>
+          <button type="button" className={`${link.link} ${styles.copy}`} onClick={() => void copyText(detail)}>
+            {m.copyDetail}
+          </button>
         </details>
       )}
     </div>

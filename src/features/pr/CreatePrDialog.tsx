@@ -189,7 +189,8 @@ function CreatePrForm({ repo }: { repo: string }) {
         </div>
       )}
       {error !== null && (
-        <ErrorNotice error={error}>
+        // 대화상자를 닫고 설정을 여는 단추를 직접 둔다(공용 단추는 대화상자를 닫지 않는다).
+        <ErrorNotice error={error} codeAction={code !== "githubExpired"}>
           {code === "githubExpired" && (
             <Button
               variant="secondary"

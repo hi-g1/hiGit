@@ -3,7 +3,7 @@ import { usePrDialogStore } from "../../features/pr/prDialogStore";
 import { MergeDialog } from "../../features/pr/MergeDialog";
 import { PrRow } from "../../features/pr/PrRow";
 import { useSettingsStore } from "../../features/settings/settingsStore";
-import { toApiError, type PrStateFilterView } from "../../lib/api";
+import { type PrStateFilterView } from "../../lib/api";
 import { listKey } from "../../lib/listKeys";
 import { useGitHubStatus, useHostingContext, usePrPages } from "../../lib/queries";
 import { useMessages } from "../../messages";
@@ -55,7 +55,6 @@ export function PullRequests({ repo }: { repo: string }) {
   };
 
   const error = pages.error;
-  const expired = error !== null && toApiError(error).code === "githubExpired";
 
   return (
     <section className={styles.screen}>
@@ -98,15 +97,8 @@ export function PullRequests({ repo }: { repo: string }) {
             {m.pr.connectToSee}
           </EmptyState>
         )}
-        {error && (
-          <ErrorNotice error={error}>
-            {expired && (
-              <Button variant="secondary" onClick={() => openSettings(true)}>
-                {m.pr.reconnect}
-              </Button>
-            )}
-          </ErrorNotice>
-        )}
+        {/* 연결이 끊겼으면 공용 해결 버튼 "다시 연결"이 붙는다(D-194). */}
+        {error && <ErrorNotice error={error} />}
         {connected && pages.isSuccess && rows.length === 0 && <EmptyState>{m.pr.empty}</EmptyState>}
         {rows.length > 0 && (
           <ul

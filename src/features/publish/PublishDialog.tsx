@@ -241,7 +241,8 @@ function Dialog({ repo }: { repo: string }) {
       )}
       {created && error !== null && <p className={styles.hint}>{m.publish.createdOnly}</p>}
       {error !== null && (
-        <ErrorNotice error={error}>
+        // 대화상자를 닫고 설정을 여는 단추를 직접 둔다(공용 단추는 대화상자를 닫지 않는다).
+        <ErrorNotice error={error} codeAction={!["githubNotConnected", "githubExpired"].includes(toApiError(error).code)}>
           {created && (
             <Button variant="secondary" disabled={busy} onClick={() => void push()}>
               {m.publish.retryPush}
