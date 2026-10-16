@@ -38,6 +38,7 @@ effort: high
 - [ ] OS 분기(`cfg(windows)`·`cfg(target_os)`)와 OS 값 읽기(글자 배율·다크는 `platform/src/display.rs`)는 `crates/platform`에만 있다.
 - [ ] 새 앱 설정 칸은 `core/src/view/settings.rs`의 `AppSettingsView`와 `AppSettingsPatch`에 함께 있고, 화면의 `DEFAULT_SETTINGS`(`src/lib/display.ts`)가 core 기본값과 같다.
 - [ ] 긴 이름·경로는 `ui/Truncate`(잘렸을 때만 툴팁)로 자르고 `title` 속성으로 전체를 보이지 않는다. 불러오는 표시는 `<Loading>`(300ms 지연), 포커스 테두리는 `base.css`의 전역 `:focus-visible` 하나다(`src/styles/focus.test.ts`).
+- [ ] UX 다듬기(계획 012) 규칙: `cursor: pointer`는 `src/ui/linkStyle.module.css`에만, `outline: none`은 대신하는 표시(`:focus-visible` 등)와 함께만. 새 `ErrorCode`는 `features/errors/fixes.ts`의 `ERROR_FIX`와 ko·en `errors`에 함께(시험·타입이 막음). 새 `ShortcutId`는 ko·en `shortcutName`에(타입이 막음). 새 액션은 명령 팔레트 분류표(`features/palette/commands.ts`의 `RUN_DIRECT`·`OPEN_UI`·`DIMMED`·`EXCLUDED`) 한 곳에(`commands.test.ts`). `Irreversible` 집합은 `clear-lock`·`force-push`·`pr-merge`·`remote-branch-delete`·`remote-branch-rename`·`remote-tag-delete` 여섯이다(D-196부터 `discard`는 `Inverse`, `tests/executor.rs`). 저장소에서 온 이미지는 `<img src="data:…">`로만 그린다(svg를 DOM에 넣지 않음, D-206). 화면이 `window.getSelection`·`navigator.clipboard`를 직접 쓰지 않고 `src/lib`(`copy.ts`·`webFeel.ts`)를 거친다.
 - [ ] 새 기능에 테스트가 있고 `cargo test --workspace`, `pnpm test`가 통과한다.
 
 ### 3. 보안 점검 (D-034~D-041, `docs/architecture.md` "보안")
