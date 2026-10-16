@@ -179,7 +179,8 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
             onSaveAnyway={() => void save()}
           />
         )}
-        {commit.error && <ErrorNotice error={commit.error} />}
+        {/* 이름·이메일이 없으면 아래에 입력칸을 바로 두므로 설정을 여는 단추는 두지 않는다. */}
+        {commit.error && <ErrorNotice error={commit.error} codeAction={false} />}
       </form>
       {/* 처음 저장이 이름·이메일 때문에 막히면 그 자리에서 바로 정한다(ux.md 높음, D-125). */}
       {identityMissing && (

@@ -191,7 +191,7 @@ describe("시작 화면", () => {
   it("연 프로젝트가 없으면 빈 상태와 찾은 Git 버전", async () => {
     vi.mocked(api.recentProjects).mockResolvedValue([]);
     renderStart();
-    expect(await screen.findByText("아직 연 프로젝트가 없어요. 오른쪽 위의 폴더 열기로 시작해요.")).toBeInTheDocument();
+    expect(await screen.findByText("아직 연 프로젝트가 없어요. 오른쪽 위의 폴더 열기나 복제로 시작해요.")).toBeInTheDocument();
     expect(await screen.findByText("✓ Git을 찾았어요 · 버전 2.45.0")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "이어서 하기" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^폴더 열기/ })).toHaveTextContent("Ctrl+O");

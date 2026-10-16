@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { Start } from "./screens/Start/Start";
 import { Workspace } from "./screens/Workspace/Workspace";
 import { CloneDialog } from "./features/clone/CloneDialog";
+import { IdentityFix } from "./features/identity/IdentityFix";
 import { useCloneStore } from "./features/clone/cloneStore";
 import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
@@ -13,6 +14,7 @@ import { useDisplaySync } from "./lib/useDisplaySync";
 import { useShortcut } from "./lib/useShortcut";
 import { useRepoStore } from "./state/repoStore";
 import { useStartup } from "./state/useStartup";
+import { ErrorActionsContext, type ErrorActions } from "./ui/errorActions";
 import { ToastHost } from "./ui/Toast";
 
 export function createQueryClient() {
@@ -25,12 +27,17 @@ export function createQueryClient() {
   });
 }
 
+/** 오류 줄마다 붙는 공용 해결 단추(D-126). */
+const ERROR_ACTIONS: ErrorActions = { identityMissing: <IdentityFix /> };
+
 export function AppProviders({ children, client }: { children: ReactNode; client?: QueryClient }) {
   const [queryClient] = useState(() => client ?? createQueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <ToastHost />
+      <ErrorActionsContext.Provider value={ERROR_ACTIONS}>
+        {children}
+        <ToastHost />
+      </ErrorActionsContext.Provider>
     </QueryClientProvider>
   );
 }

@@ -52,6 +52,8 @@ describe("버전 이름 칸", () => {
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
     const form = await screen.findByRole("form", { name: "이름과 이메일" });
     expect(screen.getByRole("alert")).toHaveTextContent("이름과 이메일이 설정되어 있지 않아요");
+    // 입력칸이 바로 아래 있으니 설정을 여는 공용 단추는 없다.
+    expect(screen.queryByRole("button", { name: "이름과 이메일 설정" })).toBeNull();
     vi.mocked(api.executeAction).mockResolvedValueOnce({ kind: "identitySaved" });
     await userEvent.type(screen.getByLabelText("이름"), "김지원");
     await userEvent.type(screen.getByLabelText("이메일"), "ji@example.com");

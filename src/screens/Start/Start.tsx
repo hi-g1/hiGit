@@ -5,7 +5,7 @@ import { useCloneStore } from "../../features/clone/cloneStore";
 import { useOpenFolder } from "../../features/open-project/useOpenFolder";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { api, type RecentProject } from "../../lib/api";
-import { queryKeys, useAppStatus, useProjectSummary, useRecentProjects } from "../../lib/queries";
+import { queryKeys, useAppStatus, useIdentity, useProjectSummary, useRecentProjects } from "../../lib/queries";
 import { SHORTCUTS } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -13,13 +13,14 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Kbd } from "../../ui/Kbd";
 import { Logo } from "../../ui/Logo";
 import { Term } from "../../ui/Term";
+import { FirstRun } from "./FirstRun";
 import { LastProject } from "./LastProject";
 import { ProjectRow } from "./ProjectRow";
 import styles from "./Start.module.css";
 
 /**
- * 시작 화면(D-031). 위: 마지막으로 하던 곳. 아래: 다른 프로젝트. 상단 바 오른쪽: 폴더 열기(Ctrl+O).
- * 노선도(D-017 확정 뒤), 복제(반복 4), 처음 실행의 이름·이메일(1b 뒤)은 아직 없다.
+ * 시작 화면(D-031). 위: 마지막으로 하던 곳. 아래: 다른 프로젝트. 상단 바 오른쪽: 복제·폴더 열기·설정.
+ * 최근 프로젝트가 없고 이름·이메일이 비었으면 위 자리에 처음 실행 패널(D-126).
  */
 export function Start() {
   const m = useMessages();
@@ -39,6 +40,16 @@ export function Start() {
   const [topIndex, setTopIndex] = useState(0);
   const top = projects[topIndex] ?? projects[0];
   const others = projects.filter((p) => p !== top);
+  const identity = useIdentity();
+  // "나중에"는 이번 실행 동안만(저장하지 않음, D-126).
+  const [firstRunLater, setFirstRunLater] = useState(false);
+  const firstRun =
+    !pendingInit &&
+    recent.isSuccess &&
+    projects.length === 0 &&
+    identity.isSuccess &&
+    !identity.data.complete &&
+    !firstRunLater;
 
   return (
     <div className={styles.start}>
@@ -117,6 +128,8 @@ export function Start() {
                 }}
               />
             )
+          ) : appStatus.data && firstRun ? (
+            <FirstRun gitVersion={appStatus.data.gitVersion} onLater={() => setFirstRunLater(true)} />
           ) : (
             appStatus.data && <p className={styles.found}>✓ {m.foundGit(appStatus.data.gitVersion)}</p>
           ))}

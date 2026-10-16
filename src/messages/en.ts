@@ -256,7 +256,16 @@ export const en: Messages = {
   removeFromList: "Remove from list",
   folderMissing: "Folder not found",
   folderNotRepo: "Not under version control",
-  noProjects: "No projects yet. Start with Open folder at the top right.",
+  noProjects: `No projects yet. Start with Open folder or ${t("clone")} at the top right.`,
+  firstRun: {
+    once: "You only do this once",
+    title: "First, choose the name on your versions",
+    identityHint: "Every version you save carries this name",
+    github: "GitHub connection",
+    githubHint: `Needed to ${t("push").toLowerCase()} and for ${t("pr").toLowerCase()}s. You can do it later in Settings`,
+    connect: "Connect",
+    later: "Later",
+  },
   foundGit: (version: string) => `Found Git · version ${version}`,
   statusSentence: (c) => {
     switch (c.kind) {
@@ -374,6 +383,7 @@ export const en: Messages = {
     save: "Save",
     saved: "Saved",
     fillGithub: "Use GitHub address",
+    openSettings: "Set name and email",
   },
   settings: {
     title: "Settings",

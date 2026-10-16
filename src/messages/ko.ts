@@ -283,7 +283,17 @@ export const ko = {
   removeFromList: "목록에서 빼기",
   folderMissing: "폴더를 찾을 수 없어요",
   folderNotRepo: "버전 관리를 하지 않는 폴더예요",
-  noProjects: "아직 연 프로젝트가 없어요. 오른쪽 위의 폴더 열기로 시작해요.",
+  noProjects: `아직 연 프로젝트가 없어요. 오른쪽 위의 폴더 열기나 ${josa(t("clone"), "으로/로")} 시작해요.`,
+  // 처음 실행 패널(D-126, start-first.png)
+  firstRun: {
+    once: "처음 한 번만 하면 돼요",
+    title: "버전에 남길 이름부터 정해요",
+    identityHint: "저장한 버전마다 이 이름이 남아요",
+    github: "GitHub 연결",
+    githubHint: `${josa(t("push"), "과/와")} ${t("pr")}에 필요해요. 나중에 설정에서 해도 돼요`,
+    connect: "연결",
+    later: "나중에",
+  },
   foundGit: (version: string) => `Git을 찾았어요 · 버전 ${version}`,
   statusSentence: (c: StatusCase) => {
     switch (c.kind) {
@@ -406,6 +416,7 @@ export const ko = {
     save: "저장",
     saved: "저장했어요",
     fillGithub: "GitHub 주소로 채우기",
+    openSettings: "이름과 이메일 설정",
   },
   settings: {
     title: "설정",
