@@ -10,13 +10,16 @@ type Props = {
   branch: string;
   /** 고르면 목록을 닫는다(확인 창이 앞에 뜬다). */
   onChosen: () => void;
+  /** 열림은 목록이 정한다(찾기 칸의 메뉴 키로도 연다, D-201). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 /**
  * 원격 브랜치 줄 오른쪽 `…`(D-130): 원격 브랜치 이름 바꾸기·지우기. 기본 브랜치 여부는 확인 창이 정한다(서버 기본은
  * 까닭과 꺼진 위험 버튼, 이름만 같은 것은 이름 입력, D-183).
  */
-export function RemoteBranchMenu({ remote, branch, onChosen }: Props) {
+export function RemoteBranchMenu({ remote, branch, onChosen, open: menuOpen, onOpenChange }: Props) {
   const m = useMessages();
   const open = useRemoteBranchStore((s) => s.open);
   const choose = (mode: "delete" | "rename") => () => {
@@ -33,14 +36,21 @@ export function RemoteBranchMenu({ remote, branch, onChosen }: Props) {
     );
   };
   return (
-    <Menu.Root modal={false}>
+    <Menu.Root modal={false} open={menuOpen} onOpenChange={onOpenChange}>
       <Menu.Trigger asChild>
-        <button type="button" className={styles.rowMenu} aria-label={m.branchRowMenu(`${remote}/${branch}`)}>
+        {/* 마우스용(D-201). 키보드는 찾기 칸에서 메뉴 키 */}
+        <button
+          type="button"
+          className={styles.rowMenu}
+          aria-label={m.branchRowMenu(`${remote}/${branch}`)}
+          aria-hidden="true"
+          tabIndex={-1}
+        >
           …
         </button>
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Content className={styles.menu} align="end" sideOffset={4}>
+        <Menu.Content className={styles.menu} align="end" sideOffset={4} onCloseAutoFocus={(e) => e.preventDefault()}>
           {item("rename")}
           {item("delete")}
         </Menu.Content>

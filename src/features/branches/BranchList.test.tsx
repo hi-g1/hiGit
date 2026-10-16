@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -70,6 +70,14 @@ function show(onDone = vi.fn()) {
   return onDone;
 }
 
+/** 줄의 `…`는 마우스용이라 읽기 프로그램에서 숨겨져 있다(D-201). */
+const menuButton = (name: string) =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>(`button[aria-label="${name} 메뉴"]`);
+    if (!el) throw new Error(`no menu button for ${name}`);
+    return el;
+  });
+
 afterEach(() => {
   vi.clearAllMocks();
   useBranchListStore.setState({ open: false, asking: null });
@@ -119,7 +127,7 @@ describe("브랜치 목록", () => {
   it("고르면 바로 갈아타고 결과를 알린다", async () => {
     const onDone = show();
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
-    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /^main/ }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "switch", input: { branch: "main", remote: null } });
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("main 브랜치로 갈아탔어요"));
   });
@@ -140,7 +148,7 @@ describe("브랜치 목록", () => {
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
     await screen.findByText("최근에 쓴 브랜치");
     await waitFor(() => expect(api.status).toHaveBeenCalled());
-    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /^main/ }));
     expect(await screen.findByRole("dialog", { name: "고친 파일 3개가 있어요" })).toBeInTheDocument();
     expect(screen.queryByText("최근에 쓴 브랜치")).not.toBeInTheDocument();
     const carry = await screen.findByRole("button", { name: "새 브랜치로 옮기기" });
@@ -170,7 +178,7 @@ describe("브랜치 목록", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
     await waitFor(() => expect(api.status).toHaveBeenCalled());
-    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /^main/ }));
     await userEvent.click(await screen.findByRole("button", { name: "여기 두기" }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", {
       id: "switch",
@@ -187,7 +195,7 @@ describe("브랜치 목록", () => {
     vi.mocked(api.switchPlan).mockResolvedValue({ dirtyFiles: 1, canCarry: true, reason: null, blocked: [], blockedTotal: 0 });
     await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
     await waitFor(() => expect(api.status).toHaveBeenCalled());
-    await userEvent.click(await screen.findByRole("button", { name: /^main(?! 메뉴)/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /^main/ }));
     await userEvent.click(await screen.findByRole("button", { name: "닫기" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(api.executeAction).not.toHaveBeenCalled();
@@ -230,7 +238,7 @@ describe("브랜치 목록", () => {
   describe("이름 바꾸기·지우기", () => {
     async function openMenu(name: string) {
       await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
-      await userEvent.click(await screen.findByRole("button", { name: `${name} 메뉴` }));
+      await userEvent.click(await menuButton(name));
     }
 
     it("로컬 줄마다 메뉴가 있고, 지우기는 확인 없이 branch-delete", async () => {
@@ -238,13 +246,13 @@ describe("브랜치 목록", () => {
       vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchDeleted", name: "결제 수정" });
       await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
       for (const name of ["로그인 기능", "main", "결제 수정"]) {
-        expect(await screen.findByRole("button", { name: `${name} 메뉴` })).toBeInTheDocument();
+        expect(await menuButton(name)).toBeInTheDocument();
       }
-      await userEvent.click(screen.getByRole("button", { name: "결제 수정 메뉴" }));
+      await userEvent.click(await menuButton("결제 수정"));
       await userEvent.click(await screen.findByRole("menuitem", { name: "브랜치 지우기" }));
       expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-delete", input: { name: "결제 수정" } });
       await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchDeleted("결제 수정")));
-      expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus();
+      expect(screen.getByRole("combobox", { name: "찾기 또는 새로 만들기" })).toHaveFocus();
     });
 
     it("지금 브랜치와 기본 브랜치는 지우기가 흐리고 아무것도 하지 않는다", async () => {
@@ -273,7 +281,7 @@ describe("브랜치 목록", () => {
         expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "branch-rename", input: { from: "결제 수정", to: "결제" } });
       });
       await waitFor(() => expect(onDone).toHaveBeenCalledWith(ko.branchRenamed("결제")));
-      await waitFor(() => expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
+      await waitFor(() => expect(screen.getByRole("combobox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
     });
 
     it("이름 바꾸기 중 Esc는 목록을 닫지 않는다", async () => {
@@ -283,9 +291,40 @@ describe("브랜치 목록", () => {
       const field = await screen.findByRole("textbox", { name: "결제 수정 메뉴" });
       await userEvent.type(field, "{Escape}");
       await waitFor(() => expect(screen.queryByRole("textbox", { name: "결제 수정 메뉴" })).not.toBeInTheDocument());
-      expect(screen.getByRole("list", { name: "브랜치" })).toBeInTheDocument();
+      expect(screen.getByRole("listbox", { name: "브랜치" })).toBeInTheDocument();
       // 이름 바꾸기를 그만두면 찾기 칸으로 돌아간다.
-      await waitFor(() => expect(screen.getByRole("textbox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
+      await waitFor(() => expect(screen.getByRole("combobox", { name: "찾기 또는 새로 만들기" })).toHaveFocus());
+    });
+
+    it("키보드만으로: 찾기 칸에서 고른 줄의 메뉴를 메뉴 키로 열고 이름 바꾸기(D-201)", async () => {
+      show();
+      await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+      const box = await screen.findByRole("combobox", { name: "찾기 또는 새로 만들기" });
+      await screen.findByRole("option", { name: /결제 수정/ });
+      // 지금 → 최근 줄(main, 결제 수정)
+      await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+      const active = document.getElementById(box.getAttribute("aria-activedescendant")!)!;
+      expect(active).toHaveAttribute("role", "option");
+      expect(active).toHaveAttribute("aria-selected", "true");
+      expect(active).toHaveTextContent("결제 수정");
+      expect(active).toHaveAttribute("aria-posinset", "3");
+      fireEvent.keyDown(box, { key: "ContextMenu" });
+      const rename = await screen.findByRole("menuitem", { name: "브랜치 이름 바꾸기" });
+      act(() => rename.focus());
+      await userEvent.keyboard("{Enter}");
+      expect(await screen.findByRole("textbox", { name: "결제 수정 메뉴" })).toHaveValue("결제 수정");
+    });
+
+    it("메뉴를 그냥 닫으면 찾기 칸으로 돌아간다", async () => {
+      show();
+      await userEvent.click(screen.getByRole("button", { name: /로그인 기능/ }));
+      const box = await screen.findByRole("combobox", { name: "찾기 또는 새로 만들기" });
+      await screen.findByRole("option", { name: /결제 수정/ });
+      fireEvent.keyDown(box, { key: "F10", shiftKey: true });
+      await screen.findByRole("menuitem", { name: "브랜치 이름 바꾸기" });
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("menuitem")).not.toBeInTheDocument());
+      expect(box).toHaveFocus();
     });
 
     it("core 오류는 토스트로", async () => {

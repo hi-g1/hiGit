@@ -1,6 +1,6 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { api, type ActionInput, type BranchListView } from "../../lib/api";
 import {
   invalidateLog,
@@ -10,6 +10,7 @@ import {
   useMergeHint,
   useStatus,
 } from "../../lib/queries";
+import { isMenuKey } from "../../lib/listKeys";
 import { formatTime } from "../../lib/time";
 import { SHORTCUTS } from "../../lib/shortcuts";
 import { useShortcut } from "../../lib/useShortcut";
@@ -43,6 +44,8 @@ type Props = {
 };
 
 type Choice = { kind: "switch"; item: ListItem } | { kind: "create"; name: string };
+
+const choiceKey = (c: Choice) => (c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`);
 
 /**
  * 브랜치 목록(D-047, r-branch.png). 고르면 바로 갈아타고, 고친 파일이 있으면 목록을 닫고 두고 갈지 옮길지
@@ -251,7 +254,18 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
     }
   };
 
+  // 줄 메뉴(`…`)가 열린 줄. 키보드는 찾기 칸에서 메뉴 키·Shift+F10으로 고른 줄의 메뉴를 연다(D-201).
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const listId = useId();
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (isMenuKey({ ...e, isComposing: e.nativeEvent.isComposing })) {
+      const choice = choices[active];
+      if (choice?.kind === "switch") {
+        e.preventDefault();
+        setMenuFor(choiceKey(choice));
+      }
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((a) => Math.min(a + 1, choices.length - 1));
@@ -275,6 +289,11 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
         value={query}
         placeholder={m.branchSearch}
         aria-label={m.branchSearch}
+        role="combobox"
+        aria-expanded={view !== undefined}
+        aria-controls={listId}
+        aria-activedescendant={choices.length > 0 ? `${listId}-${active}` : undefined}
+        aria-autocomplete="list"
         autoFocus
         onChange={(e) => {
           setQuery(e.target.value);
@@ -296,6 +315,13 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
           onRename={(from, to) => void edit({ id: "branch-rename", input: { from, to } }, m.branchRenamed(to))}
           onDelete={(name) => void edit({ id: "branch-delete", input: { name } }, m.branchDeleted(name))}
           onClose={close}
+          listId={listId}
+          menuFor={menuFor}
+          setMenuFor={(key) => {
+            setMenuFor(key);
+            // 고르지 않고 닫았으면 찾기 칸으로(`…`는 Tab 정지가 아니다).
+            if (key === null) searchRef.current?.focus();
+          }}
         />
       )}
       {!query.trim() && view?.local.some((b) => b.isHead && b.parkBlocked) && current !== null && (
@@ -350,6 +376,9 @@ function List({
   onRename,
   onDelete,
   onClose,
+  listId,
+  menuFor,
+  setMenuFor,
 }: {
   view: BranchListView;
   choices: Choice[];
@@ -364,6 +393,10 @@ function List({
   onDelete: (name: string) => void;
   /** 원격 줄 메뉴가 확인 창을 열기 전에 목록을 닫는다. */
   onClose: () => void;
+  listId: string;
+  /** 메뉴가 열린 줄(`choiceKey`). */
+  menuFor: string | null;
+  setMenuFor: (key: string | null) => void;
 }) {
   const m = useMessages();
   const branchLabel = useTermLabel("branch");
@@ -386,9 +419,9 @@ function List({
   const s = sections(view);
   const searching = query.trim() !== "";
   return (
-    // 줄 단추 옆에 `…` 단추와 이름 입력칸이 있어 listbox가 아니라 목록이다. 찾기 칸의 ↑↓가 고른 줄은
-    // `aria-current`로 알린다.
-    <ul className={styles.list} aria-label={branchLabel}>
+    // 찾기 칸이 combobox이고 이 목록이 listbox다(D-201). 고른 줄은 찾기 칸의 aria-activedescendant로 알린다.
+    // 줄의 `…`는 마우스용이라 읽기 프로그램에서 숨긴다.
+    <ul id={listId} role="listbox" className={styles.list} aria-label={branchLabel}>
       {choices.map((c, i) => {
         const first = s.recent[0];
         const header =
@@ -401,21 +434,33 @@ function List({
         const remoteRow = c.kind === "switch" && c.item.remote !== null ? c.item : null;
         if (local && renaming === local.name) {
           return (
-            <li key={`/${local.name}`}>
-              {header && <p className={styles.section}>{header}</p>}
+            <li key={`/${local.name}`} role="presentation">
+              {header && (
+                <p className={styles.section} aria-hidden="true">
+                  {header}
+                </p>
+              )}
               <RenameField repo={repo} from={local.name} pending={pending} onSubmit={(to) => onRename(local.name, to)} />
             </li>
           );
         }
         return (
           <li
-            key={c.kind === "create" ? "+create" : `${c.item.remote ?? ""}/${c.item.name}`}
+            key={choiceKey(c)}
+            role="presentation"
             className={local || remoteRow ? `${styles.rowWrap} ${i === active ? styles.activeWrap : ""}` : undefined}
           >
-            {header && <p className={styles.section}>{header}</p>}
-            <button
-              type="button"
-              aria-current={i === active ? "true" : undefined}
+            {header && (
+              <p className={styles.section} aria-hidden="true">
+                {header}
+              </p>
+            )}
+            <div
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === active}
+              aria-posinset={i + 1}
+              aria-setsize={choices.length}
               className={`${styles.row} ${i === active ? styles.active : ""} ${c.kind === "create" ? styles.create : ""}`}
               onClick={() => onPick(c)}
             >
@@ -431,19 +476,31 @@ function List({
                   <span className={styles.right}>{right(c.item)}</span>
                 </>
               )}
-            </button>
+            </div>
             {local && (
-              <BranchRowMenu row={local.row} onRename={() => onRenameStart(local.name)} onDelete={() => onDelete(local.name)} />
+              <BranchRowMenu
+                row={local.row}
+                open={menuFor === choiceKey(c)}
+                onOpenChange={(o) => setMenuFor(o ? choiceKey(c) : null)}
+                onRename={() => onRenameStart(local.name)}
+                onDelete={() => onDelete(local.name)}
+              />
             )}
             {remoteRow?.remote && (
-              <RemoteBranchMenu remote={remoteRow.remote} branch={remoteRow.name} onChosen={onClose} />
+              <RemoteBranchMenu
+                remote={remoteRow.remote}
+                branch={remoteRow.name}
+                open={menuFor === choiceKey(c)}
+                onOpenChange={(o) => setMenuFor(o ? choiceKey(c) : null)}
+                onChosen={onClose}
+              />
             )}
           </li>
         );
       })}
       {!searching &&
         view.orphanParked.map((name) => (
-          <li key={`orphan/${name}`} className={styles.orphan}>
+          <li key={`orphan/${name}`} role="option" aria-selected={false} aria-disabled="true" className={styles.orphan}>
             <Truncate className={styles.name}>{name}</Truncate>
             <span className={styles.right}>{m.parkedOnly}</span>
           </li>
