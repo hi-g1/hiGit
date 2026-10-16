@@ -365,3 +365,134 @@ mod restore {
         );
     }
 }
+
+#[test]
+fn many_backups_cost_at_most_one_log_per_shown_item() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let repo = repo();
+    let dir = repo.path();
+    let head = git(dir, &["rev-parse", "HEAD"]);
+    let script: String = (0..500)
+        .map(|i| format!("create refs/higit/backup/x-{i}/t {head}\n"))
+        .collect();
+    let mut child = std::process::Command::new("git")
+        .args(["update-ref", "--stdin"])
+        .current_dir(dir)
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    use std::io::Write;
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(script.as_bytes())
+        .unwrap();
+    assert!(child.wait().unwrap().success());
+    let logs = Arc::new(AtomicUsize::new(0));
+    let counter = logs.clone();
+    let backend = git::CliBackend::new(
+        "git",
+        Arc::new(move |cmd: &mut std::process::Command| {
+            if cmd.get_args().any(|a| a == "log") {
+                counter.fetch_add(1, Ordering::SeqCst);
+            }
+        }),
+    );
+    let core = Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>).unwrap();
+    core.open_project(dir, OpenHow::Picked).unwrap();
+    logs.store(0, Ordering::SeqCst);
+    let items = core.recovery(dir).unwrap().items;
+    assert_eq!(items.len(), 200);
+    let used = logs.load(Ordering::SeqCst);
+    assert!(used <= 205, "git log {used}번");
+}
+
+#[test]
+fn take_out_refuses_paths_into_the_git_folder() {
+    use higit_core::view::{ActionInput, ErrorCode, ErrorView, TakeOutInput, TakeOutSource};
+    let repo = repo();
+    let dir = repo.path();
+    // 받은 저장소에 `.GIT/config`를 담은 맡긴 ref가 있다.
+    let blob = {
+        let mut child = std::process::Command::new("git")
+            .args(["hash-object", "-w", "--stdin"])
+            .current_dir(dir)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        use std::io::Write;
+        child.stdin.take().unwrap().write_all(b"[core]\n").unwrap();
+        String::from_utf8(child.wait_with_output().unwrap().stdout)
+            .unwrap()
+            .trim()
+            .to_string()
+    };
+    let mktree = |input: String| {
+        let mut child = std::process::Command::new("git")
+            .args(["mktree"])
+            .current_dir(dir)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        use std::io::Write;
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        String::from_utf8(child.wait_with_output().unwrap().stdout)
+            .unwrap()
+            .trim()
+            .to_string()
+    };
+    let sub = mktree(format!("100644 blob {blob}\tconfig\n"));
+    let a = git(dir, &["rev-parse", "HEAD:a.txt"]);
+    let tree = mktree(format!("100644 blob {a}\ta.txt\n040000 tree {sub}\t.GIT\n"));
+    let evil = git(
+        dir,
+        &[
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@e",
+            "commit-tree",
+            &tree,
+            "-p",
+            "HEAD",
+            "-m",
+            "WIP on main",
+        ],
+    );
+    git(dir, &["update-ref", "refs/higit/parked/main", &evil]);
+    let core = open(dir);
+    let err = core
+        .execute(
+            dir,
+            &ActionInput::TakeOut(TakeOutInput {
+                source: TakeOutSource::Ref {
+                    refname: "refs/higit/parked/main".into(),
+                },
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+    assert!(!dir.join(".GIT").exists());
+    assert_eq!(git(dir, &["rev-parse", "refs/higit/parked/main"]), evil);
+    let err = core
+        .execute(
+            dir,
+            &ActionInput::TakeOut(TakeOutInput {
+                source: TakeOutSource::Parked {
+                    branch: "main".into(),
+                },
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+}

@@ -41,11 +41,13 @@ fn take_out_ref(git: &dyn git::GitBackend, repo: &git::RepoPath, refname: &str) 
         if crate::recovery::kind_of(git, repo, &entry.oid) != crate::view::RestoreKind::Changes {
             return Err(CoreError::InvalidInput("꺼낼 수 있는 항목이 아니에요"));
         }
+        crate::parked::refuse_unsafe(git, repo, &oid)?;
         git.run(repo, &GitOp::Unpark { oid })?;
         return Ok(Outcome::TookOut);
     }
     let branch =
         crate::parked::branch_of(refname).ok_or(CoreError::InvalidInput("없는 항목이에요"))?;
+    crate::parked::refuse_unsafe(git, repo, &oid)?;
     git.run(repo, &GitOp::Unpark { oid: oid.clone() })?;
     crate::undo::backup::backup_oid(git, repo, &oid, &format!("parked-{branch}"))?;
     git.delete_ref(repo, refname, &git::RefExpect::Is(oid))?;
@@ -69,6 +71,7 @@ fn take_out_parked(
     let oid = git
         .resolve_ref(repo, &name)?
         .ok_or(CoreError::InvalidInput("맡겨 둔 파일이 없어요"))?;
+    crate::parked::refuse_unsafe(git, repo, &oid)?;
     git.run(repo, &GitOp::UnparkKeep { oid: oid.clone() })?;
     let paths = crate::actions::merge::conflict_paths(git, repo)?;
     if paths.is_empty() {
@@ -165,6 +168,7 @@ impl Action for StashAction {
                     if !git.stash_list(repo)?.iter().any(|e| e.oid == oid) {
                         return Err(CoreError::InvalidInput("없는 항목이에요"));
                     }
+                    crate::parked::refuse_unsafe(git, repo, &oid)?;
                     git.run(repo, &GitOp::Unpark { oid: oid.clone() })?;
                     git.run(repo, &GitOp::StashDropOid { oid })?;
                     Ok(Outcome::TookOut)

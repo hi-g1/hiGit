@@ -9,6 +9,8 @@ use crate::undo::journal::{Body, Journal};
 use crate::view::{RecoveryItem, RecoverySource, RestoreKind};
 
 const MAX_ITEMS: usize = 200;
+/// 서명이 맞지 않는 journal 줄(받은 저장소, 다른 앱 데이터)은 이만큼만 보인다.
+const MAX_UNVERIFIED: usize = 50;
 /// 같은 버전·이 초 안의 reflog 줄은 앱 작업 줄에 합친다.
 const SAME_MOMENT: i64 = 2;
 
@@ -60,7 +62,14 @@ pub(crate) fn collect(
         }
     }
     let mut journal_marks: Vec<(String, i64)> = Vec::new();
+    // 서명이 맞지 않는 줄은 최근 것만 남긴다(파일 순서가 옛 것부터).
+    let unverified = lines.iter().filter(|(_, v)| !v).count();
+    let mut skip_unverified = unverified.saturating_sub(MAX_UNVERIFIED);
     for (body, verified) in lines {
+        if !verified && skip_unverified > 0 {
+            skip_unverified -= 1;
+            continue;
+        }
         let Body::Action {
             id,
             at,
@@ -74,7 +83,9 @@ pub(crate) fn collect(
         };
         let oid = after.head.clone();
         // HEAD를 옮긴 앱 작업만 같은 순간의 reflog 줄을 대신한다(임시 보관 등은 HEAD 그대로).
+        // 서명이 맞지 않는 줄은 git의 기록을 가리지 못한다.
         if let Some(o) = &oid
+            && verified
             && before.head != after.head
         {
             journal_marks.push((o.clone(), at));
@@ -136,7 +147,8 @@ pub(crate) fn collect(
             action: None,
             label,
             summary: r.summary.clone(),
-            restore: kind_of(git, repo, &r.oid),
+            // 종류(git log 한 번)는 목록을 자른 뒤 남은 것만 본다.
+            restore: RestoreKind::None,
             oid: Some(r.oid.clone()),
             refname: Some(r.name.clone()),
             undone: false,
@@ -184,5 +196,127 @@ pub(crate) fn collect(
 
     items.sort_by_key(|i| std::cmp::Reverse(i.at));
     items.truncate(MAX_ITEMS);
+    for item in items
+        .iter_mut()
+        .filter(|i| i.source == RecoverySource::Backup)
+    {
+        if let Some(oid) = &item.oid {
+            item.restore = kind_of(git, repo, oid);
+        }
+    }
     Ok(items)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::undo::{JournalKey, UndoKind, UndoState};
+    use crate::view::ActionInput;
+
+    fn git(dir: &Path, args: &[&str]) -> String {
+        let out = std::process::Command::new("git")
+            .args(["-c", "user.name=t", "-c", "user.email=t@example.com"])
+            .args(args)
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap().trim().to_string()
+    }
+
+    /// 버전 둘. (폴더, 첫째, 둘째, 둘째를 만든 reflog 시각)
+    fn two() -> (tempfile::TempDir, String, String, i64) {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        git(dir, &["commit", "-q", "--allow-empty", "-m", "처음"]);
+        let first = git(dir, &["rev-parse", "HEAD"]);
+        git(dir, &["commit", "-q", "--allow-empty", "-m", "둘"]);
+        let second = git(dir, &["rev-parse", "HEAD"]);
+        let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+        let at = backend.reflog(&RepoPath::new(dir), 1).unwrap()[0].at;
+        (repo, first, second, at)
+    }
+
+    fn line(id: usize, at: i64, before: &str, after: &str) -> Body {
+        let state = |h: &str| UndoState {
+            head: Some(h.into()),
+            branch: Some("main".into()),
+            ..Default::default()
+        };
+        Body::Action {
+            id: format!("u{id}"),
+            at,
+            action: "commit".into(),
+            input: ActionInput::Init,
+            before: state(before),
+            after: state(after),
+            kind: UndoKind::RestoreRef,
+        }
+    }
+
+    #[test]
+    fn unsigned_lines_do_not_hide_git_history() {
+        let (tmp, first, second, at) = two();
+        let dir = tmp.path();
+        let git_dir = dir.join(".git");
+        // 다른 키로 서명한 줄이 같은 버전·같은 순간을 주장한다.
+        Journal::at(&git_dir, JournalKey::ephemeral())
+            .append(&line(1, at, &first, &second))
+            .unwrap();
+        let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+        let items = collect(
+            &backend,
+            &RepoPath::new(dir),
+            &Journal::at(&git_dir, JournalKey::ephemeral()),
+        )
+        .unwrap();
+        assert!(
+            items
+                .iter()
+                .any(|i| i.source == RecoverySource::Reflog
+                    && i.oid.as_deref() == Some(second.as_str())),
+            "{items:?}"
+        );
+        let unsigned = items
+            .iter()
+            .find(|i| i.source == RecoverySource::Journal)
+            .unwrap();
+        assert_eq!(unsigned.restore, RestoreKind::None);
+    }
+
+    #[test]
+    fn only_fifty_unsigned_lines_show() {
+        let (tmp, first, second, at) = two();
+        let dir = tmp.path();
+        let git_dir = dir.join(".git");
+        let other = Journal::at(&git_dir, JournalKey::ephemeral());
+        for i in 0..80 {
+            other
+                .append(&line(i, at - 1000 + i as i64, &first, &second))
+                .unwrap();
+        }
+        let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+        let items = collect(
+            &backend,
+            &RepoPath::new(dir),
+            &Journal::at(&git_dir, JournalKey::ephemeral()),
+        )
+        .unwrap();
+        let shown: Vec<&RecoveryItem> = items
+            .iter()
+            .filter(|i| i.source == RecoverySource::Journal)
+            .collect();
+        assert_eq!(shown.len(), MAX_UNVERIFIED);
+        // 최근 줄이 남는다.
+        assert!(shown.iter().any(|i| i.id == "j:u79"));
+        assert!(!shown.iter().any(|i| i.id == "j:u0"));
+    }
 }

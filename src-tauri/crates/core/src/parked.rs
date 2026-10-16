@@ -102,7 +102,30 @@ pub(crate) fn branch_of(refname: &str) -> Option<String> {
 
 /// 저장소 안의 상대 경로이고 `.git` 폴더(Windows의 다른 이름 포함)를 건드리지 않는다.
 fn safe_paths(paths: &[String]) -> bool {
-    crate::actions::paths::validate(paths).is_ok() && paths.iter().all(|p| git::safe_relative(p))
+    crate::actions::paths::validate(paths).is_ok() && every_path_safe(paths)
+}
+
+/// 경로마다 `safe_paths`와 같은 검사(개수 제한과 빈 목록 검사 없이). 꺼내기가 쓴다.
+pub(crate) fn every_path_safe(paths: &[String]) -> bool {
+    paths
+        .iter()
+        .all(|p| crate::actions::paths::validate_one(p).is_ok() && git::safe_relative(p))
+}
+
+/// 꺼낼 stash 모양 버전에 든 경로가 모두 안전할 때만 꺼낸다(받은 저장소의 stash·백업 ref가
+/// `.git` 등을 덮어쓰지 못하게, D-082).
+pub(crate) fn refuse_unsafe(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    oid: &git::Oid,
+) -> crate::Result<()> {
+    let paths = git.parked_paths(repo, oid)?;
+    if !every_path_safe(&paths) {
+        return Err(crate::CoreError::InvalidInput(
+            "꺼낼 수 없는 파일 경로가 있어요",
+        ));
+    }
+    Ok(())
 }
 
 /// 앱이 시작한 "겹침 해결" 꺼내기의 표식(D-083). `<git 폴더>/higit/unpark.json`, 서명은 `marker`.

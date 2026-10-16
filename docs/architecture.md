@@ -295,6 +295,8 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 
 #### 작업 내역 (D-085)
 - 화면(`screens/Activity`)은 `query_recovery`가 주는 `RecoveryView { items }`를 보여준다. `core::recovery::collect`가 다섯 원천을 최신 먼저 200개로 합친다: journal의 Action 줄(되돌린 줄은 `undone`, 서명이 맞지 않는 줄은 `restore: None`), HEAD reflog(같은 해시·2초 안의 journal 줄과 겹치면 뺌), 백업 ref, 맡긴 ref, 임시 보관 목록(맡겨 두기가 잠깐 만든 항목은 뺌).
+- 서명이 맞지 않는 journal 줄은 최근 50개만 보이고(`restore: None`), 같은 순간의 reflog 줄을 가리지 못한다. 모든 원천을 시각순으로 200개로 자른 뒤 남은 백업 ref에만 `kind_of`(git log)를 부른다.
+- 꺼내기(`take-out`: 임시 보관·백업 ref·맡긴 ref)는 stash 모양 버전에 든 경로가 모두 상대 경로이고 `.git`(Windows 변형 포함)이 아닐 때만 꺼낸다(`parked::refuse_unsafe`).
 - 백업 ref의 종류는 이름이 아니라 객체 모양으로 가른다(`recovery::kind_of`). 둘째 부모의 메시지가 `index on `으로 시작하면 `Changes`(꺼내기), 아니면 `Version`(이 시점으로 되돌리기).
 - `Version`은 `restore`(`reflog`/Safe/`RestoreTree`): 지금 브랜치를 `ResetKeep`으로 옮기고 그 전에 지금 버전을 `restore-<브랜치>` 백업 ref로 남긴다. `Changes`는 `take-out`(`TakeOutSource::Stash { oid }`, `Ref { refname }`): 백업 ref는 남기고, 맡긴 ref는 꺼낸 뒤 백업으로 옮겨 지운다. core는 받은 해시·ref가 reflog·백업 ref·목록에 있는지 다시 확인한다.
 - 정리: 프로젝트를 열고 신뢰 확인을 마친 뒤 `undo::backup::prune`이 이름의 시각이 30일(`KEEP_DAYS`) 지난 백업 ref를 한 번에 20개(`PRUNE_AT_ONCE`)까지 지운다(D-079). 시각을 못 읽는 ref와 맡긴 ref는 두고, 정리가 실패해도 열기는 성공이다.
