@@ -47,7 +47,7 @@ effort: high
 - [ ] 비밀 파일 검사(D-077)의 원문(파일 내용, 찾은 값)이 로그·오류 detail·화면 밖으로 나가지 않는다. 로그 줄에는 git 원문을 쓰지 않는다(D-078)
 - [ ] 이벤트 페이로드(`op-progress` 등)에 파일 이름·원격 주소가 없다(D-080)
 - [ ] 잠금 파일 지우기는 `locks::remove`로만, git 폴더 안 일반 파일 `*.lock`만, 링크를 따라가지 않는다(D-081). 프로세스 조회·종료는 `crates/platform`에만
-- [ ] `Command::new`는 `crates/git/src/cli/runner.rs`와 `crates/platform`에만 있다. 원격 작업은 `run_network`(시간 제한, 백그라운드면 묻는 창 끄기, D-066)
+- [ ] `Command::new`는 `crates/git/src/cli/runner.rs`와 `crates/platform`에만 있다(시험 코드 제외). 원격 작업은 감시 실행(`run_watched`: 시간 제한·멈춤 감지·취소·진행 알림)으로만 한다: `run_network`(백그라운드면 묻는 창 끄기, D-066)와 복제의 `cli/clone.rs`
 - [ ] 신뢰하지 않은 저장소(`NeedsTrust`)에서 status 같은 git 명령을 돌리지 않고 열린 목록에 넣지 않는다. 새 실행 설정 키가 `trust.rs` 목록에 있다(D-039, D-067)
 - [ ] `unsafe`, 테스트 밖 `unwrap`·`expect`·`panic!`이 새로 생기지 않았다(D-038)
 - [ ] 새 의존성: 필요성, 관리 상태, `cargo-deny` 통과
@@ -59,7 +59,7 @@ effort: high
 - [ ] 꺼내기(`take-out`)는 stash 모양 버전의 경로가 모두 안전할 때만 한다(`parked::refuse_unsafe`). 서명이 맞지 않는 journal 줄은 되살리기·새 브랜치로·reflog 가리기에 쓰지 않는다(D-085)
 - [ ] 새 IPC 명령(`query_rewrite_plan`·`query_commit_detail`)이 네 곳에 있고 읽기 전용이며 열린 저장소만 받는다
 - [ ] GitHub 토큰(반복 4, D-040·D-109): `SecretString`과 OS 키체인(`platform::Keychain`)에만 있다. 화면 타입(`core::view`)·로그·오류 detail·`Debug`·명령줄·URL·환경 변수에 없다. `rg "Authorization|Bearer" src-tauri/crates`가 `hosting`의 전송(`ureq_transport.rs`)과 시험에만, `rg "ureq" src-tauri/crates --type rust`가 `hosting`에만
-- [ ] `rg "credential.helper" src-tauri/crates --type rust`가 git의 `cli/network.rs`(상수)와 시험에만 있다. helper는 `Helper` 호출에만 붙고, `auth_for`가 받기·올리기 주소 모두 github.com https·저장소 로컬 `http.*`·`remote.*.proxy` 없음·이번 실행 키체인일 때만 `Helper`를 준다(D-111)
+- [ ] `rg "credential.helper" src-tauri/crates --type rust`가 git의 `cli/network.rs`(상수), `core/src/trust.rs`(받은 저장소 설정 끄기 목록, 기존)와 시험에만 있다. helper는 `Helper` 호출에만 붙고, `auth_for`가 받기·올리기 주소 모두 github.com https·저장소 로컬 `http.*`·`remote.*.proxy` 없음·이번 실행 키체인일 때만 `Helper`를 준다(D-111)
 - [ ] helper(`github/helper.rs`)는 `get`이고 `protocol=https`·`host=github.com`(포트 없음)·사용자 이름 없음을 확인한 **뒤에만** 키체인을 읽고, 그 밖에는 아무것도 쓰지 않고 0으로 끝난다. `main.rs`의 `--git-credential` 분기가 어떤 플러그인·로그보다 먼저다
 - [ ] `hosting`이 `git`·`platform`·`core`를 모른다(`cargo tree -p hosting`). 서버가 준 URL을 열거나 따라가지 않는다(`verification_uri`는 상수 비교만, 리디렉트는 `api_base` 아래만). `app_open_hosting_page`는 주소를 인자로 받지 않는다
 - [ ] 복제(D-115): 주소는 `validate_clone_url`(https·ssh·`git@host:path`), 대상은 부모가 링크·`.git` 안이 아니고 없거나 빈 폴더, 실패 때 지우는 것은 이번 실행이 만든 대상 하나(`remove_created_target`)뿐

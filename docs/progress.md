@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G20 끝 (반복 4 문서 마무리). 반복 4 구현 완료, 끝 점검 전
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: wrap up iteration 4
-- 다음 할 일: push·CI 초록 확인 → 반복 4 끝 code-analyst 규칙·보안 점검 → 나온 것 고침 → 반복 4b(planner 계획 → code-analyst 검토 → 구현) (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: 반복 4 끝 점검 고침 완료(위반 1건·참고 2건 고침)
+- 마지막 커밋: (이 갱신과 같은 커밋) docs: record iteration 4 review fixes
+- 다음 할 일: push·CI 초록 확인 → 반복 4b(planner 계획 `docs/plans/010-*.md` → code-analyst 검토 → 구현) (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -193,7 +193,11 @@
 - [x] G18 `features/pr/CreatePrDialog`·`prDialogStore`, `usePrDraft`, 올리지 않은 버전이 있으면 `push` → `pr-create`, 이미 열린 요청·차이 없음이면 만들기 꺼짐, 성공 토스트 "열기"
 - [x] G19 `features/pr/PrSlot`(미연결 → 연결 패널, 있으면 번호·상태 → 검토 요청 화면의 그 줄, 없으면 새 검토 요청), 브랜치 목록의 "main에 합치기" 자리
 - [x] G20 문서: architecture(HostingProvider·HttpTransport·GitHub 연결 절, 셸 두 곳, 시간 제한 표, 취소 깃발, 액션 32개, 명령 11개, 보안 표 세 줄, 입력 상한), spec 화면 행, roadmap, code-analyst 점검 줄 6개
-- [ ] 반복 4 끝 점검(code-analyst 규칙·보안)
+- [x] 반복 4 끝 점검(code-analyst 규칙·보안): 핵심 보안 항목 위반 없음. 고침: 검토 요청 문구의 "브랜치" 직접 사용(34d215c, 합칠 대상은 "대상 브랜치"로), 로그인 폴링 오류 뒤 간격(759a680), 복제 실패 정리는 git이 만든 폴더만(08ae587), 점검표 문구(trust.rs 예외, 복제의 감시 실행)
+
+### 반복 4 끝 점검에서 다음으로 넘긴 것
+- 화면의 `e.key === "Escape"`·`"Enter"` 판정이 `src/lib` 밖에 있다(PullRequests·CloneDialog, 기존 Activity·Rewrite·이름 대화상자와 같은 방식). D-056을 엄격히 읽으면 `src/lib`로 옮길 후보 → 반복 5-0
+- Windows 릴리스 exe(GUI 하위 시스템)에서 helper 표준 입출력과 Git for Windows `sh`의 공백 경로 풀기는 손 확인("사람이 할 일")
 
 ## 다음 반복
 - [ ] 반복 4b: 설정과 GitHub 넓히기
