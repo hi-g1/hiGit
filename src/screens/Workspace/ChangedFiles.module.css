@@ -1,6 +1,33 @@
+/* 두 줄 행: 높이를 고정해 폴더가 없는 줄도 같은 높이 */
+.two {
+  min-height: var(--row-height-two);
+}
+
+.names {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--font-size-md);
+}
+
+/* 폴더는 앞을 줄여 끝 쪽(파일에 가까운 폴더)이 보이게 한다 */
+.dir {
+  min-height: calc(var(--font-size-sm) * var(--line-height));
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
 .kind {
   flex: none;
-  width: 4rem;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -31,7 +58,7 @@
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
-  height: var(--row-height);
+  min-height: var(--row-height-two);
   padding: 0;
   border: none;
   background: none;

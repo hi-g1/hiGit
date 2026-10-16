@@ -1,5 +1,6 @@
 import { useStageMutation } from "../../features/stage/useStageMutation";
 import type { ChangedFile } from "../../lib/api";
+import { splitPath } from "../../lib/path";
 import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -68,10 +69,11 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
       <ul className={rowStyles.list}>
         {files.map((file) => {
           const isSelected = selected === file.path;
+          const { name, dir } = splitPath(file.path);
           return (
             <li
               key={`${file.origPath ?? ""}→${file.path}`}
-              className={`${rowStyles.row} ${isSelected ? styles.selected : ""}`}
+              className={`${rowStyles.row} ${styles.two} ${isSelected ? styles.selected : ""}`}
             >
               <TermTooltip id={file.staged ? "unstage" : "stage"}>
                 <Checkbox
@@ -87,11 +89,15 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
                 aria-pressed={isSelected}
                 onClick={() => select(file.path)}
               >
-                <span className={`${styles.kind} ${styles[file.change]}`}>{m.changeKind[file.change]}</span>
-                <span className={`${rowStyles.mono} ${rowStyles.grow}`} title={file.path}>
-                  {file.path}
+                {/* 위 파일 이름, 아래 폴더(--text-muted), 오른쪽 상태 글자(D-143, r-home.png) */}
+                <span className={styles.names} title={file.path}>
+                  <span className={`${rowStyles.mono} ${styles.name}`}>{name}</span>
+                  {/* 바깥은 오른쪽부터 채워 앞쪽이 잘리고, 글자는 bdi로 왼쪽→오른쪽 그대로 */}
+                  <span className={styles.dir}>
+                    <bdi>{file.origPath ? m.renamedFrom(file.origPath) : dir}</bdi>
+                  </span>
                 </span>
-                {file.origPath && <span className={rowStyles.muted}>{m.renamedFrom(file.origPath)}</span>}
+                <span className={`${styles.kind} ${styles[file.change]}`}>{m.changeKind[file.change]}</span>
               </button>
             </li>
           );

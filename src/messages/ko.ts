@@ -502,7 +502,7 @@ export const ko = {
   } satisfies Record<ErrorCode, string>,
   changeKind: {
     added: "추가",
-    modified: "수정",
+    modified: "고침",
     deleted: "삭제",
     renamed: "이름 바꿈",
     typeChanged: "종류 바뀜",

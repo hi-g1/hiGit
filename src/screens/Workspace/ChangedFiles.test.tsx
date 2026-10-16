@@ -35,6 +35,25 @@ afterEach(() => {
 });
 
 describe("ChangedFiles", () => {
+  it("줄은 위 파일 이름·아래 폴더, 상태 글자는 고침(D-143)", () => {
+    renderList([file("docs/plans/010-settings-github-more.md", false), file("README.md", false, { change: "untracked" })]);
+    const row = screen.getByRole("button", { name: /010-settings-github-more\.md/ });
+    const [names, kind] = [...row.children];
+    expect(names?.children[0]?.textContent).toBe("010-settings-github-more.md");
+    expect(names?.children[1]?.textContent).toBe("docs/plans");
+    expect(kind?.textContent).toBe("고침");
+    expect(names).toHaveAttribute("title", "docs/plans/010-settings-github-more.md");
+    // 최상위 파일은 폴더 줄이 비어 있다(높이는 같다).
+    const top = screen.getByRole("button", { name: /README\.md/ });
+    expect(top.children[0]?.children[1]?.textContent).toBe("");
+    expect(top.children[1]?.textContent).toBe("새 파일");
+  });
+
+  it("이름 바꾼 파일은 아래 줄에 원래 이름", () => {
+    renderList([file("새/이름.txt", false, { change: "renamed", origPath: "옛/이름.txt" })]);
+    expect(screen.getByText("옛/이름.txt에서 이름 바꿈")).toBeInTheDocument();
+  });
+
   it("체크하면 이번 버전에 넣고, 해제하면 뺀다", async () => {
     const user = userEvent.setup();
     renderList([file("한글 파일.txt", false), file("b.md", true)]);
