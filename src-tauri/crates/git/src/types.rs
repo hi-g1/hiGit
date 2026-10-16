@@ -384,6 +384,13 @@ impl Default for LogQuery {
 pub enum GitOp {
     /// 아직 저장소가 아닌 폴더를 저장소로 만든다. 기본 갈래 이름은 사용자 git 설정을 따른다.
     Init,
+    /// 원격 저장소를 복제한다. `repo`는 **부모 폴더**이고 대상은 `repo/name`이다(D-115).
+    /// 주소·이름은 core가 검사한 뒤에만 온다. 서브모듈은 받지 않고 원격 이름은 `origin`.
+    Clone {
+        url: String,
+        name: String,
+        auth: AuthMode,
+    },
     /// 파일을 다음 저장에 넣는다. 지운 파일도 넣는다.
     Stage { paths: Vec<String> },
     /// 넣었던 파일을 다음 저장에서 뺀다. 작업 폴더 파일은 그대로다.

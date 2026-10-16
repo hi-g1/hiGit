@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G8c 끝 (git `remote_urls`·`AuthMode`·`set_helper_program`, helper는 Helper 호출에만)
-- 마지막 커밋: (이 갱신과 같은 커밋) git: add remote urls, auth mode and helper program
-- 다음 할 일: G9 복제(git) → G10a 연결 서비스 → G10b 연결 명령 → G11 helper … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G9 끝 (git 복제 `GitOp::Clone`, 1시간·멈춤 90초·취소 키는 대상 폴더)
+- 마지막 커밋: (이 갱신과 같은 커밋) git: add clone with progress and cancel
+- 다음 할 일: G10a 연결 서비스(core github) → G10b 연결 명령 → G11 helper → G12a 복제 액션 … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -178,7 +178,7 @@
 - [x] G8a 실패 종류 3개(원격 연결·올리기 거절보다 먼저 봄)·`ErrorCode`·ko/en 문구·바인딩
 - [x] G8b 취소 깃발 키를 (저장소, User|Background)로. `request_cancel`·`clear_cancel`·로컬 쓰기는 User, 저절로 하는 원격 확인은 Background
 - [x] G8c `remote_urls`(get-url --all [--push]), `AuthMode`, `set_helper_program`, Helper 호출에만 `-c credential.helper=` + 상수 helper 설정 + `HIGIT_CREDENTIAL_HELPER`. 로컬 http.* 조회는 기존 `local_config`(local·worktree, include 포함)를 core가 거른다
-- [ ] G9 복제(git)
+- [x] G9 `GitOp::Clone`(부모 폴더 cwd, `--no-recurse-submodules --origin origin --end-of-options`), 실패 종류 `TargetExists`→`CloneTargetExists`
 - [ ] G10a 연결 서비스 / G10b 연결 명령 / G11 helper / G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 

@@ -15,6 +15,8 @@ pub enum FailureKind {
     InvalidRefName,
     /// 같은 이름의 갈래가 이미 있다.
     BranchExists,
+    /// 복제할 폴더가 이미 있고 비어 있지 않다.
+    TargetExists,
     /// 바꾸면 저장하지 않은 변경이 덮어써진다.
     WouldOverwrite,
     /// 내 저장과 원격 저장이 갈라져 fast-forward로 받을 수 없다.
@@ -163,6 +165,11 @@ const RULES: &[(FailureKind, &[&str])] = &[
             "empty ident name",
         ],
     ),
+    // "already exists"보다 먼저 본다.
+    (
+        FailureKind::TargetExists,
+        &["already exists and is not an empty directory"],
+    ),
     (FailureKind::BranchExists, &["already exists"]),
     (
         FailureKind::InvalidRefName,
@@ -273,6 +280,10 @@ mod tests {
             (
                 " ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/ci.yml` without `workflow` scope)\nerror: failed to push some refs to 'https://github.com/octo/hello.git'\n",
                 FailureKind::GithubWorkflowScope,
+            ),
+            (
+                "fatal: destination path 'x' already exists and is not an empty directory.\n",
+                FailureKind::TargetExists,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];

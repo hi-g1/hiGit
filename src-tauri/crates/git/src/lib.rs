@@ -20,8 +20,8 @@ pub type ProgressObserver = std::sync::Arc<
     dyn Fn(&std::path::Path, std::time::Duration, std::time::Duration) + Send + Sync,
 >;
 pub use cli::{
-    BACKGROUND_TIMEOUT, CliBackend, ConfigureCommand, HELPER_ENV, NETWORK_TIMEOUT, NetMode,
-    ProcessControl, RefExpect, safe_relative,
+    BACKGROUND_TIMEOUT, CLONE_TIMEOUT, CliBackend, ConfigureCommand, HELPER_ENV, NETWORK_TIMEOUT,
+    NetMode, ProcessControl, RefExpect, safe_relative,
 };
 pub use error::{GitError, Result};
 pub use failure::FailureKind;

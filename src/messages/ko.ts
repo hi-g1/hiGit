@@ -382,6 +382,7 @@ export const ko = {
     httpForbidden: `${t("remote")}에 접근할 권한이 없어요.`,
     remoteNotFound: `${josa(t("remote"), "을/를")} 찾지 못했어요. 주소와 권한을 확인해 주세요.`,
     githubWorkflowScope: `.github/workflows 폴더를 바꾼 버전은 GitHub 연결로 ${t("push")}할 수 없어요.`,
+    cloneTargetExists: "같은 이름의 폴더가 이미 있어요. 다른 이름을 써 주세요.",
     remoteUnreachable: `${t("remote")}에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.`,
     protocolNotAllowed: "이 주소 방식은 쓸 수 없어요. https나 ssh 주소를 써 주세요.",
     unparkConflict: "맡겨 둔 파일이 지금 버전과 겹쳐서 꺼내지 않았어요.",

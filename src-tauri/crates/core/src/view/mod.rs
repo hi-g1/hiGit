@@ -651,6 +651,8 @@ pub enum ErrorCode {
     HttpForbidden,
     RemoteNotFound,
     GithubWorkflowScope,
+    /// 복제할 폴더가 이미 있고 비어 있지 않다.
+    CloneTargetExists,
     RemoteUnreachable,
     ProtocolNotAllowed,
     UnparkConflict,
@@ -684,6 +686,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::HttpForbidden => ErrorCode::HttpForbidden,
             F::RemoteNotFound => ErrorCode::RemoteNotFound,
             F::GithubWorkflowScope => ErrorCode::GithubWorkflowScope,
+            F::TargetExists => ErrorCode::CloneTargetExists,
             F::RemoteUnreachable => ErrorCode::RemoteUnreachable,
             F::NotARepository => ErrorCode::NotARepo,
             F::DubiousOwnership => ErrorCode::DubiousOwnership,

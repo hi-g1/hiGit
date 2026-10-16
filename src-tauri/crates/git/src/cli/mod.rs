@@ -7,6 +7,9 @@ mod branch_ops_tests;
 #[cfg(test)]
 mod branch_tests;
 mod branches;
+mod clone;
+#[cfg(test)]
+mod clone_tests;
 mod diff;
 #[cfg(test)]
 mod diff_tests;
@@ -51,6 +54,7 @@ use std::sync::OnceLock;
 
 use args::{Cmd, push_revs};
 
+pub use clone::CLONE_TIMEOUT;
 pub use network::{BACKGROUND_TIMEOUT, HELPER_ENV, NETWORK_TIMEOUT, NetMode};
 pub use refs::RefExpect;
 use runner::Runner;
@@ -89,6 +93,8 @@ pub struct CliBackend {
     observer: std::sync::Mutex<Option<crate::ProgressObserver>>,
     /// credential helper로 다시 실행할 앱 실행 파일(D-111).
     helper: std::sync::Mutex<Option<PathBuf>>,
+    /// 복제 전체 시간 제한.
+    clone_timeout: std::time::Duration,
 }
 
 impl CliBackend {
@@ -101,6 +107,7 @@ impl CliBackend {
             cancels: std::sync::Mutex::default(),
             observer: std::sync::Mutex::default(),
             helper: std::sync::Mutex::default(),
+            clone_timeout: clone::CLONE_TIMEOUT,
         }
     }
 
@@ -830,6 +837,7 @@ impl GitBackend for CliBackend {
         const FROM_STDIN: [&str; 2] = ["--pathspec-from-file=-", "--pathspec-file-nul"];
         let out = match op {
             GitOp::Init => self.runner.run(dir, &["init"])?,
+            GitOp::Clone { url, name, auth } => self.clone_repo(repo, url, name, *auth)?,
             GitOp::Stage { paths } => self.runner.run_with_stdin(
                 dir,
                 &[

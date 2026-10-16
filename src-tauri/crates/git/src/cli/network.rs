@@ -13,6 +13,26 @@ use crate::{AuthMode, GitError, RepoPath, Result};
 pub const HELPER_ENV: &str = "HIGIT_CREDENTIAL_HELPER";
 /// helper를 부르는 설정. 경로는 환경 변수로만 넘겨 명령 문자열은 상수다(공백·따옴표가 든 경로도 안전).
 const HELPER_CONFIG: &str = "credential.helper=!\"$HIGIT_CREDENTIAL_HELPER\" --git-credential";
+/// 사용자가 SSH 명령을 정하지 않았을 때: 질문 대신 실패한다(D-023).
+pub(super) fn ssh_batch() -> (&'static str, EnvChange<'static>) {
+    (
+        "GIT_SSH_COMMAND",
+        EnvChange::Set(OsStr::new("ssh -o BatchMode=yes")),
+    )
+}
+
+/// helper가 있으면 이 호출에서만 사용자 helper 목록을 비우고 hiGit helper 하나를 둔다.
+/// 사용자 설정은 고치지 않는다.
+pub(super) fn push_helper<'a>(
+    helper: &'a Option<std::path::PathBuf>,
+    full: &mut Vec<&'a str>,
+    env: &mut Vec<(&'a str, EnvChange<'a>)>,
+) {
+    if let Some(path) = helper {
+        full.extend(["-c", "credential.helper=", "-c", HELPER_CONFIG]);
+        env.push((HELPER_ENV, EnvChange::Set(path.as_os_str())));
+    }
+}
 
 /// 사용자가 누른 원격 작업의 시간 제한.
 pub const NETWORK_TIMEOUT: Duration = Duration::from_secs(10 * 60);
@@ -51,24 +71,13 @@ impl CliBackend {
         stdin: Option<&[u8]>,
     ) -> Result<GitOutput> {
         let dir = Some(repo.as_path());
-        let helper = match auth {
-            AuthMode::Helper => self.helper_program(),
-            AuthMode::UserDefault => None,
-        };
+        let helper = self.helper_for(auth);
         let mut full: Vec<&str> = Vec::new();
         let mut env: Vec<(&str, EnvChange)> = Vec::new();
-        if let Some(path) = &helper {
-            // 이 호출에서만 사용자 helper 목록을 비우고 hiGit helper 하나를 둔다. 사용자 설정은
-            // 고치지 않는다.
-            full.extend(["-c", "credential.helper=", "-c", HELPER_CONFIG]);
-            env.push((HELPER_ENV, EnvChange::Set(path.as_os_str())));
-        }
+        push_helper(&helper, &mut full, &mut env);
         // 사용자가 SSH 명령을 정하지 않았으면 질문 대신 실패하게 한다(D-023).
         if self.user_ssh_command(repo)?.is_none() {
-            env.push((
-                "GIT_SSH_COMMAND",
-                EnvChange::Set(OsStr::new("ssh -o BatchMode=yes")),
-            ));
+            env.push(ssh_batch());
         }
         let timeout = match mode {
             NetMode::Foreground => self.timeouts.0,
@@ -107,6 +116,35 @@ impl CliBackend {
                 observer: observer.as_deref(),
             },
         )
+    }
+
+    /// `Helper`이고 helper 실행 파일이 있으면 그 경로.
+    pub(super) fn helper_for(&self, auth: AuthMode) -> Option<std::path::PathBuf> {
+        match auth {
+            AuthMode::Helper => self.helper_program(),
+            AuthMode::UserDefault => None,
+        }
+    }
+
+    /// 저장소 밖에서 도는 원격 작업(복제)용: 환경 변수나 전역·시스템 설정의 SSH 명령.
+    /// 부모 폴더가 다른 저장소 안이어도 그 저장소 설정은 읽지 않는다.
+    pub(super) fn global_ssh_command(&self) -> Result<Option<String>> {
+        if let Some(v) = std::env::var_os("GIT_SSH_COMMAND")
+            && !v.is_empty()
+        {
+            return Ok(Some(v.to_string_lossy().into_owned()));
+        }
+        for scope in ["--global", "--system"] {
+            match self
+                .runner
+                .run(None, &["config", scope, "--get", "core.sshCommand"])
+            {
+                Ok(out) => return Ok(Some(out.stdout_lossy().trim().to_string())),
+                Err(GitError::Failed { code: Some(_), .. }) => {}
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(None)
     }
 
     /// 사용자가 정한 SSH 명령(환경 변수 `GIT_SSH_COMMAND`나 설정 `core.sshCommand`).
