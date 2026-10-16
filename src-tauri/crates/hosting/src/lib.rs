@@ -5,15 +5,37 @@
 
 #![forbid(unsafe_code)]
 
+mod api;
 mod config;
 mod error;
+mod github;
 mod http;
+mod login;
 mod remote;
+#[doc(hidden)]
+pub mod testing;
 
 pub use config::{GITHUB_API_BASE, GITHUB_SCOPE, GITHUB_WEB_BASE, GitHubConfig, valid_client_id};
 pub use error::{DETAIL_MAX_CHARS, HostingError, HostingErrorKind, ValidationKind};
+pub use github::GitHub;
 pub use http::{HttpRequest, HttpResponse, HttpTransport, Method, TransportError};
+pub use login::{HostUser, LoginChallenge, LoginPoll};
 pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
+pub use secrecy::{ExposeSecret, SecretString};
+
+/// 호스팅 서비스 하나(지금은 github.com만). 모든 호출은 블로킹이고 core가 작업 스레드에서 부른다.
+pub trait HostingProvider: Send + Sync {
+    /// 서비스 이름(`"github"`).
+    fn id(&self) -> &'static str;
+    /// 원격 주소가 이 서비스의 저장소면 저장소.
+    fn detect(&self, url: &str) -> Option<RemoteRepo>;
+    /// device flow 시작: 사람이 브라우저에 넣을 코드를 받는다.
+    fn begin_login(&self) -> Result<LoginChallenge, HostingError>;
+    /// 승인됐는지 한 번 묻는다. 간격은 부른 쪽이 지킨다.
+    fn poll_login(&self, challenge: &LoginChallenge) -> Result<LoginPoll, HostingError>;
+    /// 토큰 주인을 확인한다.
+    fn current_user(&self, token: &SecretString) -> Result<HostUser, HostingError>;
+}
 
 #[cfg(test)]
 mod tests {

@@ -1719,8 +1719,11 @@ dependencies = [
 name = "hosting"
 version = "0.1.0"
 dependencies = [
+ "percent-encoding",
  "rustls",
  "secrecy",
+ "serde",
+ "serde_json",
  "ureq",
 ]
 
