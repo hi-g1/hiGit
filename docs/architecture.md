@@ -391,6 +391,9 @@ pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, �
 | 오염된 의존성 | 빌드 결과물에 코드 심기 | lockfile, cargo-deny, 설치 스크립트 제한(D-038) |
 | 토큰 노출(반복 4) | 화면·로그·오류·명령줄·주소·환경 변수에 GitHub 토큰이 새기 | 토큰은 OS 키체인과 `SecretString`에만, 화면 타입에 칸이 없음, `Debug`가 가림, 로그는 코드만, 오류 설명은 정확한 글자 지우기 + `redact`, git으로는 helper의 표준 출력으로만(D-040, D-109, D-111) |
 | 악성 저장소가 토큰을 다른 호스트로 보내게 함 | `insteadOf`·`pushurl`·`http.proxy`·`http.sslVerify=false`로 helper 답을 가로채기 | git이 실제로 쓸 주소가 모두 github.com https이고 저장소 로컬 `http.*`·`remote.*.proxy`가 없을 때만 helper, helper는 `host=github.com` 정확 일치·사용자 이름 없음일 때만 키체인을 읽음(D-111, D-118) |
+| 받은 저장소의 보내는 곳·작업 폴더 설정(반복 5) | `pushurl`·`insteadOf`·`http.*`·`core.worktree`로 코드를 다른 곳에 올리거나 작업 폴더를 바꾸기 | 신뢰 확인 목록에 넣고 "끄고 열기"면 원격 작업을 git 크레이트 한 곳에서 거절, `core.worktree`는 무력화(D-212) |
+| 기본 앱으로 연 파일이 실행됨(반복 5) | 저장소에 넣어 둔 실행 파일·스크립트를 "열기"로 실행하게 만들기 | core 한 곳의 차단표·앞 바이트·실행 비트 검사, 저장소 안 상대 경로만, 링크 거절(D-216) |
+| journal 줄 옮겨 붙이기·순서 바꾸기(반복 5) | 다른 저장소의 서명된 줄이나 지운 줄로 엉뚱한 Ctrl+Z를 하게 만들기 | 줄을 git 폴더 경로·순번·앞 줄 서명에 묶는다(D-209). 충돌 선택은 git 폴더 안 서명한 파일(D-211) |
 | 서버가 준 URL | 앱이 피싱 주소를 열거나 따라가게 만들기 | 여는 페이지는 core가 상수와 검사한 값으로 만들고(`app_open_hosting_page`는 주소 인자가 없음), API 리디렉트는 같은 API 주소 아래만(D-110, D-122) |
 | 사용자의 실수 | 비밀 파일을 버전에 넣어 올리기 | 버전 저장을 누르면 넣을 파일을 이름·내용 규칙과 50MB 크기로 검사해 저장을 멈추는 알림 줄(D-040, D-077, `core::secrets`, `query_secret_check`). 결과에는 경로·규칙·줄 번호만 |
 | 받은 저장소에 심어 둔 멈춘 작업(`rebase-merge/` 할 일 목록의 `exec`, `CHERRY_PICK_HEAD`, 가짜 `operation.json`) | 앱의 "마치기"로 명령을 실행하게 만들기 | 앱이 시작한 작업만 이어간다: 서명한 표식(journal 키, 저장소 실제 경로에 묶임, D-102) + git 상태 일치(`verify_state`) + 남은 할 일 줄이 모두 `pick`·`fixup`·`drop`·`edit` + 표식의 해시(`verify_todo`)일 때만 `--continue`. 그 밖은 "다른 도구의 작업"으로 안내만 |
@@ -468,8 +471,11 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 ## OS별 처리 (crates/platform)
 | 항목 | Windows | Ubuntu |
 | --- | --- | --- |
-| 폴더 우클릭 "Git으로 관리" | `HKCU\Software\Classes\Directory\shell\higit` (+ `Directory\Background\shell`) 등록, 관리자 권한 불필요 | `~/.local/share/nautilus/scripts/` 스크립트, 또는 nautilus-python 확장 |
-| 실행 인자 | `higit.exe "<경로>"` | `higit "<경로>"` |
+| 폴더 우클릭 "Git으로 관리"(D-214) | `HKCU\Software\Classes\Directory\shell\higit` (+ `Directory\Background\shell`) 등록, 명령 `"<exe>" -- "%V"`, 관리자 권한 불필요, Windows 11은 "더 많은 옵션 표시" 안 | `~/.local/share/nautilus/scripts/<항목 이름>` 스크립트(파일 앱 오른쪽 클릭의 "스크립트") |
+| 실행 인자(D-213) | `higit.exe -- "<경로>"`(`--` 없이 위치 인자도 받음) | `higit -- "<경로>"` |
+| 파일 열기·폴더에서 보기(D-216) | opener 플러그인(`reveal_item_in_dir`, `open_path`), 실행 판정은 확장자·앞 바이트 | 같음, 실행 판정에 실행 권한 비트(`platform::is_executable`) 더함 |
+| 창 크기·위치(D-217) | `tauri-plugin-window-state`(크기·위치·최대화) | 같음 |
+| 설치 파일(D-220) | 사용자 단위 NSIS(한국어·English, PATH 안 넣음, 지울 때 우클릭 키 지움) | deb(`depends: git`)·AppImage(`libfuse2` 필요) |
 | 단일 인스턴스 | `tauri-plugin-single-instance` | 같음 |
 | git 찾기 | PATH → `C:\Program Files\Git\cmd\git.exe` | PATH |
 | 앱 데이터 폴더(최근 목록, D-032) | `%LOCALAPPDATA%\dev.higit.desktop` | `$XDG_DATA_HOME/dev.higit.desktop` 또는 `~/.local/share/dev.higit.desktop` |
@@ -481,7 +487,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 | 글자 크기·다크 읽기(D-147, `display_hints`) | 본문 14px. `%SystemRoot%\System32\reg.exe query HKCU\Software\Microsoft\Accessibility /v TextScaleFactor`(100~225%). 다크는 읽지 않음(WebView2가 스스로 따름) | 본문 15px. 글자 배율은 WebKitGTK가 Xft.dpi로 이미 화면 전체에 반영하므로 곱하지 않는다(D-162). 다크만 `/usr/bin/gsettings get org.gnome.desktop.interface color-scheme`. 둘 다 절대 경로·1.5초·출력 256바이트까지, 실패하면 배율 100·다크 모름 |
 | 웹뷰 | WebView2 | WebKitGTK 4.1 |
 
-우클릭 메뉴 등록·해제는 설정 화면 토글로 하고, 설치 프로그램에서는 기본 등록한다.
+우클릭 메뉴는 설치한 앱(릴리스 빌드)을 처음 켤 때 묻지 않고 등록하고 설정 "일반"에서 끈다. Windows 설치 파일은 지울 때 HKCU 키를 지우고, Ubuntu 스크립트는 실행 파일이 없으면 스스로 지운다(D-214).
 
 ## 새 액션 추가 절차
 1. `docs/spec.md` 용어표에 행 추가(id, 쉬운 이름, 원래 이름, 설명, 위험도).

@@ -306,6 +306,7 @@
 ## D-038 코드 작성과 공급망 규칙
 - 상태: 확정
 - 날짜: 2026-10-15
+- 덧붙임(2026-10-17): 첫 배포 전 항목은 시험판에서 하는 것과 정식 배포 전으로 넘기는 것으로 나눈다(D-222).
 - 결정: Rust 모든 crate에 `#![forbid(unsafe_code)]`(Windows API가 필요한 platform만 `deny`로 두고 쓰는 곳마다 이유 주석). clippy `unwrap_used`, `expect_used`, `panic`은 테스트 밖에서 경고 이상. 파일 이름은 바이트·`OsString`으로 다루고 화면에 보낼 때만 손실 변환. TypeScript는 `strict`, `noUncheckedIndexedAccess`. 의존성은 CI에서 `cargo-deny`(취약점·라이선스·출처·중복)로 검사하고, pnpm은 lockfile 고정·CI `--frozen-lockfile`·설치 스크립트는 `onlyBuiltDependencies`에 적은 것만 허용. GitHub Actions는 액션을 커밋 SHA로 고정하고 워크플로 기본 권한을 `contents: read`로, `pull_request_target`은 쓰지 않는다. 릴리스는 CI에서만 빌드한다.
 - 이유: 패닉과 unsafe는 이상한 저장소 입력에서 앱을 죽이거나 메모리 문제로 이어진다. 오염된 의존성과 넓은 CI 권한은 빌드 결과물에 코드를 심는 통로다.
 - 대안: 리뷰로만 확인(빠뜨림).
@@ -410,6 +411,7 @@
 ## D-051 1b에 넣는 보안 항목 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-15
+- 덧붙임(2026-10-17): 명령 인자를 저장소 ID로 바꾸는 일은 첫 정식 배포 전으로 미룬다(D-223).
 - 결정: 1b에 저장소 신뢰 확인(D-039, 계획 005 T1~T4), git 시간 제한과 프로세스 트리 종료(D-041 일부), 오류 원문 속 자격 증명 가리기, 열린 저장소만 받기(계획 004 10단계), clippy `unwrap_used`·`expect_used`·`panic` 경고(004 13단계), Ubuntu 22.04 기본 git으로 git 크레이트를 시험하는 CI 작업(004 15b단계)을 넣는다. 비밀 파일 경고, 로그 파일과 로그 가리기, index.lock 정리, 취소 버튼은 반복 2 앞부분에 둔다. 명령 인자를 저장소 ID로 바꾸는 일은 반복 5(첫 배포) 전에 한다.
 - 이유: 자동 원격 확인(D-045)은 누르지 않아도 저장소 설정의 프로그램을 실행시키므로 신뢰 확인과 시간 제한이 먼저 있어야 한다. 신뢰 확인은 열린 저장소만 받기가 없으면 조회 명령으로 우회된다.
 - 대안: 1b 끝나기 전 항목을 모두 1b에(단계가 너무 많음), 모두 반복 2로(자동 원격 확인이 위험한 상태로 나감).
@@ -506,6 +508,7 @@
 ## D-063 journal 줄은 앱 데이터의 키로 서명한다 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-15
+- 덧붙임(2026-10-17): 저장소·순번·앞 줄 묶기는 D-209.
 - 결정: journal 줄마다 앱 데이터 폴더의 비밀 키로 HMAC-SHA256 서명을 붙이고, 서명이 맞지 않는 줄은 되돌리기에 쓰지 않는다. 키는 처음 실행 때 만들어 앱 데이터에 둔다.
 - 이유: journal은 `.git` 안에 있어 받은 zip 저장소에 남이 만든 줄이 들어 있을 수 있다.
 - 대안: 검증만(oid·이름 형식 검사로는 남이 만든 줄을 가려내지 못함).
@@ -578,6 +581,7 @@
 ## D-072 되돌리기 종류를 넓히고 journal은 옛 줄과 호환되게 늘린다 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): v1 줄은 한 번 v2 사슬로 옮긴 뒤 믿지 않는다(D-209).
 - 결정: `UndoKind`에 `RestoreTree`(합치기·되살리기를 `reset --keep`으로 되돌림)와 `Barrier`(확인 없이 경계 줄만)를 더한다. 이번 버전에 넣기·빼기(`RestoreIndex`)는 경계 대신 일반 줄로 남기고 토스트 없이 Ctrl+Z로만 되돌린다. `UndoState.refs`로 다른 ref(`refs/heads/*`, `refs/stash`)의 이전 값을 함께 되돌린다. journal의 새 필드는 비어 있으면 쓰지 않아 옛 줄이 같은 글자로 직렬화되고 서명이 그대로 맞는다(`VERSION` 1 유지). journal에는 입력을 줄여 넣는다(경로 200개, 직접 고친 글 빼기). HEAD를 바꾸지 않는 액션은 실행 전 HEAD 백업을 만들지 않는다.
 - 이유: D-065가 예약한 그대로다. 합치기는 파일도 되돌려야 해 `reset --soft`로는 안 된다. 앱을 업데이트하면 Ctrl+Z 기록이 사라지면 안 된다.
 - 대안: journal `VERSION`을 올리고 옛 줄을 버리기.
@@ -866,6 +870,7 @@
 ## D-108 이월 항목 처리 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): 키를 못 쓸 때 알리기는 D-210, journal 묶기는 D-209로 반복 5에서 이행.
 - 결정: 넣음: unpark 표식 서명, 작업 내역의 서명 없는 journal 줄 신뢰 경계와 성능(서명 안 된 줄은 reflog 줄을 숨기지 않고 50개까지, 200개로 자른 뒤에 백업 종류·파일 수를 읽음), 꺼내기의 경로 검사. 미룸: journal 줄을 저장소·줄 순번에 묶기와 키를 못 쓸 때 알리기(반복 5 전 보안 묶음), 충돌 선택 `localStorage` 평문, 취소 표시가 저장소 단위인 문제, 시작 화면 상태 요약 큐.
 - 이유: 넣은 것은 이번에 건드리는 파일과 같다. 미룬 것은 journal 형식 변경이 필요하거나 위험이 낮다.
 - 대안: 모두 넣기.
@@ -947,6 +952,7 @@
 ## D-118 반복 4 이월 항목 처리 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): 5-0 묶음은 D-209~D-212로 이행.
 - 결정: 넣음: 취소 표시 분리(D-117), 진행 알림 1초/3초는 문서를 코드에 맞춤(1초부터 보내고 화면이 3초 뒤 "취소"). 미룸(반복 5 맨 앞 "5-0 배포 전 보안 묶음"): journal 줄을 저장소·줄 순번에 묶기와 키를 못 쓸 때 알리기, 충돌 "직접 고치기" 글의 `localStorage` 평문, 받은 저장소의 `pushurl`·`pushInsteadOf`·`core.worktree`·`http.*` 신뢰 확인. 이번 방어: helper는 git이 실제로 쓸 주소가 모두 github.com https이고 저장소 로컬 `http.*`·프록시 설정이 없을 때만 붙인다(D-111). 그래서 토큰이 엉뚱한 곳으로 가는 길은 막히고, 남는 것은 받은 저장소가 자격 증명 없이 코드를 다른 곳으로 올리게 하는 기존 위험이다.
 - 이유: 넣은 것은 이번에 만지는 코드와 겹친다. 미룬 것은 journal 형식 변경이나 신뢰 확인 UI를 따로 정해야 하고 GitHub와 무관하다.
 - 대안: 이번에 모두 넣기.
@@ -1100,6 +1106,7 @@
 ## D-137 반복 4b 이월 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): 반복 5의 5-0 보안 묶음으로 이행(D-209~D-212).
 - 결정: journal 줄 묶기와 키 알림, 충돌 "직접 고치기" 글의 `localStorage` 평문, 받은 저장소의 `pushurl`·`pushInsteadOf`·`core.worktree`·`http.*` 신뢰 확인, 화면의 Escape·Enter 판정을 `src/lib`로 모으기는 반복 5-0 그대로. 새 원격 쓰기도 모두 `auth_for`를 쓰므로 토큰 위협은 늘지 않지만, 받은 저장소의 `pushurl`이 코드를 다른 곳으로 올리게 하는 기존 위험은 새 쓰기에도 그대로 있다.
 - 이유: 이번 단계가 만지는 코드와 겹치지 않는다.
 - 대안: 이번에 모두 넣기.
@@ -1172,6 +1179,7 @@
 ## D-147 OS 글자 배율·다크는 `platform::display_hints()` 한 곳에서 (자동 결정)
 - 상태: 확정 (Ubuntu 글자 배율은 D-162로 바뀜)
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): Ubuntu 글꼴 pt 읽기는 D-218.
 - 결정: `DisplayHints { body_px, text_scale_percent, dark }`. `body_px`는 Windows 14, Linux 15, 그 밖 14(상수). `text_scale_percent`는 Ubuntu `/usr/bin/gsettings get org.gnome.desktop.interface text-scaling-factor`, Windows `%SystemRoot%\System32\reg.exe query HKCU\Software\Microsoft\Accessibility /v TextScaleFactor`(없으면 100). `dark`는 Ubuntu만 `gsettings … color-scheme`로 읽고 Windows는 `None`(WebView2의 `prefers-color-scheme`이 OS를 바로 따른다). 절대 경로만, 출력 256바이트까지, 1.5초 제한(넘기면 kill 뒤 wait), stdin·stderr 버림, Linux 두 읽기는 함께, 실패·범위 밖은 기본(100, `None`). 명령 `app_display_hints`는 Core 없이 도는 무상태 읽기라 Git이 없어도 쓴다. 화면은 시작 때와 창 포커스 때(5초에 한 번까지) 읽는다.
 - 이유: OS 판단은 `crates/platform`에만(D-002). 웹뷰는 OS 글자 배율을 반영하지 않고 WebKitGTK 22.04는 GNOME 다크를 못 볼 수 있다. 새 의존성 없이 이미 쓰는 `Command` 방식이고 절대 경로는 PATH 바꿔치기를 막는다.
 - 대안: `winreg`·`gio` crate, `devicePixelRatio`만 쓰기, 시작 때 한 번만 읽기.
@@ -1284,6 +1292,7 @@
 ## D-161 다듬기에서 하지 않는 것 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
+- 덧붙임(2026-10-17): 폴더에서 보기·기본 앱으로 열기(D-216), 창 크기·위치(D-217), 글꼴 pt(D-218), 끝 접힌 줄(D-219)로 반복 5에서 이행.
 - 결정: 파일 줄 오른쪽 메뉴의 "경로 복사"·"이 파일 고친 것 버리기"는 이번에 한다(기존 복사·`discard` 액션). 반복 5로 넘기는 것: "폴더에서 보기"와 더블클릭 "기본 앱으로 열기"(실행 파일 거절·경로 검증 설계), 창 크기·위치 기억(`tauri-plugin-window-state` 새 의존성·capability·deny 검토, 여러 모니터 손 확인), 시스템 글꼴 pt 읽기(D-138이 상수로 정함), 비교 칸 마지막 묶음 뒤 접힌 줄. 최소 창 크기는 800×560을 유지한다(사용자 의견의 960×600은 D-138의 800px 시험과 맞지 않아 물었고, 2026-10-16 사용자가 800×560 유지로 정했다).
 - 이유: 범위를 줄여 polish.md 1~5장과 D-138~D-145를 끝낸다.
 - 대안: 이번에 모두.
@@ -1661,3 +1670,123 @@
 - 이유: 새 의존성 없이 규칙이 코드로 남는다(계획 012 C21).
 - 대안: `jest-axe`·`axe-core`.
 - 영향: D-172(진행 막대는 함), D-161.
+
+## D-209 journal 줄을 저장소·순번·앞 줄에 묶는다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: journal 형식 `v: 2`. 서명 글자 = `"higit-journal\n2\n<git 폴더 실제 경로>\n<seq>\n<앞 줄 sig 또는 빈 글자>\n<본문 정규 JSON>"`. 줄에 `seq`(1부터 하나씩)를 적고 앞 줄 sig는 적지 않는다(읽을 때 앞 줄에서 얻음). 읽기는 v2 줄을 차례로 보며 `seq`가 앞 줄 + 1이고 사슬이 맞는 동안만 "믿는 줄"이다. 사슬이 끊기면 그 뒤 줄은 작업 내역에 보이기만 한다. 뒤쪽 4MB만 읽어 앞이 잘렸을 때만 첫 줄의 `seq`가 1이 아니어도 된다. 덧붙일 때 마지막 줄의 `seq`·sig를 뒤쪽 64KB에서 읽는다(저장소 쓰기 잠금 안). 옛 v1 줄은 더 믿지 않되, 저장소를 열 때(신뢰 확인 뒤, `open_project`의 백업 정리 자리) 파일에 v2 줄이 하나도 없으면 지금 키로 서명이 맞는 v1 줄을 v2 사슬로 한 번 다시 써 옮긴다(임시 파일 + rename, `check_place` 그대로, 서명이 안 맞는 v1 줄은 그 자리에 그대로). 옮기기에 실패하면 아무것도 바꾸지 않는다.
+- 이유: D-063의 서명은 줄 하나가 진짜인지만 본다. 같은 키로 서명한 다른 저장소의 줄, 지운 줄, 순서를 바꾼 `undo`·`redo` 줄을 막으려면 저장소와 순서에 묶어야 한다(D-108·D-118이 넘김). 한 번 옮기기는 D-072의 "앱을 업데이트해도 Ctrl+Z 기록이 사라지지 않는다"를 지킨다(계획 014 C1).
+- 대안: v1 줄을 계속 믿기(옮겨 붙이기 공격이 남음), v1 줄 버리기(D-072 위반), 줄마다 저장소 id를 `.git`에 두기(받은 zip이 같이 가져옴).
+- 영향: D-063, D-072, D-102.
+
+## D-210 되돌리기 키를 못 쓸 때 알리고 덮어쓰지 않는다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `load_or_create`는 파일이 없을 때만 새로 만든다. 파일이 있는데 읽지 못하거나 길이가 틀리면 덮어쓰지 않고 이번 실행만 임시 키를 쓴다. 상태는 `UndoKeyState`(`saved`·`temporary`)로 `AppStatus.undoKey`에 싣는다. `temporary`면 시작 화면 맨 위 알림 줄과 홈 알림 줄(이번 실행에 한 번, 닫기 있음)에 "되돌리기 기록을 이 컴퓨터에 저장하지 못해요. 앱을 다시 켜면 이전 작업은 Ctrl+Z로 되돌릴 수 없어요."를 보이고 "자세히 보기"에 앱 데이터 폴더 경로(`redact` 거침)를 접는다. 해결 버튼은 없다.
+- 이유: 지금은 조용히 덮어써 모든 저장소의 Ctrl+Z가 사라질 수 있고, 저장하지 못해도 사람이 모른다(D-108, 계획 014 C2).
+- 대안: 키를 키체인에 두기(잠금 해제 창), 알림 없이 로그만.
+- 영향: D-063.
+
+## D-211 충돌 선택은 git 폴더 안 서명한 파일에 둔다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `<git 폴더>/higit/conflict-draft.json`, `marker.rs`와 같은 방식(도메인 `higit-conflict-draft`, git 폴더 실제 경로, 합칠 쪽 전체 해시를 서명에 묶음). 내용은 파일별 선택(`hunks`·`ours`·`theirs`, `custom`의 글 포함), 전체 8MB·글 하나 1MB, 경로는 지금 충돌 경로에 있는 것만. 읽기는 `query_conflict_state`가 `draft`로 주고(서명·대상·경로·곳 수가 맞을 때만), 쓰기는 새 명령 `conflict_draft_save(folder, draft)`(화면은 500ms 디바운스). 마치기·그만두기와 합칠 대상이 바뀐 것을 본 조회가 파일을 지운다. 화면의 `localStorage`·`sessionStorage`는 ESLint로 막고 앱 시작 때 옛 `higit.conflict.*` 키를 한 번 지운다(`src/lib/legacyStorage.ts`만 예외).
+- 이유: spec의 "껐다 켜도 이어진다"를 지키면서 코드 글을 웹뷰 저장소에 두지 않는다. 서명은 받은 zip에 심은 선택이 "마치기" 한 번에 쓰이는 것을 막는다(계획 014 C3).
+- 대안: 직접 고친 글은 메모리에만(spec 위반), 앱 데이터 폴더(저장소 밖에 코드 사본).
+- 영향: D-070, D-102, D-118.
+
+## D-212 보내는 곳·작업 폴더를 바꾸는 설정도 신뢰 확인에 넣는다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 대상(local·worktree 범위): `remote.*.pushurl`, `url.*.insteadof`, `url.*.pushinsteadof`, `remote.*.proxy`, `remote.*.receivepack`, `remote.*.uploadpack`, `http.*` 전부, `core.worktree`. 지문 해시에 함께 넣는다(바뀌면 다시 묻는다). 대화상자는 지금 목록 아래에 "올리는 곳이나 작업 폴더를 바꾸는 설정" 목록을 따로 보이고 주소 값은 호스트만, 경로는 `redact`로. "끄고 열기": 실행되는 설정은 지금처럼 덮어쓰고, 보내는 곳 설정이 있으면 그 저장소의 원격 작업(네트워크 `GitOp` 전부)을 git 크레이트 한 곳(`CliBackend`의 저장소 정책 `RepoPolicy { overrides, network_off }`)에서 `RemoteSettingsOff`로 거절한다. 저절로 하는 원격 확인은 조용히 건너뛴다. 오류 "이 프로젝트는 올리는 곳을 바꾸는 설정을 끄고 열었어요. 믿고 다시 열면 동기화할 수 있어요.", 해결 버튼 "믿고 다시 열기"(`ERROR_FIX` 새 종류 `retrust`). `core.worktree`는 "믿고 열기"가 없다: `discover`가 작업 폴더가 git 폴더의 부모가 아님을 알면(연결된 worktree 제외) 그 부모 폴더를 저장소로 보고 늘 `-c core.worktree=<그 폴더>`를 붙인다. git 폴더 이름이 `.git`이 아니면 열지 않는다(`NotARepo`).
+- 이유: D-118이 남긴 "받은 저장소가 코드를 다른 곳으로 올리게 하는 위험". `pushurl`·`insteadOf`는 여러 값이라 `-c`로 지울 수 없어 원격 작업을 막는다. 한 곳에서 막아야 빠짐이 없다(계획 014 C4).
+- 대안: 올릴 때마다 실제 주소를 보이고 묻기, `-c`로 덮어쓰기(여러 값이라 안 됨), `http.*` 키마다 안전한 값 표.
+- 영향: D-039, D-067, D-118.
+
+## D-213 실행 인자와 단일 인스턴스 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `tauri-plugin-single-instance`를 첫 플러그인으로 등록한다(`--git-credential` 분기 뒤). 인자 해석은 core 순수 함수 `launch::parse_args(args, cwd) -> Option<PathBuf>`: 첫 인자는 실행 파일, `--`가 나오면 그 뒤 첫 인자가 경로, 그 전에는 `-`로 시작하는 인자를 건너뛰고 첫 위치 인자를 경로로 본다. `--git-credential`이 있으면 `None`. 상대 경로는 그 실행의 현재 폴더 기준. 끝에 붙은 `"`는 떼어 낸다. 4096바이트·NUL 거절. 첫 실행의 경로는 `AppState`가 들고 `app_take_launch_folder`(한 번만 줌)로 화면이 가져가 마지막 프로젝트 대신 `project_open(path, "picked")`으로 연다. 두 번째 실행은 Rust 콜백이 창을 보이고 이벤트 `open-folder { path }`를 보낸다. 화면은 도는 작업·열린 확인 창이 끝난 뒤 연다. 경로가 없으면 시작 화면 알림 "열려던 폴더를 찾지 못했어요."
+- 이유: spec "진입점"의 우클릭·명령줄과 "이미 실행 중이면 그 창에서". 열기는 늘 `open_project` 한 곳이라 신뢰 확인을 건너뛸 길이 없다(계획 014 C5).
+- 대안: 새 `OpenHow::Launch`, 경로를 이벤트로만.
+- 영향: D-032.
+
+## D-214 폴더 우클릭 메뉴는 처음 켤 때 묻지 않고 등록하고 설정에서 끈다
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 사용자 결정(2026-10-16): 처음 켤 때 묻지 않고 등록하고 설정에서 끌 수 있다. Ubuntu는 Nautilus 스크립트로 충분하다. 세부(계획 014 C6): Windows는 `HKCU\Software\Classes\Directory\shell\higit`와 `Directory\Background\shell\higit`에 `MUIVerb`·`Icon`(`"<exe>",0`)·`command`(`"<exe>" -- "%V"`), 관리자 권한 없음, Windows 11은 "더 많은 옵션 표시" 안. Ubuntu는 `~/.local/share/nautilus/scripts/<항목 이름>` 실행 스크립트(0755, `# higit-shell-menu v1` 표식, 실행 파일 경로는 작은따옴표), 실행 파일이 없으면 스스로 지우고 끝남, 고른 항목이 있으면 `"$1"`, 없으면 지금 폴더로 `exec "<exe>" -- …`. 실행 파일 경로는 `platform::launcher_path()`(AppImage면 `APPIMAGE`, 아니면 `current_exe`). 항목 이름은 화면 언어의 `shellMenuLabel`을 화면이 넘기고 core가 64바이트·제어 문자 없음을 검사한다. 상태는 실제 등록을 읽고 설정 `shell_menu: Option<bool>`은 "사람이 정했는지"만. 시작 때 `app_shell_menu_sync(label)`: 값이 없고 릴리스 빌드면 등록하고 `true`, `true`인데 실행 파일·이름이 바뀌었으면 다시 등록, `false`면 아무것도 안 함. 설정 "일반"의 "폴더 오른쪽 클릭 메뉴"가 `app_shell_menu_set`. Windows 설치 파일(D-220)은 지울 때 HKCU 키를 지운다. .deb는 스크립트가 스스로 지운다.
+- 이유: spec "진입점". HKCU와 사용자 스크립트는 관리자 권한 없이 같은 켬·끔으로 된다. 개발 빌드는 등록하지 않는다.
+- 대안: 설치 파일이 HKLM에 등록, nautilus-python 확장, `.desktop` `MimeType=inode/directory`, 처음에 묻기.
+- 영향: architecture.md "OS별 처리"의 "설치 프로그램에서는 기본 등록"을 "설치한 앱을 처음 켤 때 등록"으로.
+
+## D-215 반복 5의 새 의존성 셋 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `tauri-plugin-single-instance` 2(app), `tauri-plugin-window-state` 2(app), `winreg` 0.56(platform, `cfg(windows)`만, 트리에 이미 있는 버전). 셋 다 웹뷰 권한을 열지 않고 Rust에서만 쓴다. 정확한 버전·기능은 두 OS CI와 `cargo deny check`로 정하고 라이선스는 허용 목록 안이어야 한다(아니면 그 단계를 멈추고 progress에 적는다).
+- 이유: 레지스트리 쓰기를 `reg.exe`로 하면 따옴표 처리가 틀리기 쉽다. `winreg`는 이미 트리에 있다(계획 014 C7).
+- 대안: `reg.exe`, `windows-registry` 크레이트, 직접 만든 소켓 단일 실행.
+- 영향: D-147, `THIRD_PARTY_NOTICES.md`.
+
+## D-216 파일 열기 규칙 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: core `open_target(folder, path, purpose)`가 열린 저장소의 상대 경로만 받아 정규화하고, 저장소 밖·`.git` 안·경로 구성요소 중 링크·없는 파일을 거절한다(D-037). `reveal`(폴더에서 보기)은 있는 파일·폴더면 된다. `open`(기본 앱으로 열기)은 일반 파일이고 다음이 아닐 때만: 확장자 차단표 `OPEN_BLOCKED_EXTENSIONS`(대소문자 무시, 마지막 확장자, Windows "위험한 첨부 파일 형식"과 실행 스크립트·설치 패키지), 앞 바이트 `\x7fELF`·`MZ`·`#!`, 실행 권한 비트(`platform::is_executable`), Windows 장치 이름·대체 데이터 스트림(`:`)이 든 경로. 차단표는 바인딩 상수로 화면에 내려 메뉴 항목을 미리 끄고(까닭 "실행할 수 있는 파일은 열지 않아요") core가 실행 때 다시 본다. OS가 여는 일은 app이 opener 플러그인(`reveal_item_in_dir`, `open_path`)으로 하고 웹뷰에는 opener 권한을 주지 않는다. 폴더 위치 열기는 저장소 루트를 `open_path`. 실패하면 `OpenFailed`. 로그에는 결과 코드만.
+- 이유: D-161의 "실행 파일 거절·경로 검증". 기본 앱 열기는 실행 파일·스크립트를 그대로 실행할 수 있다(계획 014 C8).
+- 대안: 확인 창을 띄우고 열기, 허용 목록, platform이 `xdg-open`·`explorer.exe`를 직접 부르기.
+- 영향: D-037, D-161.
+
+## D-217 창 크기·위치 기억은 `tauri-plugin-window-state` (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 상태 깃발은 `SIZE`·`POSITION`·`MAXIMIZED`만(숨긴 창을 먼저 보이지 않게 `VISIBLE` 제외). 파일은 플러그인 기본 위치. 되살린 뒤 app이 한 번 고친다: 창이 어느 모니터 작업 영역과도 절반 넘게 겹치지 않으면 주 모니터 가운데로, 크기는 모니터보다 크면 줄이고 800×560보다 작으면 늘린다. 웹뷰 권한은 열지 않는다. 최소 크기 800×560 그대로.
+- 이유: D-161이 이 플러그인 검토를 적었다(계획 014 C9).
+- 대안: `settings.json`에 직접 저장, 기억하지 않기.
+- 영향: D-161, D-190.
+
+## D-218 Ubuntu만 시스템 글꼴 pt를 읽는다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `display_hints()`가 Linux에서 `/usr/bin/gsettings get org.gnome.desktop.interface font-name`(예 `'Ubuntu 11'`, 소수 허용)을 읽어 `body_px = round(pt × 4/3)`을 13~20으로 자른다. 읽지 못하면 15. Windows는 14 그대로. 절대 경로·1.5초·256바이트 규칙은 D-147 그대로.
+- 이유: D-138 "시작 크기는 OS 기본을 따른다"를 Ubuntu 글꼴 설정까지 넓힌다. 기본 11pt면 지금과 같다(계획 014 C10).
+- 대안: Windows도 `NONCLIENTMETRICS` 읽기, 둘 다 상수 유지.
+- 영향: D-138, D-147.
+
+## D-219 비교 칸 마지막 묶음 뒤 접힌 줄 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: `FileDiffView.newLineCount: Option<u32>`(새 쪽 전체 줄 수). 이진·링크·`truncated`·새 쪽 1MB 초과·지운 파일이면 `None`. 작업 폴더는 `platform::open_regular_no_follow`로 1MB까지 읽어 세고, 버전 안 비교는 그 버전 블롭(`blob_at`·`read_blob`)을 같은 상한으로 센다. 화면은 `newLineCount > 마지막 묶음 끝 줄`이면 끝에 "변경 없는 N줄 · 펼치기"를 더하고 펼치기는 기존 `fullContext`(D-156).
+- 이유: D-156이 "파일 길이를 몰라" 남긴 것(계획 014 C11).
+- 대안: 펼친 뒤에만 보이기(지금), 늘 큰 문맥으로 읽기.
+- 영향: D-156.
+
+## D-220 설치 파일: Windows 사용자 단위 NSIS, Linux deb·AppImage
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 사용자 결정(2026-10-16): Windows는 MSI 대신 관리자 확인이 없는 사용자 단위 NSIS(`installMode: "currentUser"`), 설치 언어는 한국어와 English, PATH에는 넣지 않는다. Linux는 deb·AppImage. git은 설치 파일에 넣지 않는다(넣으면 GPL 고지가 따로 필요하다). 세부(계획 014 C13을 NSIS로 바꿈): `publisher`·`shortDescription`·`category: "DeveloperTool"`, WebView2는 기본 `downloadBootstrapper`, 지울 때 우클릭 HKCU 키를 지우는 NSIS 훅(`packaging/windows/`), 서드파티 고지·글꼴 OFL·앱 `LICENSE`는 묶음 자원으로. deb는 `depends: ["git"]`·`section: "vcs"`·자체 `.desktop` 틀(`Categories=Development;RevisionControl;`, `MimeType` 없음), 고지는 `/usr/share/doc/higit/`. AppImage는 `bundleMediaFramework: false`, Ubuntu 22.04의 `libfuse2` 필요는 안내 문서에. 버전은 `package.json`·`tauri.conf.json`·Cargo 작업 공간이 같아야 한다(시험). 서드파티 고지는 `cargo metadata`·`pnpm licenses list --json`에서 스크립트(`scripts/notices.mjs`)로 만들고 CI가 빠짐을 막는다. 설정 "정보"에 "오픈 소스 라이선스"·"사용법"(묶음의 `docs/guide/index.html`) 줄.
+- 이유: 관리자 권한 없이 설치하고 우클릭 메뉴(HKCU)와 같은 범위에서 지운다.
+- 대안: MSI(Program Files, 관리자 확인), 두 언어 MSI.
+- 영향: D-174, D-214, 계획 014 R16·R16b·R16c·R20b.
+
+## D-221 서명 없이 만들고 서명 자리를 둔다
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 사용자 결정(2026-10-16): 코드 서명 인증서와 GPG 키는 정식 배포 전에 사용자가 마련하고, 지금은 서명 자리만 둔다. 세부(계획 014 C14): 릴리스는 CI에서만(D-038). `.github/workflows/release.yml`이 태그 `v*`(와 수동 실행)에 두 OS 묶음을 만들고 `SHA256SUMS`를 붙여 GitHub 릴리스를 만든다(`gh`, 새 액션 없음, 이 작업만 `contents: write`, GitHub Environment `release`). Windows는 환경 비밀 `WINDOWS_SIGN_COMMAND`가 있으면 `bundle.windows.signCommand`를 만든 설정으로 넘기고, Linux는 `LINUX_GPG_KEY`가 있으면 `SHA256SUMS.asc`. 비밀이 없으면 건너뛰고 릴리스 이름에 "서명 없는 시험판". client id는 환경 비밀 `HIGIT_GITHUB_CLIENT_ID`(D-109), 없으면 GitHub 연결은 "준비 안 됨"인 채로 배포한다. 방법은 `packaging/README.md`.
+- 이유: 인증서를 사면 워크플로를 고치지 않고 비밀만 넣으면 된다.
+- 대안: 자체 서명 인증서, 로컬 빌드 배포(D-038 위반).
+- 영향: D-038, D-109.
+
+## D-222 D-038의 "첫 배포 전" 항목을 시험판과 정식 배포로 나눈다 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 이번 설치 파일은 "서명 없는 시험판"이고 이번에 하는 것: `SECURITY.md`(GitHub 비공개 취약점 신고), `SHA256SUMS`, 파서 무작위 시험(`-z` 파서마다 고정 씨앗 무작위 바이트·잘린 입력 2만 번, 패닉 없음, 의존성 없는 시험 도우미). 첫 정식 배포(서명한 설치 파일) 전으로 넘기는 것: 코드 서명, `cargo-fuzz`, 자동 업데이트와 updater 서명, Dependabot 지연 설정.
+- 이유: 인증서가 없어 정식 배포의 조건을 다 채울 수 없다. 시험판은 체크섬과 신고 창구로 위험이 작고 파서 견고성은 지금도 값싸게 확인할 수 있다(계획 014 C15).
+- 대안: 서명 전에는 설치 파일을 만들지 않기.
+- 영향: D-038.
+
+## D-223 명령 인자를 저장소 ID로 바꾸는 일은 첫 정식 배포 전으로 미룬다
+- 상태: 확정
+- 날짜: 2026-10-17
+- 결정: 사용자 결정(2026-10-16): D-051의 "명령 인자를 저장소 ID로" 바꾸는 일은 첫 정식 배포 전으로 미룬다. 시험판은 지금 방식이다(모든 저장소 명령이 `OpenedRepos`로 막혀 열기·신뢰 확인을 거친 경로만 쓰인다).
+- 이유: 모든 명령 시그니처·바인딩·화면 호출이 바뀌는 큰 일이고 이번 반복의 목표와 겹치지 않는다(계획 014 C16).
+- 대안: 이번에 하기.
+- 영향: D-051.
