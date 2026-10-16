@@ -156,17 +156,27 @@ mod tests {
         use std::io::{BufRead, Read};
         let git = crate::find_git().unwrap();
         let mut cmd = Command::new(git);
-        // git 별칭이 sh를 띄우고 sh가 sleep을 띄운다(손자). 출력 파이프를 손자가 쥔다. sleep을 먼저 띄운 뒤
-        // "ready"를 써서, 느린 러너에서도 끝내기 전에 손자가 이미 있게 한다(고정 대기는 Windows CI에서 모자랐다).
-        cmd.args(["-c", "alias.slow=!sleep 30 & echo ready; wait", "slow"])
-            .stdout(std::process::Stdio::piped());
+        // 손자가 출력 파이프를 쥔다. 끝내기 전에 손자가 이미 떴음을 첫 줄로 확인한다(고정 대기는 느린 러너에서
+        // 모자랐다).
+        // Unix: 별칭이 sh를 띄우고 sh가 sleep을 띄운다(같은 프로세스 그룹).
+        // Windows: git이 ping을 직접 띄운다(낱말 하나인 `!` 별칭은 sh를 거치지 않는다). git이 ssh 같은 도우미를
+        // 띄우는 앱의 경우와 같다. MSYS sh가 띄운 손자는 Windows 프로세스 트리에 이어지지 않아 `taskkill /T`가
+        // 닿지 않는다(알려진 한계, progress).
+        #[cfg(unix)]
+        cmd.args(["-c", "alias.slow=!sleep 30 & echo ready; wait", "slow"]);
+        #[cfg(windows)]
+        cmd.args(["-c", "alias.slow=!ping", "slow", "-n", "30", "127.0.0.1"]);
+        cmd.stdout(std::process::Stdio::piped());
         configure_child(&mut cmd);
         prepare_killable(&mut cmd);
         let mut child = cmd.spawn().unwrap();
         let mut out = std::io::BufReader::new(child.stdout.take().unwrap());
         let mut line = String::new();
-        out.read_line(&mut line).unwrap();
-        assert_eq!(line.trim(), "ready");
+        // ping은 첫 줄 앞에 빈 줄을 쓴다.
+        while line.trim().is_empty() {
+            line.clear();
+            assert!(out.read_line(&mut line).unwrap() > 0, "손자가 뜨지 않았다");
+        }
         let start = std::time::Instant::now();
         kill_tree(&mut child);
         let _ = child.wait();
