@@ -60,6 +60,11 @@ export type StationMenuItem = {
   label: (m: Messages) => ReactNode;
   /** core 액션을 부르는 항목이면 그 액션 id(action-meta.json에 있어야 한다). */
   actionId?: string;
+  /**
+   * 되돌릴 수 없는(`irreversible`) 액션이면 true이고 `run`은 `ctx.ask`로 확인 대화상자(`ConfirmDialog`)를 연다(D-043).
+   * 메뉴를 고르자마자 실행하지 않는다.
+   */
+  confirms?: boolean;
   availability: (info: StationInfo, env: MenuEnv) => Availability;
   run: (info: StationInfo, ctx: MenuCtx) => void | Promise<void>;
 };

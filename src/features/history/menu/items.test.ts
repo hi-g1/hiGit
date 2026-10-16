@@ -10,7 +10,7 @@ import { api } from "../../../lib/api";
 import actionMeta from "../../../lib/action-meta.json";
 import { ko } from "../../../messages/ko";
 import type { StationInfo } from "./info";
-import { STATION_ITEMS, type MenuCtx, type MenuEnv } from "./items";
+import { STATION_ITEMS, type MenuCtx, type MenuEnv, type StationMenuItem } from "./items";
 
 const oid = "a".repeat(40);
 const info = (over: Partial<StationInfo> = {}): StationInfo => ({
@@ -120,17 +120,40 @@ describe("되돌리기·복사·돌아가기 항목", () => {
   });
 });
 
+/**
+ * 되돌릴 수 없는(irreversible) 액션을 부르면서 확인 표시(`confirms`)가 없는 항목 id(D-043).
+ * 그런 항목은 `run`이 바로 실행하지 않고 `ctx.ask`로 확인 대화상자를 연다.
+ */
+function unconfirmed(items: readonly Pick<StationMenuItem, "id" | "actionId" | "confirms">[]): string[] {
+  const meta = new Map(actionMeta.map((a) => [a.id, a]));
+  return items.filter((i) => i.actionId && meta.get(i.actionId)?.undo === "irreversible" && !i.confirms).map((i) => i.id);
+}
+
 describe("항목 표 가드", () => {
-  it("액션 항목은 action-meta에 있고 되돌릴 수 없는 액션이 아니다", () => {
-    // 되돌릴 수 없는(irreversible) 액션을 메뉴에 넣으려면 실행 전 확인 창(미리보기 토큰, CompareFooter
-    // 방식)을 함께 만들어야 한다(D-043). 그때 이 테스트를 바꾼다.
+  it("액션 항목은 action-meta에 있다", () => {
     const meta = new Map(actionMeta.map((a) => [a.id, a]));
     for (const i of STATION_ITEMS) {
-      if (!i.actionId) continue;
-      const m = meta.get(i.actionId);
-      expect(m, i.id).toBeDefined();
-      expect(m!.undo, i.id).not.toBe("irreversible");
+      if (i.actionId) expect(meta.get(i.actionId), i.id).toBeDefined();
     }
+  });
+
+  it("되돌릴 수 없는 액션 항목은 확인 대화상자를 거친다", async () => {
+    expect(unconfirmed(STATION_ITEMS)).toEqual([]);
+    for (const i of STATION_ITEMS.filter((x) => x.confirms)) {
+      const ask = vi.fn();
+      const executeAction = vi.mocked(api.executeAction);
+      executeAction.mockClear();
+      await i.run(info(), { ask } as unknown as MenuCtx);
+      expect(ask, i.id).toHaveBeenCalledTimes(1);
+      expect(executeAction, i.id).not.toHaveBeenCalled();
+    }
+  });
+
+  it("가드는 확인 표시 없이 넣은 되돌릴 수 없는 액션을 잡는다", () => {
+    const irreversible = actionMeta.find((a) => a.undo === "irreversible");
+    expect(irreversible, "action-meta에 되돌릴 수 없는 액션이 있다(버리기 등)").toBeDefined();
+    expect(unconfirmed([{ id: "x", actionId: irreversible!.id }])).toEqual(["x"]);
+    expect(unconfirmed([{ id: "x", actionId: irreversible!.id, confirms: true }])).toEqual([]);
   });
 });
 
