@@ -106,6 +106,27 @@ const WINDOWS_RESERVED: &[&str] = &[
     "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
+const IDENTITY_NAME_MAX: usize = 200;
+const IDENTITY_EMAIL_MAX: usize = 254;
+
+/// 전역 이름·이메일(D-125). 앞뒤 공백을 빼고, 이름 1~200바이트·이메일 3~254바이트, 제어 문자·`<`·`>`
+/// 없음, `-`로 시작하지 않음, 이메일은 `@`가 있고 공백이 없다. 통과하면 다듬은 값.
+pub(crate) fn validate_identity(name: &str, email: &str) -> Result<(String, String)> {
+    let (name, email) = (name.trim(), email.trim());
+    let plain =
+        |v: &str| !v.starts_with('-') && !v.chars().any(|c| c.is_control() || c == '<' || c == '>');
+    let name_ok = !name.is_empty() && name.len() <= IDENTITY_NAME_MAX && plain(name);
+    let email_ok = (3..=IDENTITY_EMAIL_MAX).contains(&email.len())
+        && plain(email)
+        && email.contains('@')
+        && !email.chars().any(char::is_whitespace);
+    if name_ok && email_ok {
+        Ok((name.to_string(), email.to_string()))
+    } else {
+        Err(CoreError::IdentityInvalid)
+    }
+}
+
 /// 복제할 폴더 이름 하나. 두 OS 모두에서 쓸 수 있는 이름만 받는다.
 pub(crate) fn validate_clone_name(name: &str) -> Result<()> {
     let bad = Err(CoreError::CloneNameInvalid);
@@ -135,6 +156,40 @@ pub(crate) fn validate_clone_name(name: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identity_rules() {
+        assert_eq!(
+            validate_identity("  김지원 ", " ji+won@example.com\t").unwrap(),
+            ("김지원".to_string(), "ji+won@example.com".to_string())
+        );
+        let long_name = "가".repeat(67); // 201바이트
+        let long_email = format!("{}@example.com", "a".repeat(243)); // 255바이트
+        for (name, email) in [
+            ("", "a@b.c"),
+            ("   ", "a@b.c"),
+            (long_name.as_str(), "a@b.c"),
+            ("-x", "a@b.c"),
+            ("a<b>", "a@b.c"),
+            ("이름\n둘", "a@b.c"),
+            ("이름\0", "a@b.c"),
+            ("이름", "x"),
+            ("이름", "a b@c.d"),
+            ("이름", "ab"),
+            ("이름", long_email.as_str()),
+            ("이름", "-a@b.c"),
+            ("이름", "<a@b.c>"),
+        ] {
+            assert!(
+                matches!(
+                    validate_identity(name, email),
+                    Err(CoreError::IdentityInvalid)
+                ),
+                "{name:?} {email:?}"
+            );
+        }
+        assert!(validate_identity(&"가".repeat(66), "a@b").is_ok());
+    }
 
     #[test]
     fn clone_urls() {

@@ -56,6 +56,8 @@ pub struct Core {
     allow_local_clone: bool,
     /// 앱 설정(D-127).
     settings: Arc<crate::settings::SettingsStore>,
+    /// 전역 이름·이메일 쓰기를 한 번에 하나로(D-125).
+    identity_lock: Mutex<()>,
 }
 
 /// 도는 작업 하나.
@@ -290,6 +292,18 @@ impl Core {
             github,
             allow_local_clone: false,
             settings: Arc::new(crate::settings::SettingsStore::in_memory()),
+            identity_lock: Mutex::new(()),
+        })
+    }
+
+    /// 전역(없으면 시스템) 이름·이메일(D-125). 열린 저장소가 필요 없다.
+    pub fn identity(&self) -> Result<crate::view::IdentityView> {
+        let id = self.git.identity()?;
+        let complete = id.name.is_some() && id.email.is_some();
+        Ok(crate::view::IdentityView {
+            name: id.name,
+            email: id.email,
+            complete,
         })
     }
 
@@ -635,6 +649,26 @@ impl Core {
         input: &ActionInput,
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
+        // 전역 설정이라 폴더 없이 돈다(D-125). 로그에는 액션 id와 결과 코드만.
+        if let ActionInput::IdentitySet(_) = input {
+            let _one = self
+                .identity_lock
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            let state = RepoState {
+                folder: PathBuf::new(),
+                repo: None,
+            };
+            let ctx = ExecCtx::new(
+                self.git.as_ref(),
+                &state,
+                self.executor.journal_key(),
+                &self.github,
+            );
+            let result = self.executor.execute(&ctx, "identity-set", input, None);
+            self.logger.action("execute", "identity-set", &result);
+            return Ok(result?.into());
+        }
         if let ActionInput::Clone(clone) = input {
             let result = self.run_clone(folder, clone);
             self.logger.action("execute", "clone", &result);

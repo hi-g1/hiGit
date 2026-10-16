@@ -8,8 +8,8 @@ use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
     ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, ErrorCode, ErrorView,
-    FileDiffView, GitHubStatusView, HomeMapView, HostingContextView, HostingPage, LogPage,
-    LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
+    FileDiffView, GitHubStatusView, HomeMapView, HostingContextView, HostingPage, IdentityView,
+    LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
     PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView, ProjectOpenResult,
     ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView, SecretCheckRequest,
     SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
@@ -96,6 +96,13 @@ pub async fn app_display_hints() -> CmdResult<DisplayHintsView> {
             code: ErrorCode::Internal,
             detail: Some(e.to_string()),
         })
+}
+
+/// 전역 이름·이메일(D-125). 저장소를 받지 않는 읽기.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_identity(state: State<'_, AppState>) -> CmdResult<IdentityView> {
+    blocking(state, |core| core.identity()).await
 }
 
 /// 앱 설정(D-127).

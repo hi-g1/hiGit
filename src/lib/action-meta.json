@@ -190,5 +190,11 @@
     "glossaryId": "pr",
     "risk": "safe",
     "undo": "nothing"
+  },
+  {
+    "id": "identity-set",
+    "glossaryId": "identity",
+    "risk": "normal",
+    "undo": "nothing"
   }
 ]

@@ -44,6 +44,7 @@ export const queryKeys = {
   cloneDefaults: ["cloneDefaults"] as const,
   settings: ["settings"] as const,
   displayHints: ["displayHints"] as const,
+  identity: ["identity"] as const,
 };
 
 /** 앱 설정(D-127). */
@@ -52,6 +53,15 @@ export function useAppSettings() {
     queryKey: queryKeys.settings,
     queryFn: api.settings,
     staleTime: Infinity,
+  });
+}
+
+/** 전역 이름·이메일(D-125). 저장하면 다시 읽는다. */
+export function useIdentity() {
+  return useQuery<Awaited<ReturnType<typeof api.identity>>, ApiError>({
+    queryKey: queryKeys.identity,
+    queryFn: () => api.identity(),
+    staleTime: 60_000,
   });
 }
 

@@ -9,6 +9,7 @@ mod diff;
 mod github;
 mod history;
 mod hosting;
+mod identity;
 mod input;
 mod map;
 mod merge;
@@ -34,12 +35,13 @@ pub use hosting::{
     ChecksView, HostingContextView, HostingProviderView, MergeableView, PrDetailView, PrDraftView,
     PrListRequest, PrListView, PrRowView, PrStateFilterView, PrStateView,
 };
+pub use identity::IdentityView;
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice,
-    MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput, RestoreInput, RewriteInput,
-    RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput,
-    TakeOutInput, TakeOutSource,
+    IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput, RestoreInput,
+    RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput,
+    TagInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -539,6 +541,7 @@ pub enum ActionResult {
     ParkedRecovered {
         count: u32,
     },
+    IdentitySaved,
 }
 
 impl From<Outcome> for ActionResult {
@@ -609,6 +612,7 @@ impl From<Outcome> for ActionResult {
             Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
             Outcome::PrCreated { number } => ActionResult::PrCreated { number },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
+            Outcome::IdentitySaved => ActionResult::IdentitySaved,
         }
     }
 }
@@ -695,6 +699,7 @@ pub enum ErrorCode {
     CloneTargetExists,
     CloneUrlInvalid,
     CloneNameInvalid,
+    IdentityInvalid,
     GitOutdated,
     RemoteUnreachable,
     ProtocolNotAllowed,
@@ -782,6 +787,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::AnnotatedTag => ErrorCode::AnnotatedTag,
             CoreError::CloneUrlInvalid => ErrorCode::CloneUrlInvalid,
             CoreError::CloneNameInvalid => ErrorCode::CloneNameInvalid,
+            CoreError::IdentityInvalid => ErrorCode::IdentityInvalid,
             CoreError::CloneTargetExists => ErrorCode::CloneTargetExists,
             CoreError::GitOutdated => ErrorCode::GitOutdated,
             CoreError::Git(e) => e.kind().into(),

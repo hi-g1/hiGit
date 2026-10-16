@@ -9,6 +9,7 @@ const COMMANDS: &[&str] = &[
     "app_display_hints",
     "settings_get",
     "settings_set",
+    "query_identity",
     "github_status",
     "github_connect_start",
     "github_connect_poll",

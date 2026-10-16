@@ -248,6 +248,7 @@ fn action_input_tags_match_registry() {
             ActionInput::Init
             | ActionInput::Clone(_)
             | ActionInput::PrCreate(_)
+            | ActionInput::IdentitySet(_)
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
@@ -294,6 +295,10 @@ fn action_input_tags_match_registry() {
             body: String::new(),
             base: "main".into(),
             draft: false,
+        }),
+        ActionInput::IdentitySet(higit_core::view::IdentityInput {
+            name: "이름".into(),
+            email: "a@example.com".into(),
         }),
         ActionInput::Stage(paths.clone()),
         ActionInput::Unstage(paths.clone()),

@@ -14,6 +14,7 @@
     "allow-app-display-hints",
     "allow-settings-get",
     "allow-settings-set",
+    "allow-query-identity",
     "allow-github-status",
     "allow-github-connect-start",
     "allow-github-connect-poll",

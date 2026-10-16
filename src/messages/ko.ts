@@ -468,6 +468,7 @@ export const ko = {
     prSameBranch: `같은 ${t("branch")}끼리는 ${josa(t("pr"), "을/를")} 만들 수 없어요.`,
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",
+    identityInvalid: "이름과 이메일을 확인해 주세요.",
     invalidBranchName: `${t("branch")} 이름으로 쓸 수 없는 글자가 있어요.`,
     branchExists: `같은 이름의 ${josa(t("branch"), "이/가")} 이미 있어요.`,
     wouldOverwrite: `버전으로 저장하지 않은 변경이 덮어써져요. 먼저 ${t("commit")}부터 해 주세요.`,

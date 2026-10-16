@@ -22,6 +22,8 @@ export const commands = {
 	settingsGet: () => __TAURI_INVOKE<AppSettingsView>("settings_get"),
 	/**  앱 설정의 알려진 칸만 바꾼다. */
 	settingsSet: (patch: AppSettingsPatch) => __TAURI_INVOKE<AppSettingsView>("settings_set", { patch }),
+	/**  전역 이름·이메일(D-125). 저장소를 받지 않는 읽기. */
+	queryIdentity: () => __TAURI_INVOKE<IdentityView>("query_identity"),
 	/**  설정의 GitHub 구역 상태. 키체인을 건드리지 않는다. */
 	githubStatus: () => __TAURI_INVOKE<GitHubStatusView>("github_status"),
 	/**  GitHub 로그인(device flow)을 시작한다. */
@@ -105,7 +107,9 @@ export type ActionInput =
 /**  원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115). */
 { id: "clone"; input: CloneInput } | 
 /**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
-{ id: "pr-create"; input: PrCreateInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
+{ id: "pr-create"; input: PrCreateInput } | 
+/**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
+{ id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
 { id: "ignore"; input: PathsInput } | 
 /**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
@@ -181,7 +185,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -494,7 +498,7 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  검토 요청의 head와 대상이 같거나 head가 기본 브랜치다. */
 "prSameBranch" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
-"cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
+"cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
 "indexLocked" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
@@ -602,6 +606,19 @@ export type HunkChoice = { kind: "ours" } | { kind: "theirs" } |
 export type HunkView = {
 	section: string,
 	lines: DiffLineView[],
+};
+
+/**  전역 이름·이메일(D-125). core가 앞뒤 공백을 빼고 다시 검사한다. */
+export type IdentityInput = {
+	name: string,
+	email: string,
+};
+
+export type IdentityView = {
+	name: string | null,
+	email: string | null,
+	/**  이름과 이메일이 둘 다 있다. */
+	complete: boolean,
 };
 
 /**  화면 언어(D-139). 시스템 따라가기는 화면이 웹뷰 언어로 정한다(D-149). */

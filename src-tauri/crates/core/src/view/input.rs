@@ -15,6 +15,8 @@ pub enum ActionInput {
     Clone(CloneInput),
     /// 올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113).
     PrCreate(PrCreateInput),
+    /// 전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다.
+    IdentitySet(IdentityInput),
     Stage(PathsInput),
     Unstage(PathsInput),
     Commit(CommitInput),
@@ -73,6 +75,7 @@ impl ActionInput {
             ActionInput::Init => "init",
             ActionInput::Clone(_) => "clone",
             ActionInput::PrCreate(_) => "pr-create",
+            ActionInput::IdentitySet(_) => "identity-set",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
@@ -113,6 +116,8 @@ impl ActionInput {
             paths: p.paths.iter().take(MAX_PATHS).cloned().collect(),
         };
         match self {
+            // 이름·이메일은 어디에도 남기지 않는다(D-125).
+            ActionInput::IdentitySet(_) => ActionInput::IdentitySet(IdentityInput::default()),
             ActionInput::Stage(p) => ActionInput::Stage(cut(p)),
             ActionInput::Unstage(p) => ActionInput::Unstage(cut(p)),
             ActionInput::Discard(p) => ActionInput::Discard(cut(p)),
@@ -219,6 +224,14 @@ pub struct PrCreateInput {
     /// 합칠 대상 원격 브랜치 이름.
     pub base: String,
     pub draft: bool,
+}
+
+/// 전역 이름·이메일(D-125). core가 앞뒤 공백을 빼고 다시 검사한다.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct IdentityInput {
+    pub name: String,
+    pub email: String,
 }
 
 /// 복제 입력. 주소와 폴더 이름은 core가 검사한다.

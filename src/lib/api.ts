@@ -41,6 +41,8 @@ export type {
   GitHubStatusView,
   HomeMapView,
   HostingPage,
+  IdentityInput,
+  IdentityView,
   LoginChallengeView,
   LoginPollView,
   MapCommit,
@@ -138,6 +140,8 @@ export const api = {
   /** 앱 설정(D-127). */
   settings: () => call(commands.settingsGet()),
   setSettings: (patch: AppSettingsPatch) => call(commands.settingsSet(patch)),
+  /** 전역 이름·이메일(D-125). 열린 저장소가 필요 없다. */
+  identity: () => call(commands.queryIdentity()),
   /** OS 글자 크기·배율·다크(D-147). Git이 없어도 된다. */
   displayHints: () => call(commands.appDisplayHints()),
   githubStatus: () => call(commands.githubStatus()),

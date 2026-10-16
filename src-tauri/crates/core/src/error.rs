@@ -129,6 +129,10 @@ pub enum CoreError {
     #[error("복제할 수 없는 주소입니다")]
     CloneUrlInvalid,
 
+    /// 이름·이메일이 규칙에 맞지 않는다(D-125). 값은 담지 않는다.
+    #[error("이름과 이메일을 확인해 주세요")]
+    IdentityInvalid,
+
     /// 복제할 폴더 이름이 규칙에 맞지 않는다.
     #[error("쓸 수 없는 폴더 이름입니다")]
     CloneNameInvalid,

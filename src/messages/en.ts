@@ -436,6 +436,7 @@ export const en: Messages = {
     prSameBranch: `A ${t("pr").toLowerCase()} can't be made between the same ${t("branch").toLowerCase()}.`,
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",
+    identityInvalid: "Check the name and email.",
     invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,
     branchExists: `A ${t("branch").toLowerCase()} with the same name already exists.`,
     wouldOverwrite: `Changes not saved as a version would be overwritten. Use ${t("commit")} first.`,

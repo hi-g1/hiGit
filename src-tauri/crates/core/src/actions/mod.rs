@@ -8,6 +8,7 @@ mod clone;
 mod commit;
 pub(crate) mod conflict;
 mod discard;
+mod identity;
 pub(crate) mod ignore;
 mod init;
 pub(crate) mod merge;
@@ -33,6 +34,7 @@ pub use clone::CloneAction;
 pub use commit::CommitAction;
 pub use conflict::ConflictAction;
 pub use discard::DiscardAction;
+pub use identity::IdentityAction;
 pub use ignore::IgnoreAction;
 pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
@@ -114,6 +116,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(BranchEditAction::rename()))?;
     registry.register(Box::new(CloneAction::new()))?;
     registry.register(Box::new(PrCreateAction::new()))?;
+    registry.register(Box::new(IdentityAction::new()))?;
     Ok(())
 }
 
