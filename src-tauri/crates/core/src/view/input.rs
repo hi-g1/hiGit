@@ -42,6 +42,8 @@ pub enum ActionInput {
     Pull,
     Push,
     Sync(SyncInput),
+    /// 지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097).
+    Amend(AmendInput),
 }
 
 impl ActionInput {
@@ -69,6 +71,7 @@ impl ActionInput {
             ActionInput::Pull => "pull",
             ActionInput::Push => "push",
             ActionInput::Sync(_) => "sync",
+            ActionInput::Amend(_) => "amend",
         }
     }
 
@@ -116,6 +119,11 @@ impl ActionInput {
             }),
             ActionInput::Sync(i) => ActionInput::Sync(SyncInput {
                 locale: journal_locale(&i.locale),
+            }),
+            // 메시지(최대 1MB)는 줄에 남기지 않는다. 되돌리기는 `before`/`after`로 한다.
+            ActionInput::Amend(i) => ActionInput::Amend(AmendInput {
+                expect_head: i.expect_head.clone(),
+                message: i.message.as_ref().map(|_| String::new()),
             }),
             other => other.clone(),
         }
@@ -234,6 +242,15 @@ pub enum TakeOutSource {
     Parked { branch: String },
     /// 작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085).
     Ref { refname: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AmendInput {
+    /// 화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다.
+    pub expect_head: String,
+    /// 새 메시지. 없으면 메시지는 그대로 두고 넣은 파일만 더한다.
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

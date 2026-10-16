@@ -21,9 +21,9 @@ pub use conflict::{
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
-    ActionInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput, FileChoice,
-    FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, RestoreInput, SwitchInput,
-    SyncInput, TakeOutInput, TakeOutSource,
+    ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
+    FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, RestoreInput,
+    SwitchInput, SyncInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -416,6 +416,11 @@ pub enum ActionResult {
         summary: String,
     },
     #[serde(rename_all = "camelCase")]
+    Amended {
+        short_oid: String,
+        summary: String,
+    },
+    #[serde(rename_all = "camelCase")]
     Switched {
         branch: String,
         /// 떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름.
@@ -480,6 +485,7 @@ impl From<Outcome> for ActionResult {
             Outcome::Committed { short_oid, summary } => {
                 ActionResult::Committed { short_oid, summary }
             }
+            Outcome::Amended { short_oid, summary } => ActionResult::Amended { short_oid, summary },
             Outcome::Switched(r) => ActionResult::Switched {
                 branch: r.branch,
                 parked_on: r.parked.map(|(b, _)| b),

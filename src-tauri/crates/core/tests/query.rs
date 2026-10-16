@@ -265,7 +265,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Fetch(_)
             | ActionInput::Pull
             | ActionInput::Push
-            | ActionInput::Sync(_) => {}
+            | ActionInput::Sync(_)
+            | ActionInput::Amend(_) => {}
         }
     }
     let paths = PathsInput {
@@ -318,6 +319,10 @@ fn action_input_tags_match_registry() {
         ActionInput::Push,
         ActionInput::Sync(higit_core::view::SyncInput {
             locale: "ko".into(),
+        }),
+        ActionInput::Amend(higit_core::view::AmendInput {
+            expect_head: "a".repeat(40),
+            message: None,
         }),
     ];
     samples.iter().for_each(every_variant);

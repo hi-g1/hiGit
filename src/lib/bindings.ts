@@ -89,7 +89,9 @@ export type ActionInput =
 /**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
 { id: "clear-lock" } | 
 /**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
-{ id: "recover-parked" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput };
+{ id: "recover-parked" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput } | 
+/**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
+{ id: "amend"; input: AmendInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -99,7 +101,7 @@ export type ActionMetaView = {
 };
 
 /**  액션 실행 결과. */
-export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
+export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "amended"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
 parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
 /**  겹친 파일. 비어 있지 않으면 올리지 않았다. */
@@ -114,6 +116,13 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 { kind: "conflictFinished" } | 
 /**  합치기를 그만뒀다. */
 { kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "parkedRecovered"; count: number };
+
+export type AmendInput = {
+	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
+	expectHead: string,
+	/**  새 메시지. 없으면 메시지는 그대로 두고 넣은 파일만 더한다. */
+	message: string | null,
+};
 
 /**  앱 시작 시 확인한 환경. */
 export type AppStatus = {

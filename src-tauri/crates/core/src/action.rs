@@ -93,6 +93,11 @@ pub enum Outcome {
         short_oid: String,
         summary: String,
     },
+    /// 마지막 버전을 고쳤다.
+    Amended {
+        short_oid: String,
+        summary: String,
+    },
     /// 브랜치를 갈아탔다(맡겨 두기 결과 포함).
     Switched(crate::actions::SwitchReport),
     BranchCreated {

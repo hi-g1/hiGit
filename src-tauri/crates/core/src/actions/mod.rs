@@ -1,5 +1,6 @@
 //! 등록된 액션들. 새 액션 추가 절차는 docs/architecture.md "새 액션 추가 절차".
 
+mod amend;
 mod branch_create;
 mod clear_lock;
 mod commit;
@@ -17,6 +18,7 @@ mod stage;
 pub(crate) mod stash;
 pub(crate) mod switch;
 
+pub use amend::AmendAction;
 pub use branch_create::BranchCreateAction;
 pub use clear_lock::ClearLockAction;
 pub use commit::CommitAction;
@@ -87,6 +89,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(RemoteAction::pull()))?;
     registry.register(Box::new(RemoteAction::push()))?;
     registry.register(Box::new(RemoteAction::sync()))?;
+    registry.register(Box::new(AmendAction::new()))?;
     Ok(())
 }
 

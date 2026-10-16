@@ -335,6 +335,7 @@ fn registered_actions_match_spec_risk() {
             ("pull", "pull", Risk::Normal),
             ("push", "push", Risk::Normal),
             ("sync", "sync", Risk::Normal),
+            ("amend", "amend", Risk::Caution),
         ]
     );
 }
