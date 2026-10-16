@@ -121,7 +121,6 @@ pub(crate) fn read<T: DeserializeOwned>(git_dir: &Path, name: Name, key: &Journa
 }
 
 /// 표식이 있는지(서명은 보지 않는다). 남은 표식을 정리할지 정할 때 쓴다.
-#[allow(dead_code)] // 계획 008 E9부터 쓴다.
 pub(crate) fn exists(git_dir: &Path, name: Name) -> bool {
     place_ok(git_dir, name) && path(git_dir, name).is_file()
 }

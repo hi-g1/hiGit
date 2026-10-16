@@ -272,7 +272,9 @@ fn action_input_tags_match_registry() {
             | ActionInput::Reset(_)
             | ActionInput::RebaseI(_)
             | ActionInput::Tag(_)
-            | ActionInput::TagDelete(_) => {}
+            | ActionInput::TagDelete(_)
+            | ActionInput::BranchDelete(_)
+            | ActionInput::BranchRename(_) => {}
         }
     }
     let paths = PathsInput {
@@ -347,6 +349,11 @@ fn action_input_tags_match_registry() {
         ActionInput::TagDelete(higit_core::view::TagDeleteInput {
             name: "v1".into(),
             oid: "a".repeat(40),
+        }),
+        ActionInput::BranchDelete(higit_core::view::BranchNameInput { name: "옆".into() }),
+        ActionInput::BranchRename(higit_core::view::BranchRenameInput {
+            from: "옆".into(),
+            to: "곁".into(),
         }),
     ];
     samples.iter().for_each(every_variant);

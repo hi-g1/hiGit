@@ -113,6 +113,13 @@ pub enum Outcome {
     Tagged {
         name: String,
     },
+    BranchDeleted {
+        name: String,
+    },
+    BranchRenamed {
+        from: String,
+        to: String,
+    },
     TagDeleted {
         name: String,
     },

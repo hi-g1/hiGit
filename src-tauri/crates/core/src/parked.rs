@@ -56,6 +56,41 @@ pub(crate) fn ref_name(branch: &str) -> String {
     format!("{PARKED_PREFIX}{encoded}")
 }
 
+/// 지운 브랜치의 맡긴 ref를 백업 ref(`parked-<브랜치>`)로 옮기고 지운다(D-103). 없으면 할 일 없음.
+pub(crate) fn retire_to_backup(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    branch: &str,
+) -> crate::Result<()> {
+    let name = ref_name(branch);
+    if let Some(oid) = git.resolve_ref(repo, &name)? {
+        crate::undo::backup::backup_oid(git, repo, &oid, &format!("parked-{branch}"))?;
+        git.delete_ref(repo, &name, &git::RefExpect::Is(oid))?;
+    }
+    Ok(())
+}
+
+/// 이름을 바꾼 브랜치의 맡긴 ref를 새 이름으로 옮긴다(D-054, D-103). 새 이름에 남은 것이 있으면
+/// 먼저 백업으로 물린다.
+pub(crate) fn move_ref(
+    git: &dyn git::GitBackend,
+    repo: &git::RepoPath,
+    from: &str,
+    to: &str,
+) -> crate::Result<()> {
+    let (old, new) = (ref_name(from), ref_name(to));
+    let Some(oid) = git.resolve_ref(repo, &old)? else {
+        return Ok(());
+    };
+    if old == new {
+        return Ok(());
+    }
+    retire_to_backup(git, repo, to)?;
+    git.update_ref(repo, &new, &oid, &git::RefExpect::Absent)?;
+    git.delete_ref(repo, &old, &git::RefExpect::Is(oid))?;
+    Ok(())
+}
+
 /// ref 이름에서 브랜치 이름을 되살린다. 맡긴 ref가 아니면 `None`.
 pub(crate) fn branch_of(refname: &str) -> Option<String> {
     let encoded = refname.strip_prefix(PARKED_PREFIX)?;

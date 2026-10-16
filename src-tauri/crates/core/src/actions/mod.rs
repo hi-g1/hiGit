@@ -2,6 +2,7 @@
 
 mod amend;
 mod branch_create;
+mod branch_edit;
 mod clear_lock;
 mod commit;
 pub(crate) mod conflict;
@@ -24,6 +25,7 @@ mod tag;
 
 pub use amend::AmendAction;
 pub use branch_create::BranchCreateAction;
+pub use branch_edit::BranchEditAction;
 pub use clear_lock::ClearLockAction;
 pub use commit::CommitAction;
 pub use conflict::ConflictAction;
@@ -104,6 +106,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(RewriteAction::new()))?;
     registry.register(Box::new(TagAction::create()))?;
     registry.register(Box::new(TagAction::delete()))?;
+    registry.register(Box::new(BranchEditAction::delete()))?;
+    registry.register(Box::new(BranchEditAction::rename()))?;
     Ok(())
 }
 

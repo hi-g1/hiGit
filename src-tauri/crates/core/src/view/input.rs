@@ -56,6 +56,10 @@ pub enum ActionInput {
     Tag(TagInput),
     /// 태그를 지운다(가벼운 태그만).
     TagDelete(TagDeleteInput),
+    /// 로컬 브랜치를 지운다(D-103).
+    BranchDelete(BranchNameInput),
+    /// 로컬 브랜치 이름을 바꾼다(D-103).
+    BranchRename(BranchRenameInput),
 }
 
 impl ActionInput {
@@ -90,6 +94,8 @@ impl ActionInput {
             ActionInput::RebaseI(_) => "rebase-i",
             ActionInput::Tag(_) => "tag",
             ActionInput::TagDelete(_) => "tag-delete",
+            ActionInput::BranchDelete(_) => "branch-delete",
+            ActionInput::BranchRename(_) => "branch-rename",
         }
     }
 
@@ -297,6 +303,19 @@ pub enum RewriteKindInput {
     /// 바로 아래 단계의 버전에 합친다.
     Squash,
     Drop,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchNameInput {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchRenameInput {
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

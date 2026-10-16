@@ -126,15 +126,25 @@ pub(crate) fn undo(
             undo_ignore(git, repo, &now, &entry)?;
             Undid::Restored
         }
+        UndoKind::Inverse if entry.action == "branch-rename" => {
+            undo_branch_rename(git, repo, &entry)?;
+            Undid::Restored
+        }
         // 올리기·가져오기·동기화는 되돌리지 않는다. 올린 것은 기록을 바꾸지 않는다(D-042, D-073).
         UndoKind::Inverse if entry.action == "pull" => return Err(CoreError::NothingToUndo),
         UndoKind::Inverse => return Err(CoreError::UndoPushed),
         _ => return Err(CoreError::NothingToUndo),
     };
     let reverted = matches!(undid, Undid::Reverted);
-    // 임시 보관 되돌리기는 항목을 꺼내고 목록에서 빼는 것으로 `refs/stash`를 이미 되돌렸다.
-    if !reverted && entry.action != "stash" {
+    // 임시 보관 되돌리기는 항목을 꺼내고 목록에서 빼는 것으로 `refs/stash`를, 이름 바꾸기
+    // 되돌리기는 이름을 되돌리는 것으로 두 ref를 이미 되돌렸다.
+    if !reverted && entry.action != "stash" && entry.action != "branch-rename" {
         restore_refs(git, repo, &entry.after.refs, &entry.before.refs)?;
+    }
+    if entry.action == "branch-delete" {
+        // 지우면서 사라진 upstream 설정을 같은 이름의 원격 브랜치가 하나뿐일 때만 다시 잇는다.
+        // 잇지 못해도 브랜치는 되살아났다.
+        let _ = reconnect_upstream(git, repo, &entry);
     }
     journal.append(&Body::Undo {
         target: entry.id.clone(),
@@ -306,6 +316,72 @@ fn revert_pushed(
 fn redo_tree(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
     let after = entry.after.head_oid().ok_or(CoreError::NothingToUndo)?;
     git.run(repo, &GitOp::ResetKeep { oid: after })?;
+    Ok(())
+}
+
+/// 브랜치 이름 바꾸기 되돌리기: 새 이름이 그때 버전 그대로 있고 옛 이름이 비어 있을 때만 원래
+/// 이름으로 되돌리고 맡긴 ref도 옮긴다. upstream은 되살리지 않는다(D-103).
+fn undo_branch_rename(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::BranchRename(input) = &entry.input else {
+        return Err(CoreError::NothingToUndo);
+    };
+    let (from, to) = (input.from.trim(), input.to.trim());
+    let value = |state: &UndoState, name: &str| {
+        state
+            .refs
+            .iter()
+            .find(|(n, _)| n == &format!("refs/heads/{name}"))
+            .and_then(|(_, v)| v.as_deref())
+            .and_then(Oid::parse)
+    };
+    let renamed = value(&entry.after, to).ok_or(CoreError::NothingToUndo)?;
+    if git.resolve_ref(repo, &format!("refs/heads/{to}"))? != Some(renamed)
+        || git
+            .resolve_ref(repo, &format!("refs/heads/{from}"))?
+            .is_some()
+    {
+        return Err(CoreError::UndoStale);
+    }
+    git.run(
+        repo,
+        &GitOp::BranchRename {
+            from: to.to_string(),
+            to: from.to_string(),
+            force: from.to_lowercase() == to.to_lowercase(),
+        },
+    )?;
+    crate::parked::move_ref(git, repo, to, from)?;
+    Ok(())
+}
+
+/// 되살린 브랜치를 같은 이름의 원격 추적 브랜치(하나뿐일 때)에 다시 잇는다.
+fn reconnect_upstream(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<()> {
+    let ActionInput::BranchDelete(input) = &entry.input else {
+        return Ok(());
+    };
+    let name = input.name.trim();
+    let suffix = format!("/{name}");
+    let remotes = git.remotes(repo)?;
+    let matches: Vec<String> = git
+        .list_refs(repo, "refs/remotes/")?
+        .into_iter()
+        .filter_map(|r| r.name.strip_prefix("refs/remotes/").map(str::to_string))
+        .filter(|short| {
+            short.ends_with(&suffix)
+                && remotes
+                    .iter()
+                    .any(|rm| short == &format!("{}{suffix}", rm.name))
+        })
+        .collect();
+    if let [upstream] = matches.as_slice() {
+        git.run(
+            repo,
+            &GitOp::SetUpstream {
+                branch: name.to_string(),
+                upstream: upstream.clone(),
+            },
+        )?;
+    }
     Ok(())
 }
 

@@ -166,5 +166,17 @@
     "glossaryId": "tag",
     "risk": "safe",
     "undo": "restoreRef"
+  },
+  {
+    "id": "branch-delete",
+    "glossaryId": "branch-delete",
+    "risk": "caution",
+    "undo": "restoreRef"
+  },
+  {
+    "id": "branch-rename",
+    "glossaryId": "branch-rename",
+    "risk": "normal",
+    "undo": "inverse"
   }
 ]

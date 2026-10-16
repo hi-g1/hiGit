@@ -693,41 +693,13 @@ impl Queries {
         })
     }
 
-    /// 기본 브랜치: 지금 브랜치 upstream의 원격(없으면 origin, 그다음 첫 원격)의 HEAD,
-    /// 그것도 없으면 로컬 main, master 순(D-048).
     fn default_branch(
         &self,
         root: &RepoPath,
         branches: &[git::Branch],
         remotes: &[git::Remote],
     ) -> Result<Option<String>> {
-        let upstream_remote = branches
-            .iter()
-            .find(|b| b.is_head)
-            .and_then(|b| b.upstream.as_deref())
-            .and_then(|u| {
-                remotes
-                    .iter()
-                    .filter(|r| u.starts_with(&format!("{}/", r.name)))
-                    .max_by_key(|r| r.name.len())
-            });
-        let remote = upstream_remote
-            .or_else(|| remotes.iter().find(|r| r.name == "origin"))
-            .or_else(|| remotes.first());
-        if let Some(remote) = remote
-            && let Some(head) = self.git.remote_head(root, &remote.name)?
-        {
-            return Ok(Some(head));
-        }
-        let has_local = |n: &str| {
-            branches
-                .iter()
-                .any(|b| b.kind == git::BranchKind::Local && b.name == n)
-        };
-        Ok(["main", "master"]
-            .into_iter()
-            .find(|n| has_local(n))
-            .map(str::to_string))
+        default_branch(self.git.as_ref(), root, branches, remotes)
     }
 
     /// 버전 기록 한 쪽(D-088). 첫 쪽(`tips` 없음)은 끝점을 정하고 지금 위치·기본 브랜치·안
@@ -1019,6 +991,43 @@ fn stays_inside(root: &Path, rel: &str) -> Result<()> {
         return Err(CoreError::InvalidInput("저장소 밖을 가리키는 파일이에요"));
     }
     Ok(())
+}
+
+/// 기본 브랜치: 지금 브랜치 upstream의 원격(없으면 origin, 그다음 첫 원격)의 HEAD,
+/// 그것도 없으면 로컬 main, master 순(D-048). 브랜치 지우기도 같은 판정을 쓴다.
+pub(crate) fn default_branch(
+    git: &dyn GitBackend,
+    root: &RepoPath,
+    branches: &[git::Branch],
+    remotes: &[git::Remote],
+) -> Result<Option<String>> {
+    let upstream_remote = branches
+        .iter()
+        .find(|b| b.is_head)
+        .and_then(|b| b.upstream.as_deref())
+        .and_then(|u| {
+            remotes
+                .iter()
+                .filter(|r| u.starts_with(&format!("{}/", r.name)))
+                .max_by_key(|r| r.name.len())
+        });
+    let remote = upstream_remote
+        .or_else(|| remotes.iter().find(|r| r.name == "origin"))
+        .or_else(|| remotes.first());
+    if let Some(remote) = remote
+        && let Some(head) = git.remote_head(root, &remote.name)?
+    {
+        return Ok(Some(head));
+    }
+    let has_local = |n: &str| {
+        branches
+            .iter()
+            .any(|b| b.kind == git::BranchKind::Local && b.name == n)
+    };
+    Ok(["main", "master"]
+        .into_iter()
+        .find(|n| has_local(n))
+        .map(str::to_string))
 }
 
 #[cfg(test)]

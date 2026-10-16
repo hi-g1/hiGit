@@ -23,10 +23,11 @@ pub use conflict::{
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use history::{RewriteBlocked, RewriteCardView, RewritePlanView};
 pub use input::{
-    ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
-    FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, OidInput, PathsInput,
-    RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput,
-    TagDeleteInput, TagInput, TakeOutInput, TakeOutSource,
+    ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CommitInput,
+    ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice, MergeInput,
+    MergeIntoInput, OidInput, PathsInput, RestoreInput, RewriteInput, RewriteKindInput,
+    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TakeOutInput,
+    TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -442,6 +443,13 @@ pub enum ActionResult {
     Tagged {
         name: String,
     },
+    BranchDeleted {
+        name: String,
+    },
+    BranchRenamed {
+        from: String,
+        to: String,
+    },
     TagDeleted {
         name: String,
     },
@@ -532,6 +540,8 @@ impl From<Outcome> for ActionResult {
             Outcome::Picked { short_oid, summary } => ActionResult::Picked { short_oid, summary },
             Outcome::Reset { dropped } => ActionResult::Reset { dropped },
             Outcome::Tagged { name } => ActionResult::Tagged { name },
+            Outcome::BranchDeleted { name } => ActionResult::BranchDeleted { name },
+            Outcome::BranchRenamed { from, to } => ActionResult::BranchRenamed { from, to },
             Outcome::TagDeleted { name } => ActionResult::TagDeleted { name },
             Outcome::Rewritten {
                 kept,

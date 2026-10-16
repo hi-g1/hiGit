@@ -105,7 +105,11 @@ export type ActionInput =
 /**  고른 버전에 가벼운 태그를 단다(D-104). */
 { id: "tag"; input: TagInput } | 
 /**  태그를 지운다(가벼운 태그만). */
-{ id: "tag-delete"; input: TagDeleteInput };
+{ id: "tag-delete"; input: TagDeleteInput } | 
+/**  로컬 브랜치를 지운다(D-103). */
+{ id: "branch-delete"; input: BranchNameInput } | 
+/**  로컬 브랜치 이름을 바꾼다(D-103). */
+{ id: "branch-rename"; input: BranchRenameInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -121,7 +125,7 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 /**  고른 버전을 지금 브랜치로 복사했다. */
 { kind: "picked"; shortOid: string; summary: string } | 
 /**  지금 브랜치를 옛 버전으로 옮겼다. 기록에서 빠진 버전 수. */
-{ kind: "reset"; dropped: number } | { kind: "tagged"; name: string } | { kind: "tagDeleted"; name: string } | 
+{ kind: "reset"; dropped: number } | { kind: "tagged"; name: string } | { kind: "branchDeleted"; name: string } | { kind: "branchRenamed"; from: string; to: string } | { kind: "tagDeleted"; name: string } | 
 /**  기록을 정리했다. 남은·뺀·묶어 합친 버전 수. */
 { kind: "rewritten"; kept: number; dropped: number; joined: number } | 
 /**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
@@ -177,6 +181,15 @@ export type BranchListView = {
 export type BranchNameCheck = {
 	ok: boolean,
 	problem: NameProblem | null,
+};
+
+export type BranchNameInput = {
+	name: string,
+};
+
+export type BranchRenameInput = {
+	from: string,
+	to: string,
 };
 
 export type BranchRow = {

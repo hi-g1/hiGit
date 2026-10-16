@@ -203,7 +203,7 @@ impl Action for MergeIntoAction {
 
 /// 다른 작업 폴더가 그 브랜치를 쓰는 중인지. 그 작업 폴더를 몰래 바꾸지 않게 막는다.
 /// 연결된 worktree에서 열었으면 주 작업 폴더(공용 폴더의 HEAD)도 본다.
-fn checked_out_elsewhere(
+pub(crate) fn checked_out_elsewhere(
     git: &dyn git::GitBackend,
     repo: &git::RepoPath,
     branch: &str,
