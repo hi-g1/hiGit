@@ -1,0 +1,10 @@
+/* 역 위에 겹친 툴팁 자리(D-155). 보이지 않고 포커스만 보인다 */
+.tip {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.tip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}

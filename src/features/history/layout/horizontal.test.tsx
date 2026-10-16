@@ -57,6 +57,21 @@ describe("홈 두 줄 노선도(같은 배치 함수, D-090)", () => {
     }
   });
 
+  it("홈이 아주 좁으면 지금 줄만 그려 역이 오른쪽으로 잘리지 않는다", () => {
+    const s = home(view({ currentCommits: [c(1), c(2), c(3, "로그인 단추 크기 맞춤")], currentMore: 3 }), 320);
+    expect(new Set(s.lines.filter((l) => !l.dashed).map((l) => l.color))).toEqual(new Set(["b:로그인-기능"]));
+    for (const st of s.stations) expect(st.x + st.r).toBeLessThanOrEqual(320);
+    for (const t of s.tags) expect(t.x + t.width / 2).toBeLessThanOrEqual(320);
+    // 마지막 역 이름이 "고친 파일 N개"와 겹치지 않는다.
+    const names = s.texts.filter((t) => t.y === s.texts.find((x) => x.text.startsWith("고친"))!.y).sort((a, b) => a.x - b.x);
+    for (let i = 1; i < names.length; i++) {
+      const left = names[i - 1]!;
+      const right = names[i]!;
+      const leftEnd = left.anchor === "start" ? left.x + textWidth(left.text, 13) : left.x + textWidth(left.text, 13) / 2;
+      expect(leftEnd).toBeLessThanOrEqual(right.x - textWidth(right.text, 13) / 2);
+    }
+  });
+
   it("홈은 역을 5개까지 그리고 나머지는 접는다", () => {
     const many = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => c(n));
     const s = home(view({ currentCommits: many, currentMore: 2 }), 1600);
@@ -67,7 +82,7 @@ describe("홈 두 줄 노선도(같은 배치 함수, D-090)", () => {
   });
 
   it("홈 단추로 겹칠 때는 이전 N개를 SVG 글자로 그리지 않는다", () => {
-    const s = layoutHorizontal(view({ currentCommits: [c(1), c(2), c(3)] }), 420, "home", { ...labels, interactiveFold: true });
+    const s = layoutHorizontal(view({ currentCommits: [c(1), c(2), c(3)], currentMore: 2 }), 420, "home", { ...labels, interactiveFold: true });
     expect(s.fold).not.toBeNull();
     expect(s.texts.find((t) => t.text.startsWith("이전"))).toBeUndefined();
   });

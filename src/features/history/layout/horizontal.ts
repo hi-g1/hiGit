@@ -36,6 +36,8 @@ const HOME_MAX_LABEL = 200;
 const HOME_RIGHT = 72;
 /** 접힌 앞쪽을 알리는 왼쪽 끝 점선 길이(D-141). */
 const FOLD_DASH = 24;
+/** 홈이 이보다 좁으면(800px·아주 크게) 두 줄 대신 지금 줄만 그린다. 기본 브랜치 소식은 옆 합치기 제안이 보인다. */
+const HOME_TWO_LINE_MIN = 460;
 /** "지금 여기" 이름표 높이와 좌우 여백. */
 const TAG_PAD = 16;
 
@@ -121,8 +123,9 @@ export function homeToRouteNodes(view: HomeMapView, shown: HomeMapView["currentC
  * 너비에 맞게 역을 놓는다. 역이 많아 모자라면 앞쪽 역을 접고, 왼쪽 끝 점선과 "이전 N개"로 알린다(D-141, D-155).
  * 홈은 역 5개까지·이름표 폭 간격·오른쪽 끝 "지금 여기" 이름표, 시작 화면은 지금 간격 규칙을 쓴다.
  */
-export function layoutHorizontal(view: HomeMapView, width: number, density: Density, labels: HorizontalLabels): Scene {
+export function layoutHorizontal(full: HomeMapView, width: number, density: Density, labels: HorizontalLabels): Scene {
   const spec = SPECS[density];
+  const view = density === "home" && full.twoLines && width < HOME_TWO_LINE_MIN ? { ...full, twoLines: false } : full;
   const scene = emptyScene(width, spec.height);
   if (view.currentCommits.length === 0) return scene;
   const mini = density === "mini";
@@ -258,10 +261,14 @@ export function layoutHorizontal(view: HomeMapView, width: number, density: Dens
   const tagWidth = (text: string) => textWidth(text, FONT) + TAG_PAD;
   /** 홈에서 "지금 여기" 이름표가 놓이는 역(고친 파일이 없으면 마지막 버전). */
   const hereOn = home ? (hasNow ? NOW : commits[commits.length - 1]!.oid) : null;
+  /** 홈에서 마지막 역 이름은 오른쪽 "고친 파일 N개" 글자 앞까지만. */
+  const lastRoom = (x: number) =>
+    home && hasNow ? Math.max(0, 2 * (nowX - x - textWidth(labels.changed(view.changedFiles), FONT) / 2 - 8)) : Infinity;
   commits.forEach((c, i) => {
     const x = xs[i]!;
     scene.stations.push(station(c.oid, { title: c.summary }));
-    if (spec.names) scene.texts.push({ x, y: nameY, text: fitText(c.summary, nameRoom(step), FONT), tone: "text", anchor: "middle" });
+    const room = i === commits.length - 1 ? Math.min(nameRoom(step), lastRoom(x)) : nameRoom(step);
+    if (spec.names) scene.texts.push({ x, y: nameY, text: fitText(c.summary, room, FONT), tone: "text", anchor: "middle" });
     if (!mini && view.upstreamOid === c.oid && view.upstreamLabel) {
       const text = view.upstreamLabel;
       const ty = spec.names === "above" ? y + 26 : y - 26;
