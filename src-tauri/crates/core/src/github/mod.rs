@@ -219,11 +219,14 @@ impl GitHubService {
             Ok(poll) => poll,
             Err(e) => {
                 let configured = e.kind() != HostingErrorKind::NotConfigured;
+                // 오류 뒤에도 간격을 지킨다(바로 다시 불러도 GitHub에 곧장 묻지 않게, D-121).
+                let now = self.now();
                 self.finish_poll(seq, |login| {
                     if !configured {
                         *login = None;
                     } else if let Some(pending) = login {
                         pending.in_flight = false;
+                        pending.next_poll = now + pending.interval;
                     }
                 });
                 return Err(from_hosting(&e, &[&device_code]));
@@ -677,6 +680,23 @@ mod tests {
         f.advance(901);
         assert_eq!(f.service.connect_poll().unwrap(), LoginPollView::Expired);
         assert_eq!(f.requests(), 1);
+    }
+
+    #[test]
+    fn failed_poll_still_waits_for_the_interval() {
+        let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
+        f.fake.push_json(200, &device_json(5));
+        f.fake.push_json(503, "unavailable");
+        f.service.connect_start().unwrap();
+        f.advance(5);
+        assert!(f.service.connect_poll().is_err());
+        assert_eq!(f.requests(), 2);
+        // 바로 다시 불러도 묻지 않는다.
+        assert_eq!(
+            f.service.connect_poll().unwrap(),
+            LoginPollView::Pending { interval_secs: 5 }
+        );
+        assert_eq!(f.requests(), 2);
     }
 
     #[test]
