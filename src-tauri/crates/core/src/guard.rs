@@ -11,7 +11,6 @@ use crate::view::RestoreKind;
 use crate::{CoreError, Result};
 
 /// 해시가 어디에 있어야 하는지.
-#[allow(dead_code)] // 계획 008 E11부터 액션이 쓴다.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Scope {
     /// 지금 위치이거나 그 조상(되돌리기·돌아가기).
@@ -19,14 +18,13 @@ pub(crate) enum Scope {
     /// 로컬 브랜치 끝에서 닿음(복사).
     BranchReachable,
     /// 로컬 브랜치 끝에서 닿거나 작업 내역에 버전으로 있음(태그·새 브랜치의 시작, 이때 파일 보기).
+    #[allow(dead_code)] // 계획 008 E16부터 쓴다.
     BranchOrActivity,
 }
 
-#[allow(dead_code)]
 const NO_VERSION: CoreError = CoreError::InvalidInput("없는 버전이에요");
 
 /// 화면이 준 해시가 버전(커밋)이고 `scope` 안에 있으면 그 `Oid`.
-#[allow(dead_code)]
 pub(crate) fn verified_commit(
     git: &dyn GitBackend,
     repo: &RepoPath,

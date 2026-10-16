@@ -21,7 +21,16 @@ pub(crate) enum OpKind {
 }
 
 impl OpKind {
-    #[allow(dead_code)] // 계획 008 E11부터 쓴다.
+    /// 충돌 해결 화면의 맥락.
+    pub(crate) fn context(self) -> crate::view::ConflictContext {
+        use crate::view::ConflictContext as C;
+        match self {
+            OpKind::CherryPick => C::CherryPick,
+            OpKind::Revert => C::Revert,
+            OpKind::Rebase => C::Rebase,
+        }
+    }
+
     pub(crate) fn git(self) -> git::OperationKind {
         match self {
             OpKind::CherryPick => git::OperationKind::CherryPick,
@@ -61,7 +70,6 @@ impl OpMarker {
     }
 }
 
-#[allow(dead_code)] // 계획 008 E11부터 쓴다.
 pub(crate) fn write(git_dir: &std::path::Path, key: &JournalKey, op: &OpMarker) -> Result<()> {
     marker::write(git_dir, Name::Operation, key, op)
 }

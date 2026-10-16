@@ -44,6 +44,10 @@ pub enum ActionInput {
     Sync(SyncInput),
     /// 지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097).
     Amend(AmendInput),
+    /// 고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다.
+    Revert(OidInput),
+    /// 다른 브랜치의 버전 하나를 지금 브랜치로 복사한다.
+    CherryPick(OidInput),
 }
 
 impl ActionInput {
@@ -72,6 +76,8 @@ impl ActionInput {
             ActionInput::Push => "push",
             ActionInput::Sync(_) => "sync",
             ActionInput::Amend(_) => "amend",
+            ActionInput::Revert(_) => "revert",
+            ActionInput::CherryPick(_) => "cherry-pick",
         }
     }
 
@@ -242,6 +248,13 @@ pub enum TakeOutSource {
     Parked { branch: String },
     /// 작업 내역의 백업 ref(stash 모양)나 맡긴 ref(D-085).
     Ref { refname: String },
+}
+
+/// 노선도에서 고른 버전 해시. core가 다시 확인한다(D-099).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OidInput {
+    pub oid: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

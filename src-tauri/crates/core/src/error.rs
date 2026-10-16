@@ -113,6 +113,10 @@ pub enum CoreError {
     #[error("지울 수 없는 브랜치입니다")]
     BranchProtected,
 
+    /// 버전에 남길 이름·이메일이 없다(git을 부르기 전에 알아챔).
+    #[error("이름과 이메일이 없습니다")]
+    IdentityMissing,
+
     /// 하려는 결과가 지금과 같다(빈 복사·이미 취소된 변경, 바뀐 것 없는 고치기).
     #[error("바뀌는 것이 없습니다")]
     NoChange,

@@ -91,7 +91,11 @@ export type ActionInput =
 /**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
 { id: "recover-parked" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput } | 
 /**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
-{ id: "amend"; input: AmendInput };
+{ id: "amend"; input: AmendInput } | 
+/**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
+{ id: "revert"; input: OidInput } | 
+/**  다른 브랜치의 버전 하나를 지금 브랜치로 복사한다. */
+{ id: "cherry-pick"; input: OidInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -101,7 +105,13 @@ export type ActionMetaView = {
 };
 
 /**  액션 실행 결과. */
-export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "amended"; shortOid: string; summary: string } | { kind: "switched"; branch: string; 
+export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "staged"; count: number } | { kind: "unstaged"; count: number } | { kind: "committed"; shortOid: string; summary: string } | { kind: "amended"; shortOid: string; summary: string } | 
+/**  고른 버전의 변경을 취소하는 새 버전을 만들었다. */
+{ kind: "reverted"; shortOid: string; summary: string } | 
+/**  고른 버전을 지금 브랜치로 복사했다. */
+{ kind: "picked"; shortOid: string; summary: string } | 
+/**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
+{ kind: "operationConflicts"; context: ConflictContext; paths: string[] } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
 parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
 /**  겹친 파일. 비어 있지 않으면 올리지 않았다. */
@@ -476,6 +486,11 @@ export type NameProblem = "empty" |
 "invalid" | 
 /**  같은 이름(대소문자 무시)의 로컬 브랜치가 있다. */
 "exists";
+
+/**  노선도에서 고른 버전 해시. core가 다시 확인한다(D-099). */
+export type OidInput = {
+	oid: string,
+};
 
 /**  오래 걸리는 작업의 진행(1초마다, D-080). 파일 이름이나 원격 주소는 담지 않는다. */
 export type OpProgress = {

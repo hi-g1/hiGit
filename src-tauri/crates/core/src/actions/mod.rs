@@ -11,6 +11,7 @@ mod init;
 pub(crate) mod merge;
 pub(crate) mod names;
 pub(crate) mod paths;
+mod pick;
 mod recover_parked;
 mod remote;
 mod restore;
@@ -27,6 +28,7 @@ pub use discard::DiscardAction;
 pub use ignore::IgnoreAction;
 pub use init::InitAction;
 pub use merge::{MergeAction, MergeIntoAction};
+pub use pick::PickAction;
 pub use recover_parked::RecoverParkedAction;
 pub use remote::{RemoteAction, SyncReport};
 pub use restore::RestoreAction;
@@ -90,6 +92,8 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(RemoteAction::push()))?;
     registry.register(Box::new(RemoteAction::sync()))?;
     registry.register(Box::new(AmendAction::new()))?;
+    registry.register(Box::new(PickAction::revert()))?;
+    registry.register(Box::new(PickAction::cherry_pick()))?;
     Ok(())
 }
 

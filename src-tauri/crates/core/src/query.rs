@@ -80,11 +80,7 @@ impl Queries {
             active: context.is_some(),
             context: match &context {
                 Some(Context::Unpark(_)) => ConflictContext::Unpark,
-                Some(Context::Operation(op)) => match op.kind {
-                    OpKind::CherryPick => ConflictContext::CherryPick,
-                    OpKind::Revert => ConflictContext::Revert,
-                    OpKind::Rebase => ConflictContext::Rebase,
-                },
+                Some(Context::Operation(op)) => op.kind.context(),
                 _ => ConflictContext::Merge,
             },
             ours: None,

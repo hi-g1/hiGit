@@ -22,8 +22,8 @@ pub use conflict::{
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
-    FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, PathsInput, RestoreInput,
-    SwitchInput, SyncInput, TakeOutInput, TakeOutSource,
+    FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, OidInput, PathsInput,
+    RestoreInput, SwitchInput, SyncInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -420,6 +420,23 @@ pub enum ActionResult {
         short_oid: String,
         summary: String,
     },
+    /// 고른 버전의 변경을 취소하는 새 버전을 만들었다.
+    #[serde(rename_all = "camelCase")]
+    Reverted {
+        short_oid: String,
+        summary: String,
+    },
+    /// 고른 버전을 지금 브랜치로 복사했다.
+    #[serde(rename_all = "camelCase")]
+    Picked {
+        short_oid: String,
+        summary: String,
+    },
+    /// 복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등).
+    OperationConflicts {
+        context: ConflictContext,
+        paths: Vec<String>,
+    },
     #[serde(rename_all = "camelCase")]
     Switched {
         branch: String,
@@ -486,6 +503,13 @@ impl From<Outcome> for ActionResult {
                 ActionResult::Committed { short_oid, summary }
             }
             Outcome::Amended { short_oid, summary } => ActionResult::Amended { short_oid, summary },
+            Outcome::Reverted { short_oid, summary } => {
+                ActionResult::Reverted { short_oid, summary }
+            }
+            Outcome::Picked { short_oid, summary } => ActionResult::Picked { short_oid, summary },
+            Outcome::OperationConflicts { context, paths } => {
+                ActionResult::OperationConflicts { context, paths }
+            }
             Outcome::Switched(r) => ActionResult::Switched {
                 branch: r.branch,
                 parked_on: r.parked.map(|(b, _)| b),
@@ -653,6 +677,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::TagExists => ErrorCode::TagExists,
             CoreError::BranchProtected => ErrorCode::BranchProtected,
             CoreError::NoChange => ErrorCode::NoChange,
+            CoreError::IdentityMissing => ErrorCode::IdentityMissing,
             CoreError::Git(e) => e.kind().into(),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {
                 ErrorCode::Internal

@@ -98,6 +98,19 @@ pub enum Outcome {
         short_oid: String,
         summary: String,
     },
+    Reverted {
+        short_oid: String,
+        summary: String,
+    },
+    Picked {
+        short_oid: String,
+        summary: String,
+    },
+    /// 앱이 시작한 작업이 충돌·hook으로 멈췄다(표식이 남아 있다, D-101).
+    OperationConflicts {
+        context: crate::view::ConflictContext,
+        paths: Vec<String>,
+    },
     /// 브랜치를 갈아탔다(맡겨 두기 결과 포함).
     Switched(crate::actions::SwitchReport),
     BranchCreated {
@@ -165,7 +178,9 @@ impl Outcome {
         match self {
             Outcome::Ignored { .. } => JournalMode::Always,
             // 합치기를 시작만 했다. 마치기·그만두기가 따로 기록한다.
-            Outcome::MergeConflicts { .. } => JournalMode::Skip,
+            Outcome::MergeConflicts { .. } | Outcome::OperationConflicts { .. } => {
+                JournalMode::Skip
+            }
             Outcome::Synced(r) if r.merge_started => JournalMode::Skip,
             // 꺼내기는 HEAD를 바꾸지 않아 앞선 되돌리기를 막지 않는다.
             Outcome::TookOut => JournalMode::Skip,

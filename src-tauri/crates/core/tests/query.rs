@@ -266,7 +266,9 @@ fn action_input_tags_match_registry() {
             | ActionInput::Pull
             | ActionInput::Push
             | ActionInput::Sync(_)
-            | ActionInput::Amend(_) => {}
+            | ActionInput::Amend(_)
+            | ActionInput::Revert(_)
+            | ActionInput::CherryPick(_) => {}
         }
     }
     let paths = PathsInput {
@@ -323,6 +325,12 @@ fn action_input_tags_match_registry() {
         ActionInput::Amend(higit_core::view::AmendInput {
             expect_head: "a".repeat(40),
             message: None,
+        }),
+        ActionInput::Revert(higit_core::view::OidInput {
+            oid: "a".repeat(40),
+        }),
+        ActionInput::CherryPick(higit_core::view::OidInput {
+            oid: "a".repeat(40),
         }),
     ];
     samples.iter().for_each(every_variant);

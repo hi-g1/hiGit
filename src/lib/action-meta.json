@@ -130,5 +130,17 @@
     "glossaryId": "amend",
     "risk": "caution",
     "undo": "restoreRef"
+  },
+  {
+    "id": "revert",
+    "glossaryId": "revert",
+    "risk": "normal",
+    "undo": "restoreTree"
+  },
+  {
+    "id": "cherry-pick",
+    "glossaryId": "cherry-pick",
+    "risk": "normal",
+    "undo": "restoreTree"
   }
 ]

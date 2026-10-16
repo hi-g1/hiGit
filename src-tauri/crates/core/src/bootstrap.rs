@@ -166,6 +166,13 @@ pub fn init() -> Result<Core> {
 }
 
 impl Core {
+    /// **테스트 전용.** 앱 데이터 폴더처럼 `dir`의 키 파일을 쓴다(껐다 켠 뒤에도 같은 키).
+    #[doc(hidden)]
+    pub fn with_key_dir_for_tests(mut self, dir: &Path) -> Self {
+        self.set_key(crate::undo::JournalKey::load_or_create(dir));
+        self
+    }
+
     /// 테스트가 앱이 쓴 것과 같은 표식을 만들 때 쓴다.
     #[cfg(test)]
     pub(crate) fn key_for_tests(&self) -> &crate::undo::JournalKey {
