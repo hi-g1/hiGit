@@ -3,10 +3,10 @@
 이 파일만 읽고 이어서 할 수 있게 단계마다 갱신한다.
 
 ## 지금
-- 반복: **반복 5**(계획 014) 차례. UX 다듬기(계획 012)는 2026-10-17 끝(U29는 반복 5로). 4c(계획 013)·4b(계획 010)·다듬기(계획 011)는 2026-10-16 끝. 4b·4c·UX 다듬기의 끝 점검은 반복 5 끝 점검에 합친다(진행 방식).
-- 단계: 014-R20b 사용법 문서 끝(R20 6c352b7, R19 1fef5a1, R18 bbbcf2c, R17 0ec901d … R1 9634bd8. 점검 고침 de22a23·0bd411b·b2c4a18·d29fefe·ab42e98). 사용자 지시 반영: 계획 013·014(5fa36b2), MIT 라이선스(58663c5, D-174)
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: user guide as one html file
-- 다음 할 일: CI(1fef5a1, bundle 첫 실행) 확인 → R20~R20b push → 릴리스 워크플로 수동 실행(초안 확인 뒤 지움) → R21 v0.1.0 시험판
+- 반복: **로드맵 끝**. 반복 5(계획 014)와 v0.1.0 시험판까지 2026-10-17 끝. 다음 반복은 정해지지 않았다(첫 정식 배포 전 할 일은 roadmap "반복 5"의 넘긴 것).
+- 단계: 014-R21 v0.1.0 시험판 끝(R20b 33136ca, R20 6c352b7, R19 1fef5a1 … R1 9634bd8. 점검 고침 de22a23·0bd411b·b2c4a18·d29fefe·ab42e98). 릴리스: https://github.com/hi-g1/hiGit/releases/tag/v0.1.0
+- 마지막 커밋: (이 갱신과 같은 커밋) docs: record the v0.1.0 pre-release
+- 다음 할 일: 사람이 할 일(아래)을 기다린다. 특히 Git 상표와 앱 이름, GitHub OAuth App client id(저장소 변수 `HIGIT_GITHUB_CLIENT_ID`), 설치 파일·한글 입력·우클릭 메뉴 손 확인, 코드 서명 인증서.
 
 ## 진행 방식 (사용자 지시, 2026-10-15, 2026-10-16 고침)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: … → 4b → **4c(계획 013)** → **UX 다듬기(계획 012)** → **반복 5(계획 014)** → **v0.1.0 시험판**(GitHub 릴리스 "pre-release", 설치 파일과 사용법 `hiGit-guide.html`).
@@ -335,7 +335,7 @@
 - [x] 014-R19 릴리스 워크플로(이 커밋. 산출물은 새 액션 대신 러너의 `gh run download`로(쓰기 권한은 publish 하나, `actions: read`), 체크섬과 릴리스를 한 작업에서, 태그는 시험판(pre-release)·수동 실행은 초안, 사용법 html을 `hiGit-guide.html`로 붙임, 릴리스 본문은 `packaging/RELEASE_NOTES.md`. 수동 실행 한 번은 CI 초록 뒤에)
 - [x] 014-R20 마무리·점검(이 커밋. code-analyst 보안 위주 점검 한 번: 높음 0, 중간 2(열기 차단표 → 0bd411b, 릴리스 워크플로 태그 이름 셸 삽입 → de22a23), 낮음 5 중 3 고침(신뢰 창 호스트 `\` → b2c4a18, journal 옮기기 잠금·임시 파일 → d29fefe), 2는 받아들임(아래 "알려진 한계"). client id를 저장소 변수로(ab42e98). 릴리스 스크린샷 `docs/research/img/release/`(홈·버전 기록·설정, Ubuntu, 데모 저장소))
 - [x] 014-R20b 사용법 문서(이 커밋. `docs/guide/src/`의 원본과 그림(webp)을 `node scripts/guide-build.mjs`가 한 파일 `docs/guide/index.html`(336KB, 인터넷 없이 열림)로 묶음. 15장 중 12장에 Ubuntu 그림. English `en.html`은 그림 없이 같은 차례)
-- [ ] 014-R21 v0.1.0 시험판(GitHub 릴리스 "pre-release")
+- [x] 014-R21 v0.1.0 시험판(태그 `v0.1.0` = bf03405, 릴리스 워크플로 38950965006 초록, https://github.com/hi-g1/hiGit/releases/tag/v0.1.0 "hiGit 0.1.0 (서명 없는 시험판)", pre-release. 붙은 것: `hiGit_0.1.0_x64-setup.exe`, `hiGit_0.1.0_amd64.deb`, `hiGit_0.1.0_amd64.AppImage`, `hiGit-guide.html`, `SHA256SUMS`. 그 전에 수동 실행으로 초안을 만들어 확인하고 지움)
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
