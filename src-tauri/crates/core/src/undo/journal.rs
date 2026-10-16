@@ -322,7 +322,12 @@ impl Journal {
         }
         let tmp = self.path.with_extension("jsonl.tmp");
         let write = || -> std::io::Result<()> {
-            let mut file = std::fs::File::create(&tmp)?;
+            // 남아 있던 임시 파일(링크일 수도 있다)은 지우고 새로 만든다. 링크를 따라가 쓰지 않는다.
+            let _ = std::fs::remove_file(&tmp);
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&tmp)?;
             file.write_all(out.as_bytes())?;
             file.sync_data()?;
             drop(file);

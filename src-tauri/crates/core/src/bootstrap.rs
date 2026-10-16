@@ -712,8 +712,11 @@ impl Core {
             crate::undo::backup::KEEP_DAYS,
             crate::undo::backup::PRUNE_AT_ONCE,
         );
-        // 옛 journal 줄을 한 번 v2 사슬로 옮긴다(D-209). 실패해도 열기는 성공이고 파일은 그대로다.
-        let _ = self.executor.migrate_journal(self.git.as_ref(), &repo_path);
+        // 옛 journal 줄을 한 번 v2 사슬로 옮긴다(D-209). 덧붙이기와 겹치지 않게 저장소 잠금 안에서 한다.
+        // 다른 작업이 돌면(Busy) 다음에 열 때 한다. 실패해도 열기는 성공이고 파일은 그대로다.
+        let _ = self.with_repo_lock(&repo, |executor, ctx| {
+            executor.migrate_journal(ctx.git, &repo_path)
+        });
         Ok(ProjectOpenResult::Opened {
             repo: RepoInfo::from_path(&repo),
         })
