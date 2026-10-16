@@ -12,6 +12,7 @@ describe("원격 작업 목록", () => {
       "remote-branch-delete",
       "remote-branch-rename",
       "sync",
+      "tag-push",
     ]);
   });
 });

@@ -214,5 +214,11 @@
     "glossaryId": "remote-branch-rename",
     "risk": "danger",
     "undo": "irreversible"
+  },
+  {
+    "id": "tag-push",
+    "glossaryId": "tag-push",
+    "risk": "normal",
+    "undo": "nothing"
   }
 ]

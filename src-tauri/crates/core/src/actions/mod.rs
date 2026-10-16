@@ -26,7 +26,8 @@ mod rewrite;
 mod stage;
 pub(crate) mod stash;
 pub(crate) mod switch;
-mod tag;
+pub(crate) mod tag;
+mod tag_push;
 
 pub use amend::AmendAction;
 pub use branch_create::BranchCreateAction;
@@ -53,6 +54,7 @@ pub use stage::PathsAction;
 pub use stash::StashAction;
 pub use switch::{SwitchAction, SwitchReport};
 pub use tag::TagAction;
+pub use tag_push::TagPushAction;
 
 use git::RepoPath;
 
@@ -124,6 +126,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(ForcePushAction::new()))?;
     registry.register(Box::new(RemoteBranchAction::delete()))?;
     registry.register(Box::new(RemoteBranchAction::rename()))?;
+    registry.register(Box::new(TagPushAction::new()))?;
     Ok(())
 }
 

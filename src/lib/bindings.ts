@@ -100,7 +100,7 @@ export const commands = {
 /* Constants */
 export const OP_PROGRESS_EVENT = "op-progress" as const;
 
-export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename"] as const;
+export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push","remote-branch-delete","remote-branch-rename","tag-push"] as const;
 
 export const REPO_CHANGED_EVENT = "repo-changed" as const;
 
@@ -163,7 +163,9 @@ export type ActionInput_Deserialize =
 /**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
 { id: "remote-branch-delete"; input: RemoteBranchInput } | 
 /**  원격 브랜치 이름 바꾸기(D-130). */
-{ id: "remote-branch-rename"; input: RemoteBranchRenameInput };
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
+/**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
+{ id: "tag-push"; input: TagPushInput };
 
 export type ActionInput_Serialize = 
 /**  관리 시작. 입력 없음. */
@@ -219,7 +221,9 @@ export type ActionInput_Serialize =
 /**  원격 브랜치 지우기(D-130). 되돌릴 수 없어 확인 토큰이 입력에 묶인다. */
 { id: "remote-branch-delete"; input: RemoteBranchInput } | 
 /**  원격 브랜치 이름 바꾸기(D-130). */
-{ id: "remote-branch-rename"; input: RemoteBranchRenameInput };
+{ id: "remote-branch-rename"; input: RemoteBranchRenameInput } | 
+/**  태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다. */
+{ id: "tag-push"; input: TagPushInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -255,7 +259,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -1285,6 +1289,11 @@ export type TagDeleteInput = {
 
 export type TagInput = {
 	oid: string,
+	name: string,
+};
+
+/**  태그 올리기 입력(D-131). */
+export type TagPushInput = {
 	name: string,
 };
 

@@ -44,7 +44,7 @@ pub use input::{
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
     HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput,
     RemoteBranchInput, RemoteBranchRenameInput, RestoreInput, RewriteInput, RewriteKindInput,
-    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TakeOutInput,
+    RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput,
     TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
@@ -561,6 +561,9 @@ pub enum ActionResult {
         from: String,
         to: String,
     },
+    TagPushed {
+        name: String,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -639,6 +642,7 @@ impl From<Outcome> for ActionResult {
             Outcome::RemoteBranchRenamed { remote, from, to } => {
                 ActionResult::RemoteBranchRenamed { remote, from, to }
             }
+            Outcome::TagPushed { name } => ActionResult::TagPushed { name },
         }
     }
 }

@@ -183,7 +183,7 @@ pub(crate) fn upstream(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<U
 }
 
 /// upstream이 없을 때 쓸 원격: 하나뿐이면 그것, 여럿이면 origin.
-fn pick_remote(git: &dyn GitBackend, repo: &RepoPath) -> Result<String> {
+pub(crate) fn pick_remote(git: &dyn GitBackend, repo: &RepoPath) -> Result<String> {
     if let Some(up) = upstream(git, repo)? {
         return Ok(up.remote);
     }
@@ -254,6 +254,19 @@ impl Net<'_> {
                 branch: branch.to_string(),
                 src: src.clone(),
                 expect: expect.clone(),
+                auth,
+            },
+        )
+    }
+
+    /// 태그 하나를 올린다(D-131). 강제하지 않는다.
+    pub(crate) fn push_tag(&self, remote: &str, name: &str) -> Result<OpOutput> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        self.run(
+            auth,
+            &GitOp::PushTag {
+                remote: remote.to_string(),
+                name: name.to_string(),
                 auth,
             },
         )

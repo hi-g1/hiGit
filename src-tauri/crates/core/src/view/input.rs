@@ -72,6 +72,8 @@ pub enum ActionInput {
     RemoteBranchDelete(RemoteBranchInput),
     /// 원격 브랜치 이름 바꾸기(D-130).
     RemoteBranchRename(RemoteBranchRenameInput),
+    /// 태그 하나를 원격에 올린다(D-131). 덧붙이기만 해 확인이 없다.
+    TagPush(TagPushInput),
 }
 
 impl ActionInput {
@@ -114,6 +116,7 @@ impl ActionInput {
             ActionInput::ForcePush(_) => "force-push",
             ActionInput::RemoteBranchDelete(_) => "remote-branch-delete",
             ActionInput::RemoteBranchRename(_) => "remote-branch-rename",
+            ActionInput::TagPush(_) => "tag-push",
         }
     }
 
@@ -391,6 +394,13 @@ pub struct TagDeleteInput {
 #[serde(rename_all = "camelCase")]
 pub struct OidInput {
     pub oid: String,
+}
+
+/// 태그 올리기 입력(D-131).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPushInput {
+    pub name: String,
 }
 
 /// 원격 브랜치 지우기 입력(D-130). 확인 창이 본 추적 ref 값(`expect_tip`)일 때만 지운다.

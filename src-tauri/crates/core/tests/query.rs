@@ -280,7 +280,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::BranchRename(_)
             | ActionInput::ForcePush(_)
             | ActionInput::RemoteBranchDelete(_)
-            | ActionInput::RemoteBranchRename(_) => {}
+            | ActionInput::RemoteBranchRename(_)
+            | ActionInput::TagPush(_) => {}
         }
     }
     let paths = PathsInput {
@@ -395,6 +396,7 @@ fn action_input_tags_match_registry() {
             to: "곁".into(),
             expect_tip: "a".repeat(40),
         }),
+        ActionInput::TagPush(higit_core::view::TagPushInput { name: "v1".into() }),
     ];
     samples.iter().for_each(every_variant);
 

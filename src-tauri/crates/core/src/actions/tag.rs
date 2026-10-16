@@ -36,7 +36,7 @@ impl TagAction {
 }
 
 /// 태그 이름 검사(D-104): 앞뒤 공백을 뗀 뒤 255바이트 이하, `-`로 시작하지 않고 git의 이름 규칙에 맞음.
-fn tag_name(git: &dyn git::GitBackend, raw: &str) -> Result<String> {
+pub(crate) fn tag_name(git: &dyn git::GitBackend, raw: &str) -> Result<String> {
     let name = raw.trim();
     crate::actions::names::validate_ref_like(name)?;
     if !git.check_tag_name(name)? {
