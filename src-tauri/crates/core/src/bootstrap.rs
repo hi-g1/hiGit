@@ -937,12 +937,55 @@ fn clone_key(folder: &Path) -> Option<PathBuf> {
 }
 
 /// 이번 복제가 만든 대상 폴더만 지운다(링크가 아니고 바로 그 부모 아래일 때).
+/// 확인과 복제 사이에 다른 프로그램이 같은 이름의 폴더를 만들었을 수 있으므로, git이 만든
+/// 모양(`.git`이 있거나 비어 있음)일 때만 지운다.
 fn remove_created_target(parent: &Path, target: &Path) {
     let Ok(meta) = std::fs::symlink_metadata(target) else {
         return;
     };
-    if meta.is_dir() && !meta.file_type().is_symlink() && target.parent() == Some(parent) {
+    if !meta.is_dir() || meta.file_type().is_symlink() || target.parent() != Some(parent) {
+        return;
+    }
+    if std::fs::symlink_metadata(target.join(".git")).is_ok() {
         let _ = std::fs::remove_dir_all(target);
+    } else {
+        // 비어 있을 때만 지워진다.
+        let _ = std::fs::remove_dir(target);
+    }
+}
+
+#[cfg(test)]
+mod clone_cleanup_tests {
+    use super::remove_created_target;
+
+    #[test]
+    fn removes_only_git_made_folders() {
+        let parent = tempfile::tempdir().unwrap();
+        let p = parent.path();
+        let made = p.join("made");
+        std::fs::create_dir_all(made.join(".git").join("objects")).unwrap();
+        std::fs::write(made.join("a.txt"), "x").unwrap();
+        remove_created_target(p, &made);
+        assert!(!made.exists());
+
+        let empty = p.join("empty");
+        std::fs::create_dir(&empty).unwrap();
+        remove_created_target(p, &empty);
+        assert!(!empty.exists());
+
+        // 다른 프로그램이 그사이 만든 폴더(.git 없음, 파일 있음)는 남긴다.
+        let other = p.join("other");
+        std::fs::create_dir(&other).unwrap();
+        std::fs::write(other.join("mine.txt"), "내 것").unwrap();
+        remove_created_target(p, &other);
+        assert!(other.join("mine.txt").is_file());
+
+        // 다른 부모 아래 대상은 건드리지 않는다.
+        let elsewhere = tempfile::tempdir().unwrap();
+        let foreign = elsewhere.path().join("x");
+        std::fs::create_dir_all(foreign.join(".git")).unwrap();
+        remove_created_target(p, &foreign);
+        assert!(foreign.exists());
     }
 }
 
