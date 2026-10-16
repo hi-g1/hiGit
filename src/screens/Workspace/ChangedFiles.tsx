@@ -28,13 +28,26 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
   const stage = useStageMutation(folder);
 
   const included = files.filter((f) => f.staged).length;
-  const all = included === files.length;
+  // 넣은 파일이 없으면 버전 저장이 모두 넣고 저장하므로 모두 켠 모양으로 보인다(D-142, D-157). index는 그대로.
+  const virtualAll = files.length > 0 && included === 0;
+  const all = included === files.length || virtualAll;
   const toggleAll = () =>
     stage.mutate(
-      all
-        ? { include: false, paths: files.flatMap(pathsOf) }
-        : { include: true, paths: files.filter((f) => !f.staged).map((f) => f.path) },
+      virtualAll
+        ? { include: true, paths: files.map((f) => f.path) }
+        : all
+          ? { include: false, paths: files.flatMap(pathsOf) }
+          : { include: true, paths: files.filter((f) => !f.staged).map((f) => f.path) },
     );
+  /** 모두 켠 모양에서 하나를 끄면 나머지를 넣는다(하나뿐이면 그것을 넣어 확정한다). */
+  const toggleOne = (file: ChangedFile) => {
+    if (!virtualAll) {
+      stage.mutate({ include: !file.staged, paths: pathsOf(file) });
+      return;
+    }
+    const others = files.filter((f) => f.path !== file.path).map((f) => f.path);
+    stage.mutate({ include: true, paths: others.length > 0 ? others : [file.path] });
+  };
 
   // ↑↓로 비교할 파일을 옮긴다(단축키 표의 fileList 범위, D-056).
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -53,7 +66,7 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
         <TermTooltip id={all ? "unstage" : "stage"}>
           <Checkbox
             checked={all}
-            indeterminate={included > 0 && !all}
+            indeterminate={included > 0 && included < files.length}
             disabled={stage.isPending}
             aria-label={`${all ? leaveOutLabel : includeLabel}: ${m.changedFilesCount(files.length)}`}
             onChange={toggleAll}
@@ -75,12 +88,12 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
               key={`${file.origPath ?? ""}→${file.path}`}
               className={`${rowStyles.row} ${styles.two} ${isSelected ? styles.selected : ""}`}
             >
-              <TermTooltip id={file.staged ? "unstage" : "stage"}>
+              <TermTooltip id={file.staged || virtualAll ? "unstage" : "stage"}>
                 <Checkbox
-                  checked={file.staged}
+                  checked={file.staged || virtualAll}
                   disabled={stage.isPending}
-                  aria-label={`${file.staged ? leaveOutLabel : includeLabel}: ${file.path}`}
-                  onChange={() => stage.mutate({ include: !file.staged, paths: pathsOf(file) })}
+                  aria-label={`${file.staged || virtualAll ? leaveOutLabel : includeLabel}: ${file.path}`}
+                  onChange={() => toggleOne(file)}
                 />
               </TermTooltip>
               <button

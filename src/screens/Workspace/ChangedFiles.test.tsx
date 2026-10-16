@@ -54,6 +54,28 @@ describe("ChangedFiles", () => {
     expect(screen.getByText("옛/이름.txt에서 이름 바꿈")).toBeInTheDocument();
   });
 
+  it("넣은 파일이 0개면 모두 켠 모양이고 하나를 끄면 나머지를 넣는다(D-142)", async () => {
+    const user = userEvent.setup();
+    renderList([file("a.txt", false), file("b.txt", false), file("c.txt", false)]);
+    for (const box of screen.getAllByRole("checkbox")) expect(box).toBeChecked();
+    const head = screen.getByRole("checkbox", { name: /고친 파일 3개$/ });
+    expect(head).toHaveProperty("indeterminate", false);
+    await user.click(screen.getByRole("checkbox", { name: "이번 버전에서 빼기: b.txt" }));
+    expect(api.executeAction).toHaveBeenCalledTimes(1);
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "stage", input: { paths: ["a.txt", "c.txt"] } });
+  });
+
+  it("파일 하나뿐이면 그 파일을 넣어 확정하고, 머리 체크는 모두 넣는다", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderList([file("한 개.txt", false)]);
+    await user.click(screen.getByRole("checkbox", { name: "이번 버전에서 빼기: 한 개.txt" }));
+    expect(api.executeAction).toHaveBeenLastCalledWith("/repo", { id: "stage", input: { paths: ["한 개.txt"] } });
+    unmount();
+    renderList([file("a", false), file("b", false)]);
+    await user.click(screen.getByRole("checkbox", { name: /고친 파일 2개$/ }));
+    expect(api.executeAction).toHaveBeenLastCalledWith("/repo", { id: "stage", input: { paths: ["a", "b"] } });
+  });
+
   it("체크하면 이번 버전에 넣고, 해제하면 뺀다", async () => {
     const user = userEvent.setup();
     renderList([file("한글 파일.txt", false), file("b.md", true)]);
@@ -107,7 +129,7 @@ describe("ChangedFiles", () => {
 
   it("실패하면 이유를 보여준다", async () => {
     const user = userEvent.setup();
-    renderList([file("a", false)]);
+    renderList([file("a", false), file("b", true)]);
     vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "busy", detail: null }));
     await user.click(screen.getByRole("checkbox", { name: "이번 버전에 넣기: a" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("다른 작업이 끝날 때까지 기다려 주세요.");
