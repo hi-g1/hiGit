@@ -123,6 +123,7 @@ impl Action for PublishAction {
             name,
             description,
             private: i.visibility == Visibility::Private,
+            owner: hosting::RepoOwner::Me,
         };
         let created = ctx
             .github

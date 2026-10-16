@@ -40,20 +40,36 @@ impl fmt::Debug for LoginChallenge {
     }
 }
 
-/// device flow로 요청할 권한(D-109, D-135). 폼의 `scope` 값을 이것만 만든다.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LoginScope {
-    /// 비공개 저장소 올리기·검토 요청에 필요한 최소.
-    Repo,
-    /// 거기에 `.github/workflows` 바꾸기를 더한다(사용자가 고를 때만).
-    RepoWorkflow,
+/// device flow로 요청할 권한 묶음(D-109, D-135, D-186). 폼의 `scope` 값은 이것만 만든다.
+/// 늘 `repo`(비공개 저장소 올리기·검토 요청에 필요한 최소)를 넣고, 사람이 고를 때만 더한다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LoginScopes {
+    /// `.github/workflows` 바꾸기(`workflow`).
+    pub workflow: bool,
+    /// 계정 이메일 읽기(`user:email`).
+    pub email: bool,
 }
 
-impl LoginScope {
+impl LoginScopes {
     pub fn form_value(self) -> &'static str {
-        match self {
-            Self::Repo => "repo",
-            Self::RepoWorkflow => "repo workflow",
+        match (self.workflow, self.email) {
+            (false, false) => "repo",
+            (true, false) => "repo workflow",
+            (false, true) => "repo user:email",
+            (true, true) => "repo workflow user:email",
+        }
+    }
+
+    /// 받은 `scope`(쉼표·공백 목록)에서 더한 권한 둘을 읽는다.
+    pub fn from_granted(scope: &str) -> Self {
+        let has = |name: &str| {
+            scope
+                .split(|c: char| c == ',' || c.is_whitespace())
+                .any(|s| s == name)
+        };
+        Self {
+            workflow: has("workflow"),
+            email: has("user:email") || has("user"),
         }
     }
 }
@@ -69,10 +85,10 @@ pub enum LoginPoll {
     },
     Expired,
     Denied,
-    /// 토큰과, 받은 권한에 `workflow`가 들었는지.
+    /// 토큰과, 받은 권한 중 더한 것.
     Granted {
         token: SecretString,
-        workflow: bool,
+        scopes: LoginScopes,
     },
 }
 
@@ -86,10 +102,10 @@ impl fmt::Debug for LoginPoll {
                 .finish(),
             Self::Expired => f.write_str("Expired"),
             Self::Denied => f.write_str("Denied"),
-            Self::Granted { workflow, .. } => f
+            Self::Granted { scopes, .. } => f
                 .debug_struct("Granted")
                 .field("token", &"<가림>")
-                .field("workflow", workflow)
+                .field("scopes", scopes)
                 .finish(),
         }
     }
@@ -217,15 +233,11 @@ pub(crate) fn parse_token(body: &[u8], current_interval: u64) -> Result<LoginPol
     if !bearer || !valid_opaque(&token, TOKEN_MAX) {
         return Err(bad("unexpected token"));
     }
-    // 받은 권한에서는 `workflow`가 있는지만 본다. refresh_token 등 다른 값은 읽지 않고 버린다.
-    let workflow = parsed.scope.as_deref().is_some_and(|scope| {
-        scope
-            .split(|c: char| c == ',' || c.is_whitespace())
-            .any(|s| s == "workflow")
-    });
+    // 받은 권한에서는 더한 권한 둘만 본다. refresh_token 등 다른 값은 읽지 않고 버린다.
+    let scopes = LoginScopes::from_granted(parsed.scope.as_deref().unwrap_or_default());
     Ok(LoginPoll::Granted {
         token: SecretString::from(token),
-        workflow,
+        scopes,
     })
 }
 
@@ -270,6 +282,30 @@ fn valid_user_code(code: &str) -> bool {
 /// 공백·제어 문자가 없는 ASCII, 1~`max`자.
 fn valid_opaque(value: &str, max: usize) -> bool {
     !value.is_empty() && value.len() <= max && value.bytes().all(|b| b.is_ascii_graphic())
+}
+
+#[cfg(test)]
+mod scope_tests {
+    use super::LoginScopes;
+
+    #[test]
+    fn four_form_values_and_granted_parsing() {
+        let s = |workflow, email| LoginScopes { workflow, email };
+        assert_eq!(s(false, false).form_value(), "repo");
+        assert_eq!(s(true, false).form_value(), "repo workflow");
+        assert_eq!(s(false, true).form_value(), "repo user:email");
+        assert_eq!(s(true, true).form_value(), "repo workflow user:email");
+        for (granted, want) in [
+            ("repo", s(false, false)),
+            ("repo,workflow", s(true, false)),
+            ("repo user:email", s(false, true)),
+            ("user:email,workflow,repo", s(true, true)),
+            ("", s(false, false)),
+            ("workflows,user:emails", s(false, false)),
+        ] {
+            assert_eq!(LoginScopes::from_granted(granted), want, "{granted}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -378,11 +414,11 @@ mod tests {
                "refresh_token":"ghr_x"}"#,
         )
         .unwrap();
-        let LoginPoll::Granted { token, workflow } = &granted else {
+        let LoginPoll::Granted { token, scopes } = &granted else {
             panic!("{granted:?}");
         };
         assert_eq!(token.expose_secret(), "gho_TESTSECRET0123456789");
-        assert!(!workflow);
+        assert_eq!(*scopes, LoginScopes::default());
         assert!(!format!("{granted:?}").contains("TESTSECRET"));
         // 받은 권한에서 workflow가 있는지만 본다(쉼표·공백 목록, D-135).
         for (scope, want) in [
@@ -395,10 +431,10 @@ mod tests {
             let body = format!(
                 r#"{{"access_token":"gho_TESTSECRET0123456789","token_type":"bearer","scope":"{scope}"}}"#
             );
-            let Ok(LoginPoll::Granted { workflow, .. }) = poll(&body) else {
+            let Ok(LoginPoll::Granted { scopes, .. }) = poll(&body) else {
                 panic!("{scope}");
             };
-            assert_eq!(workflow, want, "{scope}");
+            assert_eq!(scopes.workflow, want, "{scope}");
         }
 
         let bad_cases = [

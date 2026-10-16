@@ -11,12 +11,22 @@ pub const REPO_DESCRIPTION_MAX_BYTES: usize = 350;
 /// 저장소 목록 한 쪽의 최대 수.
 pub const REPO_PAGE_MAX: u32 = 50;
 
+/// 저장소를 만들 곳(D-184).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RepoOwner {
+    /// 토큰 주인의 계정.
+    Me,
+    /// 조직(이름은 `valid_owner`).
+    Org(String),
+}
+
 /// 새 저장소(빈 저장소, 초기 파일 없음).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewRepo {
     pub name: String,
     pub description: String,
     pub private: bool,
+    pub owner: RepoOwner,
 }
 
 /// 만든 저장소(소유자·이름만).
@@ -34,6 +44,8 @@ pub struct RepoSummary {
     pub private: bool,
     /// 마지막으로 올린 시각(unix 초). 없으면 `None`.
     pub pushed_at: Option<i64>,
+    /// 소유자가 조직인지(`owner.type == "Organization"`, D-184).
+    pub owner_is_org: bool,
 }
 
 /// 저장소 정보(D-177). 합치기 방법 칸이 응답에 없으면 `None`(쓰기 권한이 없으면 빠질 수 있다).
@@ -67,6 +79,8 @@ struct NewRepoJson<'a> {
 #[derive(Deserialize)]
 struct OwnerJson {
     login: String,
+    #[serde(rename = "type", default)]
+    kind: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -123,6 +137,11 @@ fn bad(detail: &str) -> HostingError {
 pub(crate) fn check_new_repo(new: &NewRepo) -> Result<(), HostingError> {
     if !valid_name(&new.name) {
         return Err(invalid("repository name"));
+    }
+    if let RepoOwner::Org(org) = &new.owner
+        && !valid_owner(org)
+    {
+        return Err(invalid("organization name"));
     }
     if new.description.len() > REPO_DESCRIPTION_MAX_BYTES
         || new.description.chars().any(char::is_control)
@@ -195,6 +214,7 @@ pub(crate) fn parse_list(body: &[u8]) -> Result<Vec<RepoSummary>, HostingError> 
         .filter(|r| valid_owner(&r.owner.login) && valid_name(&r.name))
         .map(|r| RepoSummary {
             pushed_at: r.pushed_at.as_deref().and_then(crate::pr::parse_time),
+            owner_is_org: r.owner.kind.as_deref() == Some("Organization"),
             owner: r.owner.login,
             name: r.name,
             private: r.private,
@@ -211,6 +231,7 @@ mod tests {
             name: name.into(),
             description: description.into(),
             private: true,
+            owner: RepoOwner::Me,
         }
     }
 
@@ -331,7 +352,7 @@ mod tests {
     fn list_skips_odd_items_and_reads_times() {
         let body = br#"[
             {"name":"a","owner":{"login":"me"},"private":false,"pushed_at":"2026-10-02T00:00:00Z","description":null},
-            {"name":"b","owner":{"login":"org-1"},"private":true,"pushed_at":null},
+            {"name":"b","owner":{"login":"org-1","type":"Organization"},"private":true,"pushed_at":null},
             {"name":"../c","owner":{"login":"me"},"private":false,"pushed_at":null}
         ]"#;
         let list = parse_list(body).unwrap();
@@ -341,5 +362,6 @@ mod tests {
             crate::pr::parse_time("2026-10-02T00:00:00Z")
         );
         assert!(list[1].private && list[1].pushed_at.is_none());
+        assert!(!list[0].owner_is_org && list[1].owner_is_org);
     }
 }

@@ -192,10 +192,9 @@ impl GitHubService {
         };
         let challenge = self
             .provider
-            .begin_login(if workflow {
-                hosting::LoginScope::RepoWorkflow
-            } else {
-                hosting::LoginScope::Repo
+            .begin_login(hosting::LoginScopes {
+                workflow,
+                email: false,
             })
             .map_err(|e| from_hosting(&e, &[]))?;
         let now = self.now();
@@ -270,8 +269,8 @@ impl GitHubService {
                 self.finish_poll(seq, |login| *login = None);
                 Ok(LoginPollView::Denied)
             }
-            LoginPoll::Granted { token, workflow } => {
-                self.complete_login(seq, token, &device_code, workflow)
+            LoginPoll::Granted { token, scopes } => {
+                self.complete_login(seq, token, &device_code, scopes.workflow)
             }
         }
     }

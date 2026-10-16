@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+mod account;
 mod api;
 mod config;
 mod error;
@@ -19,11 +20,12 @@ mod repo;
 pub mod testing;
 mod ureq_transport;
 
+pub use account::{ACCOUNT_EMAILS_MAX, AccountEmail};
 pub use config::{GITHUB_API_BASE, GITHUB_WEB_BASE, GitHubConfig, valid_client_id};
 pub use error::{DETAIL_MAX_CHARS, HostingError, HostingErrorKind, ValidationKind};
 pub use github::GitHub;
 pub use http::{HttpRequest, HttpResponse, HttpTransport, Method, TransportError};
-pub use login::{HostUser, LoginChallenge, LoginPoll, LoginScope};
+pub use login::{HostUser, LoginChallenge, LoginPoll, LoginScopes};
 pub use pr::{
     BRANCH_MAX_BYTES, ChecksSummary, Mergeable, NewPr, PR_BODY_MAX_BYTES, PR_PAGE_MAX,
     PR_TITLE_MAX_BYTES, PrDetail, PrPage, PrQuery, PrState, PrStateFilter, PullRequest,
@@ -35,7 +37,7 @@ pub use pr_write::{
 };
 pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
 pub use repo::{
-    CreatedRepo, NewRepo, REPO_DESCRIPTION_MAX_BYTES, REPO_PAGE_MAX, RepoInfo, RepoPage,
+    CreatedRepo, NewRepo, REPO_DESCRIPTION_MAX_BYTES, REPO_PAGE_MAX, RepoInfo, RepoOwner, RepoPage,
     RepoSummary,
 };
 pub use secrecy::{ExposeSecret, SecretString};
@@ -48,7 +50,7 @@ pub trait HostingProvider: Send + Sync {
     /// 원격 주소가 이 서비스의 저장소면 저장소.
     fn detect(&self, url: &str) -> Option<RemoteRepo>;
     /// device flow 시작: 사람이 브라우저에 넣을 코드를 받는다.
-    fn begin_login(&self, scope: LoginScope) -> Result<LoginChallenge, HostingError>;
+    fn begin_login(&self, scopes: LoginScopes) -> Result<LoginChallenge, HostingError>;
     /// 승인됐는지 한 번 묻는다. 간격은 부른 쪽이 지킨다.
     fn poll_login(&self, challenge: &LoginChallenge) -> Result<LoginPoll, HostingError>;
     /// 토큰 주인을 확인한다.
@@ -74,7 +76,8 @@ pub trait HostingProvider: Send + Sync {
         repo: &RemoteRepo,
         new: &NewPr,
     ) -> Result<PullRequest, HostingError>;
-    /// 토큰 주인의 계정에 빈 저장소를 만든다(D-132). 입력이 규칙에 맞지 않으면 보내지 않는다.
+    /// 토큰 주인의 계정이나 고른 조직에 빈 저장소를 만든다(D-132, D-184). 입력이 규칙에 맞지 않으면
+    /// 보내지 않고, 조직이면 응답 소유자가 그 조직이어야 한다.
     fn create_repo(&self, token: &SecretString, new: &NewRepo)
     -> Result<CreatedRepo, HostingError>;
     /// 토큰 주인이 볼 수 있는 저장소 한 쪽(최근에 올린 것부터, D-133).
@@ -127,6 +130,8 @@ pub trait HostingProvider: Send + Sync {
     ) -> Result<RemoteRepo, HostingError>;
     /// 저장소를 읽을 수 있는지(포크 준비 확인). 404면 거짓.
     fn repo_exists(&self, token: &SecretString, repo: &RemoteRepo) -> Result<bool, HostingError>;
+    /// 계정에 등록된 이메일(`user:email` 권한 필요, D-186). 주소는 core 밖으로 내보내지 않는다.
+    fn account_emails(&self, token: &SecretString) -> Result<Vec<AccountEmail>, HostingError>;
     /// 브랜치를 서버가 보호하는지(D-183 ④). 볼 수 없거나 없으면 `None`.
     fn branch_protected(
         &self,

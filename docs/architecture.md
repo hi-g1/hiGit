@@ -339,13 +339,14 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 pub trait HostingProvider: Send + Sync {          // 블로킹. core가 작업 스레드에서 부른다
     fn id(&self) -> &'static str;                  // "github"
     fn detect(&self, url: &str) -> Option<RemoteRepo>; // 호스트가 정확히 github.com일 때만
-    fn begin_login(&self, scope: LoginScope) -> Result<LoginChallenge, HostingError>; // device flow 시작(Repo | RepoWorkflow, D-135)
+    fn begin_login(&self, scopes: LoginScopes) -> Result<LoginChallenge, HostingError>; // device flow 시작. LoginScopes { workflow, email }의 폼 값은 repo · repo workflow · repo user:email · repo workflow user:email(D-135, D-186)
     fn poll_login(&self, c: &LoginChallenge) -> Result<LoginPoll, HostingError>;
     fn current_user(&self, token: &SecretString) -> Result<HostUser, HostingError>;
     fn list_prs(&self, token: &SecretString, repo: &RemoteRepo, q: &PrQuery) -> Result<PrPage, HostingError>;
     fn pr_detail(&self, token: &SecretString, repo: &RemoteRepo, number: u64) -> Result<PrDetail, HostingError>;
     fn create_pr(&self, token: &SecretString, repo: &RemoteRepo, new: &NewPr) -> Result<PullRequest, HostingError>;
-    fn create_repo(&self, token: &SecretString, new: &NewRepo) -> Result<CreatedRepo, HostingError>; // POST /user/repos, 빈 저장소(D-132)
+    fn create_repo(&self, token: &SecretString, new: &NewRepo) -> Result<CreatedRepo, HostingError>; // 빈 저장소. RepoOwner::Me는 POST /user/repos, Org(이름)는 POST /orgs/{org}/repos이고 응답 소유자가 그 조직이어야 함(D-132, D-184)
+    fn account_emails(&self, token: &SecretString) -> Result<Vec<AccountEmail>, HostingError>; // GET user/emails 100개, Debug가 주소를 가림(D-186)
     fn list_repos(&self, token: &SecretString, page: u32, per_page: u32) -> Result<RepoPage, HostingError>; // 50개씩(D-133)
     fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError>; // 올릴 권한·합치기 방법·포크의 원래 저장소(D-177)
     fn branch_protected(&self, token: &SecretString, repo: &RemoteRepo, branch: &str) -> Result<Option<bool>, HostingError>; // 403·404는 None(D-183)
@@ -358,7 +359,7 @@ pub trait HostingProvider: Send + Sync {          // 블로킹. core가 작업 �
 }
 // NewPr.head_owner가 있으면 head를 "<소유자>:<브랜치>"로 보낸다(포크 경로). head 이름 자체에는 ':'를 받지 않는다.
 // pr_detail은 리뷰 요약(사람마다 마지막 승인·변경 요청, 100개 넘거나 볼 수 없으면 None)과 댓글 수를 함께 읽는다(D-134).
-// LoginPoll::Granted { token, workflow }: 받은 권한에 workflow가 들었는지만 본다.
+// LoginPoll::Granted { token, scopes }: 받은 권한에서 workflow·user:email(또는 user)만 읽는다.
 
 pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, 시험은 testing::FakeTransport
     fn send(&self, req: &HttpRequest) -> Result<HttpResponse, TransportError>;

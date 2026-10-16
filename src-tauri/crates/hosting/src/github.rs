@@ -5,17 +5,18 @@ use std::sync::Arc;
 use secrecy::{ExposeSecret, SecretString};
 
 use crate::HostingProvider;
+use crate::account::{self, ACCOUNT_EMAILS_MAX, AccountEmail};
 use crate::api::{self, API_ACCEPT, API_VERSION, API_VERSION_HEADER, USER_AGENT, encode};
 use crate::config::GitHubConfig;
 use crate::error::{HostingError, HostingErrorKind};
 use crate::http::{HttpRequest, HttpResponse, HttpTransport, Method};
-use crate::login::{self, HostUser, LoginChallenge, LoginPoll, LoginScope};
+use crate::login::{self, HostUser, LoginChallenge, LoginPoll, LoginScopes};
 use crate::pr::{
     self, CHECK_RUNS_PAGE, NewPr, PR_PAGE_MAX, PrDetail, PrPage, PrQuery, PullRequest,
 };
 use crate::pr_write::{self, Comment, MergeRequest, MergeResult};
 use crate::remote::{RemoteRepo, parse_remote, valid_name, valid_owner};
-use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoInfo, RepoPage};
+use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoInfo, RepoOwner, RepoPage};
 
 const DEVICE_GRANT: &str = "urn:ietf:params:oauth:grant-type:device_code";
 /// 같은 API 주소 안의 리디렉트를 따르는 최대 횟수.
@@ -169,11 +170,11 @@ impl HostingProvider for GitHub {
         Self::detect(url)
     }
 
-    fn begin_login(&self, scope: LoginScope) -> Result<LoginChallenge, HostingError> {
+    fn begin_login(&self, scopes: LoginScopes) -> Result<LoginChallenge, HostingError> {
         let client_id = self.client_id()?;
         let body = self.login_post(
             "/login/device/code",
-            &[("client_id", client_id), ("scope", scope.form_value())],
+            &[("client_id", client_id), ("scope", scopes.form_value())],
         )?;
         let expected_uri = format!("{}/login/device", self.config.web_base);
         login::parse_device_code(&body, &expected_uri)
@@ -295,8 +296,29 @@ impl HostingProvider for GitHub {
     ) -> Result<CreatedRepo, HostingError> {
         repo::check_new_repo(new)?;
         let body = repo::new_repo_json(new)?;
-        let res = self.api_write(Method::Post, token, "/user/repos", Some(body))?;
-        repo::parse_created(&res.body)
+        let path = match &new.owner {
+            RepoOwner::Me => "/user/repos".to_owned(),
+            RepoOwner::Org(org) => format!("/orgs/{}/repos", encode(org)),
+        };
+        let res = self.api_write(Method::Post, token, &path, Some(body))?;
+        let created = repo::parse_created(&res.body)?;
+        if let RepoOwner::Org(org) = &new.owner
+            && !created.owner.eq_ignore_ascii_case(org)
+        {
+            return Err(HostingError::with_detail(
+                HostingErrorKind::BadResponse,
+                "unexpected repository owner",
+            ));
+        }
+        Ok(created)
+    }
+
+    fn account_emails(&self, token: &SecretString) -> Result<Vec<AccountEmail>, HostingError> {
+        let res = self.api_get(
+            token,
+            &format!("/user/emails?per_page={ACCOUNT_EMAILS_MAX}"),
+        )?;
+        account::parse_emails(&res.body)
     }
 
     fn list_comments(
@@ -485,7 +507,7 @@ mod tests {
         fake.push_json(200, r#"{"login":"octocat","id":1,"name":"Mona"}"#);
         let gh = github(&fake);
 
-        let challenge = gh.begin_login(LoginScope::Repo).unwrap();
+        let challenge = gh.begin_login(LoginScopes::default()).unwrap();
         assert_eq!(challenge.user_code, "WDJB-MJHT");
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Pending)));
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Pending)));
@@ -493,10 +515,10 @@ mod tests {
             gh.poll_login(&challenge),
             Ok(LoginPoll::SlowDown { interval_secs: 10 })
         ));
-        let LoginPoll::Granted { token, workflow } = gh.poll_login(&challenge).unwrap() else {
+        let LoginPoll::Granted { token, scopes } = gh.poll_login(&challenge).unwrap() else {
             panic!("토큰을 받아야 한다");
         };
-        assert!(!workflow);
+        assert_eq!(scopes, LoginScopes::default());
         let user = gh.current_user(&token).unwrap();
         assert_eq!(user.login, "octocat");
         assert_eq!(fake.pending(), 0);
@@ -551,7 +573,7 @@ mod tests {
         fake.push_json(200, r#"{"error":"access_denied"}"#);
         fake.push_json(200, r#"{"error":"device_flow_disabled"}"#);
         let gh = github(&fake);
-        let challenge = gh.begin_login(LoginScope::Repo).unwrap();
+        let challenge = gh.begin_login(LoginScopes::default()).unwrap();
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Expired)));
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Denied)));
         assert_eq!(
@@ -579,7 +601,7 @@ mod tests {
         fake.push_error(crate::TransportError::Timeout);
         let gh = github(&fake);
         let kinds: Vec<_> = (0..7)
-            .map(|_| gh.begin_login(LoginScope::Repo).unwrap_err().kind())
+            .map(|_| gh.begin_login(LoginScopes::default()).unwrap_err().kind())
             .collect();
         assert_eq!(
             kinds,
@@ -600,7 +622,7 @@ mod tests {
         let fake = Arc::new(FakeTransport::new());
         let gh = GitHub::new(fake.clone(), GitHubConfig::new(None));
         assert_eq!(
-            gh.begin_login(LoginScope::Repo).unwrap_err().kind(),
+            gh.begin_login(LoginScopes::default()).unwrap_err().kind(),
             HostingErrorKind::NotConfigured
         );
         assert!(fake.requests().is_empty());
@@ -945,6 +967,7 @@ mod tests {
             name: "hello".into(),
             description: "설명".into(),
             private: true,
+            owner: RepoOwner::Me,
         };
         assert_eq!(
             gh.create_repo(&token(), &new).unwrap(),
@@ -1149,6 +1172,51 @@ mod tests {
     }
 
     #[test]
+    fn organization_repository_and_emails() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(
+            201,
+            r#"{"name":"tool","owner":{"login":"My-Org","type":"Organization"}}"#,
+        );
+        fake.push_json(201, r#"{"name":"tool","owner":{"login":"someone"}}"#);
+        fake.push_json(403, r#"{"message":"Must have admin rights"}"#);
+        fake.push_json(200, r#"[{"email":"me@example.com","verified":true}]"#);
+        let gh = github(&fake);
+        let new = NewRepo {
+            name: "tool".into(),
+            description: String::new(),
+            private: true,
+            owner: RepoOwner::Org("my-org".into()),
+        };
+        assert_eq!(gh.create_repo(&token(), &new).unwrap().owner, "My-Org");
+        assert_eq!(
+            gh.create_repo(&token(), &new).unwrap_err().kind(),
+            HostingErrorKind::BadResponse
+        );
+        assert!(matches!(
+            gh.create_repo(&token(), &new).unwrap_err().kind(),
+            HostingErrorKind::Forbidden { .. }
+        ));
+        assert_eq!(gh.account_emails(&token()).unwrap().len(), 1);
+        let reqs = fake.requests();
+        assert_eq!(reqs[0].url, "https://api.github.com/orgs/my-org/repos");
+        assert_eq!(
+            reqs[3].url,
+            "https://api.github.com/user/emails?per_page=100"
+        );
+        // 조직 이름 규칙에 맞지 않으면 보내지 않는다.
+        let fake = Arc::new(FakeTransport::new());
+        for org in ["-a", "", &"a".repeat(40), "a/b"] {
+            let bad = NewRepo {
+                owner: RepoOwner::Org(org.to_string()),
+                ..new.clone()
+            };
+            assert!(github(&fake).create_repo(&token(), &bad).is_err(), "{org}");
+        }
+        assert!(fake.requests().is_empty());
+    }
+
+    #[test]
     fn writes_send_json_once() {
         let fake = Arc::new(FakeTransport::new());
         fake.push_json(200, "{}");
@@ -1186,7 +1254,12 @@ mod tests {
     fn login_scope_is_sent_as_asked() {
         let fake = Arc::new(FakeTransport::new());
         fake.push_json(200, &device_json());
-        github(&fake).begin_login(LoginScope::RepoWorkflow).unwrap();
+        github(&fake)
+            .begin_login(LoginScopes {
+                workflow: true,
+                email: false,
+            })
+            .unwrap();
         assert_eq!(
             body(&fake.requests()[0]),
             format!("client_id={CLIENT_ID}&scope=repo%20workflow")
