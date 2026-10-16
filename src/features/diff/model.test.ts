@@ -6,6 +6,7 @@ const diff: FileDiffView = {
   binary: false,
   truncated: false,
   link: null,
+  newLineCount: null,
   hunks: [
     {
       section: "함수",
@@ -47,6 +48,7 @@ describe("비교 보기 모델", () => {
     binary: false,
     truncated: false,
     link: null,
+    newLineCount: null,
     // 13~15줄, 24~26줄, 바로 붙은 27~29줄, 지운 줄만 있는 묶음(-40,2 +39,0)
     hunks: [hunk(13, 3, 13, 3, "fn a()"), hunk(24, 3, 24, 3), hunk(27, 3, 27, 3), { ...hunk(40, 2, 39, 0), lines: [] }],
   };
@@ -77,8 +79,26 @@ describe("비교 보기 모델", () => {
     expect(f1 && f1.type === "fold" && f1.unavailable).toBe(true);
   });
 
+  it("파일 줄 수를 알면 마지막 묶음 뒤도 접힌 줄로 센다(D-219)", () => {
+    // 마지막 묶음(-40,2 +39,0)은 지금 쪽 39번 줄 뒤. 지금 쪽 50줄이면 40~50번(마지막 저장 쪽 42~52번) 11줄.
+    const rows = toDiffRows({ ...spaced, newLineCount: 50 });
+    const end = rows.at(-1);
+    expect(end?.type === "fold" ? [end.key, end.count, end.from, end.to, end.section] : null).toEqual(["fEnd", 11, 42, 52, ""]);
+    // 펼치면 그 구간 줄로 바뀐다.
+    const full: FileDiffView = { ...spaced, newLineCount: 50, hunks: [hunk(1, 52, 1, 52)] };
+    const open = toDiffRows({ ...spaced, newLineCount: 50 }, full, new Set(["fEnd"]));
+    expect(open.some((r) => r.type === "fold" && r.key === "fEnd")).toBe(false);
+    expect(open.filter((r) => r.type === "line" && r.key.startsWith("fEnd"))).toHaveLength(11);
+  });
+
+  it("마지막 묶음이 파일 끝까지면, 줄 수를 모르거나 비교가 잘렸으면 끝 접힌 줄이 없다", () => {
+    expect(toDiffRows({ ...diff, newLineCount: 3 }).some((r) => r.type === "fold")).toBe(false);
+    expect(toDiffRows(spaced).some((r) => r.type === "fold" && r.key === "fEnd")).toBe(false);
+    expect(toDiffRows({ ...spaced, newLineCount: 50, truncated: true }).some((r) => r.type === "fold" && r.key === "fEnd")).toBe(false);
+  });
+
   it("추가·삭제 줄 수를 센다", () => {
     expect(countChanges(diff)).toEqual({ added: 2, removed: 1 });
-    expect(countChanges({ binary: true, truncated: false, hunks: [], link: null })).toEqual({ added: 0, removed: 0 });
+    expect(countChanges({ binary: true, truncated: false, hunks: [], link: null, newLineCount: null })).toEqual({ added: 0, removed: 0 });
   });
 });

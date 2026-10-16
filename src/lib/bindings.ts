@@ -803,6 +803,11 @@ export type FileDiffView = {
 	hunks: HunkView[],
 	/**  심볼릭 링크면 가리키는 곳. 이때는 내용을 읽지 않고 줄도 없다(D-052). */
 	link: string | null,
+	/**
+	 *  지금 쪽(버전 안 비교면 그 버전) 파일의 줄 수. 마지막 묶음 뒤 접힌 줄을 센다(D-219). 모르면(1MB 넘음, 지운
+	 *  파일, 새 파일, 링크, 잘린 비교) `None`.
+	 */
+	newLineCount: number | null,
 };
 
 export type FileResolution = {

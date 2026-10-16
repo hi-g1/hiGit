@@ -31,6 +31,7 @@ pub use conflict::{
     ConflictHunkView, ConflictSide, ConflictStateView, DraftFile, DraftPick, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
+pub(crate) use diff::{LINE_COUNT_LIMIT, line_count};
 pub use force_push::{DroppedVersion, ForcePushBlock, ForcePushPlanView};
 pub use github::{
     CloneDefaultsView, EmailCheckState, EmailCheckView, GitHubRepoListView, GitHubRepoRowView,

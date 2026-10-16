@@ -27,6 +27,9 @@ pub struct FileDiffView {
     pub hunks: Vec<HunkView>,
     /// 심볼릭 링크면 가리키는 곳. 이때는 내용을 읽지 않고 줄도 없다(D-052).
     pub link: Option<String>,
+    /// 지금 쪽(버전 안 비교면 그 버전) 파일의 줄 수. 마지막 묶음 뒤 접힌 줄을 센다(D-219). 모르면(1MB 넘음, 지운
+    /// 파일, 새 파일, 링크, 잘린 비교) `None`.
+    pub new_line_count: Option<u32>,
 }
 
 impl FileDiffView {
@@ -36,8 +39,19 @@ impl FileDiffView {
             truncated: false,
             hunks: Vec::new(),
             link: Some(target),
+            new_line_count: None,
         }
     }
+}
+
+/// 줄 수 셀 때 읽는 상한.
+pub(crate) const LINE_COUNT_LIMIT: u64 = 1024 * 1024;
+
+/// git의 줄 번호와 같은 줄 수: `\n` 수, 끝에 줄바꿈 없는 줄이 있으면 하나 더. CRLF도 `\n`으로 센다.
+pub(crate) fn line_count(bytes: &[u8]) -> Option<u32> {
+    let newlines = bytes.iter().filter(|b| **b == b'\n').count();
+    let partial = usize::from(bytes.last().is_some_and(|b| *b != b'\n'));
+    u32::try_from(newlines + partial).ok()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -96,6 +110,7 @@ impl From<git::FileDiff> for FileDiffView {
             truncated: d.truncated,
             hunks: d.hunks.into_iter().map(HunkView::from).collect(),
             link: None,
+            new_line_count: None,
         }
     }
 }
@@ -147,6 +162,15 @@ impl From<git::Hunk> for HunkView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn line_counts_match_git_numbering() {
+        assert_eq!(line_count(b""), Some(0));
+        assert_eq!(line_count(b"a\nb\n"), Some(2));
+        assert_eq!(line_count(b"a\nb"), Some(2));
+        assert_eq!(line_count(b"a\r\nb\r\n"), Some(2));
+        assert_eq!(line_count(b"\n\n"), Some(2));
+    }
 
     #[test]
     fn old_requests_read_full_context_as_false() {

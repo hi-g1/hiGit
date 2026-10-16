@@ -29,6 +29,7 @@ const fixtures = vi.hoisted(() => {
     binary: false,
     truncated: false,
     link: null,
+    newLineCount: null,
     hunks: [{ section: "", oldStart: 20, oldLen: 2, newStart: 20, newLen: 2, lines: [ctx(20), ctx(21)] }],
   };
   return { status, homeMap, diff };

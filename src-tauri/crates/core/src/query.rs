@@ -733,10 +733,14 @@ impl Queries {
             let target = git::DiffTarget {
                 path: request.path.clone(),
                 orig_path: request.orig_path.clone(),
-                kind: git::DiffKind::Commit { oid },
+                kind: git::DiffKind::Commit { oid: oid.clone() },
                 full_context: request.full_context,
             };
-            return Ok(self.git.diff(&root, &target)?.into());
+            let mut view: FileDiffView = self.git.diff(&root, &target)?.into();
+            if wants_line_count(&view) {
+                view.new_line_count = self.blob_line_count(&root, oid.as_str(), &request.path);
+            }
+            return Ok(view);
         }
         // 링크는 안·밖 어디를 가리키든 따라가 읽지 않고 대상만 보여준다(D-052).
         // 링크 자신이 밖을 가리키는 폴더 링크 아래에 있으면 막는다.
@@ -749,7 +753,22 @@ impl Queries {
         for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
             stays_inside(root.as_path(), path)?;
         }
-        Ok(self.git.diff(&root, &request.into())?.into())
+        let mut view: FileDiffView = self.git.diff(&root, &request.into())?.into();
+        if !request.untracked && wants_line_count(&view) {
+            view.new_line_count = work_tree_line_count(root.as_path(), &request.path);
+        }
+        Ok(view)
+    }
+
+    /// 버전 안 파일의 줄 수(D-219). 그 버전에 없거나(지움) 1MB를 넘으면 `None`.
+    fn blob_line_count(&self, root: &RepoPath, rev: &str, path: &str) -> Option<u32> {
+        let oid = self.git.blob_at(root, rev, path).ok().flatten()?;
+        let (_, bytes) = self
+            .git
+            .read_blob(root, &oid, crate::view::LINE_COUNT_LIMIT)
+            .ok()
+            .flatten()?;
+        crate::view::line_count(&bytes?)
     }
 
     /// 버전 저장 전에 넣을 파일에서 키·비밀번호로 보이는 것을 찾는다(D-040, D-077).
@@ -1717,6 +1736,25 @@ fn repo_path(path: &Path) -> Result<RepoPath> {
     platform::normalize_repo_path(path)
         .map(RepoPath::new)
         .map_err(CoreError::FolderNotFound)
+}
+
+/// 마지막 묶음 뒤 접힌 줄을 셀 만한 비교인지(D-219): 묶음이 있고 잘리지 않은 글자 비교.
+fn wants_line_count(view: &FileDiffView) -> bool {
+    !view.binary && !view.truncated && view.link.is_none() && !view.hunks.is_empty()
+}
+
+/// 작업 폴더 파일의 줄 수(D-219). 링크·일반 파일이 아님·없음·1MB 넘음이면 `None`.
+fn work_tree_line_count(root: &Path, path: &str) -> Option<u32> {
+    use std::io::Read;
+    let file = platform::open_regular_no_follow(&root.join(path)).ok()?;
+    let mut bytes = Vec::new();
+    file.take(crate::view::LINE_COUNT_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    if bytes.len() as u64 > crate::view::LINE_COUNT_LIMIT {
+        return None;
+    }
+    crate::view::line_count(&bytes)
 }
 
 /// `rel`이 심볼릭 링크(Windows 정션 포함)면 가리키는 곳. 아니면 `None`.

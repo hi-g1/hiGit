@@ -32,6 +32,7 @@ const spaced: FileDiffView = {
   binary: false,
   truncated: false,
   link: null,
+  newLineCount: null,
   hunks: [{ section: "function save()", oldStart: 13, oldLen: 3, newStart: 13, newLen: 3, lines: lines(13, 3) }],
 };
 
@@ -74,6 +75,7 @@ describe("DiffView", () => {
       binary: false,
       truncated: false,
       link: null,
+      newLineCount: null,
       hunks: [
         {
           section: "",
@@ -106,14 +108,14 @@ describe("DiffView", () => {
       after: { mime: "image/png", data: "BBBB", bytes: 3 },
       tooLarge: false,
     });
-    show({ binary: true, truncated: false, hunks: [], link: null });
+    show({ binary: true, truncated: false, hunks: [], link: null, newLineCount: null });
     expect(await screen.findByRole("img", { name: "한글 파일.txt · 지금" })).toBeInTheDocument();
     expect(api.imagePair).toHaveBeenCalledWith("/repo", { path: "src/한글 파일.txt", origPath: null, commit: null });
   });
 
   it("이진 파일은 내용 대신 안내", async () => {
     vi.mocked(api.imagePair).mockResolvedValue({ before: null, after: null, tooLarge: true });
-    show({ binary: true, truncated: false, hunks: [], link: null });
+    show({ binary: true, truncated: false, hunks: [], link: null, newLineCount: null });
     expect(await screen.findByText("이진 파일이라 내용을 비교할 수 없어요.")).toBeInTheDocument();
   });
 
@@ -122,6 +124,7 @@ describe("DiffView", () => {
       binary: false,
       truncated: true,
       link: null,
+      newLineCount: null,
       hunks: [
         {
           section: "",
@@ -137,12 +140,12 @@ describe("DiffView", () => {
   });
 
   it("바뀐 줄이 없으면 그렇게 알려준다", async () => {
-    show({ binary: false, truncated: false, hunks: [], link: null });
+    show({ binary: false, truncated: false, hunks: [], link: null, newLineCount: null });
     expect(await screen.findByText("바뀐 줄이 없어요.")).toBeInTheDocument();
   });
 
   it("심볼릭 링크는 내용 대신 가리키는 곳", async () => {
-    show({ binary: false, truncated: false, hunks: [], link: "../밖/비밀.txt" });
+    show({ binary: false, truncated: false, hunks: [], link: "../밖/비밀.txt", newLineCount: null });
     expect(await screen.findByText("링크: ../밖/비밀.txt")).toBeInTheDocument();
     expect(screen.queryByText("바뀐 줄이 없어요.")).toBeNull();
   });

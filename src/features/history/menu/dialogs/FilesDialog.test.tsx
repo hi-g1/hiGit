@@ -49,7 +49,7 @@ const detail = (over: Partial<CommitDetailView> = {}): CommitDetailView => ({
 });
 
 function open(i = info()) {
-  vi.mocked(api.diff).mockResolvedValue({ binary: false, truncated: false, hunks: [], link: null });
+  vi.mocked(api.diff).mockResolvedValue({ binary: false, truncated: false, hunks: [], link: null, newLineCount: null });
   const ctx = { repo: "/r", m: ko, queryClient: new QueryClient() } as unknown as MenuCtx;
   render(
     <AppProviders client={createQueryClient()}>
