@@ -6,7 +6,7 @@ import { Term } from "../../../../ui/Term";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
 import { runAction } from "../run";
-import { composing, Frame } from "./Frame";
+import { composing, DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./Dialogs.module.css";
 
 type Props = { info: StationInfo; ctx: MenuCtx; onClose: () => void };
@@ -43,9 +43,9 @@ export function TagDialog({ info, ctx, onClose }: Props) {
     );
 
   return (
-    <Frame
+    <DialogFrame
       title={<Term id="tag" focusable={false} />}
-      station={
+      subtitle={
         <>
           {info.shortOid} · <bdi>{info.summary}</bdi>
         </>
@@ -90,6 +90,6 @@ export function TagDialog({ info, ctx, onClose }: Props) {
           {m.create}
         </Button>
       </div>
-    </Frame>
+    </DialogFrame>
   );
 }

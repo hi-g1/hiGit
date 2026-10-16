@@ -8,7 +8,7 @@ import { Term } from "../../../ui/Term";
 import type { ToastAction } from "../../../ui/toastStore";
 import type { Zoom } from "../layout/simplify";
 import type { StationDialog } from "./ask";
-import { copyText } from "./copy";
+import { copyText } from "../../../lib/copy";
 import type { StationInfo } from "./info";
 import { runAction } from "./run";
 import { MAX_RANGE } from "../range";

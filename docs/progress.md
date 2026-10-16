@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G13b 끝 (액션 pr-create: 올리기 없음, head = upstream 원격 브랜치, D-123)
-- 마지막 커밋: (이 갱신과 같은 커밋) core: add pr-create action
-- 다음 할 일: G14 대화상자 공용(화면) → G15 설정·GitHub 연결 → G16 복제 화면 → G17 검토 요청 화면 … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G14 끝 (대화상자 틀 `ui/DialogFrame`·`lib/copy` 공용화)
+- 마지막 커밋: (이 갱신과 같은 커밋) ui: share the dialog frame and copy helper
+- 다음 할 일: G15 설정 대화상자·GitHub 연결 → G16 복제 화면 → G17 검토 요청 화면 → G18 새 검토 요청 → G19 브랜치 목록 → G20 (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -186,7 +186,8 @@
 - [x] G12b `query_clone_defaults`(네 곳, `api.cloneDefaults`)
 - [x] G13a 대상 원격(upstream 원격, 없으면 하나뿐·origin)의 올리기 주소가 github.com일 때만, head는 upstream 원격 브랜치 이름. 조회 4개(hosting_context·pr_draft는 네트워크 없음), `NotGithubRemote`
 - [x] G13b 액션 `pr-create`(32번째, safe/Nothing, 원격 잠금만, journal 남기지 않음), `NotPushed`·`PrSameBranch`, 보내기 전 검사, D-123
-- [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
+- [x] G14 `ui/DialogFrame`(부제 선택, 폭 narrow/wide, 키 차단, `composing`)·`lib/copy`, 역 메뉴 대화상자 4개가 사용
+- [ ] G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 
 ## 다음 반복
 - [ ] 반복 4b: 설정과 GitHub 넓히기

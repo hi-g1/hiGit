@@ -4,7 +4,7 @@ import { useBranchNameCheck } from "../../../../lib/queries";
 import { useMessages } from "../../../../messages";
 import { Button } from "../../../../ui/Button";
 import { runAction, type RunCtx } from "../run";
-import { composing, Frame } from "./Frame";
+import { composing, DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./Dialogs.module.css";
 
 type Props = {
@@ -38,9 +38,9 @@ export function NewBranchDialog({ oid, shortOid, summary, ctx, onClose }: Props)
   };
 
   return (
-    <Frame
+    <DialogFrame
       title={m.newBranchHere}
-      station={
+      subtitle={
         <>
           {shortOid} · <bdi>{summary}</bdi>
         </>
@@ -73,6 +73,6 @@ export function NewBranchDialog({ oid, shortOid, summary, ctx, onClose }: Props)
           {m.create}
         </Button>
       </div>
-    </Frame>
+    </DialogFrame>
   );
 }

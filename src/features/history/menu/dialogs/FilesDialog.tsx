@@ -10,7 +10,7 @@ import { Button } from "../../../../ui/Button";
 import { ErrorNotice } from "../../../../ui/ErrorNotice";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
-import { Frame } from "./Frame";
+import { DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./FilesDialog.module.css";
 
 type Props = { info: StationInfo; ctx: MenuCtx; onClose: () => void };
@@ -50,9 +50,9 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
   };
 
   return (
-    <Frame
+    <DialogFrame
       title={m.filesAtVersion}
-      station={
+      subtitle={
         <>
           {info.shortOid} · <bdi>{info.summary}</bdi>
         </>
@@ -114,6 +114,6 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
           {m.close}
         </Button>
       </div>
-    </Frame>
+    </DialogFrame>
   );
 }

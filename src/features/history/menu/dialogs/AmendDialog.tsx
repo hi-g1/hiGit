@@ -8,7 +8,7 @@ import { Term } from "../../../../ui/Term";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
 import { runAction } from "../run";
-import { Frame } from "./Frame";
+import { DialogFrame } from "../../../../ui/DialogFrame";
 import styles from "./Dialogs.module.css";
 
 type Props = { info: StationInfo; stagedFiles: number; ctx: MenuCtx; onClose: () => void };
@@ -43,15 +43,15 @@ export function AmendDialog({ info, stagedFiles, ctx, onClose }: Props) {
   };
 
   return (
-    <Frame
+    <DialogFrame
       title={<Term id="amend" focusable={false} />}
-      station={
+      subtitle={
         <>
           {info.shortOid} · <bdi>{info.summary}</bdi>
         </>
       }
       onClose={onClose}
-      className={styles.wide}
+      size="wide"
     >
       <textarea
         className={`${styles.field} ${styles.message}`}
@@ -83,6 +83,6 @@ export function AmendDialog({ info, stagedFiles, ctx, onClose }: Props) {
           {m.amendAction}
         </Button>
       </div>
-    </Frame>
+    </DialogFrame>
   );
 }

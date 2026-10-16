@@ -1,4 +1,4 @@
-// 클립보드에 글자 넣기. 웹뷰에 따라 navigator.clipboard가 없을 수 있어 옛 방법으로 한 번 더 해 본다.
+// 클립보드에 글자 넣기(역 메뉴·복제·연결 코드). 웹뷰에 따라 navigator.clipboard가 없을 수 있어 옛 방법으로 한 번 더 해 본다.
 
 export async function copyText(text: string): Promise<boolean> {
   try {
