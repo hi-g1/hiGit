@@ -1,4 +1,4 @@
-//! 전역 이름·이메일 읽기·쓰기(D-125). 저장소 밖에서 돌려 저장소 설정이 섞이지 않게 하고,
+//! 전역 이름·이메일 읽기·쓰기(D-125). `--global`·`--system`만 읽고 써서 저장소 설정이 섞이지 않게 하고,
 //! `GIT_CONFIG_GLOBAL` 같은 사용자 환경 변수는 그대로 따른다.
 
 use super::CliBackend;
@@ -42,10 +42,12 @@ impl CliBackend {
             GlobalOp::SetIdentity { name, email } => {
                 // 이름이 먼저다. 이메일을 쓰지 못하면 이름은 그대로 두고 오류(되돌리지 않음).
                 self.runner
-                    .run(None, &["config", "--global", "user.name", name])?;
+                    .run(None, &["config", "--global", "user.name", name])
+                    .map_err(hide_value)?;
                 let out = self
                     .runner
-                    .run(None, &["config", "--global", "user.email", email])?;
+                    .run(None, &["config", "--global", "user.email", email])
+                    .map_err(hide_value)?;
                 Ok(OpOutput {
                     stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
                     stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
@@ -53,5 +55,34 @@ impl CliBackend {
                 })
             }
         }
+    }
+}
+
+/// 실패한 명령의 마지막 인자(쓰려던 값)를 가린다. 오류의 `Display`·`Debug`에 이름·이메일이 남지 않게(D-078).
+fn hide_value(e: GitError) -> GitError {
+    match e {
+        GitError::Failed {
+            mut args,
+            code,
+            stdout,
+            stderr,
+        } => {
+            if let Some(last) = args.last_mut() {
+                *last = "***".into();
+            }
+            GitError::Failed {
+                args,
+                code,
+                stdout,
+                stderr,
+            }
+        }
+        GitError::TimedOut { mut args } => {
+            if let Some(last) = args.last_mut() {
+                *last = "***".into();
+            }
+            GitError::TimedOut { args }
+        }
+        other => other,
     }
 }

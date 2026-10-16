@@ -126,3 +126,16 @@ fn read_only_global_fails_to_write() {
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
     assert!(result.is_err());
 }
+
+#[test]
+fn failed_write_does_not_carry_the_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let git = backend(&dir.path().join("없는 폴더").join("config"), None);
+    let err = git
+        .run_global(&set("김지원", "secret@example.com"))
+        .unwrap_err();
+    let shown = format!("{err} {err:?}");
+    assert!(shown.contains("user.name"), "{shown}");
+    assert!(!shown.contains("김지원"), "{shown}");
+    assert!(!shown.contains("secret@example.com"), "{shown}");
+}
