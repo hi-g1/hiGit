@@ -133,6 +133,7 @@
 | 역 | `#F4F4F2` |
 
 - 화면에서는 SVG 파일만 `<img>`로 불러 쓴다(색을 CSS로 다시 칠하지 않는다). 시작 화면 맨 위 높이 28px, 설정 "정보" 구역 20px 안팎.
+- 작은 아이콘(16·24px): `app-icon-small.svg`(`app-icon-16.png`·`app-icon-24.png`). 역 고리 없이 굵은 선, 테두리 #4A5059. `.ico`의 16·24 칸과 Linux 16·24 PNG만 이것이고 32px 이상은 큰 아이콘이다.
 
 ## 확인 사항
 - Windows(WebView2)와 Ubuntu(WebKitGTK)에서 글꼴 렌더링과 스크롤바 모양을 매번 비교한다. 스크롤바는 CSS로 얇게 통일.

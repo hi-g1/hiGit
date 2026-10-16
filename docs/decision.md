@@ -1301,7 +1301,8 @@
 - 상태: 확정
 - 날짜: 2026-10-16
 - 결정: 앱 아이콘과 로고는 `assets/brand/`의 파일을 쓴다. 앱 아이콘(`app-icon.svg`, `app-icon-1024.png`)은 먹색 둥근 사각형 위 소문자 h 모양 노선이다: 파란 본선에서 초록 갈래가 색이 번지며 갈라지고 끝에 역 세 개. 로고(`logo-light.svg`, `logo-dark.svg`)는 아이콘과 "hiGit" 글자(Pretendard Bold, 글자는 패스)를 나란히 놓고 바탕은 투명, i의 점은 파란 역 고리다. `src-tauri/icons`는 `pnpm tauri icon assets/brand/app-icon-1024.png`로 만든다. 로고는 시작 화면 맨 위(높이 28px 안팎)와 설정의 "정보" 구역(20px 안팎)에 두고 라이트 모드는 `logo-light`, 다크 모드는 `logo-dark`를 쓴다. 아이콘 색(바탕 #2B3036, 본선 #7FA7D6, 갈래 #6BBF8A, 역 #F4F4F2)은 화면 토큰과 따로 두어 `tokens.css`에 넣지 않고, 화면 코드는 SVG 파일만 불러 쓴다.
-- 이유: 사용자가 고른 안(가-10 먹색).
+- 덧붙임(2026-10-16, 사용자): 16·24px은 따로 그린 작은 아이콘을 쓴다. `assets/brand/app-icon-small.svg`(`app-icon-16.png`·`app-icon-24.png`)는 역 고리를 빼고 선을 굵게 했고, 어두운 작업 표시줄에서 묻히지 않게 테두리(#4A5059)를 조금 밝게 했다. `src-tauri/icons/icon.ico`의 16·24 칸과 Linux `icons/16x16.png`·`icons/24x24.png`만 이 그림이고 32px 이상은 큰 아이콘 그대로다. `pnpm tauri icon`으로 다시 만들면 `.ico`의 16·24 칸을 이 PNG로 다시 바꾼다. 비교 그림은 `docs/research/img/brand/small-compare.png`.
+- 이유: 사용자가 고른 안(가-10 먹색). 작은 아이콘은 큰 아이콘을 줄이면 16px에서 역 고리가 회색 점이 되고 어두운 작업 표시줄에서 바탕이 묻혀서(`icon-sizes.png`).
 - 영향: D-031, D-145(설정에 "정보" 구역이 더해진다), design.md "브랜드".
 
 ## D-164 칸 나눔선: 끌어서 왼쪽 칸 폭 바꾸기
