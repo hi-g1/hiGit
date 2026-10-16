@@ -102,8 +102,23 @@ pub struct PrDetail {
     pub mergeable: Mergeable,
     /// 시험 결과를 볼 수 없으면(권한·없음) `None`.
     pub checks: Option<ChecksSummary>,
+    /// 리뷰 요약. 볼 수 없거나(권한·없음) 100개를 넘으면 `None`(D-134).
+    pub reviews: Option<ReviewsSummary>,
+    /// 댓글 수(대화 댓글 + 코드 댓글).
+    pub comments: u32,
     pub(crate) head_sha: String,
 }
+
+/// 사람마다 마지막 리뷰 상태로 센 승인·변경 요청 수(D-134). 취소된 리뷰(`DISMISSED`)는 빼고
+/// 댓글만 남긴 리뷰(`COMMENTED`)와 아직 내지 않은 리뷰(`PENDING`)는 상태를 바꾸지 않는다.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ReviewsSummary {
+    pub approved: u32,
+    pub changes_requested: u32,
+}
+
+/// 리뷰를 읽는 한 쪽의 수. 이보다 많으면 요약을 보이지 않는다.
+pub(crate) const REVIEWS_PAGE: u32 = 100;
 
 /// 새 검토 요청.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -150,6 +165,16 @@ struct PullJson {
     created_at: String,
     updated_at: String,
     mergeable_state: Option<String>,
+    #[serde(default)]
+    comments: u64,
+    #[serde(default)]
+    review_comments: u64,
+}
+
+#[derive(Deserialize)]
+struct ReviewJson {
+    user: Option<UserJson>,
+    state: String,
 }
 
 #[derive(Deserialize)]
@@ -215,6 +240,8 @@ pub(crate) fn parse_one(body: &[u8], base_owner: &str) -> Result<PullRequest, Ho
 pub(crate) fn parse_detail(body: &[u8], base_owner: &str) -> Result<PrDetail, HostingError> {
     let item: PullJson =
         serde_json::from_slice(body).map_err(|_| bad("pull request is not JSON"))?;
+    let comments =
+        u32::try_from(item.comments.saturating_add(item.review_comments)).unwrap_or(u32::MAX);
     let (pr, sha, mergeable_state) = convert(item, base_owner)?;
     let head_sha = sha
         .filter(|sha| valid_sha(sha))
@@ -230,7 +257,34 @@ pub(crate) fn parse_detail(body: &[u8], base_owner: &str) -> Result<PrDetail, Ho
         pr,
         mergeable,
         checks: None,
+        reviews: None,
+        comments,
         head_sha,
+    })
+}
+
+/// `GET pulls/{n}/reviews`(오래된 것부터). 사람마다 마지막으로 정한 상태만 센다.
+pub(crate) fn parse_reviews(body: &[u8]) -> Result<ReviewsSummary, HostingError> {
+    let parsed: Vec<ReviewJson> =
+        serde_json::from_slice(body).map_err(|_| bad("reviews are not JSON"))?;
+    let mut last: Vec<(String, &str)> = Vec::new();
+    for review in &parsed {
+        let Some(user) = &review.user else { continue };
+        let state = match review.state.as_str() {
+            s @ ("APPROVED" | "CHANGES_REQUESTED" | "DISMISSED") => s,
+            _ => continue,
+        };
+        match last.iter_mut().find(|(login, _)| *login == user.login) {
+            Some(entry) => entry.1 = state,
+            None => last.push((user.login.clone(), state)),
+        }
+    }
+    let count = |want: &str| {
+        u32::try_from(last.iter().filter(|(_, s)| *s == want).count()).unwrap_or(u32::MAX)
+    };
+    Ok(ReviewsSummary {
+        approved: count("APPROVED"),
+        changes_requested: count("CHANGES_REQUESTED"),
     })
 }
 
@@ -264,7 +318,7 @@ pub(crate) fn validation_error(body: &[u8]) -> HostingError {
     let joined = messages.join("; ");
     let kind = if messages
         .iter()
-        .any(|m| m.contains("A pull request already exists"))
+        .any(|m| m.contains("A pull request already exists") || m.contains("name already exists"))
     {
         ValidationKind::AlreadyExists
     } else if messages.iter().any(|m| m.contains("No commits between")) {
@@ -655,5 +709,28 @@ mod tests {
         ] {
             assert_eq!(parse_time(bad), None, "{bad}");
         }
+    }
+
+    #[test]
+    fn reviews_count_each_person_by_their_last_decision() {
+        let body = br#"[
+            {"user":{"login":"a"},"state":"APPROVED"},
+            {"user":{"login":"a"},"state":"CHANGES_REQUESTED"},
+            {"user":{"login":"b"},"state":"APPROVED"},
+            {"user":{"login":"b"},"state":"COMMENTED"},
+            {"user":{"login":"c"},"state":"APPROVED"},
+            {"user":{"login":"c"},"state":"DISMISSED"},
+            {"user":{"login":"d"},"state":"PENDING"},
+            {"user":null,"state":"APPROVED"}
+        ]"#;
+        assert_eq!(
+            parse_reviews(body).unwrap(),
+            ReviewsSummary {
+                approved: 1,
+                changes_requested: 1
+            }
+        );
+        assert_eq!(parse_reviews(b"[]").unwrap(), ReviewsSummary::default());
+        assert!(parse_reviews(b"nope").is_err());
     }
 }

@@ -188,7 +188,7 @@ impl GitHubService {
         };
         let challenge = self
             .provider
-            .begin_login()
+            .begin_login(hosting::LoginScope::Repo)
             .map_err(|e| from_hosting(&e, &[]))?;
         let now = self.now();
         let interval = Duration::from_secs(challenge.interval_secs);
@@ -262,7 +262,7 @@ impl GitHubService {
                 self.finish_poll(seq, |login| *login = None);
                 Ok(LoginPollView::Denied)
             }
-            LoginPoll::Granted(token) => self.complete_login(seq, token, &device_code),
+            LoginPoll::Granted { token, .. } => self.complete_login(seq, token, &device_code),
         }
     }
 

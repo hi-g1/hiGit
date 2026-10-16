@@ -9,11 +9,12 @@ use crate::api::{self, API_ACCEPT, API_VERSION, API_VERSION_HEADER, USER_AGENT, 
 use crate::config::GitHubConfig;
 use crate::error::{HostingError, HostingErrorKind};
 use crate::http::{HttpRequest, HttpResponse, HttpTransport, Method};
-use crate::login::{self, HostUser, LoginChallenge, LoginPoll};
+use crate::login::{self, HostUser, LoginChallenge, LoginPoll, LoginScope};
 use crate::pr::{
     self, CHECK_RUNS_PAGE, NewPr, PR_PAGE_MAX, PrDetail, PrPage, PrQuery, PullRequest,
 };
 use crate::remote::{RemoteRepo, parse_remote, valid_name, valid_owner};
+use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoPage};
 
 const DEVICE_GRANT: &str = "urn:ietf:params:oauth:grant-type:device_code";
 /// 같은 API 주소 안의 리디렉트를 따르는 최대 횟수.
@@ -150,11 +151,11 @@ impl HostingProvider for GitHub {
         Self::detect(url)
     }
 
-    fn begin_login(&self) -> Result<LoginChallenge, HostingError> {
+    fn begin_login(&self, scope: LoginScope) -> Result<LoginChallenge, HostingError> {
         let client_id = self.client_id()?;
         let body = self.login_post(
             "/login/device/code",
-            &[("client_id", client_id), ("scope", &self.config.scope)],
+            &[("client_id", client_id), ("scope", scope.form_value())],
         )?;
         let expected_uri = format!("{}/login/device", self.config.web_base);
         login::parse_device_code(&body, &expected_uri)
@@ -232,6 +233,27 @@ impl HostingProvider for GitHub {
             }
             Err(err) => return Err(err),
         };
+        // 리뷰 요약(D-134): 볼 수 없으면 줄을 빼고, 100개를 넘으면(다음 쪽이 있으면) 빼고, 요청 한도는 알린다.
+        let reviews_path = format!(
+            "{base}/pulls/{number}/reviews?per_page={}",
+            pr::REVIEWS_PAGE
+        );
+        detail.reviews = match self.api_get(token, &reviews_path) {
+            Ok(res) if pr::has_next_link(res.header("link")) => None,
+            Ok(res) => pr::parse_reviews(&res.body).ok(),
+            Err(err)
+                if matches!(
+                    err.kind(),
+                    HostingErrorKind::Forbidden {
+                        rate_limited: false,
+                        ..
+                    } | HostingErrorKind::NotFound
+                ) =>
+            {
+                None
+            }
+            Err(err) => return Err(err),
+        };
         Ok(detail)
     }
 
@@ -250,6 +272,40 @@ impl HostingProvider for GitHub {
         let res = self.api_send(req)?;
         api::check_status(&res)?;
         pr::parse_one(&res.body, &repo.owner)
+    }
+
+    fn create_repo(
+        &self,
+        token: &SecretString,
+        new: &NewRepo,
+    ) -> Result<CreatedRepo, HostingError> {
+        repo::check_new_repo(new)?;
+        let body = repo::new_repo_json(new)?;
+        let req = self
+            .api_request(Method::Post, token, "/user/repos")
+            .header("Content-Type", "application/json")
+            .body(body);
+        let res = self.api_send(req)?;
+        api::check_status(&res)?;
+        repo::parse_created(&res.body)
+    }
+
+    fn list_repos(
+        &self,
+        token: &SecretString,
+        page: u32,
+        per_page: u32,
+    ) -> Result<RepoPage, HostingError> {
+        let per_page = per_page.clamp(1, REPO_PAGE_MAX);
+        let page = page.max(1);
+        let path = format!(
+            "/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page={per_page}&page={page}"
+        );
+        let res = self.api_get(token, &path)?;
+        Ok(RepoPage {
+            items: repo::parse_list(&res.body)?,
+            has_more: pr::has_next_link(res.header("link")),
+        })
     }
 }
 
@@ -299,7 +355,7 @@ mod tests {
         fake.push_json(200, r#"{"login":"octocat","id":1,"name":"Mona"}"#);
         let gh = github(&fake);
 
-        let challenge = gh.begin_login().unwrap();
+        let challenge = gh.begin_login(LoginScope::Repo).unwrap();
         assert_eq!(challenge.user_code, "WDJB-MJHT");
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Pending)));
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Pending)));
@@ -307,9 +363,10 @@ mod tests {
             gh.poll_login(&challenge),
             Ok(LoginPoll::SlowDown { interval_secs: 10 })
         ));
-        let LoginPoll::Granted(token) = gh.poll_login(&challenge).unwrap() else {
+        let LoginPoll::Granted { token, workflow } = gh.poll_login(&challenge).unwrap() else {
             panic!("토큰을 받아야 한다");
         };
+        assert!(!workflow);
         let user = gh.current_user(&token).unwrap();
         assert_eq!(user.login, "octocat");
         assert_eq!(fake.pending(), 0);
@@ -364,7 +421,7 @@ mod tests {
         fake.push_json(200, r#"{"error":"access_denied"}"#);
         fake.push_json(200, r#"{"error":"device_flow_disabled"}"#);
         let gh = github(&fake);
-        let challenge = gh.begin_login().unwrap();
+        let challenge = gh.begin_login(LoginScope::Repo).unwrap();
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Expired)));
         assert!(matches!(gh.poll_login(&challenge), Ok(LoginPoll::Denied)));
         assert_eq!(
@@ -392,7 +449,7 @@ mod tests {
         fake.push_error(crate::TransportError::Timeout);
         let gh = github(&fake);
         let kinds: Vec<_> = (0..7)
-            .map(|_| gh.begin_login().unwrap_err().kind())
+            .map(|_| gh.begin_login(LoginScope::Repo).unwrap_err().kind())
             .collect();
         assert_eq!(
             kinds,
@@ -413,7 +470,7 @@ mod tests {
         let fake = Arc::new(FakeTransport::new());
         let gh = GitHub::new(fake.clone(), GitHubConfig::new(None));
         assert_eq!(
-            gh.begin_login().unwrap_err().kind(),
+            gh.begin_login(LoginScope::Repo).unwrap_err().kind(),
             HostingErrorKind::NotConfigured
         );
         assert!(fake.requests().is_empty());
@@ -652,10 +709,18 @@ mod tests {
             200,
             r#"{"total_count":2,"check_runs":[{"conclusion":"success"},{"conclusion":null}]}"#,
         );
+        fake.push_json(200, r#"[{"user":{"login":"a"},"state":"APPROVED"},{"user":{"login":"b"},"state":"CHANGES_REQUESTED"}]"#);
         let gh = github(&fake);
         let detail = gh.pr_detail(&token(), &octo(), 7).unwrap();
         assert_eq!(detail.mergeable, Mergeable::Conflicts);
         assert_eq!(detail.checks.unwrap().pending, 1);
+        assert_eq!(
+            detail.reviews,
+            Some(crate::pr::ReviewsSummary {
+                approved: 1,
+                changes_requested: 1
+            })
+        );
         let reqs = fake.requests();
         assert_eq!(
             reqs[0].url,
@@ -669,13 +734,43 @@ mod tests {
             )
         );
 
+        assert_eq!(
+            fake.requests()[2].url,
+            "https://api.github.com/repos/octo/hello/pulls/7/reviews?per_page=100"
+        );
+
         for status in [403, 404] {
             let fake = Arc::new(FakeTransport::new());
             fake.push_json(200, &pull_json(7));
             fake.push_json(status, "{}");
+            fake.push_json(status, "{}");
             let detail = github(&fake).pr_detail(&token(), &octo(), 7).unwrap();
             assert_eq!(detail.checks, None);
+            assert_eq!(detail.reviews, None);
         }
+
+        // 리뷰가 100개를 넘으면(다음 쪽이 있으면) 요약을 빼고 상세는 그대로다.
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(200, &pull_json(7));
+        fake.push_json(200, r#"{"total_count":0,"check_runs":[]}"#);
+        fake.push(HttpResponse {
+            status: 200,
+            headers: vec![
+                ("Content-Type".into(), "application/json".into()),
+                (
+                    "Link".into(),
+                    r#"<https://api.github.com/x?page=2>; rel="next""#.into(),
+                ),
+            ],
+            body: b"[]".to_vec(),
+        });
+        assert_eq!(
+            github(&fake)
+                .pr_detail(&token(), &octo(), 7)
+                .unwrap()
+                .reviews,
+            None
+        );
 
         let fake = Arc::new(FakeTransport::new());
         fake.push_json(200, &pull_json(7));
@@ -686,6 +781,84 @@ mod tests {
                 .unwrap_err()
                 .kind(),
             HostingErrorKind::Unauthorized
+        );
+    }
+
+    #[test]
+    fn repositories_are_created_and_listed() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(
+            201,
+            r#"{"name":"hello","owner":{"login":"octocat"},"private":true}"#,
+        );
+        fake.push_json(422, r#"{"message":"Repository creation failed.","errors":[{"resource":"Repository","code":"custom","field":"name","message":"name already exists on this account"}]}"#);
+        fake.push_json(
+            422,
+            r#"{"message":"Repository creation failed.","errors":[{"message":"something else"}]}"#,
+        );
+        fake.push(HttpResponse {
+            status: 200,
+            headers: vec![
+                ("Content-Type".into(), "application/json".into()),
+                (
+                    "Link".into(),
+                    r#"<https://api.github.com/user/repos?page=2>; rel="next""#.into(),
+                ),
+            ],
+            body: br#"[{"name":"a","owner":{"login":"me"},"private":false,"pushed_at":null}]"#
+                .to_vec(),
+        });
+        let gh = github(&fake);
+        let new = NewRepo {
+            name: "hello".into(),
+            description: "설명".into(),
+            private: true,
+        };
+        assert_eq!(
+            gh.create_repo(&token(), &new).unwrap(),
+            CreatedRepo {
+                owner: "octocat".into(),
+                name: "hello".into()
+            }
+        );
+        assert_eq!(
+            gh.create_repo(&token(), &new).unwrap_err().kind(),
+            HostingErrorKind::Validation(crate::error::ValidationKind::AlreadyExists)
+        );
+        assert_eq!(
+            gh.create_repo(&token(), &new).unwrap_err().kind(),
+            HostingErrorKind::Validation(crate::error::ValidationKind::Invalid)
+        );
+        let page = gh.list_repos(&token(), 2, 500).unwrap();
+        assert!(page.has_more && page.items.len() == 1);
+        let reqs = fake.requests();
+        assert_eq!(reqs[0].method, Method::Post);
+        assert_eq!(reqs[0].url, "https://api.github.com/user/repos");
+        assert_eq!(
+            reqs[3].url,
+            "https://api.github.com/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page=50&page=2"
+        );
+        for req in &reqs {
+            assert!(!format!("{} {:?} {}", req.url, req.headers, body(req)).contains(TOKEN));
+        }
+        // 규칙에 맞지 않는 입력은 보내지 않는다.
+        let fake = Arc::new(FakeTransport::new());
+        let bad = NewRepo {
+            name: "../x".into(),
+            ..new
+        };
+        assert!(github(&fake).create_repo(&token(), &bad).is_err());
+        assert!(fake.requests().is_empty());
+    }
+
+    #[test]
+    fn login_scope_is_sent_as_asked() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(200, &device_json());
+        github(&fake).begin_login(LoginScope::RepoWorkflow).unwrap();
+        assert_eq!(
+            body(&fake.requests()[0]),
+            format!("client_id={CLIENT_ID}&scope=repo%20workflow")
         );
     }
 

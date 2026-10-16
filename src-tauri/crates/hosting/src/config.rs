@@ -1,7 +1,5 @@
 //! GitHub 연결 설정. 비밀이 아닌 값만 둔다(client id는 공개 값이다).
 
-/// device flow로 받을 권한. 비공개 저장소 올리기·검토 요청에 필요한 최소다(D-109).
-pub const GITHUB_SCOPE: &str = "repo";
 pub const GITHUB_API_BASE: &str = "https://api.github.com";
 pub const GITHUB_WEB_BASE: &str = "https://github.com";
 
@@ -11,7 +9,6 @@ pub struct GitHubConfig {
     pub client_id: Option<String>,
     pub api_base: String,
     pub web_base: String,
-    pub scope: String,
 }
 
 impl GitHubConfig {
@@ -23,7 +20,6 @@ impl GitHubConfig {
                 .map(str::to_owned),
             api_base: GITHUB_API_BASE.to_owned(),
             web_base: GITHUB_WEB_BASE.to_owned(),
-            scope: GITHUB_SCOPE.to_owned(),
         }
     }
 
@@ -77,7 +73,6 @@ mod tests {
         let config = GitHubConfig::new(None);
         assert_eq!(config.api_base, "https://api.github.com");
         assert_eq!(config.web_base, "https://github.com");
-        assert_eq!(config.scope, "repo");
         let local = config.with_bases("http://127.0.0.1:9/", "http://127.0.0.1:9");
         assert_eq!(local.api_base, "http://127.0.0.1:9");
         assert_eq!(local.web_base, "http://127.0.0.1:9");

@@ -228,6 +228,8 @@ fn list_and_detail_go_through_the_service() {
 
     f.fake.push_json(200, &pull_json(3, "main", "octo"));
     f.fake.push_json(403, "{}");
+    // 리뷰를 볼 수 없어도(403) 상세는 그대로다(D-134).
+    f.fake.push_json(403, "{}");
     let detail = f.core.queries().pr_detail(dir.path(), 3).unwrap();
     assert_eq!(detail.row.number, 3);
     assert_eq!(detail.mergeable, MergeableView::Behind);

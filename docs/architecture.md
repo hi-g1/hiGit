@@ -338,13 +338,17 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 pub trait HostingProvider: Send + Sync {          // 블로킹. core가 작업 스레드에서 부른다
     fn id(&self) -> &'static str;                  // "github"
     fn detect(&self, url: &str) -> Option<RemoteRepo>; // 호스트가 정확히 github.com일 때만
-    fn begin_login(&self) -> Result<LoginChallenge, HostingError>;   // device flow 시작
+    fn begin_login(&self, scope: LoginScope) -> Result<LoginChallenge, HostingError>; // device flow 시작(Repo | RepoWorkflow, D-135)
     fn poll_login(&self, c: &LoginChallenge) -> Result<LoginPoll, HostingError>;
     fn current_user(&self, token: &SecretString) -> Result<HostUser, HostingError>;
     fn list_prs(&self, token: &SecretString, repo: &RemoteRepo, q: &PrQuery) -> Result<PrPage, HostingError>;
     fn pr_detail(&self, token: &SecretString, repo: &RemoteRepo, number: u64) -> Result<PrDetail, HostingError>;
     fn create_pr(&self, token: &SecretString, repo: &RemoteRepo, new: &NewPr) -> Result<PullRequest, HostingError>;
+    fn create_repo(&self, token: &SecretString, new: &NewRepo) -> Result<CreatedRepo, HostingError>; // POST /user/repos, 빈 저장소(D-132)
+    fn list_repos(&self, token: &SecretString, page: u32, per_page: u32) -> Result<RepoPage, HostingError>; // 50개씩(D-133)
 }
+// pr_detail은 리뷰 요약(사람마다 마지막 승인·변경 요청, 100개 넘거나 볼 수 없으면 None)과 댓글 수를 함께 읽는다(D-134).
+// LoginPoll::Granted { token, workflow }: 받은 권한에 workflow가 들었는지만 본다.
 
 pub trait HttpTransport: Send + Sync {             // 실제는 UreqTransport, 시험은 testing::FakeTransport
     fn send(&self, req: &HttpRequest) -> Result<HttpResponse, TransportError>;

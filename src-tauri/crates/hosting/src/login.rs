@@ -40,6 +40,24 @@ impl fmt::Debug for LoginChallenge {
     }
 }
 
+/// device flow로 요청할 권한(D-109, D-135). 폼의 `scope` 값을 이것만 만든다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoginScope {
+    /// 비공개 저장소 올리기·검토 요청에 필요한 최소.
+    Repo,
+    /// 거기에 `.github/workflows` 바꾸기를 더한다(사용자가 고를 때만).
+    RepoWorkflow,
+}
+
+impl LoginScope {
+    pub fn form_value(self) -> &'static str {
+        match self {
+            Self::Repo => "repo",
+            Self::RepoWorkflow => "repo workflow",
+        }
+    }
+}
+
 /// 한 번 물어본 결과.
 #[derive(Clone)]
 pub enum LoginPoll {
@@ -51,7 +69,11 @@ pub enum LoginPoll {
     },
     Expired,
     Denied,
-    Granted(SecretString),
+    /// 토큰과, 받은 권한에 `workflow`가 들었는지.
+    Granted {
+        token: SecretString,
+        workflow: bool,
+    },
 }
 
 impl fmt::Debug for LoginPoll {
@@ -64,7 +86,11 @@ impl fmt::Debug for LoginPoll {
                 .finish(),
             Self::Expired => f.write_str("Expired"),
             Self::Denied => f.write_str("Denied"),
-            Self::Granted(_) => f.write_str("Granted(<가림>)"),
+            Self::Granted { workflow, .. } => f
+                .debug_struct("Granted")
+                .field("token", &"<가림>")
+                .field("workflow", workflow)
+                .finish(),
         }
     }
 }
@@ -91,6 +117,8 @@ struct DeviceCodeBody {
 struct TokenBody {
     access_token: Option<String>,
     token_type: Option<String>,
+    /// 받은 권한(쉼표나 공백으로 나눈 목록).
+    scope: Option<String>,
     error: Option<String>,
     interval: Option<u64>,
 }
@@ -189,8 +217,16 @@ pub(crate) fn parse_token(body: &[u8], current_interval: u64) -> Result<LoginPol
     if !bearer || !valid_opaque(&token, TOKEN_MAX) {
         return Err(bad("unexpected token"));
     }
-    // refresh_token 등 다른 값은 읽지 않고 버린다.
-    Ok(LoginPoll::Granted(SecretString::from(token)))
+    // 받은 권한에서는 `workflow`가 있는지만 본다. refresh_token 등 다른 값은 읽지 않고 버린다.
+    let workflow = parsed.scope.as_deref().is_some_and(|scope| {
+        scope
+            .split(|c: char| c == ',' || c.is_whitespace())
+            .any(|s| s == "workflow")
+    });
+    Ok(LoginPoll::Granted {
+        token: SecretString::from(token),
+        workflow,
+    })
 }
 
 /// `GET /user`의 응답 본문.
@@ -342,11 +378,28 @@ mod tests {
                "refresh_token":"ghr_x"}"#,
         )
         .unwrap();
-        let LoginPoll::Granted(token) = &granted else {
+        let LoginPoll::Granted { token, workflow } = &granted else {
             panic!("{granted:?}");
         };
         assert_eq!(token.expose_secret(), "gho_TESTSECRET0123456789");
+        assert!(!workflow);
         assert!(!format!("{granted:?}").contains("TESTSECRET"));
+        // 받은 권한에서 workflow가 있는지만 본다(쉼표·공백 목록, D-135).
+        for (scope, want) in [
+            ("repo", false),
+            ("repo,workflow", true),
+            ("workflow repo", true),
+            ("", false),
+            ("workflows", false),
+        ] {
+            let body = format!(
+                r#"{{"access_token":"gho_TESTSECRET0123456789","token_type":"bearer","scope":"{scope}"}}"#
+            );
+            let Ok(LoginPoll::Granted { workflow, .. }) = poll(&body) else {
+                panic!("{scope}");
+            };
+            assert_eq!(workflow, want, "{scope}");
+        }
 
         let bad_cases = [
             r#"{"access_token":"gho_x","token_type":"mac"}"#,
