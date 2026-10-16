@@ -235,4 +235,30 @@ pub struct ExecCtx<'a> {
     pub key: &'a crate::undo::JournalKey,
     /// GitHub 연결(인증된 원격 작업·복제·검토 요청, D-111).
     pub github: &'a crate::github::GitHubService,
+    /// 앱 설정 복사본(D-127).
+    pub settings: crate::settings::AppSettings,
+}
+
+impl<'a> ExecCtx<'a> {
+    /// 기본 설정(모두 꺼짐)으로 만든다. 시험과 설정을 쓰지 않는 곳이 쓴다.
+    pub fn new(
+        git: &'a dyn GitBackend,
+        state: &'a RepoState,
+        key: &'a crate::undo::JournalKey,
+        github: &'a crate::github::GitHubService,
+    ) -> Self {
+        Self {
+            git,
+            state,
+            key,
+            github,
+            settings: crate::settings::AppSettings::default(),
+        }
+    }
+
+    /// 설정을 바꾼 복사본.
+    pub fn with_settings(mut self, settings: crate::settings::AppSettings) -> Self {
+        self.settings = settings;
+        self
+    }
 }

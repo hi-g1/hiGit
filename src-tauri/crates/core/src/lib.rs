@@ -29,6 +29,7 @@ mod recovery;
 mod redact;
 mod registry;
 mod secrets;
+pub mod settings;
 mod state;
 pub mod trust;
 pub mod undo;

@@ -19,6 +19,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::app_open_git_download,
             commands::app_open_log_folder,
             commands::app_open_hosting_page,
+            commands::settings_get,
+            commands::settings_set,
             commands::github_status,
             commands::github_connect_start,
             commands::github_connect_poll,

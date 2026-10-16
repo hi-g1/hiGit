@@ -6,6 +6,8 @@ const COMMANDS: &[&str] = &[
     "app_open_git_download",
     "app_open_log_folder",
     "app_open_hosting_page",
+    "settings_get",
+    "settings_set",
     "github_status",
     "github_connect_start",
     "github_connect_poll",

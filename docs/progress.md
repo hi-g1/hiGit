@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4b (계획 010, 끝의 "검토 반영" 절이 단계 설명보다 우선. 단계 이름은 계획 005와 겹치므로 "010-H3"처럼 적는다)
-- 단계: 010-H1 끝 (결정 D-124~D-137, 용어 6개, spec 위험도·화면 행, roadmap 반복 4c)
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: add iteration 4b decisions and terms
-- 다음 할 일: 010-H2 앱 설정 저장과 `ExecCtx.settings`(+`ExecCtx::new`) → 010-H3 전역 이름·이메일(git) → …
+- 단계: 010-H2 끝 (앱 설정 `settings.json`·`ExecCtx.settings`·`ExecCtx::new`·명령 settings_get/set)
+- 마지막 커밋: (이 갱신과 같은 커밋) core: add app settings store and commands
+- 다음 할 일: 010-H3 전역 이름·이메일 읽기·쓰기(git, 시험마다 임시 GIT_CONFIG_GLOBAL) → 010-H4 identity-set → …
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -203,7 +203,8 @@
 ## 반복 4b 단계 (계획 010, 검토 반영 순서)
 - [x] 계획 0dcaa22(planner + code-analyst 검토 17건 반영)
 - [x] 010-H1 결정·용어
-- [ ] 010-H2 앱 설정 / 010-H3 전역 이름·이메일(git) / 010-H4 identity-set·query_identity / 010-H5 처음 실행 패널·설정 구역
+- [x] 010-H2 앱 설정(`core::settings`, 쓰기 실패는 메모리, `ExecCtx::new`로 시험 생성부 정리)
+- [ ] 010-H3 전역 이름·이메일(git) / 010-H4 identity-set·query_identity / 010-H5 처음 실행 패널·설정 구역
 - [ ] 010-H6 공용 확인 대화상자 / 010-H7a 원격 ref 실패 분류 / 010-H7b lease push·ref 삭제·태그·ls-remote
 - [ ] 010-H8 D-097 완화·rewrote 표식 / 010-H9 force-push / 010-H10 고급 설정·덮어쓰며 올리기 화면
 - [ ] 010-H11 원격 브랜치 지우기·이름 바꾸기 / 010-H12 tag-push / 010-H13 원격 브랜치 메뉴·태그 올리기 화면

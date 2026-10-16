@@ -4,6 +4,7 @@ import {
   type ActionInput,
   type DiffRequest,
   type ErrorCode,
+  type AppSettingsPatch,
   type ErrorView,
   type HostingPage,
   type LogQuery,
@@ -16,6 +17,8 @@ export type {
   ActionInput,
   ActionMetaView,
   ActionResult,
+  AppSettingsPatch,
+  AppSettingsView,
   BranchListView,
   BranchNameCheck,
   BranchRow,
@@ -128,6 +131,9 @@ export const api = {
   /** GitHub 페이지를 연다(D-109). 주소는 core가 만들고, 검토 요청은 열린 저장소만. */
   openHostingPage: (folder: string | null, page: HostingPage) =>
     call(commands.appOpenHostingPage(folder, page)),
+  /** 앱 설정(D-127). */
+  settings: () => call(commands.settingsGet()),
+  setSettings: (patch: AppSettingsPatch) => call(commands.settingsSet(patch)),
   githubStatus: () => call(commands.githubStatus()),
   githubConnectStart: () => call(commands.githubConnectStart()),
   /** 간격 안이면 core가 네트워크 없이 기다리라고 답한다. */

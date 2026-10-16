@@ -5,14 +5,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use higit_core::view::{
-    ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    CloneDefaultsView, CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView,
-    DiffRequest, ErrorCode, ErrorView, FileDiffView, GitHubStatusView, HomeMapView,
-    HostingContextView, HostingPage, LogPage, LogQuery, LoginChallengeView, LoginPollView,
-    MergeHintView, OpenHow, PendingWorkView, PrDetailView, PrDraftView, PrListRequest, PrListView,
-    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
-    RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
-    UndoResult,
+    ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
+    BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
+    ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView, FileDiffView,
+    GitHubStatusView, HomeMapView, HostingContextView, HostingPage, LogPage, LogQuery,
+    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrDetailView,
+    PrDraftView, PrListRequest, PrListView, PreviewView, ProjectOpenResult, ProjectSummaryView,
+    RecentProject, RecoveryView, RewritePlanView, SecretCheckRequest, SecretCheckView,
+    StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -84,6 +84,23 @@ pub async fn app_open_hosting_page(
             code: ErrorCode::Internal,
             detail: Some(e.to_string()),
         })
+}
+
+/// 앱 설정(D-127).
+#[tauri::command]
+#[specta::specta]
+pub async fn settings_get(state: State<'_, AppState>) -> CmdResult<AppSettingsView> {
+    blocking(state, |core| Ok(core.settings())).await
+}
+
+/// 앱 설정의 알려진 칸만 바꾼다.
+#[tauri::command]
+#[specta::specta]
+pub async fn settings_set(
+    state: State<'_, AppState>,
+    patch: AppSettingsPatch,
+) -> CmdResult<AppSettingsView> {
+    blocking(state, move |core| Ok(core.set_settings(&patch))).await
 }
 
 /// 설정의 GitHub 구역 상태. 키체인을 건드리지 않는다.

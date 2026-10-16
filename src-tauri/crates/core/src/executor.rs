@@ -484,12 +484,13 @@ mod tests {
             folder: "/p".into(),
             repo: None,
         };
-        let ctx = ExecCtx {
-            git: &NoGit,
-            state: &state,
-            key: &JournalKey::ephemeral(),
-            github: crate::github::GitHubService::none(),
-        };
+        let journal_key = JournalKey::ephemeral();
+        let ctx = ExecCtx::new(
+            &NoGit,
+            &state,
+            &journal_key,
+            crate::github::GitHubService::none(),
+        );
         for _ in 0..3 {
             exec.preview(&ctx, "safe", &ActionInput::Init).unwrap();
         }
@@ -505,12 +506,13 @@ mod tests {
             folder: "/p".into(),
             repo: None,
         };
-        let ctx = ExecCtx {
-            git: &NoGit,
-            state: &state,
-            key: &JournalKey::ephemeral(),
-            github: crate::github::GitHubService::none(),
-        };
+        let journal_key = JournalKey::ephemeral();
+        let ctx = ExecCtx::new(
+            &NoGit,
+            &state,
+            &journal_key,
+            crate::github::GitHubService::none(),
+        );
         for _ in 0..3 {
             exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
         }

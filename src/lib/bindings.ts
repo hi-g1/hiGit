@@ -16,6 +16,10 @@ export const commands = {
 	 *  상수와 검사한 값으로 만든다. 검토 요청은 열린 저장소(`folder`)만.
 	 */
 	appOpenHostingPage: (folder: string | null, page: HostingPage) => __TAURI_INVOKE<null>("app_open_hosting_page", { folder, page }),
+	/**  앱 설정(D-127). */
+	settingsGet: () => __TAURI_INVOKE<AppSettingsView>("settings_get"),
+	/**  앱 설정의 알려진 칸만 바꾼다. */
+	settingsSet: (patch: AppSettingsPatch) => __TAURI_INVOKE<AppSettingsView>("settings_set", { patch }),
 	/**  설정의 GitHub 구역 상태. 키체인을 건드리지 않는다. */
 	githubStatus: () => __TAURI_INVOKE<GitHubStatusView>("github_status"),
 	/**  GitHub 로그인(device flow)을 시작한다. */
@@ -182,6 +186,16 @@ export type AmendInput = {
 	expectHead: string,
 	/**  새 메시지. 없으면 메시지는 그대로 두고 넣은 파일만 더한다. */
 	message: string | null,
+};
+
+/**  바꿀 칸만 담는다. 없는 칸은 그대로. */
+export type AppSettingsPatch = {
+	allowPublishedRewrite?: boolean | null,
+};
+
+export type AppSettingsView = {
+	/**  "올린 버전도 바꾸기". 켜면 덮어쓰며 올리기도 보인다. */
+	allowPublishedRewrite: boolean,
 };
 
 /**  앱 시작 시 확인한 환경. */

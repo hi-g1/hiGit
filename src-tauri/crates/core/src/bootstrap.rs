@@ -54,6 +54,8 @@ pub struct Core {
     github: Arc<crate::github::GitHubService>,
     /// 시험용: 복제 주소로 로컬 절대 경로를 받는다.
     allow_local_clone: bool,
+    /// 앱 설정(D-127).
+    settings: Arc<crate::settings::SettingsStore>,
 }
 
 /// 도는 작업 하나.
@@ -165,6 +167,9 @@ pub fn init() -> Result<Core> {
     let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
     core.set_github(github_service(data_dir.as_deref()));
+    if let Some(dir) = &data_dir {
+        core.settings = Arc::new(crate::settings::SettingsStore::open(dir));
+    }
     if let Some(dir) = &data_dir {
         core.logger = crate::log::Logger::open(dir);
     }
@@ -284,7 +289,28 @@ impl Core {
             running: Arc::default(),
             github,
             allow_local_clone: false,
+            settings: Arc::new(crate::settings::SettingsStore::in_memory()),
         })
+    }
+
+    /// 앱 설정(D-127).
+    pub fn settings(&self) -> crate::view::AppSettingsView {
+        self.settings.get().into()
+    }
+
+    /// 앱 설정의 알려진 칸만 바꾼다. 파일을 못 써도 이번 실행 동안은 바뀐 값을 쓴다.
+    pub fn set_settings(
+        &self,
+        patch: &crate::view::AppSettingsPatch,
+    ) -> crate::view::AppSettingsView {
+        self.settings.set(patch).into()
+    }
+
+    /// **테스트 전용.** 앱 데이터 폴더처럼 `dir`의 `settings.json`을 쓴다.
+    #[doc(hidden)]
+    pub fn with_settings_dir_for_tests(mut self, dir: &Path) -> Self {
+        self.settings = Arc::new(crate::settings::SettingsStore::open(dir));
+        self
     }
 
     /// **테스트 전용.** 복제 주소로 로컬 절대 경로(bare 원격)를 받는다.
@@ -597,6 +623,7 @@ impl Core {
             state: &state,
             key: self.executor.journal_key(),
             github: &self.github,
+            settings: self.settings.get(),
         };
         let (_preview, token) = self.executor.preview(&ctx, input.action_id(), input)?;
         Ok(PreviewView { token: token.0 })
@@ -673,6 +700,7 @@ impl Core {
             state: &state,
             key: self.executor.journal_key(),
             github: &self.github,
+            settings: self.settings.get(),
         };
         Ok(crate::view::RecoveryView {
             items: self.executor.recovery(&ctx)?,
@@ -816,6 +844,7 @@ impl Core {
             state: &state,
             key: self.executor.journal_key(),
             github: &self.github,
+            settings: self.settings.get(),
         };
         f(&self.executor, &ctx)
     }
@@ -882,6 +911,7 @@ impl Core {
             state: &state,
             key: self.executor.journal_key(),
             github: &self.github,
+            settings: self.settings.get(),
         };
         let input = ActionInput::Clone(crate::view::CloneInput {
             url,

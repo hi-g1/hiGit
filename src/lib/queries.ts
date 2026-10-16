@@ -42,7 +42,17 @@ export const queryKeys = {
   prDetail: (repo: string, number: number) => ["github", "prDetail", repo, number] as const,
   prDraft: (repo: string) => ["github", "prDraft", repo] as const,
   cloneDefaults: ["cloneDefaults"] as const,
+  settings: ["settings"] as const,
 };
+
+/** 앱 설정(D-127). */
+export function useAppSettings() {
+  return useQuery<Awaited<ReturnType<typeof api.settings>>, ApiError>({
+    queryKey: queryKeys.settings,
+    queryFn: api.settings,
+    staleTime: Infinity,
+  });
+}
 
 /** 복제 대화상자의 부모 폴더 기본값(홈 폴더). */
 export function useCloneDefaults() {

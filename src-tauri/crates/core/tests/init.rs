@@ -26,12 +26,14 @@ fn init_turns_folder_into_repo() {
     };
     assert_eq!(state.repo, None);
 
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
         .unwrap()
@@ -59,12 +61,13 @@ fn stage_and_commit_with_real_git() {
         folder: folder.clone(),
         repo: None,
     };
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
         .unwrap()
@@ -84,12 +87,13 @@ fn stage_and_commit_with_real_git() {
         folder: folder.clone(),
         repo: Some(repo),
     };
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     exec.execute(
         &ctx,
         "stage",

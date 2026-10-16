@@ -36,12 +36,13 @@ fn stage_and_unstage_call_git_with_paths() {
     let exec = executor();
     let git = FakeGit::new();
     let state = repo_state("/repo");
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
 
     let out = exec
         .execute(
@@ -75,12 +76,13 @@ fn commit_returns_new_summary() {
     let exec = executor();
     let git = FakeGit::new();
     let state = repo_state("/repo");
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
 
     let out = exec
         .execute(&ctx, "commit", &commit("로그인 화면\n\n설명"), None)
@@ -96,12 +98,13 @@ fn inputs_are_checked_before_git() {
     let exec = executor();
     let git = FakeGit::new();
     let state = repo_state("/repo");
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     let invalid = |r: higit_core::Result<Outcome>| matches!(r, Err(CoreError::InvalidInput(_)));
 
     assert!(invalid(exec.execute(
@@ -140,12 +143,13 @@ fn actions_need_a_repo() {
     let exec = executor();
     let git = FakeGit::new();
     let state = folder_state("/그냥 폴더");
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a"]))),
         ("unstage", ActionInput::Unstage(paths(&["a"]))),
@@ -285,12 +289,13 @@ fn stage_and_commit_refuse_while_files_are_in_conflict() {
         kind: git::EntryKind::Unmerged,
     });
     let state = repo_state("/repo");
-    let ctx = ExecCtx {
-        git: &git,
-        state: &state,
-        key: &higit_core::undo::JournalKey::ephemeral(),
-        github: higit_core::github::GitHubService::none(),
-    };
+    let journal_key = higit_core::undo::JournalKey::ephemeral();
+    let ctx = ExecCtx::new(
+        &git,
+        &state,
+        &journal_key,
+        higit_core::github::GitHubService::none(),
+    );
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a.txt"]))),
         ("commit", commit("저장")),

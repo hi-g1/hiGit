@@ -11,6 +11,8 @@
     "allow-app-open-git-download",
     "allow-app-open-log-folder",
     "allow-app-open-hosting-page",
+    "allow-settings-get",
+    "allow-settings-set",
     "allow-github-status",
     "allow-github-connect-start",
     "allow-github-connect-poll",
