@@ -66,6 +66,33 @@ pub struct ConflictStateView {
     pub clean_files: u32,
     /// 앱이 끝낼 수 없는 다른 작업(리베이스·cherry-pick·revert)이 충돌을 남겼다.
     pub other_operation: bool,
+    /// 앞서 고른 것(D-211). 같은 합치기이고 서명·경로·곳 수가 맞을 때만.
+    pub draft: Option<ConflictDraftView>,
+}
+
+/// 충돌 해결 화면에서 고른 것. 화면의 선택 모양 그대로다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictDraftView {
+    pub files: Vec<DraftFile>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftFile {
+    pub path: String,
+    pub pick: DraftPick,
+}
+
+/// 파일 하나의 선택. 텍스트는 곳마다(고르지 않은 곳은 `null`), 그 밖은 한쪽 그대로.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum DraftPick {
+    Hunks {
+        picks: Vec<Option<crate::view::HunkChoice>>,
+    },
+    Ours,
+    Theirs,
 }
 
 /// 한쪽 파일의 모양.

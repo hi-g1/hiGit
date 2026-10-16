@@ -27,8 +27,8 @@ pub use branch::{
     BranchListView, BranchNameCheck, BranchRow, CarryBlock, NameProblem, SwitchPlanView,
 };
 pub use conflict::{
-    ConflictContext, ConflictFileKind, ConflictFileSummary, ConflictFileView, ConflictHunkView,
-    ConflictSide, ConflictStateView, SideState,
+    ConflictContext, ConflictDraftView, ConflictFileKind, ConflictFileSummary, ConflictFileView,
+    ConflictHunkView, ConflictSide, ConflictStateView, DraftFile, DraftPick, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use force_push::{DroppedVersion, ForcePushBlock, ForcePushPlanView};

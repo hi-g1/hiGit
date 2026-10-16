@@ -98,7 +98,9 @@ export function Conflict({ repo, state, onDone }: Props) {
   const files: ConflictFile[] = state.files.map((f) => ({ path: f.path, kind: f.kind, hunks: f.hunks }));
   const key = `${repo}|${state.theirs?.shortOid ?? ""}`;
   const { open } = store;
-  useEffect(() => open(key), [open, key]);
+  // 처음 열 때만 저장소의 초안으로 채운다(D-211). 같은 합치기면 지금 선택을 둔다.
+  const draft = state.draft;
+  useEffect(() => open(key, repo, draft), [open, key, repo, draft]);
 
   const picks = store.picks;
   const { total, remaining, byFile } = progress(files, picks);

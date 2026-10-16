@@ -28,6 +28,8 @@ pub(crate) enum Name {
     Operation,
     /// 올린 기록을 바꿨다(D-129, `core::rewrote`).
     Rewrote,
+    /// 충돌 해결 화면에서 고른 것(D-211, `core::conflict_draft`).
+    ConflictDraft,
 }
 
 impl Name {
@@ -36,6 +38,15 @@ impl Name {
             Name::Unpark => "unpark",
             Name::Operation => "operation",
             Name::Rewrote => "rewrote",
+            Name::ConflictDraft => "conflict-draft",
+        }
+    }
+
+    /// 파일 크기 상한. 충돌 선택은 직접 고친 글을 담아 크다(본문 8MB에 JSON 글자 이스케이프 여유).
+    fn max_bytes(self) -> u64 {
+        match self {
+            Name::ConflictDraft => 20 * 1024 * 1024,
+            _ => MAX_BYTES,
         }
     }
 }
@@ -108,7 +119,7 @@ pub(crate) fn read<T: DeserializeOwned>(git_dir: &Path, name: Name, key: &Journa
         return None;
     }
     let file = path(git_dir, name);
-    if std::fs::metadata(&file).ok()?.len() > MAX_BYTES {
+    if std::fs::metadata(&file).ok()?.len() > name.max_bytes() {
         return None;
     }
     let text = std::fs::read_to_string(file).ok()?;

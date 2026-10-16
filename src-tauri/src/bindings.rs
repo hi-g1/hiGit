@@ -68,6 +68,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_recovery,
             commands::query_pending_work,
             commands::query_conflict_state,
+            commands::conflict_draft_save,
             commands::query_conflict_file,
             commands::query_project_summary,
             commands::query_clone_defaults,

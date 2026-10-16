@@ -60,6 +60,7 @@
     "allow-query-recovery",
     "allow-query-pending-work",
     "allow-query-conflict-state",
+    "allow-conflict-draft-save",
     "allow-query-conflict-file",
     "allow-query-project-summary",
     "allow-query-clone-defaults",

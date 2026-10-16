@@ -55,6 +55,7 @@ const COMMANDS: &[&str] = &[
     "query_recovery",
     "query_pending_work",
     "query_conflict_state",
+    "conflict_draft_save",
     "query_conflict_file",
     "query_project_summary",
     "query_clone_defaults",

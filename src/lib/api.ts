@@ -8,6 +8,7 @@ import {
   type ErrorView,
   type HostingPage,
   type ImageRequest,
+  type ConflictDraftView,
   type LogQuery,
   type OpenHow,
   type PrListRequest,
@@ -25,6 +26,7 @@ export type {
   BranchNameCheck,
   BranchRow,
   CarryBlock,
+  ConflictDraftView,
   DirtyChoice,
   ImageBlob,
   ImageMime,
@@ -233,6 +235,8 @@ export const api = {
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),
   /** 충돌 해결 화면 상태(D-069). */
   conflictState: (repo: string) => call(commands.queryConflictState(repo)),
+  /** 충돌 해결 화면에서 고른 것을 저장소 안에 남긴다(D-211). */
+  saveConflictDraft: (repo: string, draft: ConflictDraftView) => call(commands.conflictDraftSave(repo, draft)),
   /** 충돌 파일 하나의 고를 곳(D-086). */
   conflictFile: (repo: string, path: string) => call(commands.queryConflictFile(repo, path)),
   /** 작업 내역(D-085). */

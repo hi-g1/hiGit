@@ -1,10 +1,10 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { conflictFile: vi.fn(), executeAction: vi.fn() },
+  api: { conflictFile: vi.fn(), executeAction: vi.fn(), saveConflictDraft: vi.fn() },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -24,6 +24,7 @@ const state: ConflictStateView = {
   moreFiles: 0,
   cleanFiles: 5,
   otherOperation: false,
+  draft: null,
 };
 
 const textFile: ConflictFileView = {
@@ -52,6 +53,7 @@ const binaryFile: ConflictFileView = {
 function show(onDone = vi.fn()) {
   vi.mocked(api.conflictFile).mockImplementation(async (_repo, path) => (path === "그림.png" ? binaryFile : textFile));
   vi.mocked(api.executeAction).mockResolvedValue({ kind: "conflictFinished" });
+  vi.mocked(api.saveConflictDraft).mockResolvedValue(null);
   render(
     <AppProviders client={createQueryClient()}>
       <Conflict repo="/repo" state={state} onDone={onDone} />
@@ -63,7 +65,6 @@ function show(onDone = vi.fn()) {
 afterEach(() => {
   vi.clearAllMocks();
   act(() => useConflictStore.getState().clear());
-  window.localStorage.clear();
 });
 
 describe("충돌 해결 화면", () => {
@@ -94,6 +95,30 @@ describe("충돌 해결 화면", () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { code: "Digit1", key: "1", bubbles: true }));
     });
     expect(within(preview).getByText('<Form title="로그인하기" />')).toBeInTheDocument();
+  });
+
+  it("고른 것을 잠시 뒤 저장소에 남기고, 껐다 켜면 그 초안으로 이어 간다(D-211)", async () => {
+    show();
+    await screen.findByText('<Form title="로그인하기" />');
+    await userEvent.click(screen.getAllByRole("button", { name: "이걸로" })[1]!);
+    await vi.waitFor(() => expect(api.saveConflictDraft).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(api.saveConflictDraft).toHaveBeenCalledWith("/repo", {
+      files: [{ path: "src/화면.tsx", pick: { kind: "hunks", picks: [{ kind: "theirs" }, null] } }],
+    });
+    const saved = vi.mocked(api.saveConflictDraft).mock.calls[0]![1];
+
+    // 껐다 켠 흉내: 화면 상태를 비우고 조회가 준 초안으로 다시 연다.
+    cleanup();
+    act(() => useConflictStore.getState().clear());
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Conflict repo="/repo" state={{ ...state, draft: saved }} onDone={vi.fn()} />
+      </AppProviders>,
+    );
+    expect(await screen.findByText("충돌 3곳 중 2곳 남음")).toBeInTheDocument();
+    // 고른 곳은 건너뛰고 남은 곳에서 연다.
+    expect(await screen.findByText("30번째 줄", { exact: false })).toBeInTheDocument();
+    expect(useConflictStore.getState().picks).toEqual({ "src/화면.tsx": { kind: "hunks", picks: [{ kind: "theirs" }, null] } });
   });
 
   it("모든 곳을 고르면 합치기 마치기가 나타나 conflict-finish를 부른다", async () => {

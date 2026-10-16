@@ -720,6 +720,17 @@ impl Core {
         self.recent.remove(path);
     }
 
+    /// 충돌 해결 화면에서 고른 것을 저장소 안에 남긴다(D-211). 저장소 쓰기 잠금 안에서.
+    pub fn save_conflict_draft(
+        &self,
+        folder: &Path,
+        draft: &crate::view::ConflictDraftView,
+    ) -> Result<()> {
+        self.with_repo_lock(folder, |_, _| {
+            self.queries.save_conflict_draft(folder, draft)
+        })
+    }
+
     /// 최근 목록의 프로젝트를 고정하거나 푼다(D-203).
     pub fn pin_project(&self, path: &Path, pinned: bool) -> Result<()> {
         self.recent.pin(path, pinned).map_err(pin_error)

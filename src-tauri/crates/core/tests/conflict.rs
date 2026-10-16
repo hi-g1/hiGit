@@ -478,3 +478,151 @@ mod unpark {
         assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
     }
 }
+
+/// 충돌 해결 화면에서 고른 것을 저장소 안에 서명해 둔다(D-211).
+mod draft {
+    use super::*;
+    use higit_core::view::{ActionInput, ConflictDraftView, DraftFile, DraftPick, HunkChoice};
+
+    fn picks() -> ConflictDraftView {
+        ConflictDraftView {
+            files: vec![
+                DraftFile {
+                    path: "a.txt".into(),
+                    pick: DraftPick::Hunks {
+                        picks: vec![
+                            Some(HunkChoice::Ours),
+                            None,
+                            Some(HunkChoice::Custom {
+                                text: "직접 고친 줄\n".into(),
+                            }),
+                        ],
+                    },
+                },
+                DraftFile {
+                    path: "b.bin".into(),
+                    pick: DraftPick::Theirs,
+                },
+            ],
+        }
+    }
+
+    fn draft_file(dir: &Path) -> std::path::PathBuf {
+        dir.join(".git/higit/conflict-draft.json")
+    }
+
+    #[test]
+    fn saved_picks_come_back_with_the_state() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        assert_eq!(core.queries().conflict_state(dir).unwrap().draft, None);
+        core.save_conflict_draft(dir, &picks()).unwrap();
+        assert!(draft_file(dir).exists());
+        assert_eq!(
+            core.queries().conflict_state(dir).unwrap().draft,
+            Some(picks())
+        );
+        // 다른 키(받은 zip, 다른 컴퓨터)로 서명한 파일은 쓰지 않는다.
+        let other = self::core(dir);
+        assert_eq!(other.queries().conflict_state(dir).unwrap().draft, None);
+    }
+
+    #[test]
+    fn picks_that_do_not_fit_are_refused() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let refused = |draft: ConflictDraftView| {
+            let err = core.save_conflict_draft(dir, &draft).unwrap_err();
+            assert_eq!(ErrorView::from(&err).code, ErrorCode::InvalidInput);
+        };
+        // 충돌 경로에 없는 경로
+        refused(ConflictDraftView {
+            files: vec![DraftFile {
+                path: "c.txt".into(),
+                pick: DraftPick::Ours,
+            }],
+        });
+        // 곳 번호 넘침
+        refused(ConflictDraftView {
+            files: vec![DraftFile {
+                path: "a.txt".into(),
+                pick: DraftPick::Hunks {
+                    picks: vec![Some(HunkChoice::Ours); 4],
+                },
+            }],
+        });
+        // 이진 파일을 곳마다
+        refused(ConflictDraftView {
+            files: vec![DraftFile {
+                path: "b.bin".into(),
+                pick: DraftPick::Hunks { picks: vec![None] },
+            }],
+        });
+        // 글 하나 1MB 넘김, 같은 경로 둘
+        refused(ConflictDraftView {
+            files: vec![DraftFile {
+                path: "a.txt".into(),
+                pick: DraftPick::Hunks {
+                    picks: vec![Some(HunkChoice::Custom {
+                        text: "x".repeat(1024 * 1024 + 1),
+                    })],
+                },
+            }],
+        });
+        refused(ConflictDraftView {
+            files: vec![
+                DraftFile {
+                    path: "b.bin".into(),
+                    pick: DraftPick::Ours,
+                },
+                DraftFile {
+                    path: "b.bin".into(),
+                    pick: DraftPick::Theirs,
+                },
+            ],
+        });
+        assert!(!draft_file(dir).exists());
+    }
+
+    #[test]
+    fn finishing_or_aborting_or_another_merge_removes_the_picks() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        core.save_conflict_draft(dir, &picks()).unwrap();
+        core.execute(dir, &ActionInput::ConflictAbort, None)
+            .unwrap();
+        assert!(!draft_file(dir).exists());
+        assert!(
+            core.save_conflict_draft(dir, &picks()).is_err(),
+            "합치는 중이 아니면 거절"
+        );
+
+        // 같은 브랜치가 다른 버전이 되어 다시 합치면 앞의 선택은 맞지 않아 지운다.
+        git(dir, &["merge", "-q", "--no-ff", "-m", "합침", "기능"]);
+        core.save_conflict_draft(dir, &picks()).unwrap();
+        git(dir, &["merge", "--abort"]);
+        git(dir, &["switch", "-q", "기능"]);
+        std::fs::write(dir.join("e.txt"), "더\n").unwrap();
+        commit_all(dir, "기능 더");
+        git(dir, &["switch", "-q", "main"]);
+        git(dir, &["merge", "-q", "--no-ff", "-m", "합침", "기능"]);
+        assert_eq!(core.queries().conflict_state(dir).unwrap().draft, None);
+        assert!(!draft_file(dir).exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_higit_folder_is_not_written() {
+        let repo = merging();
+        let dir = repo.path();
+        let core = core(dir);
+        let outside = tempfile::tempdir().unwrap();
+        let _ = std::fs::remove_dir_all(dir.join(".git/higit"));
+        std::os::unix::fs::symlink(outside.path(), dir.join(".git/higit")).unwrap();
+        assert!(core.save_conflict_draft(dir, &picks()).is_err());
+        assert!(!outside.path().join("conflict-draft.json").exists());
+    }
+}

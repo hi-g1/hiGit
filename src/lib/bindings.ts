@@ -104,6 +104,8 @@ export const commands = {
 	queryPendingWork: (repo: string) => __TAURI_INVOKE<PendingWorkView>("query_pending_work", { repo }),
 	/**  충돌 해결 화면 상태(D-069). */
 	queryConflictState: (repo: string) => __TAURI_INVOKE<ConflictStateView>("query_conflict_state", { repo }),
+	/**  충돌 해결 화면에서 고른 것을 저장소 안에 남긴다(D-211). 화면은 500ms 모아 보낸다. */
+	conflictDraftSave: (repo: string, draft: ConflictDraftView) => __TAURI_INVOKE<null>("conflict_draft_save", { repo, draft }),
 	/**  충돌 파일 하나의 고를 곳(D-086). */
 	queryConflictFile: (repo: string, path: string) => __TAURI_INVOKE<ConflictFileView>("query_conflict_file", { repo, path }),
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
@@ -547,6 +549,11 @@ export type ConflictContext =
 /**  앱이 시작한 기록 정리. 내 쪽은 옮기는 버전, 합칠 쪽은 정리된 기록. */
 "rebase";
 
+/**  충돌 해결 화면에서 고른 것. 화면의 선택 모양 그대로다. */
+export type ConflictDraftView = {
+	files: DraftFile[],
+};
+
 /**  `Text`는 곳마다 고르고, `Whole`은 파일 단위로 한쪽을 고른다. */
 export type ConflictFileKind = "text" | "whole";
 
@@ -612,6 +619,8 @@ export type ConflictStateView = {
 	cleanFiles: number,
 	/**  앱이 끝낼 수 없는 다른 작업(리베이스·cherry-pick·revert)이 충돌을 남겼다. */
 	otherOperation: boolean,
+	/**  앞서 고른 것(D-211). 같은 합치기이고 서명·경로·곳 수가 맞을 때만. */
+	draft: ConflictDraftView | null,
 };
 
 /**  줄 하나. 줄 번호는 화면에 바로 쓰도록 core가 계산한다. */
@@ -653,6 +662,14 @@ export type DisplayHintsView = {
 	/**  OS가 다크 모드인지. 모르면 null(화면은 CSS에 맡긴다). */
 	dark: boolean | null,
 };
+
+export type DraftFile = {
+	path: string,
+	pick: DraftPick,
+};
+
+/**  파일 하나의 선택. 텍스트는 곳마다(고르지 않은 곳은 `null`), 그 밖은 한쪽 그대로. */
+export type DraftPick = { kind: "hunks"; picks: (HunkChoice | null)[] } | { kind: "ours" } | { kind: "theirs" };
 
 /**  원격에서 사라질 버전 하나(앞 5개만 보인다). */
 export type DroppedVersion = {

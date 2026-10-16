@@ -150,6 +150,17 @@ impl Action for ConflictAction {
     }
 
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
+        let outcome = self.run(ctx, input)?;
+        // 마치거나 그만두면 고른 것을 지운다(D-211). 이어진 충돌은 합칠 쪽이 바뀌어 조회가 지운다.
+        if let Ok(dir) = ctx.git.git_dir(repo_of(ctx)?) {
+            crate::conflict_draft::clear(&dir);
+        }
+        Ok(outcome)
+    }
+}
+
+impl ConflictAction {
+    fn run(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
         refuse_other_operation(git, repo, ctx.key)?;

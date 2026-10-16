@@ -7,14 +7,15 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
-    ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, EmailCheckView, ErrorCode,
-    ErrorView, FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
-    HostingContextView, HostingPage, IdentityView, ImagePairView, ImageRequest, LogPage, LogQuery,
-    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrCommentsView,
-    PrDetailView, PrDraftView, PrListRequest, PrListView, PrRepoView, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView,
-    RemoteBranchPlanView, RewritePlanView, ScopeAdd, SecretCheckRequest, SecretCheckView,
-    StashListView, StatusView, SwitchPlanView, TrustChoice, UndoResult,
+    ConflictDraftView, ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView,
+    EmailCheckView, ErrorCode, ErrorView, FileDiffView, ForcePushPlanView, GitHubRepoListView,
+    GitHubStatusView, HomeMapView, HostingContextView, HostingPage, IdentityView, ImagePairView,
+    ImageRequest, LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow,
+    PendingWorkView, PrCommentsView, PrDetailView, PrDraftView, PrListRequest, PrListView,
+    PrRepoView, PreviewView, ProjectOpenResult, ProjectSummaryView, PublishDraftView,
+    RecentProject, RecoveryView, RemoteBranchPlanView, RewritePlanView, ScopeAdd,
+    SecretCheckRequest, SecretCheckView, StashListView, StatusView, SwitchPlanView, TrustChoice,
+    UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -657,6 +658,20 @@ pub async fn query_conflict_state(
     repo: String,
 ) -> CmdResult<ConflictStateView> {
     blocking(state, move |core| core.conflict_state(&PathBuf::from(repo))).await
+}
+
+/// 충돌 해결 화면에서 고른 것을 저장소 안에 남긴다(D-211). 화면은 500ms 모아 보낸다.
+#[tauri::command]
+#[specta::specta]
+pub async fn conflict_draft_save(
+    state: State<'_, AppState>,
+    repo: String,
+    draft: ConflictDraftView,
+) -> CmdResult<()> {
+    blocking(state, move |core| {
+        core.save_conflict_draft(&PathBuf::from(repo), &draft)
+    })
+    .await
 }
 
 /// 충돌 파일 하나의 고를 곳(D-086).

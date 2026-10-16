@@ -41,6 +41,13 @@ export default defineConfig(
         { object: "Intl", property: "RelativeTimeFormat", message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150)." },
         { object: "navigator", property: "language", message: "OS 언어는 src/lib/locale.ts에서만 읽습니다(D-149)." },
         { object: "navigator", property: "languages", message: "OS 언어는 src/lib/locale.ts에서만 읽습니다(D-149)." },
+        { object: "window", property: "localStorage", message: "웹뷰 저장소는 쓰지 않습니다. 남길 것은 core에 둡니다(D-211)." },
+        { object: "window", property: "sessionStorage", message: "웹뷰 저장소는 쓰지 않습니다. 남길 것은 core에 둡니다(D-211)." },
+      ],
+      "no-restricted-globals": [
+        "error",
+        { name: "localStorage", message: "웹뷰 저장소는 쓰지 않습니다. 남길 것은 core에 둡니다(D-211)." },
+        { name: "sessionStorage", message: "웹뷰 저장소는 쓰지 않습니다. 남길 것은 core에 둡니다(D-211)." },
       ],
       // 화면은 백엔드를 src/lib/를 통해서만 부른다(D-010). invoke를 직접 쓰지 않는다.
       "no-restricted-imports": [
@@ -65,8 +72,8 @@ export default defineConfig(
     rules: { "no-restricted-imports": "off" },
   },
   {
-    files: ["src/lib/time.ts", "src/lib/locale.ts", "src/**/*.test.{ts,tsx}"],
-    rules: { "no-restricted-properties": "off" },
+    files: ["src/lib/time.ts", "src/lib/locale.ts", "src/lib/legacyStorage.ts", "src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-properties": "off", "no-restricted-globals": "off" },
   },
   {
     files: ["*.config.{js,ts}", "scripts/**/*.mjs"],

@@ -45,6 +45,22 @@ describe("화면 코드 린트", () => {
     expect(locale.messages.filter((m) => m.severity === 2)).toEqual([]);
   });
 
+  it.each([
+    ["localStorage", `export const f = () => localStorage.getItem("k");`],
+    ["window.localStorage", `export const f = () => window.localStorage.getItem("k");`],
+    ["sessionStorage", `export const f = () => sessionStorage.setItem("k", "v");`],
+    ["window.sessionStorage", `export const f = () => window.sessionStorage.clear();`],
+  ])("화면 코드의 %s는 오류(D-211)", async (_name, code) => {
+    expect((await errors(code)).length).toBeGreaterThan(0);
+  });
+
+  it("옛 저장소 정리 파일에서는 통과", async () => {
+    const [legacy] = await eslint.lintText(`export const f = () => window.localStorage.removeItem("k");`, {
+      filePath: `${ROOT}src/lib/legacyStorage.ts`,
+    });
+    expect(legacy.messages.filter((m) => m.severity === 2)).toEqual([]);
+  });
+
   it("평범한 JSX 글자는 통과", async () => {
     expect(await errors(`export const A = (p: { s: string }) => <p>{p.s}</p>;`)).toEqual([]);
   });

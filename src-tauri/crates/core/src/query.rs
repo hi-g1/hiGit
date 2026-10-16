@@ -331,6 +331,32 @@ impl Queries {
 
     /// 충돌 해결 화면의 상태(D-069). 합치는 중이 아니면 `active: false`.
     pub fn conflict_state(&self, repo: &Path) -> Result<ConflictStateView> {
+        let (mut view, target) = self.conflict_state_with_target(repo)?;
+        // 앞서 고른 것을 붙인다(D-211). 합칠 쪽이 바뀌었으면 지운다.
+        if let Some(theirs) = &target {
+            let git_dir = self.git.git_dir(&self.opened_repo(repo)?)?;
+            view.draft = crate::conflict_draft::load(&git_dir, &self.key, theirs, &view.files);
+        }
+        Ok(view)
+    }
+
+    /// 충돌 해결 화면에서 고른 것을 남긴다(D-211). 합치는 중이 아니면 거절한다.
+    pub(crate) fn save_conflict_draft(
+        &self,
+        repo: &Path,
+        draft: &crate::view::ConflictDraftView,
+    ) -> Result<()> {
+        let (view, target) = self.conflict_state_with_target(repo)?;
+        let theirs = target.ok_or(CoreError::InvalidInput("합치는 중이 아니에요"))?;
+        let git_dir = self.git.git_dir(&self.opened_repo(repo)?)?;
+        crate::conflict_draft::save(&git_dir, &self.key, &theirs, draft, &view.files)
+    }
+
+    /// 충돌 상태와 합칠 쪽 버전 전체 해시(고른 것을 묶는 대상).
+    fn conflict_state_with_target(
+        &self,
+        repo: &Path,
+    ) -> Result<(ConflictStateView, Option<String>)> {
         use crate::conflict::Context;
         use crate::operation::OpKind;
         const MAX_FILES: usize = 200;
@@ -354,9 +380,10 @@ impl Queries {
             more_files: 0,
             clean_files: 0,
             other_operation: context.is_none() && (other || !conflicts.is_empty()),
+            draft: None,
         };
         let Some(context) = context else {
-            return Ok(view);
+            return Ok((view, None));
         };
         let branches = self.git.branches(&root)?;
         // 그 버전을 가리키는 로컬 브랜치, 없으면 원격 브랜치 이름. 없으면 짧은 해시를 쓴다.
@@ -391,13 +418,14 @@ impl Queries {
         // 다른 쪽 버전: 합치기는 MERGE_HEAD, 꺼내기는 맡긴 항목, 복사·되돌리기는 고른 버전.
         let other_rev = |name: &str| self.git.resolve_ref(&root, name);
         let current = self.git.current_branch(&root)?;
-        match &context {
+        let target = match &context {
             Context::Operation(op) if op.kind == OpKind::Rebase => {
                 // 내 쪽 = 옮기는 버전, 합칠 쪽 = 정리된 기록(지금 HEAD, 이름표는 정리하는 브랜치).
                 if let Some(moving) = other_rev("REBASE_HEAD")? {
                     view.ours = side(moving.as_str(), None)?;
                 }
                 view.theirs = side("HEAD", Some(op.branch.clone()))?;
+                other_rev("HEAD")?.map(|o| o.to_string())
             }
             _ => {
                 let theirs = match &context {
@@ -409,12 +437,13 @@ impl Queries {
                     Context::Operation(_) => other_rev("REVERT_HEAD")?,
                 };
                 let Some(theirs) = theirs else {
-                    return Ok(view);
+                    return Ok((view, None));
                 };
                 view.ours = side("HEAD", current)?;
                 view.theirs = side(theirs.as_str(), name_of(&theirs))?;
+                Some(theirs.to_string())
             }
-        }
+        };
         view.more_files = u32::try_from(conflicts.len().saturating_sub(MAX_FILES)).unwrap_or(0);
         for c in conflicts.iter().take(MAX_FILES) {
             let file = crate::conflict::read_file(self.git.as_ref(), &root, c)?;
@@ -438,7 +467,7 @@ impl Queries {
                 .count(),
         )
         .unwrap_or(u32::MAX);
-        Ok(view)
+        Ok((view, target))
     }
 
     /// 충돌 파일 하나의 고를 곳(D-086). 충돌 중인 경로만 받는다.
