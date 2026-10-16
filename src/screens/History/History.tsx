@@ -20,6 +20,7 @@ import { useMessages } from "../../messages";
 import { useHistoryStore } from "../../state/historyStore";
 import { useRepoStore } from "../../state/repoStore";
 import { EmptyState } from "../../ui/EmptyState";
+import { Loading } from "../../ui/Loading";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term, TermTooltip } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
@@ -310,7 +311,7 @@ export function History({
           {m.zoomStatus(m.zoomNames[zoom], shown.length)}
         </span>
       </header>
-      {log.isPending && <EmptyState>{m.loading}</EmptyState>}
+      <Loading pending={log.isPending} />
       {log.error && <ErrorNotice error={log.error} />}
       {pages &&
         (received === 0 ? (

@@ -16,7 +16,7 @@ import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
-import { EmptyState } from "../../ui/EmptyState";
+import { Loading } from "../../ui/Loading";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Splitter } from "../../ui/Splitter";
 import { Activity } from "../Activity/Activity";
@@ -99,7 +99,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         <div className={styles.twoPane} style={{ "--pane-width": `${pane.rem}rem` } as CSSProperties}>
           <section className={styles.left}>
             <div className={styles.scroll}>
-              {status.isPending && <EmptyState>{m.loading}</EmptyState>}
+              <Loading pending={status.isPending} />
               {status.error && <ErrorNotice error={status.error} />}
               {status.data && (
                 <>

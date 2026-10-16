@@ -12,6 +12,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
+import { Loading } from "../../ui/Loading";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { Tooltip } from "../../ui/Tooltip";
@@ -81,7 +82,7 @@ export function Activity({ repo, onDone }: Props) {
   return (
     <section className={styles.activity} aria-label={m.activityArea}>
       <p className={styles.note}>{m.activityNote}</p>
-      {recovery.isPending && <EmptyState>{m.loading}</EmptyState>}
+      <Loading pending={recovery.isPending} />
       {recovery.error && <ErrorNotice error={recovery.error} />}
       {recovery.data && items.length === 0 && <EmptyState>{m.activityEmpty}</EmptyState>}
       {groups.map((g) => (

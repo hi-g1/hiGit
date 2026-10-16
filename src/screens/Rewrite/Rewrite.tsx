@@ -7,7 +7,7 @@ import { useRewritePlan } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
-import { EmptyState } from "../../ui/EmptyState";
+import { Loading } from "../../ui/Loading";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
@@ -83,7 +83,7 @@ export function Rewrite({ repo, onDone }: Props) {
         </Button>
       </header>
       <div className={styles.body}>
-        {plan.isPending && <EmptyState>{m.loading}</EmptyState>}
+        <Loading pending={plan.isPending} />
         {plan.error && <ErrorNotice error={plan.error} />}
         {blocked !== null && (
           <p className={styles.notice} role="alert">

@@ -6,6 +6,7 @@ import { useAppSettings, useDiff } from "../../lib/queries";
 import { changeSettings } from "../../lib/settingsSave";
 import { useMessages } from "../../messages";
 import { EmptyState } from "../../ui/EmptyState";
+import { Loading } from "../../ui/Loading";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { TermTooltip } from "../../ui/Term";
 import styles from "./DiffView.module.css";
@@ -47,7 +48,7 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
         {showable && <Summary {...countChanges(diff.data!)} />}
       </header>
       <div className={styles.body}>
-        {diff.isPending && <EmptyState>{m.loading}</EmptyState>}
+        <Loading pending={diff.isPending} />
         {diff.error && <ErrorNotice error={diff.error} />}
         {full.error && <ErrorNotice error={full.error} />}
         {diff.data &&
