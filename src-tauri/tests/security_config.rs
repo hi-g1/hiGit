@@ -194,6 +194,7 @@ fn installers_are_user_nsis_deb_and_appimage() {
     for name in [
         "LICENSE",
         "THIRD_PARTY_NOTICES.md",
+        "THIRD_PARTY_LICENSES.txt",
         "licenses/Pretendard-OFL.txt",
         "licenses/JetBrainsMono-OFL.txt",
         "licenses/D2Coding-OFL.txt",

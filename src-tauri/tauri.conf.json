@@ -40,6 +40,7 @@
     "resources": {
       "../LICENSE": "LICENSE",
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../THIRD_PARTY_LICENSES.txt": "THIRD_PARTY_LICENSES.txt",
       "../assets/fonts/licenses/Pretendard-OFL.txt": "licenses/Pretendard-OFL.txt",
       "../assets/fonts/licenses/JetBrainsMono-OFL.txt": "licenses/JetBrainsMono-OFL.txt",
       "../src/assets/fonts/D2Coding-OFL.txt": "licenses/D2Coding-OFL.txt"
@@ -60,7 +61,8 @@
         "desktopTemplate": "../packaging/linux/higit.desktop",
         "files": {
           "/usr/share/doc/higit/copyright": "../LICENSE",
-          "/usr/share/doc/higit/THIRD_PARTY_NOTICES.md": "../THIRD_PARTY_NOTICES.md"
+          "/usr/share/doc/higit/THIRD_PARTY_NOTICES.md": "../THIRD_PARTY_NOTICES.md",
+          "/usr/share/doc/higit/THIRD_PARTY_LICENSES.txt": "../THIRD_PARTY_LICENSES.txt"
         }
       },
       "appimage": {

@@ -71,6 +71,7 @@ if (mode === "fast") {
   frontend();
   rustQuick();
   run("Rust 테스트", "cargo", ["test", "-q", "--workspace"], "src-tauri");
+  run("서드파티 고지", "node", ["scripts/notices.mjs", "--check"]);
   // 다시 생성해도 파일이 바뀌지 않아야 최신이다. git 상태(스테이지 여부)와 상관없이 내용으로 비교한다.
   const before = GENERATED.map(read);
   run("바인딩 생성", "cargo", ["run", "-q", "-p", "app", "--example", "gen-bindings"], "src-tauri");
