@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { onOpProgress, type OpProgress } from "../../lib/events";
+import { onOpProgress, REMOTE_ACTION_IDS, type OpProgress } from "../../lib/events";
 import { useProgressStore } from "./progressStore";
 
 /** 원격 작업. 취소할 수 있고 오래 출력이 없으면 "응답 없음"을 보인다. */
-export const REMOTE_ACTIONS: ReadonlySet<string> = new Set(["fetch", "pull", "push", "sync"]);
+export const REMOTE_ACTIONS: ReadonlySet<string> = new Set(REMOTE_ACTION_IDS);
 /** 이만큼 지나면 "취소"가 나타난다. */
 export const CANCEL_AFTER_SECS = 3;
 /** 원격 작업이 이만큼 출력이 없으면 "응답 없음"(D-080). */

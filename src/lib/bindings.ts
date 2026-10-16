@@ -57,6 +57,8 @@ export const commands = {
 	queryRoutePreview: (repo: string, limit: number) => __TAURI_INVOKE<HomeMapView>("query_route_preview", { repo, limit }),
 	/**  기록 정리 카드 지도의 처음 모습(D-106). 고른 버전 50개까지. */
 	queryRewritePlan: (repo: string, oids: string[]) => __TAURI_INVOKE<RewritePlanView>("query_rewrite_plan", { repo, oids }),
+	/**  덮어쓰며 올리기 확인 창의 값(D-128). 네트워크 없이 읽기만 한다. */
+	queryForcePushPlan: (repo: string) => __TAURI_INVOKE<ForcePushPlanView>("query_force_push_plan", { repo }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -95,6 +97,8 @@ export const commands = {
 
 /* Constants */
 export const OP_PROGRESS_EVENT = "op-progress" as const;
+
+export const REMOTE_ACTIONS = ["fetch","pull","push","sync","clone","force-push"] as const;
 
 export const REPO_CHANGED_EVENT = "repo-changed" as const;
 
@@ -151,7 +155,9 @@ export type ActionInput_Deserialize =
 /**  로컬 브랜치를 지운다(D-103). */
 { id: "branch-delete"; input: BranchNameInput } | 
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
-{ id: "branch-rename"; input: BranchRenameInput };
+{ id: "branch-rename"; input: BranchRenameInput } | 
+/**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
+{ id: "force-push"; input: ForcePushInput };
 
 export type ActionInput_Serialize = 
 /**  관리 시작. 입력 없음. */
@@ -201,7 +207,9 @@ export type ActionInput_Serialize =
 /**  로컬 브랜치를 지운다(D-103). */
 { id: "branch-delete"; input: BranchNameInput } | 
 /**  로컬 브랜치 이름을 바꾼다(D-103). */
-{ id: "branch-rename"; input: BranchRenameInput };
+{ id: "branch-rename"; input: BranchRenameInput } | 
+/**  덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다. */
+{ id: "force-push"; input: ForcePushInput };
 
 export type ActionMetaView = {
 	id: string,
@@ -237,7 +245,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -546,9 +554,22 @@ export type DisplayHintsView = {
 	dark: boolean | null,
 };
 
+/**  원격에서 사라질 버전 하나(앞 5개만 보인다). */
+export type DroppedVersion = {
+	shortOid: string,
+	summary: string,
+	author: string,
+};
+
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
-"rewrotePublished" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+"rewrotePublished" | 
+/**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */
+"forcePushDisabled" | 
+/**  원격 기본 브랜치는 덮어쓰거나 지우지 않는다(D-128). */
+"forcePushProtected" | 
+/**  덮어쓸 것이 없다(그냥 올리면 된다). */
+"nothingToOverwrite" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -601,6 +622,59 @@ export type FileResolution = {
 
 /**  글자 크기 단계(D-138, D-146). */
 export type FontSizeSetting = "small" | "normal" | "large" | "xlarge";
+
+/**  덮어쓰며 올리기를 할 수 없는 까닭. */
+export type ForcePushBlock = 
+/**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */
+"disabled" | 
+/**  특정 버전을 보는 중이다. */
+"detached" | 
+/**  합치는 중이거나 다른 도구의 작업이 진행 중이다. */
+"otherOperation" | 
+/**  올린 적이 없다(upstream 없음). */
+"noUpstream" | 
+/**  upstream이 원격 기본 브랜치다(`main`·`master`·`init.defaultBranch`·원격 HEAD). */
+"defaultBranch" | 
+/**  원격에 내 기록에 없는 버전이 없다. 덮어쓸 것 없이 그냥 올리면 된다. */
+"nothingToOverwrite";
+
+/**
+ *  덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
+ *  같은지 비교한다(토큰이 이름까지 묶는다). 해시는 확인 창이 보여 준 값이다.
+ */
+export type ForcePushInput = {
+	/**  upstream 원격 이름(`origin`). */
+	remote: string,
+	/**  upstream의 원격 브랜치 이름(`기능`). */
+	branch: string,
+	/**  확인 창이 보여 준 원격 끝(lease 기대 값). 그사이 원격이 바뀌면 서버가 거절한다. */
+	expectRemote: string,
+	/**  확인 창이 본 지금 위치. 이 버전만 올라간다. */
+	expectHead: string,
+};
+
+export type ForcePushPlanView = {
+	/**  설정이 켜져 있다(꺼져 있으면 화면은 진입점을 숨긴다). */
+	allowed: boolean,
+	blocked: ForcePushBlock | null,
+	/**  지금 브랜치(로컬). */
+	branch: string | null,
+	/**  upstream 원격 이름과 원격 브랜치 이름. 실행 입력에 그대로 담는다. */
+	remote: string | null,
+	remoteBranch: string | null,
+	/**  확인 창이 보여 줄 원격 끝과 지금 위치. 실행 입력의 기대 값이 된다. */
+	expectRemote: string | null,
+	expectHead: string | null,
+	/**  올라갈 내 버전 수(원격에 없는 것). */
+	ahead: number,
+	/**  원격에서 사라질 버전 수(내 기록에 없는 것). */
+	dropped: number,
+	/**  사라질 버전 가운데 다른 사람이 만든 것(작성자 이메일이 내 이메일과 다름, 모르면 모두). */
+	droppedByOthers: number,
+	sample: DroppedVersion[],
+	/**  이 브랜치에 "올린 기록을 바꿨다" 표식이 있다(D-129). */
+	rewrotePublished: boolean,
+};
 
 /**  설정의 GitHub 구역이 그리는 상태. 키체인을 건드리지 않고 만든다. */
 export type GitHubStatusView = {

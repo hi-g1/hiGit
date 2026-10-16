@@ -196,5 +196,11 @@
     "glossaryId": "identity",
     "risk": "normal",
     "undo": "nothing"
+  },
+  {
+    "id": "force-push",
+    "glossaryId": "force-push",
+    "risk": "danger",
+    "undo": "irreversible"
   }
 ]

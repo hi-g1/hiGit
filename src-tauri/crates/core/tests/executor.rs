@@ -367,6 +367,21 @@ fn registered_actions_match_spec_risk() {
             ("clone", "clone", Risk::Safe),
             ("pr-create", "pr", Risk::Safe),
             ("identity-set", "identity", Risk::Normal),
+            ("force-push", "force-push", Risk::Danger),
         ]
     );
+}
+
+/// 되돌릴 수 없어 실행 전 확인을 받는 액션(D-043). 원격 브랜치 지우기·이름 바꾸기는 010-H11이 더한다.
+#[test]
+fn irreversible_actions_are_the_confirmed_few() {
+    let mut registry = Registry::new();
+    actions::register_all(&mut registry).unwrap();
+    let mut irreversible: Vec<_> = registry
+        .metas()
+        .filter(|m| m.undo == higit_core::undo::UndoKind::Irreversible)
+        .map(|m| m.id)
+        .collect();
+    irreversible.sort_unstable();
+    assert_eq!(irreversible, ["clear-lock", "discard", "force-push"]);
 }

@@ -31,6 +31,7 @@ const COMMANDS: &[&str] = &[
     "query_log_stats",
     "query_route_preview",
     "query_rewrite_plan",
+    "query_force_push_plan",
     "query_commit_detail",
     "query_diff",
     "query_branches",

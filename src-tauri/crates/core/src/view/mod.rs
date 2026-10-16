@@ -6,6 +6,7 @@ use std::path::Path;
 mod branch;
 mod conflict;
 mod diff;
+mod force_push;
 mod github;
 mod history;
 mod hosting;
@@ -25,6 +26,7 @@ pub use conflict::{
     ConflictSide, ConflictStateView, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
+pub use force_push::{DroppedVersion, ForcePushBlock, ForcePushPlanView};
 pub use github::{
     CloneDefaultsView, GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView,
 };
@@ -38,10 +40,10 @@ pub use hosting::{
 pub use identity::IdentityView;
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
-    CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice,
-    IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput, RestoreInput,
-    RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput,
-    TagInput, TakeOutInput, TakeOutSource,
+    CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
+    HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCreateInput,
+    RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput,
+    TagDeleteInput, TagInput, TakeOutInput, TakeOutSource,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -544,6 +546,9 @@ pub enum ActionResult {
         count: u32,
     },
     IdentitySaved,
+    ForcePushed {
+        dropped: u32,
+    },
 }
 
 impl From<Outcome> for ActionResult {
@@ -615,6 +620,7 @@ impl From<Outcome> for ActionResult {
             Outcome::PrCreated { number } => ActionResult::PrCreated { number },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
+            Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },
         }
     }
 }
@@ -657,6 +663,12 @@ pub enum ErrorCode {
     PublishedHistory,
     /// 올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129).
     RewrotePublished,
+    /// 설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127).
+    ForcePushDisabled,
+    /// 원격 기본 브랜치는 덮어쓰거나 지우지 않는다(D-128).
+    ForcePushProtected,
+    /// 덮어쓸 것이 없다(그냥 올리면 된다).
+    NothingToOverwrite,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -798,6 +810,9 @@ impl From<&CoreError> for ErrorView {
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,
             CoreError::RewrotePublished => ErrorCode::RewrotePublished,
+            CoreError::ForcePushDisabled => ErrorCode::ForcePushDisabled,
+            CoreError::ForcePushProtected => ErrorCode::ForcePushProtected,
+            CoreError::NothingToOverwrite => ErrorCode::NothingToOverwrite,
             CoreError::HasChanges => ErrorCode::HasChanges,
             CoreError::TagExists => ErrorCode::TagExists,
             CoreError::BranchProtected => ErrorCode::BranchProtected,

@@ -41,7 +41,7 @@ pub use action::{
     Action, ActionMeta, Availability, ExecCtx, JournalMode, Outcome, Preview, Risk,
     UnavailableReason,
 };
-pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
+pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, REMOTE_ACTIONS, init};
 pub use error::{CoreError, GithubFailure, Result};
 pub use executor::{Executor, PreviewToken};
 pub use github::git_credential_main;

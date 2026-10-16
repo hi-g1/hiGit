@@ -1094,6 +1094,113 @@ impl Queries {
         })
     }
 
+    /// 덮어쓰며 올리기 확인 창의 값(D-128). 네트워크 없이 로컬 정보만 읽는다. `allow`는 앱 설정(D-127)이고
+    /// `Core::force_push_plan`이 넣는다. 다른 사람의 버전은 작성자 이메일이 이 저장소에서 쓰는 이메일과 다른 것이고,
+    /// 내 이메일을 모르면 사라지는 버전을 모두 다른 사람의 것으로 센다(더 경고하는 쪽).
+    pub(crate) fn force_push_plan(
+        &self,
+        repo: &Path,
+        allow: bool,
+    ) -> Result<crate::view::ForcePushPlanView> {
+        use crate::view::{DroppedVersion, ForcePushBlock as B, ForcePushPlanView};
+        /// 사라질 버전을 읽는 상한과 보여 줄 수.
+        const READ: u32 = 200;
+        const SHOWN: usize = 5;
+        let root = self.opened_repo(repo)?;
+        let git = self.git.as_ref();
+        let mut view = ForcePushPlanView {
+            allowed: allow,
+            blocked: None,
+            branch: None,
+            remote: None,
+            remote_branch: None,
+            expect_remote: None,
+            expect_head: None,
+            ahead: 0,
+            dropped: 0,
+            dropped_by_others: 0,
+            sample: Vec::new(),
+            rewrote_published: false,
+        };
+        let blocked = |mut v: ForcePushPlanView, b: B| {
+            v.blocked = Some(b);
+            Ok(v)
+        };
+        if !allow {
+            return blocked(view, B::Disabled);
+        }
+        let Some(branch) = git.current_branch(&root)? else {
+            return blocked(view, B::Detached);
+        };
+        view.branch = Some(branch.clone());
+        if crate::actions::switch::refuse_during_operation(git, &root).is_err()
+            || git.index_entries(&root)?.iter().any(|e| e.stage > 0)
+        {
+            return blocked(view, B::OtherOperation);
+        }
+        let Some(up) = crate::actions::remote::upstream(git, &root)? else {
+            return blocked(view, B::NoUpstream);
+        };
+        let (remote, remote_branch) = up.push_target(git)?;
+        view.remote = Some(remote.clone());
+        view.remote_branch = Some(remote_branch.clone());
+        if crate::guard::protected_branch(git, &root, None, &branch)?
+            || crate::guard::protected_branch(git, &root, Some(&remote), &remote_branch)?
+        {
+            return blocked(view, B::DefaultBranch);
+        }
+        let (Some(head), Some(tip)) = (
+            git.resolve_ref(&root, "HEAD")?,
+            git.resolve_ref(&root, &up.rev())?,
+        ) else {
+            return blocked(view, B::NoUpstream);
+        };
+        view.expect_head = Some(head.to_string());
+        view.expect_remote = Some(tip.to_string());
+        view.rewrote_published = crate::rewrote::marked(git, &root, &self.key)?;
+        let (ahead, dropped) = git.count_between(&root, head.as_str(), tip.as_str())?;
+        view.ahead = ahead;
+        view.dropped = dropped;
+        if dropped == 0 {
+            return blocked(view, B::NothingToOverwrite);
+        }
+        let gone = git.log(
+            &root,
+            &git::LogQuery {
+                skip: 0,
+                limit: READ,
+                rev: Some(format!("{head}..{tip}")),
+            },
+        )?;
+        // 저장소 설정이 전역보다 이긴다(git과 같은 순서).
+        let mine = git
+            .local_config(&root)?
+            .into_iter()
+            .rev()
+            .find(|(k, _)| k == "user.email")
+            .map(|(_, v)| v)
+            .or(git.identity()?.email);
+        let by_others = |c: &&git::Commit| match &mine {
+            Some(me) => !c.author_email.eq_ignore_ascii_case(me),
+            None => true,
+        };
+        let counted = u32::try_from(gone.len()).unwrap_or(u32::MAX);
+        // 상한 밖의 버전은 다른 사람의 것으로 센다.
+        view.dropped_by_others = u32::try_from(gone.iter().filter(by_others).count())
+            .unwrap_or(u32::MAX)
+            .saturating_add(dropped.saturating_sub(counted));
+        view.sample = gone
+            .iter()
+            .take(SHOWN)
+            .map(|c| DroppedVersion {
+                short_oid: c.short_oid.clone(),
+                summary: c.summary.clone(),
+                author: c.author_name.clone(),
+            })
+            .collect();
+        Ok(view)
+    }
+
     /// 기록 정리 카드 지도의 처음 모습(D-100, D-106). 고른 버전이 정리할 수 있는 구간이 아니면
     /// `blocked`로 까닭을 알린다. 실행할 때 core가 같은 검사를 다시 한다. 읽기만 한다.
     /// `allow_published_rewrite`는 앱 설정(D-127)이고 `Core::rewrite_plan`이 넣는다.

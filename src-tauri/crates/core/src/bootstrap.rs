@@ -71,8 +71,8 @@ struct Running {
     elapsed_secs: u64,
 }
 
-/// 원격 작업. 언제든 취소할 수 있다.
-const REMOTE_ACTIONS: [&str; 5] = ["fetch", "pull", "push", "sync", "clone"];
+/// 원격 작업. 언제든 취소할 수 있고 진행 알림이 오래 없으면 "응답 없음"이다. 화면도 이 목록을 바인딩으로 받는다.
+pub const REMOTE_ACTIONS: [&str; 6] = ["fetch", "pull", "push", "sync", "clone", "force-push"];
 
 /// 복제 대상 경로의 최대 글자 수(Windows 260자 한도 안에서 저장소 안 파일 자리를 남긴다).
 const CLONE_TARGET_MAX_CHARS: usize = 200;
@@ -311,6 +311,12 @@ impl Core {
             complete,
             noreply_email: self.github.noreply_email(),
         })
+    }
+
+    /// 덮어쓰며 올리기 확인 창의 값(D-128). 설정이 꺼져 있으면 `Disabled`로 막힌다.
+    pub fn force_push_plan(&self, repo: &Path) -> Result<crate::view::ForcePushPlanView> {
+        let allow = self.settings.get().allow_published_rewrite;
+        self.queries.force_push_plan(repo, allow)
     }
 
     /// 기록 정리 카드 지도의 처음 모습(D-106). 올림 검사는 앱 설정을 따른다(D-127).
@@ -699,7 +705,7 @@ impl Core {
         let token = preview_token.map(PreviewToken);
         // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
-            "fetch" | "push" | "pr-create" => Locks::Network,
+            "fetch" | "push" | "pr-create" | "force-push" => Locks::Network,
             // 잠금 정리는 앱의 다른 작업이 하나도 없을 때만(D-081).
             "pull" | "sync" | "clear-lock" => Locks::Both,
             _ => Locks::Worktree,

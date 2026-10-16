@@ -3,7 +3,7 @@
 //! 동기화 = 원격 확인 → (받을 것이 있으면) 합치기 → (보낼 것이 있으면) 올리기. 합칠 때 겹치면
 //! 합치기를 시작하지 않는다(충돌 해결은 반복 2). 겹침은 작업 폴더를 건드리지 않고 미리 본다.
 
-use git::{AuthMode, GitBackend, GitOp, LogQuery, OpOutput, RepoPath};
+use git::{AuthMode, GitBackend, GitOp, LogQuery, Oid, OpOutput, RepoPath};
 
 use super::{names, needs_repo, repo_of};
 use crate::undo::backup;
@@ -133,21 +133,21 @@ impl Action for RemoteAction {
 }
 
 /// 지금 브랜치의 upstream. `remote`는 원격 이름, `tracking`은 `origin/main` 같은 원격 추적 이름.
-struct Upstream {
-    remote: String,
-    tracking: String,
+pub(crate) struct Upstream {
+    pub(crate) remote: String,
+    pub(crate) tracking: String,
 }
 
 impl Upstream {
     /// git에 넘길 전체 이름. 짧은 이름(`origin/main`)은 같은 이름의 태그·로컬 브랜치가 먼저 풀린다(D-069).
-    fn rev(&self) -> String {
+    pub(crate) fn rev(&self) -> String {
         format!("refs/remotes/{}", self.tracking)
     }
 
     /// 올릴 곳을 앱이 정한다: `<원격> HEAD:refs/heads/<upstream 브랜치>`. 인자 없는 `git push`는
     /// 저장소 설정(`remote.<n>.push`, `push.default=matching`)이 무엇을 올릴지 정해, 받은 저장소의
     /// 설정이 다른 브랜치까지 덮어쓸 수 있다.
-    fn push_target(&self, git: &dyn GitBackend) -> Result<(String, String)> {
+    pub(crate) fn push_target(&self, git: &dyn GitBackend) -> Result<(String, String)> {
         let branch = self
             .tracking
             .strip_prefix(&format!("{}/", self.remote))
@@ -160,7 +160,7 @@ impl Upstream {
     }
 }
 
-fn upstream(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Upstream>> {
+pub(crate) fn upstream(git: &dyn GitBackend, repo: &RepoPath) -> Result<Option<Upstream>> {
     let Some(tracking) = git.status(repo)?.branch.upstream else {
         return Ok(None);
     };
@@ -202,12 +202,12 @@ fn pick_remote(git: &dyn GitBackend, repo: &RepoPath) -> Result<String> {
 }
 
 /// 원격 호출 하나에 필요한 것. 인증 방식은 호출마다 core가 정한다(D-111).
-struct Net<'a> {
-    git: &'a dyn GitBackend,
-    repo: &'a RepoPath,
-    github: &'a crate::github::GitHubService,
+pub(crate) struct Net<'a> {
+    pub(crate) git: &'a dyn GitBackend,
+    pub(crate) repo: &'a RepoPath,
+    pub(crate) github: &'a crate::github::GitHubService,
     /// 저절로 하는 원격 확인.
-    background: bool,
+    pub(crate) background: bool,
 }
 
 impl Net<'_> {
@@ -236,6 +236,33 @@ impl Net<'_> {
                 auth,
             },
         )
+    }
+
+    /// 덮어쓰며 올리기(D-128). 원격 `branch`가 `expect`일 때만 `src`로 바꾼다.
+    pub(crate) fn push_force(
+        &self,
+        remote: &str,
+        branch: &str,
+        src: &Oid,
+        expect: &Oid,
+    ) -> Result<OpOutput> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        self.run(
+            auth,
+            &GitOp::PushForce {
+                remote: remote.to_string(),
+                branch: branch.to_string(),
+                src: src.clone(),
+                expect: expect.clone(),
+                auth,
+            },
+        )
+    }
+
+    /// 서버가 알려 주는 원격 기본 브랜치(`ls-remote --symref`).
+    pub(crate) fn server_head(&self, remote: &str) -> Result<Option<String>> {
+        let auth = self.github.auth_for(self.git, self.repo, remote, false);
+        Ok(self.git.ls_remote_head(self.repo, remote, auth)?)
     }
 
     /// hiGit helper로 인증한 호출이 인증·권한 문제로 실패하면 토큰을 한 번 확인한다. 401이면

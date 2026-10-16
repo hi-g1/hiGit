@@ -44,6 +44,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::query_log_stats,
             commands::query_route_preview,
             commands::query_rewrite_plan,
+            commands::query_force_push_plan,
             commands::query_commit_detail,
             commands::query_diff,
             commands::query_branches,
@@ -72,6 +73,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .constant("REPO_CHANGED_EVENT", REPO_CHANGED_EVENT)
         .constant("WATCH_STATUS_EVENT", WATCH_STATUS_EVENT)
         .constant("OP_PROGRESS_EVENT", OP_PROGRESS_EVENT)
+        .constant("REMOTE_ACTIONS", higit_core::REMOTE_ACTIONS)
 }
 
 /// 저장소 파일이 바뀌었을 때(페이로드: `RepoChanged`).

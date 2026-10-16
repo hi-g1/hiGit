@@ -50,18 +50,21 @@ pub(crate) fn record(git: &dyn GitBackend, repo: &RepoPath, key: &JournalKey) ->
     marker::write(&dir, Name::Rewrote, key, &marks)
 }
 
-/// 지금 브랜치에 아직 유효한 표식이 있는지. upstream이 바뀌었거나 HEAD가 표식의 옛 끝을 품게 됐으면
-/// 그 표식을 지우고 거짓.
-pub(crate) fn active(git: &dyn GitBackend, repo: &RepoPath, key: &JournalKey) -> Result<bool> {
+/// 지금 브랜치의 표식 상태. 표식이 없으면 `None`, 있으면 (브랜치, 이미 끝났는지).
+fn state(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    key: &JournalKey,
+) -> Result<Option<(String, bool)>> {
     let Some(branch) = git.current_branch(repo)? else {
-        return Ok(false);
+        return Ok(None);
     };
     let dir = git.git_dir(repo)?;
     let Some(marks) = marker::read::<Marks>(&dir, Name::Rewrote, key) else {
-        return Ok(false);
+        return Ok(None);
     };
     let Some(mark) = marks.branches.iter().find(|m| m.branch == branch) else {
-        return Ok(false);
+        return Ok(None);
     };
     let upstream = git.status(repo)?.branch.upstream;
     let settled = match Oid::parse(&mark.old_tip) {
@@ -71,11 +74,25 @@ pub(crate) fn active(git: &dyn GitBackend, repo: &RepoPath, key: &JournalKey) ->
         }
         _ => true,
     };
-    if settled {
-        forget(git, repo, key, &branch)?;
-        return Ok(false);
+    Ok(Some((branch, settled)))
+}
+
+/// 지금 브랜치에 아직 유효한 표식이 있는지. upstream이 바뀌었거나 HEAD가 표식의 옛 끝을 품게 됐으면
+/// 그 표식을 지우고 거짓.
+pub(crate) fn active(git: &dyn GitBackend, repo: &RepoPath, key: &JournalKey) -> Result<bool> {
+    match state(git, repo, key)? {
+        Some((branch, true)) => {
+            forget(git, repo, key, &branch)?;
+            Ok(false)
+        }
+        Some((_, false)) => Ok(true),
+        None => Ok(false),
     }
-    Ok(true)
+}
+
+/// `active`와 같되 파일을 지우지 않는다(조회용).
+pub(crate) fn marked(git: &dyn GitBackend, repo: &RepoPath, key: &JournalKey) -> Result<bool> {
+    Ok(matches!(state(git, repo, key)?, Some((_, false))))
 }
 
 /// 브랜치의 표식을 지운다(덮어쓰며 올리기 성공, 브랜치 지우기).

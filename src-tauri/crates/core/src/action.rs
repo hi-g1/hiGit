@@ -190,6 +190,10 @@ pub enum Outcome {
     },
     /// 전역 이름·이메일을 저장했다(값은 담지 않는다, D-125).
     IdentitySaved,
+    /// 덮어쓰며 올렸다. 원격에서 사라진 버전 수(D-128).
+    ForcePushed {
+        dropped: u32,
+    },
 }
 
 /// 실행 결과를 작업 목록(journal)에 어떻게 남길지. 액션의 `undo` 종류보다 우선한다.

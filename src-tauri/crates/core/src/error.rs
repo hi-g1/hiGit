@@ -101,6 +101,18 @@ pub enum CoreError {
     #[error("이미 올린 버전이 있습니다")]
     PublishedHistory,
 
+    /// 설정 "올린 버전도 바꾸기"가 꺼져 있어 덮어쓰며 올리지 않는다(D-127).
+    #[error("덮어쓰며 올리기가 꺼져 있습니다")]
+    ForcePushDisabled,
+
+    /// 원격 기본 브랜치는 덮어쓰거나 지우지 않는다(D-128, D-130).
+    #[error("원격 기본 브랜치입니다")]
+    ForcePushProtected,
+
+    /// 원격에 내 기록에 없는 버전이 없어 덮어쓸 것이 없다(그냥 올리면 된다).
+    #[error("덮어쓸 것이 없습니다")]
+    NothingToOverwrite,
+
     /// 올린 버전의 기록을 바꿔 원격과 갈라졌다. 원격의 옛 버전을 다시 들여오지 않게 멈춘다(D-129).
     #[error("올린 기록을 바꿔 원격과 갈라졌습니다")]
     RewrotePublished,

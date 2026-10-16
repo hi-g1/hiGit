@@ -49,7 +49,8 @@ vi.mock("../../lib/api", async (importOriginal) => {
   const api = new Proxy({}, { get: (_, key: string) => known[key] ?? (() => Promise.reject(new Error(`unmocked ${key}`))) });
   return { ...real, api };
 });
-vi.mock("../../lib/events", () => ({
+vi.mock("../../lib/events", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/events")>()),
   onRepoChanged: vi.fn(async () => () => {}),
   onWatchStatus: vi.fn(async () => () => {}),
   onOpProgress: vi.fn(async () => () => {}),

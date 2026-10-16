@@ -8,6 +8,7 @@ mod clone;
 mod commit;
 pub(crate) mod conflict;
 mod discard;
+mod force_push;
 mod identity;
 pub(crate) mod ignore;
 mod init;
@@ -17,7 +18,7 @@ pub(crate) mod paths;
 mod pick;
 mod pr_create;
 mod recover_parked;
-mod remote;
+pub(crate) mod remote;
 mod reset;
 mod restore;
 mod rewrite;
@@ -34,6 +35,7 @@ pub use clone::CloneAction;
 pub use commit::CommitAction;
 pub use conflict::ConflictAction;
 pub use discard::DiscardAction;
+pub use force_push::ForcePushAction;
 pub use identity::IdentityAction;
 pub use ignore::IgnoreAction;
 pub use init::InitAction;
@@ -117,6 +119,7 @@ pub fn register_all(registry: &mut Registry) -> Result<()> {
     registry.register(Box::new(CloneAction::new()))?;
     registry.register(Box::new(PrCreateAction::new()))?;
     registry.register(Box::new(IdentityAction::new()))?;
+    registry.register(Box::new(ForcePushAction::new()))?;
     Ok(())
 }
 

@@ -10,6 +10,8 @@ import {
 } from "./bindings";
 
 export type { OpProgress, RepoChanged, WatchStatus } from "./bindings";
+/** 원격 작업 id(core의 `REMOTE_ACTIONS` 그대로). 취소할 수 있고 오래 출력이 없으면 "응답 없음"이다. */
+export { REMOTE_ACTIONS as REMOTE_ACTION_IDS } from "./bindings";
 
 /** 저장소 파일이 바뀌면 불린다. 돌려준 함수로 구독을 끝낸다. */
 export function onRepoChanged(handler: (event: RepoChanged) => void): Promise<UnlistenFn> {

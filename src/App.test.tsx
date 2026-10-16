@@ -22,7 +22,8 @@ vi.mock("./lib/api", async (importOriginal) => ({
   },
 }));
 vi.mock("./lib/dialog", () => ({ pickFolder: vi.fn() }));
-vi.mock("./lib/events", () => ({
+vi.mock("./lib/events", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/events")>()),
   onRepoChanged: vi.fn(async () => () => {}),
   onWatchStatus: vi.fn(async () => () => {}),
   onOpProgress: vi.fn(async () => () => {}),

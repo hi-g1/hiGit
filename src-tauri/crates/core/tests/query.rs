@@ -277,7 +277,8 @@ fn action_input_tags_match_registry() {
             | ActionInput::Tag(_)
             | ActionInput::TagDelete(_)
             | ActionInput::BranchDelete(_)
-            | ActionInput::BranchRename(_) => {}
+            | ActionInput::BranchRename(_)
+            | ActionInput::ForcePush(_) => {}
         }
     }
     let paths = PathsInput {
@@ -374,6 +375,12 @@ fn action_input_tags_match_registry() {
         ActionInput::BranchRename(higit_core::view::BranchRenameInput {
             from: "옆".into(),
             to: "곁".into(),
+        }),
+        ActionInput::ForcePush(higit_core::view::ForcePushInput {
+            remote: "origin".into(),
+            branch: "기능".into(),
+            expect_remote: "a".repeat(40),
+            expect_head: "b".repeat(40),
         }),
     ];
     samples.iter().for_each(every_variant);

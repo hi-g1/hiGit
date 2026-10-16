@@ -66,6 +66,8 @@ pub enum ActionInput {
     BranchDelete(BranchNameInput),
     /// 로컬 브랜치 이름을 바꾼다(D-103).
     BranchRename(BranchRenameInput),
+    /// 덮어쓰며 올리기(D-128). 되돌릴 수 없어 확인 토큰이 이 입력 전체에 묶인다.
+    ForcePush(ForcePushInput),
 }
 
 impl ActionInput {
@@ -105,6 +107,7 @@ impl ActionInput {
             ActionInput::TagDelete(_) => "tag-delete",
             ActionInput::BranchDelete(_) => "branch-delete",
             ActionInput::BranchRename(_) => "branch-rename",
+            ActionInput::ForcePush(_) => "force-push",
         }
     }
 
@@ -382,6 +385,21 @@ pub struct TagDeleteInput {
 #[serde(rename_all = "camelCase")]
 pub struct OidInput {
     pub oid: String,
+}
+
+/// 덮어쓰며 올리기 입력(D-128, 계획 010 R4). 이름은 화면이 본 upstream이고 core가 upstream에서 다시 구해
+/// 같은지 비교한다(토큰이 이름까지 묶는다). 해시는 확인 창이 보여 준 값이다.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ForcePushInput {
+    /// upstream 원격 이름(`origin`).
+    pub remote: String,
+    /// upstream의 원격 브랜치 이름(`기능`).
+    pub branch: String,
+    /// 확인 창이 보여 준 원격 끝(lease 기대 값). 그사이 원격이 바뀌면 서버가 거절한다.
+    pub expect_remote: String,
+    /// 확인 창이 본 지금 위치. 이 버전만 올라간다.
+    pub expect_head: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

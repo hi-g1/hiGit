@@ -8,11 +8,11 @@ use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
     ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, ErrorCode, ErrorView,
-    FileDiffView, GitHubStatusView, HomeMapView, HostingContextView, HostingPage, IdentityView,
-    LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
-    PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView, ProjectOpenResult,
-    ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView, SecretCheckRequest,
-    SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    FileDiffView, ForcePushPlanView, GitHubStatusView, HomeMapView, HostingContextView,
+    HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView,
+    OpenHow, PendingWorkView, PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView,
+    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -381,6 +381,19 @@ pub async fn query_commit_detail(
 ) -> CmdResult<CommitDetailView> {
     blocking(state, move |core| {
         core.queries().commit_detail(&PathBuf::from(repo), &oid)
+    })
+    .await
+}
+
+/// 덮어쓰며 올리기 확인 창의 값(D-128). 네트워크 없이 읽기만 한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_force_push_plan(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<ForcePushPlanView> {
+    blocking(state, move |core| {
+        core.force_push_plan(&PathBuf::from(repo))
     })
     .await
 }

@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const handlers: { changed?: (e: unknown) => void; status?: (e: unknown) => void } = {};
-vi.mock("./events", () => ({
+vi.mock("./events", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./events")>()),
   onRepoChanged: vi.fn(async (h: (e: unknown) => void) => {
     handlers.changed = h;
     return () => {};
