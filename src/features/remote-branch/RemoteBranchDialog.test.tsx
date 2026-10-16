@@ -6,7 +6,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
     remoteBranchPlan: vi.fn(),
-    githubStatus: vi.fn(async () => ({ configured: false, connected: false, login: null, remembered: false, workflow: false })),
+    githubStatus: vi.fn(async () => ({ configured: false, connected: false, login: null, remembered: false, workflow: false, email: false })),
     previewAction: vi.fn(),
     executeAction: vi.fn(),
     checkBranchName: vi.fn(),

@@ -31,7 +31,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { PullRequests } from "./PullRequests";
 
 const REPO = "/home/me/hello";
-const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false };
+const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false, email: false };
 
 const row = (number: number, over: Partial<PrRowView> = {}): PrRowView => ({
   number,

@@ -323,6 +323,12 @@ impl Core {
         })
     }
 
+    /// 전역 이메일이 GitHub 계정의 것인지(D-186). 결과 종류만 준다. 열린 저장소가 필요 없다.
+    pub fn github_email_check(&self) -> Result<crate::view::EmailCheckView> {
+        let id = self.git.identity()?;
+        self.github.email_check(id.email.as_deref())
+    }
+
     /// 덮어쓰며 올리기 확인 창의 값(D-128). 설정이 꺼져 있으면 `Disabled`로 막힌다.
     pub fn force_push_plan(&self, repo: &Path) -> Result<crate::view::ForcePushPlanView> {
         let allow = self.settings.get().allow_published_rewrite;
@@ -377,8 +383,11 @@ impl Core {
     }
 
     /// GitHub 로그인(device flow)을 시작한다.
-    pub fn github_connect_start(&self, workflow: bool) -> Result<crate::view::LoginChallengeView> {
-        let result = self.github.connect_start(workflow);
+    pub fn github_connect_start(
+        &self,
+        add: Option<crate::view::ScopeAdd>,
+    ) -> Result<crate::view::LoginChallengeView> {
+        let result = self.github.connect_start(add);
         self.logger.action("github", "connect-start", &result);
         result
     }

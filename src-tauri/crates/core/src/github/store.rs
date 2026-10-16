@@ -20,15 +20,19 @@ pub(crate) struct StatusFile {
     /// 받은 권한에 `workflow`가 있다(D-135). 옛 파일에는 없어 거짓으로 읽고, 거짓이면 쓰지 않는다(`v`는 1 그대로).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub workflow: bool,
+    /// 받은 권한에 `user:email`이 있다(D-186). `workflow`와 같은 방식.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub email: bool,
 }
 
 impl StatusFile {
-    pub(crate) fn new(login: &str, id: u64, workflow: bool) -> Self {
+    pub(crate) fn new(login: &str, id: u64, scopes: hosting::LoginScopes) -> Self {
         Self {
             v: VERSION,
             login: login.to_owned(),
             id,
-            workflow,
+            workflow: scopes.workflow,
+            email: scopes.email,
         }
     }
 }
@@ -111,8 +115,21 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = StatusStore::open(dir.path());
         assert_eq!(store.read(), None);
-        store.write(&StatusFile::new("octocat", 1, false)).unwrap();
-        assert_eq!(store.read(), Some(StatusFile::new("octocat", 1, false)));
+        store
+            .write(&StatusFile::new(
+                "octocat",
+                1,
+                hosting::LoginScopes::default(),
+            ))
+            .unwrap();
+        assert_eq!(
+            store.read(),
+            Some(StatusFile::new(
+                "octocat",
+                1,
+                hosting::LoginScopes::default()
+            ))
+        );
         let text = std::fs::read_to_string(dir.path().join(FILE)).unwrap();
         assert_eq!(text, r#"{"v":1,"login":"octocat","id":1}"#);
 
@@ -136,7 +153,13 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().unwrap();
         let store = StatusStore::open(dir.path());
-        store.write(&StatusFile::new("octocat", 1, false)).unwrap();
+        store
+            .write(&StatusFile::new(
+                "octocat",
+                1,
+                hosting::LoginScopes::default(),
+            ))
+            .unwrap();
         let mode = std::fs::metadata(dir.path().join(FILE))
             .unwrap()
             .permissions()

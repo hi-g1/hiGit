@@ -15,6 +15,42 @@ pub struct GitHubStatusView {
     pub remembered: bool,
     /// 워크플로 권한을 받은 연결(D-135).
     pub workflow: bool,
+    /// 이메일 확인 권한(`user:email`)을 받은 연결(D-186).
+    pub email: bool,
+}
+
+/// 다시 연결하며 더할 권한(D-135, D-186). 지금 가진 권한은 그대로 두고 더한다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ScopeAdd {
+    Workflow,
+    Email,
+}
+
+/// 전역 이메일이 GitHub 계정의 것인지(D-186). 계정의 이메일 목록은 담지 않는다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum EmailCheckState {
+    /// GitHub에 연결돼 있지 않다.
+    NotConnected,
+    /// 전역 이메일이 없다.
+    NoIdentity,
+    /// 이 계정의 가림 주소다.
+    Noreply,
+    /// 이메일 확인 권한이 없다.
+    NoPermission,
+    /// 계정에 있고 확인된 이메일이다.
+    OnAccount,
+    /// 계정에 있지만 확인되지 않았다.
+    Unverified,
+    /// 계정에 없다.
+    NotOnAccount,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct EmailCheckView {
+    pub state: EmailCheckState,
 }
 
 /// 내 GitHub 저장소 목록 한 쪽(복제 대화상자, D-133). 이름·공개 여부·날짜뿐이다.
@@ -34,6 +70,8 @@ pub struct GitHubRepoRowView {
     /// 마지막으로 올린 시각(unix 초).
     #[specta(type = Option<u32>)]
     pub pushed_at: Option<i64>,
+    /// 소유자가 조직이다(D-184 "만들 곳" 후보).
+    pub owner_is_org: bool,
 }
 
 /// 로그인 시작: 사람이 브라우저에 넣을 코드.

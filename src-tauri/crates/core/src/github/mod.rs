@@ -53,8 +53,8 @@ struct State {
     remembered: bool,
     /// 키체인을 못 써 이번 실행에만 둔 연결의 로그인 이름.
     session_login: Option<String>,
-    /// 이번 실행에만 둔 연결이 `workflow` 권한을 받았다.
-    session_workflow: bool,
+    /// 이번 실행에만 둔 연결이 받은 더한 권한.
+    session_scopes: hosting::LoginScopes,
 }
 
 struct PendingLogin {
@@ -65,6 +65,24 @@ struct PendingLogin {
     interval: Duration,
     /// 서버에 묻는 중. 그동안 오는 폴링은 네트워크 없이 `Pending`.
     in_flight: bool,
+}
+
+/// 이 로그인의 GitHub 가림 주소(`<id>+<로그인>@…`, 옛 꼴 `<로그인>@…`)인지. 대소문자 무시.
+fn is_noreply_for(email: &str, login: &str) -> bool {
+    let Some(local) = email
+        .to_ascii_lowercase()
+        .strip_suffix("@users.noreply.github.com")
+        .map(str::to_owned)
+    else {
+        return false;
+    };
+    let login = login.to_ascii_lowercase();
+    let user = match local.split_once('+') {
+        Some((id, user)) if !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()) => user,
+        Some(_) => return false,
+        None => local.as_str(),
+    };
+    user == login
 }
 
 /// 연결된 토큰과 그 세대.
@@ -119,7 +137,9 @@ impl GitHubService {
         let token = SecretString::from(token.to_owned());
         if remembered {
             let _ = self.keychain.set(KEYCHAIN_ACCOUNT, &token);
-            let _ = self.store.write(&StatusFile::new(login, 1, false));
+            let _ = self
+                .store
+                .write(&StatusFile::new(login, 1, hosting::LoginScopes::default()));
         }
         let mut state = self.state();
         state.token = Some(token);
@@ -147,18 +167,91 @@ impl GitHubService {
     pub fn status(&self) -> GitHubStatusView {
         let file = self.store.read();
         let state = self.state();
-        let (connected, login, remembered, workflow) = match (&state.session_login, file) {
-            (Some(login), _) => (true, Some(login.clone()), false, state.session_workflow),
-            (None, Some(file)) => (true, Some(file.login), true, file.workflow),
-            (None, None) => (false, None, false, false),
+        let (connected, login, remembered, scopes) = match (&state.session_login, file) {
+            (Some(login), _) => (true, Some(login.clone()), false, state.session_scopes),
+            (None, Some(file)) => (
+                true,
+                Some(file.login),
+                true,
+                hosting::LoginScopes {
+                    workflow: file.workflow,
+                    email: file.email,
+                },
+            ),
+            (None, None) => (false, None, false, hosting::LoginScopes::default()),
         };
         GitHubStatusView {
             configured: self.configured,
             connected,
             login,
             remembered,
-            workflow,
+            workflow: scopes.workflow,
+            email: scopes.email,
         }
+    }
+
+    /// 다시 연결할 때 요청할 권한: 지금 가진 권한에 `add`를 더한다(이메일을 더하다 워크플로를 잃지 않게).
+    fn scopes_with(&self, add: Option<crate::view::ScopeAdd>) -> hosting::LoginScopes {
+        let status = self.status();
+        let mut scopes = if status.connected {
+            hosting::LoginScopes {
+                workflow: status.workflow,
+                email: status.email,
+            }
+        } else {
+            hosting::LoginScopes::default()
+        };
+        match add {
+            Some(crate::view::ScopeAdd::Workflow) => scopes.workflow = true,
+            Some(crate::view::ScopeAdd::Email) => scopes.email = true,
+            None => {}
+        }
+        scopes
+    }
+
+    /// 전역 이메일이 연결된 GitHub 계정의 것인지(D-186). 결과 종류만 주고 계정의 이메일 목록은 이 함수
+    /// 안에서 비교한 뒤 버린다. 가림 주소는 네트워크 없이, 권한이 없으면 네트워크 없이 답한다.
+    pub fn email_check(&self, identity_email: Option<&str>) -> Result<crate::view::EmailCheckView> {
+        use crate::view::{EmailCheckState as S, EmailCheckView};
+        let status = self.status();
+        let view = |state| Ok(EmailCheckView { state });
+        let Some(login) = status.login.filter(|_| status.connected) else {
+            return view(S::NotConnected);
+        };
+        let Some(email) = identity_email.map(str::trim).filter(|e| !e.is_empty()) else {
+            return view(S::NoIdentity);
+        };
+        if is_noreply_for(email, &login) {
+            return view(S::Noreply);
+        }
+        if !status.email {
+            return view(S::NoPermission);
+        }
+        let emails = self.call(|provider, token| match provider.account_emails(token) {
+            // 권한 칸은 있는데 토큰이 권한을 잃었으면 권한 없음으로 본다.
+            Err(e)
+                if e.kind()
+                    == (HostingErrorKind::Forbidden {
+                        rate_limited: false,
+                        sso: false,
+                    }) =>
+            {
+                Ok(None)
+            }
+            other => other.map(Some),
+        })?;
+        let Some(emails) = emails else {
+            return view(S::NoPermission);
+        };
+        let found = emails
+            .iter()
+            .find(|e| e.address.eq_ignore_ascii_case(email))
+            .map(|e| e.verified);
+        view(match found {
+            Some(true) => S::OnAccount,
+            Some(false) => S::Unverified,
+            None => S::NotOnAccount,
+        })
     }
 
     /// GitHub 가림 이메일 `<숫자 id>+<로그인>@users.noreply.github.com`(D-126). 기억한 연결의 상태 파일로만
@@ -178,9 +271,9 @@ impl GitHubService {
             .then(|| format!("{}+{login}@users.noreply.github.com", file.id))
     }
 
-    /// 로그인을 시작한다. 진행 중이던 로그인은 버린다. `workflow`면 워크플로 권한도 요청한다(D-135).
-    /// 이미 연결돼 있어도 시작할 수 있고, 승인되면 새 토큰이 이전 것을 바꾼다.
-    pub fn connect_start(&self, workflow: bool) -> Result<LoginChallengeView> {
+    /// 로그인을 시작한다. 진행 중이던 로그인은 버린다. 이미 연결돼 있으면 지금 가진 권한에 `add`를
+    /// 더해 요청하고(D-135, D-186), 승인되면 새 토큰이 이전 것을 바꾼다.
+    pub fn connect_start(&self, add: Option<crate::view::ScopeAdd>) -> Result<LoginChallengeView> {
         if !self.configured {
             return Err(failure(GithubFailure::NotConfigured));
         }
@@ -192,10 +285,7 @@ impl GitHubService {
         };
         let challenge = self
             .provider
-            .begin_login(hosting::LoginScopes {
-                workflow,
-                email: false,
-            })
+            .begin_login(self.scopes_with(add))
             .map_err(|e| from_hosting(&e, &[]))?;
         let now = self.now();
         let interval = Duration::from_secs(challenge.interval_secs);
@@ -270,7 +360,7 @@ impl GitHubService {
                 Ok(LoginPollView::Denied)
             }
             LoginPoll::Granted { token, scopes } => {
-                self.complete_login(seq, token, &device_code, scopes.workflow)
+                self.complete_login(seq, token, &device_code, scopes)
             }
         }
     }
@@ -305,7 +395,7 @@ impl GitHubService {
         seq: u64,
         token: SecretString,
         device_code: &str,
-        workflow: bool,
+        scopes: hosting::LoginScopes,
     ) -> Result<LoginPollView> {
         let user = match self.provider.current_user(&token) {
             Ok(user) => user,
@@ -328,7 +418,7 @@ impl GitHubService {
         let remembered = match self.keychain.set(KEYCHAIN_ACCOUNT, &token) {
             Ok(()) => match self
                 .store
-                .write(&StatusFile::new(&user.login, user.id, workflow))
+                .write(&StatusFile::new(&user.login, user.id, scopes))
             {
                 Ok(()) => true,
                 Err(_) => {
@@ -348,7 +438,11 @@ impl GitHubService {
         state.generation += 1;
         state.remembered = remembered;
         state.session_login = (!remembered).then(|| user.login.clone());
-        state.session_workflow = !remembered && workflow;
+        state.session_scopes = if remembered {
+            hosting::LoginScopes::default()
+        } else {
+            scopes
+        };
         Ok(LoginPollView::Connected { login: user.login })
     }
 
@@ -523,6 +617,7 @@ impl GitHubService {
                     name: r.name,
                     private: r.private,
                     pushed_at: r.pushed_at,
+                    owner_is_org: r.owner_is_org,
                 })
                 .collect(),
             has_more: list.has_more,
@@ -643,7 +738,7 @@ mod tests {
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, &granted());
         f.fake.push_json(200, USER);
-        f.service.connect_start(false).unwrap();
+        f.service.connect_start(None).unwrap();
         f.advance(5);
         assert_eq!(
             f.service.connect_poll().unwrap(),
@@ -669,7 +764,9 @@ mod tests {
             r#"{"access_token":"gho_NEWSECRET0123456789","token_type":"bearer","scope":"repo,workflow"}"#,
         );
         f.fake.push_json(200, USER);
-        f.service.connect_start(true).unwrap();
+        f.service
+            .connect_start(Some(crate::view::ScopeAdd::Workflow))
+            .unwrap();
         f.advance(5);
         f.service.connect_poll().unwrap();
         let reqs = f.fake.requests();
@@ -684,6 +781,107 @@ mod tests {
         )
         .unwrap();
         assert_eq!(f.service.store.read().map(|s| s.workflow), Some(false));
+    }
+
+    /// 다시 연결해 권한을 더하는 한 번(코드 → 승인 → 사용자). 요청한 `scope` 폼 값을 돌려준다.
+    fn reconnect(f: &Fixture, add: Option<crate::view::ScopeAdd>, granted_scope: &str) -> String {
+        let before = f.fake.requests().len();
+        f.fake.push_json(200, &device_json(5));
+        f.fake.push_json(
+            200,
+            &format!(
+                r#"{{"access_token":"gho_NEWSECRET0123456789","token_type":"bearer","scope":"{granted_scope}"}}"#
+            ),
+        );
+        f.fake.push_json(200, USER);
+        f.service.connect_start(add).unwrap();
+        f.advance(5);
+        f.service.connect_poll().unwrap();
+        let body = String::from_utf8(f.fake.requests()[before].body.clone().unwrap()).unwrap();
+        body.rsplit("scope=").next().unwrap().to_owned()
+    }
+
+    #[test]
+    fn adding_a_scope_keeps_the_ones_already_granted() {
+        use crate::view::ScopeAdd;
+        let dir = tempfile::tempdir().unwrap();
+        let f = fixture(
+            platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+            Some(dir.path()),
+        );
+        connect(&f);
+        assert_eq!(
+            reconnect(&f, Some(ScopeAdd::Email), "repo,user:email"),
+            "repo%20user%3Aemail"
+        );
+        assert!(f.service.status().email && !f.service.status().workflow);
+        assert_eq!(
+            reconnect(&f, Some(ScopeAdd::Workflow), "repo,user:email,workflow"),
+            "repo%20workflow%20user%3Aemail"
+        );
+        let status = f.service.status();
+        assert!(status.email && status.workflow);
+        let file = f.service.store.read().unwrap();
+        assert!(file.email && file.workflow);
+        // 옛 상태 파일(email 칸 없음)은 거짓으로 읽는다.
+        std::fs::write(
+            dir.path().join("github.json"),
+            r#"{"v":1,"login":"octocat","id":1,"workflow":true}"#,
+        )
+        .unwrap();
+        let file = f.service.store.read().unwrap();
+        assert!(file.workflow && !file.email);
+    }
+
+    #[test]
+    fn email_check_reports_only_a_kind() {
+        use crate::view::EmailCheckState as S;
+        let dir = tempfile::tempdir().unwrap();
+        let f = fixture(
+            platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+            Some(dir.path()),
+        );
+        let state = |email: Option<&str>| f.service.email_check(email).unwrap().state;
+        assert_eq!(state(Some("me@example.com")), S::NotConnected);
+        connect(&f);
+        assert_eq!(state(None), S::NoIdentity);
+        assert_eq!(state(Some("  ")), S::NoIdentity);
+        assert_eq!(
+            state(Some("583231+OctoCat@users.noreply.github.com")),
+            S::Noreply
+        );
+        assert_eq!(state(Some("octocat@users.noreply.github.com")), S::Noreply);
+        assert_eq!(
+            state(Some("1+someone@users.noreply.github.com")),
+            S::NoPermission
+        );
+        // 권한이 없으면 묻지 않는다.
+        let sent = f.fake.requests().len();
+        assert_eq!(state(Some("me@example.com")), S::NoPermission);
+        assert_eq!(f.fake.requests().len(), sent);
+        reconnect(&f, Some(crate::view::ScopeAdd::Email), "repo,user:email");
+        let emails = r#"[{"email":"Me@Example.com","verified":true},{"email":"new@example.com","verified":false}]"#;
+        for (asked, want) in [
+            ("me@example.com", S::OnAccount),
+            ("new@example.com", S::Unverified),
+            ("secret-other@example.org", S::NotOnAccount),
+        ] {
+            f.fake.push_json(200, emails);
+            let view = f.service.email_check(Some(asked)).unwrap();
+            assert_eq!(view.state, want, "{asked}");
+            assert!(!format!("{view:?}").contains("example"));
+        }
+        // 권한을 잃은 토큰(403)은 권한 없음.
+        f.fake.push_json(403, "{}");
+        assert_eq!(state(Some("me@example.com")), S::NoPermission);
+        // 401이면 연결이 끊기고 오류에 이메일이 없다.
+        f.fake.push_json(401, "{}");
+        let err = f
+            .service
+            .email_check(Some("secret-other@example.org"))
+            .unwrap_err();
+        assert!(!format!("{err:?}").contains("secret-other"));
+        assert!(!f.service.status().connected);
     }
 
     #[test]
@@ -723,7 +921,7 @@ mod tests {
     fn unconfigured_cannot_start() {
         let service = GitHubService::unconfigured();
         assert!(!service.status().configured);
-        let err = service.connect_start(false).unwrap_err();
+        let err = service.connect_start(None).unwrap_err();
         assert!(matches!(
             err,
             CoreError::Github {
@@ -746,7 +944,7 @@ mod tests {
         f.fake.push_json(200, &granted());
         f.fake.push_json(200, USER);
 
-        let challenge = f.service.connect_start(false).unwrap();
+        let challenge = f.service.connect_start(None).unwrap();
         assert_eq!(challenge.user_code, "WDJB-MJHT");
         assert_eq!(challenge.interval_secs, 5);
         // 간격 안의 폴링은 네트워크를 쓰지 않는다.
@@ -807,7 +1005,7 @@ mod tests {
     fn expiry_is_checked_without_network() {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
-        f.service.connect_start(false).unwrap();
+        f.service.connect_start(None).unwrap();
         f.advance(901);
         assert_eq!(f.service.connect_poll().unwrap(), LoginPollView::Expired);
         assert_eq!(f.requests(), 1);
@@ -818,7 +1016,7 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(503, "unavailable");
-        f.service.connect_start(false).unwrap();
+        f.service.connect_start(None).unwrap();
         f.advance(5);
         assert!(f.service.connect_poll().is_err());
         assert_eq!(f.requests(), 2);
@@ -835,7 +1033,7 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, r#"{"error":"access_denied"}"#);
-        f.service.connect_start(false).unwrap();
+        f.service.connect_start(None).unwrap();
         f.advance(5);
         assert_eq!(f.service.connect_poll().unwrap(), LoginPollView::Denied);
         assert!(f.service.connect_poll().is_err());
@@ -847,8 +1045,8 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, &device_json(7));
-        f.service.connect_start(false).unwrap();
-        let second = f.service.connect_start(false).unwrap();
+        f.service.connect_start(None).unwrap();
+        let second = f.service.connect_start(None).unwrap();
         assert_eq!(second.interval_secs, 7);
         f.advance(5);
         // 첫 번째의 간격(5초)이 아니라 두 번째(7초)를 따른다.

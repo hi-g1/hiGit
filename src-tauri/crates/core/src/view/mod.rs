@@ -30,8 +30,8 @@ pub use conflict::{
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use force_push::{DroppedVersion, ForcePushBlock, ForcePushPlanView};
 pub use github::{
-    CloneDefaultsView, GitHubRepoListView, GitHubRepoRowView, GitHubStatusView, HostingPage,
-    LoginChallengeView, LoginPollView,
+    CloneDefaultsView, EmailCheckState, EmailCheckView, GitHubRepoListView, GitHubRepoRowView,
+    GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView, ScopeAdd,
 };
 pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,

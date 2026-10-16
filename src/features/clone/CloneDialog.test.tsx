@@ -8,7 +8,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   api: {
     appStatus: vi.fn(async () => ({ gitVersion: "2.50.1", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" })),
     cloneDefaults: vi.fn(async () => ({ parent: "/home/me" })),
-    githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false, workflow: false })),
+    githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false, workflow: false, email: false })),
     executeAction: vi.fn(),
     cancelAction: vi.fn(async () => null),
     openProject: vi.fn(async () => ({ kind: "opened", repo: { path: "/home/me/hello", name: "hello" } })),

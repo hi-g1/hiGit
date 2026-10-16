@@ -27,7 +27,7 @@ export const commands = {
 	/**  설정의 GitHub 구역 상태. 키체인을 건드리지 않는다. */
 	githubStatus: () => __TAURI_INVOKE<GitHubStatusView>("github_status"),
 	/**  GitHub 로그인(device flow)을 시작한다. */
-	githubConnectStart: (workflow: boolean) => __TAURI_INVOKE<LoginChallengeView>("github_connect_start", { workflow }),
+	githubConnectStart: (add: "workflow" | "email" | null) => __TAURI_INVOKE<LoginChallengeView>("github_connect_start", { add }),
 	/**  승인됐는지 묻는다. 간격 안이면 core가 네트워크 없이 답한다. */
 	githubConnectPoll: () => __TAURI_INVOKE<LoginPollView>("github_connect_poll"),
 	githubConnectCancel: () => __TAURI_INVOKE<null>("github_connect_cancel"),
@@ -65,6 +65,8 @@ export const commands = {
 	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
 	/**  내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다. */
 	queryGithubRepos: (page: number) => __TAURI_INVOKE<GitHubRepoListView>("query_github_repos", { page }),
+	/**  전역 이메일이 GitHub 계정의 것인지(D-186). 결과 종류만 받는다. */
+	queryGithubEmailCheck: () => __TAURI_INVOKE<EmailCheckView>("query_github_email_check"),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -587,6 +589,27 @@ export type DroppedVersion = {
 	author: string,
 };
 
+/**  전역 이메일이 GitHub 계정의 것인지(D-186). 계정의 이메일 목록은 담지 않는다. */
+export type EmailCheckState = 
+/**  GitHub에 연결돼 있지 않다. */
+"notConnected" | 
+/**  전역 이메일이 없다. */
+"noIdentity" | 
+/**  이 계정의 가림 주소다. */
+"noreply" | 
+/**  이메일 확인 권한이 없다. */
+"noPermission" | 
+/**  계정에 있고 확인된 이메일이다. */
+"onAccount" | 
+/**  계정에 있지만 확인되지 않았다. */
+"unverified" | 
+/**  계정에 없다. */
+"notOnAccount";
+
+export type EmailCheckView = {
+	state: EmailCheckState,
+};
+
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
 "rewrotePublished" | 
@@ -728,6 +751,8 @@ export type GitHubRepoRowView = {
 	private: boolean,
 	/**  마지막으로 올린 시각(unix 초). */
 	pushedAt: number | null,
+	/**  소유자가 조직이다(D-184 "만들 곳" 후보). */
+	ownerIsOrg: boolean,
 };
 
 /**  설정의 GitHub 구역이 그리는 상태. 키체인을 건드리지 않고 만든다. */
@@ -740,6 +765,8 @@ export type GitHubStatusView = {
 	remembered: boolean,
 	/**  워크플로 권한을 받은 연결(D-135). */
 	workflow: boolean,
+	/**  이메일 확인 권한(`user:email`)을 받은 연결(D-186). */
+	email: boolean,
 };
 
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
@@ -1257,6 +1284,9 @@ export type RewriteStepInput = {
 };
 
 export type RiskView = "safe" | "normal" | "caution" | "danger";
+
+/**  다시 연결하며 더할 권한(D-135, D-186). 지금 가진 권한은 그대로 두고 더한다. */
+export type ScopeAdd = "workflow" | "email";
 
 export type SecretCheckRequest = {
 	/**  넣은 파일이 없으면 고친 파일을 모두 넣고 저장할 때처럼 모든 고친 파일을 본다(D-062). */

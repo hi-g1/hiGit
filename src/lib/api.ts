@@ -10,6 +10,7 @@ import {
   type LogQuery,
   type OpenHow,
   type PrListRequest,
+  type ScopeAdd,
   type TrustChoice,
 } from "./bindings";
 
@@ -24,6 +25,9 @@ export type {
   BranchRow,
   GitHubRepoListView,
   GitHubRepoRowView,
+  EmailCheckState,
+  EmailCheckView,
+  ScopeAdd,
   BranchView,
   ChangeKind,
   ChangedFile,
@@ -150,7 +154,9 @@ export const api = {
   displayHints: () => call(commands.appDisplayHints()),
   githubStatus: () => call(commands.githubStatus()),
   /** `workflow`면 워크플로 권한도 요청한다(D-135). */
-  githubConnectStart: (workflow = false) => call(commands.githubConnectStart(workflow)),
+  /** 연결을 시작한다. 이미 연결돼 있으면 지금 권한에 `add`를 더한다(D-135, D-186). */
+  githubConnectStart: (add: ScopeAdd | null = null) => call(commands.githubConnectStart(add)),
+  githubEmailCheck: () => call(commands.queryGithubEmailCheck()),
   githubRepos: (page: number) => call(commands.queryGithubRepos(page)),
   /** 간격 안이면 core가 네트워크 없이 기다리라고 답한다. */
   githubConnectPoll: () => call(commands.githubConnectPoll()),

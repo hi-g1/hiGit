@@ -51,7 +51,7 @@ function createController(setState: (state: ConnectState) => void) {
     clear();
     setState({ kind: "starting" });
     try {
-      const challenge = await api.githubConnectStart(workflow);
+      const challenge = await api.githubConnectStart(workflow ? "workflow" : null);
       active = true;
       setState({ kind: "waiting", code: challenge.userCode, expiresAt: Date.now() + challenge.expiresInSecs * 1000 });
       // 코드를 넣는 페이지(주소는 core 상수). 열지 못해도 코드는 보인다.

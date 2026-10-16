@@ -58,7 +58,7 @@ const context = (provider: "github" | null) => ({
   isDefaultBranch: false,
 });
 
-const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false };
+const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false, email: false };
 
 async function openList() {
   render(

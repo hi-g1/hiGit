@@ -28,7 +28,7 @@ const github = (over: Partial<Awaited<ReturnType<typeof api.githubStatus>>> = {}
   configured: true,
   connected: false,
   login: null,
-  remembered: false, workflow: false,
+  remembered: false, workflow: false, email: false,
   ...over,
 });
 
@@ -127,7 +127,7 @@ describe("처음 실행 패널(D-126, start-first.png)", () => {
   });
 
   it("연결돼 있으면 ✓와 로그인 이름, 단추 없음", async () => {
-    vi.mocked(api.githubStatus).mockResolvedValue(github({ connected: true, login: "junho", remembered: true, workflow: false }));
+    vi.mocked(api.githubStatus).mockResolvedValue(github({ connected: true, login: "junho", remembered: true, workflow: false, email: false }));
     renderStart();
     expect(await screen.findByText("@junho")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "연결" })).toBeNull();

@@ -7,12 +7,12 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
-    ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, ErrorCode, ErrorView,
-    FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
+    ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, EmailCheckView, ErrorCode,
+    ErrorView, FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
     HostingContextView, HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView,
     LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrDetailView, PrDraftView,
     PrListRequest, PrListView, PreviewView, ProjectOpenResult, ProjectSummaryView,
-    PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView, RewritePlanView,
+    PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView, RewritePlanView, ScopeAdd,
     SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
@@ -135,9 +135,16 @@ pub async fn github_status(state: State<'_, AppState>) -> CmdResult<GitHubStatus
 #[specta::specta]
 pub async fn github_connect_start(
     state: State<'_, AppState>,
-    workflow: bool,
+    add: Option<ScopeAdd>,
 ) -> CmdResult<LoginChallengeView> {
-    blocking(state, move |core| core.github_connect_start(workflow)).await
+    blocking(state, move |core| core.github_connect_start(add)).await
+}
+
+/// 전역 이메일이 GitHub 계정의 것인지(D-186). 결과 종류만 받는다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_github_email_check(state: State<'_, AppState>) -> CmdResult<EmailCheckView> {
+    blocking(state, |core| core.github_email_check()).await
 }
 
 /// 내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다.
