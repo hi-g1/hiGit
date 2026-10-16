@@ -36,7 +36,7 @@ export function DiffView({ repo, request }: { repo: string; request: DiffRequest
       {/* 파일 이름과 숫자만(D-049, r-home.png). 비교 보기라는 이름은 칸의 접근성 이름과 호버로 남긴다. */}
       <header className={styles.head}>
         <TermTooltip id="diff">
-          <h2 className={styles.path} tabIndex={0}>
+          <h2 className={styles.path}>
             {shownPath}
           </h2>
         </TermTooltip>

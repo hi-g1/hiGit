@@ -1,8 +1,8 @@
-import { useState, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { useDiscardFlow } from "../../features/stash/useDiscardFlow";
 import { useStageMutation } from "../../features/stage/useStageMutation";
 import type { ChangedFile } from "../../lib/api";
-import { isMenuKey } from "../../lib/listKeys";
+import { isMenuKey, listKey } from "../../lib/listKeys";
 import { splitPath } from "../../lib/path";
 import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
@@ -70,19 +70,49 @@ export function ChangedFiles({
     stage.mutate({ include: true, paths: others.length > 0 ? others : [file.path] });
   };
 
-  // ↑↓로 비교할 파일을 옮긴다(단축키 표의 fileList 범위, D-056).
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = matches("nextFile", e.nativeEvent) ? 1 : matches("prevFile", e.nativeEvent) ? -1 : 0;
-    if (step === 0 || files.length === 0) return;
-    e.preventDefault();
-    const at = files.findIndex((f) => f.path === selected);
-    const next = files[Math.min(Math.max(at + step, 0), files.length - 1)];
-    if (next) select(next.path);
+  // 줄 하나가 포커스 단위(roving tabindex, D-200). 고른 파일 줄만 Tab 정지이고, 없으면 첫 줄.
+  const rows = useRef<(HTMLDivElement | null)[]>([]);
+  const at = Math.max(
+    files.findIndex((f) => f.path === selected),
+    0,
+  );
+  const moveTo = (index: number) => {
+    const next = files[Math.min(Math.max(index, 0), files.length - 1)];
+    if (!next) return;
+    select(next.path);
+    rows.current[files.indexOf(next)]?.focus();
+  };
+  const openRowMenu = (file: ChangedFile, row: HTMLElement) => {
+    const list = row.closest<HTMLElement>("#changed-files");
+    const box = row.getBoundingClientRect();
+    if (list) openMenu(file, list, { clientX: box.left, clientY: box.bottom });
+  };
+  // ↑↓·Home·End로 줄을 옮기며 고르고, Space로 넣기·빼기, 메뉴 키·Shift+F10으로 줄 메뉴(단축키 표의 fileList 범위).
+  const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, file: ChangedFile, index: number) => {
+    const native = e.nativeEvent;
+    if (isMenuKey({ ...e, isComposing: native.isComposing })) {
+      e.preventDefault();
+      openRowMenu(file, e.currentTarget);
+      return;
+    }
+    const move = listKey(native);
+    let target: number | null = null;
+    if (matches("nextFile", native)) target = index + 1;
+    else if (matches("prevFile", native)) target = index - 1;
+    else if (move === "first") target = 0;
+    else if (move === "last") target = files.length - 1;
+    if (target !== null) {
+      e.preventDefault();
+      moveTo(target);
+    } else if (matches("toggleFile", native)) {
+      e.preventDefault();
+      toggleOne(file);
+    }
   };
 
   return (
     // 버전을 저장하면 포커스가 여기로 온다(다음 Ctrl+Z가 글자 되돌리기로 가지 않게).
-    <div id="changed-files" tabIndex={-1} className={styles.list} onKeyDown={onKeyDown}>
+    <div id="changed-files" tabIndex={-1} className={styles.list}>
       <FileRowMenu
         file={menu?.file ?? null}
         anchor={{ x: menu?.x ?? 0, y: menu?.y ?? 0 }}
@@ -103,49 +133,54 @@ export function ChangedFiles({
           />
         </TermTooltip>
         <TermTooltip id="status">
-          <span className={rowStyles.muted} tabIndex={0}>
-            {m.changedFilesCount(files.length)}
-          </span>
+          <span className={rowStyles.muted}>{m.changedFilesCount(files.length)}</span>
         </TermTooltip>
       </div>
       {stage.error && <ErrorNotice error={stage.error} />}
-      <ul className={rowStyles.list}>
-        {files.map((file) => {
+      <div role="grid" aria-label={m.changedFilesCount(files.length)} className={rowStyles.list}>
+        {files.map((file, index) => {
           const isSelected = selected === file.path;
+          const included = file.staged || virtualAll;
           const { name, dir } = splitPath(file.path);
           return (
-            <li
+            <div
               key={`${file.origPath ?? ""}→${file.path}`}
-              className={`${rowStyles.row} ${styles.two} ${isSelected ? styles.selected : ""}`}
-              onContextMenu={(e: MouseEvent<HTMLLIElement>) => {
+              ref={(el) => {
+                rows.current[index] = el;
+              }}
+              role="row"
+              tabIndex={index === at ? 0 : -1}
+              aria-selected={isSelected}
+              aria-haspopup="menu"
+              aria-label={m.fileRow(file.path, m.changeKind[file.change], included)}
+              className={`${rowStyles.row} ${styles.two} ${styles.fileRow} ${isSelected ? styles.selected : ""}`}
+              onClick={() => select(file.path)}
+              onFocus={(e) => {
+                // 포커스를 따라 고른다(Tab으로 들어오거나 누름).
+                if (e.target === e.currentTarget && !isSelected) select(file.path);
+              }}
+              onKeyDown={(e) => onRowKeyDown(e, file, index)}
+              onContextMenu={(e: MouseEvent<HTMLDivElement>) => {
                 // 웹뷰의 기본 메뉴 대신 파일 메뉴(경로 복사·고친 것 버리기).
                 e.preventDefault();
                 const list = e.currentTarget.closest<HTMLElement>("#changed-files");
                 if (list) openMenu(file, list, e);
               }}
             >
-              <TermTooltip id={file.staged || virtualAll ? "unstage" : "stage"}>
-                <Checkbox
-                  checked={file.staged || virtualAll}
-                  disabled={stage.isPending}
-                  aria-label={`${file.staged || virtualAll ? leaveOutLabel : includeLabel}: ${file.path}`}
-                  onChange={() => toggleOne(file)}
-                />
-              </TermTooltip>
-              <button
-                type="button"
-                className={styles.pick}
-                aria-pressed={isSelected}
-                aria-haspopup="menu"
-                onClick={() => select(file.path)}
-                onKeyDown={(e) => {
-                  if (!isMenuKey({ ...e, isComposing: e.nativeEvent.isComposing })) return;
-                  e.preventDefault();
-                  const list = e.currentTarget.closest<HTMLElement>("#changed-files");
-                  const row = e.currentTarget.getBoundingClientRect();
-                  if (list) openMenu(file, list, { clientX: row.left, clientY: row.bottom });
-                }}
-              >
+              <div role="gridcell" className={styles.checkCell}>
+                <TermTooltip id={included ? "unstage" : "stage"}>
+                  {/* 체크 상자는 마우스용이다. 키보드는 줄에서 Space(D-200). */}
+                  <Checkbox
+                    tabIndex={-1}
+                    checked={included}
+                    disabled={stage.isPending}
+                    aria-label={`${included ? leaveOutLabel : includeLabel}: ${file.path}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleOne(file)}
+                  />
+                </TermTooltip>
+              </div>
+              <div role="gridcell" className={styles.pick}>
                 {/* 위 파일 이름, 아래 폴더(--text-muted), 오른쪽 상태 글자(D-143, r-home.png) */}
                 {/* 이름은 끝을, 폴더는 앞을 줄인다. 어느 쪽이 잘려도 전체 경로를 툴팁으로 */}
                 <TruncateGroup full={file.path}>
@@ -159,11 +194,11 @@ export function ChangedFiles({
                   </span>
                 </TruncateGroup>
                 <span className={`${styles.kind} ${styles[file.change]}`}>{m.changeKind[file.change]}</span>
-              </button>
-            </li>
+              </div>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

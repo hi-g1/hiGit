@@ -42,15 +42,16 @@ afterEach(() => {
 describe("ChangedFiles", () => {
   it("줄은 위 파일 이름·아래 폴더, 상태 글자는 고침(D-143)", () => {
     renderList([file("docs/plans/010-settings-github-more.md", false), file("README.md", false, { change: "untracked" })]);
-    const row = screen.getByRole("button", { name: /010-settings-github-more\.md/ });
-    const [names, kind] = [...row.children];
+    const row = screen.getByRole("row", { name: /010-settings-github-more\.md/ });
+    const cell = row.querySelectorAll("[role=gridcell]")[1]!;
+    const [names, kind] = [...cell.children];
     expect(names?.children[0]?.textContent).toBe("010-settings-github-more.md");
     expect(names?.children[1]?.textContent).toBe("docs/plans");
     expect(kind?.textContent).toBe("고침");
     // 전체 경로는 잘렸을 때만 툴팁으로 보인다(title을 쓰지 않는다).
     expect(row.querySelector("[title]")).toBeNull();
     // 최상위 파일은 폴더 줄이 비어 있다(높이는 같다).
-    const top = screen.getByRole("button", { name: /README\.md/ });
+    const top = screen.getByRole("row", { name: /README\.md/ }).querySelectorAll("[role=gridcell]")[1]!;
     expect(top.children[0]?.children[1]?.textContent).toBe("");
     expect(top.children[1]?.textContent).toBe("새 파일");
   });
@@ -86,11 +87,11 @@ describe("ChangedFiles", () => {
     const user = userEvent.setup();
     renderList([file("docs/한글.md", false), file("b.md", false)]);
     vi.mocked(api.executeAction).mockResolvedValue({ kind: "discarded", count: 1 });
-    fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
+    fireEvent.contextMenu(screen.getByRole("row", { name: /한글\.md/ }));
     await user.click(await screen.findByRole("menuitem", { name: "경로 복사" }));
     expect(copyText).toHaveBeenCalledWith("docs/한글.md");
     await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사했어요"));
-    fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
+    fireEvent.contextMenu(screen.getByRole("row", { name: /한글\.md/ }));
     await user.click(await screen.findByRole("menuitem", { name: "이 파일 고친 것 버리기" }));
     // 확인 창 없이 버리고 되돌리기 토스트로 넘긴다(D-196).
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["docs/한글.md"] } });
@@ -100,7 +101,7 @@ describe("ChangedFiles", () => {
 
   it("메뉴 키·Shift+F10으로도 연다", async () => {
     renderList([file("a.txt", false)]);
-    const row = screen.getByRole("button", { name: /a\.txt/ });
+    const row = screen.getByRole("row", { name: /a\.txt/ });
     fireEvent.keyDown(row, { key: "F10", shiftKey: true });
     expect(await screen.findByRole("menuitem", { name: "경로 복사" })).toBeInTheDocument();
   });
@@ -167,9 +168,9 @@ describe("ChangedFiles", () => {
   it("행을 누르면 비교할 파일로 고른다", async () => {
     const user = userEvent.setup();
     renderList([file("a.txt", false), file("b.txt", false)]);
-    await user.click(screen.getByRole("button", { name: /b\.txt/ }));
+    await user.click(screen.getByRole("row", { name: /b\.txt/ }));
     expect(useRepoStore.getState().selectedPath).toBe("b.txt");
-    expect(screen.getByRole("button", { name: /b\.txt/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("row", { name: /b\.txt/ })).toHaveAttribute("aria-selected", "true");
     expect(api.executeAction).not.toHaveBeenCalled();
   });
 
@@ -177,12 +178,43 @@ describe("ChangedFiles", () => {
     const user = userEvent.setup();
     renderList([file("a.txt", false), file("b.txt", false), file("c.txt", false)]);
     act(() => useRepoStore.setState({ selectedPath: "a.txt" }));
-    document.getElementById("changed-files")!.focus();
+    act(() => screen.getByRole("row", { name: /a\.txt/ }).focus());
     await user.keyboard("{ArrowDown}{ArrowDown}");
     expect(useRepoStore.getState().selectedPath).toBe("c.txt");
+    expect(screen.getByRole("row", { name: /c\.txt/ })).toHaveFocus();
     await user.keyboard("{ArrowDown}");
     expect(useRepoStore.getState().selectedPath).toBe("c.txt");
     await user.keyboard("{ArrowUp}");
     expect(useRepoStore.getState().selectedPath).toBe("b.txt");
+    await user.keyboard("{Home}");
+    expect(useRepoStore.getState().selectedPath).toBe("a.txt");
+    await user.keyboard("{End}");
+    expect(useRepoStore.getState().selectedPath).toBe("c.txt");
+  });
+
+  it("목록은 Tab 정지 하나이고 줄 이름에 상태와 넣음·뺌(D-200)", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 100 }, (_, i) => file(`f${i}.txt`, i === 1));
+    renderList(many);
+    const rows = screen.getAllByRole("row");
+    expect(rows.filter((r) => r.tabIndex === 0)).toHaveLength(1);
+    for (const box of screen.getAllByRole("checkbox").slice(1)) expect(box).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("row", { name: "f1.txt · 고침 · 넣음" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "f0.txt · 고침 · 뺌" })).toBeInTheDocument();
+    // 머리 체크 → 목록(줄 하나) → 밖으로: 목록 안에서 Tab은 두 번만 멈춘다.
+    act(() => screen.getAllByRole("checkbox")[0]!.focus());
+    await user.tab();
+    expect(document.activeElement).toBe(rows[0]);
+    await user.tab();
+    expect(document.getElementById("changed-files")!.contains(document.activeElement)).toBe(false);
+  });
+
+  it("Space는 그 줄을 넣거나 뺀다(한 번)", async () => {
+    const user = userEvent.setup();
+    renderList([file("a.txt", false), file("b.txt", true)]);
+    act(() => screen.getByRole("row", { name: /b\.txt/ }).focus());
+    await user.keyboard(" ");
+    expect(api.executeAction).toHaveBeenCalledTimes(1);
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "unstage", input: { paths: ["b.txt"] } });
   });
 });

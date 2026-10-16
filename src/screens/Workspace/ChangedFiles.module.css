@@ -63,8 +63,18 @@
   cursor: default;
 }
 
-.pick:focus-visible {
+/* 줄 하나가 포커스 단위(D-200) */
+.fileRow {
+  cursor: default;
+}
+
+.fileRow:focus-visible {
   outline-offset: var(--focus-offset-inset);
+}
+
+.checkCell {
+  display: flex;
+  flex: none;
 }
 
 /* 선택한 행: 왼쪽 2px 파랑 막대(design.md "목록 행") */

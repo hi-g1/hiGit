@@ -165,6 +165,7 @@ export const en: Messages = {
   ownerAllow: "Trust this folder",
   close: "Close",
   changedFilesCount: (n: number) => `${n} changed files`,
+  fileRow: (path: string, kind: string, included: boolean) => `${path} · ${kind} · ${included ? "included" : "left out"}`,
   unpushed: (n: number) => `${n} versions not uploaded`,
   historyArea: t("log"),
   synced: (sent: number, received: number) => `Synced · ↑${sent} ↓${received}`,
@@ -218,6 +219,7 @@ export const en: Messages = {
     palette: "Find a command",
     nextFile: "Next file",
     prevFile: "Previous file",
+    toggleFile: "Include or leave out",
   },
   syncPlan: (ahead: number, behind: number) =>
     ahead === 0 && behind === 0

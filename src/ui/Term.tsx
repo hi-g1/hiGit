@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { getTerm, type TermId } from "../glossary";
 import { SHORTCUTS, type ShortcutId } from "../lib/shortcuts";
 import { useUiStore } from "../state/uiStore";
@@ -58,11 +58,14 @@ export function TermTooltip({
   );
 }
 
+/** 이 안에 든 용어는 포커스를 받지 않는다(이미 포커스되는 요소, D-200). */
+const CONTROLS = 'button, a[href], summary, label, [role="menuitem"], [role="option"], [role="row"], [role="tab"]';
+
 type TermProps = {
   id: TermId;
   /**
-   * 버튼처럼 이미 포커스되는 요소 안에 넣을 때는 false. 포커스가 겹치지 않게 하고,
-   * 툴팁은 호버로 뜬다.
+   * 포커스를 받을지. 정하지 않으면 버튼·링크·메뉴 항목·`summary`·`label`·목록 줄 안에서는 받지 않는다
+   * (툴팁은 호버로 뜬다, D-200). 정하면 그것이 이긴다.
    */
   focusable?: boolean;
   /** 툴팁에 보일 단축키(D-198). */
@@ -75,12 +78,18 @@ type TermProps = {
  * "Git 원래 이름으로 보기"에서는 본문과 툴팁 첫 줄이 서로 바뀐다.
  * "용어 설명 보기"를 끄면 툴팁이 없으므로 포커스도 받지 않는다.
  */
-export function Term({ id, focusable = true, shortcut }: TermProps) {
+export function Term({ id, focusable, shortcut }: TermProps) {
   const label = useTermLabel(id);
   const termHelp = useUiStore((s) => s.termHelp);
+  const ref = useRef<HTMLSpanElement>(null);
+  const [inControl, setInControl] = useState(false);
+  useLayoutEffect(() => {
+    if (focusable === undefined) setInControl(ref.current?.closest(CONTROLS) != null);
+  }, [focusable]);
+  const canFocus = focusable ?? !inControl;
   return (
     <TermTooltip id={id} shortcut={shortcut}>
-      <span className={styles.term} tabIndex={focusable && termHelp ? 0 : undefined}>
+      <span ref={ref} className={styles.term} tabIndex={canFocus && termHelp ? 0 : undefined}>
         {label}
       </span>
     </TermTooltip>

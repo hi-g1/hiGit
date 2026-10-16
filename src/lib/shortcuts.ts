@@ -79,6 +79,8 @@ export const SHORTCUTS = {
   palette: { keys: [ctrl("KeyK")], label: "Ctrl+K", scope: "global", inTextField: "app" },
   /** 단축키 표 열기·닫기(D-198). 입력칸 안에서도 */
   shortcutHelp: { keys: [ctrl("Slash")], label: "Ctrl+/", scope: "global", inTextField: "app" },
+  /** 파일 목록의 줄 넣기·빼기(D-200) */
+  toggleFile: { keys: [plain("Space")], label: "Space", scope: "fileList", inTextField: "native" },
   /** 파일 목록에서 다음·이전 파일 */
   nextFile: { keys: [plain("ArrowDown")], label: "↓", scope: "fileList", inTextField: "native" },
   prevFile: { keys: [plain("ArrowUp")], label: "↑", scope: "fileList", inTextField: "native" },

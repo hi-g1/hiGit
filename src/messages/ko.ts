@@ -190,6 +190,7 @@ export const ko = {
   ownerAllow: "이 폴더 믿기",
   close: "닫기",
   changedFilesCount: (n: number) => `고친 파일 ${n}개`,
+  fileRow: (path: string, kind: string, included: boolean) => `${path} · ${kind} · ${included ? "넣음" : "뺌"}`,
   unpushed: (n: number) => `안 올린 버전 ${n}개`,
   historyArea: t("log"),
   synced: (sent: number, received: number) => `${t("sync")}했어요 · ↑${sent} ↓${received}`,
@@ -243,6 +244,7 @@ export const ko = {
     palette: "명령 찾기",
     nextFile: "다음 파일",
     prevFile: "이전 파일",
+    toggleFile: `${t("stage")}·빼기`,
   } satisfies Record<ShortcutId, string>,
   syncPlan: (ahead: number, behind: number) =>
     ahead === 0 && behind === 0

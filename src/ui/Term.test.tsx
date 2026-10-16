@@ -53,6 +53,33 @@ describe("Term", () => {
     act(() => useUiStore.setState({ termHelp: true }));
   });
 
+  it("버튼·메뉴 항목·목록 줄 안에서는 포커스를 받지 않고, 명시하면 그것이 이긴다(D-200)", () => {
+    render(
+      <>
+        <p>
+          문장 속 <Term id="push" />
+        </p>
+        <button type="button">
+          <Term id="pull" />
+        </button>
+        <div role="row" tabIndex={0}>
+          <Term id="stage" />
+        </div>
+        <button type="button">
+          <Term id="fetch" focusable />
+        </button>
+        <p>
+          <Term id="commit" focusable={false} />
+        </p>
+      </>,
+    );
+    expect(screen.getByText("올리기")).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("가져오기")).not.toHaveAttribute("tabindex");
+    expect(screen.getByText("이번 버전에 넣기")).not.toHaveAttribute("tabindex");
+    expect(screen.getByText("원격 확인")).toHaveAttribute("tabindex", "0");
+    expect(screen.getByText("버전 저장")).not.toHaveAttribute("tabindex");
+  });
+
   it("명령이 없는 용어는 명령 줄을 생략한다", async () => {
     const user = userEvent.setup();
     render(<Term id="conflict" />);
