@@ -183,6 +183,8 @@ pub enum GithubFailure {
     PrAlreadyExists,
     PrNoDifference,
     PrInvalid,
+    /// 지금 브랜치가 올리는 원격이 github.com이 아니다.
+    NotGithubRemote,
 }
 
 impl CoreError {

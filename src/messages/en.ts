@@ -354,6 +354,7 @@ export const en: Messages = {
     prAlreadyExists: `A ${t("pr").toLowerCase()} for this ${t("branch").toLowerCase()} already exists.`,
     prNoDifference: `There are no different versions between the two ${t("branch").toLowerCase()}es.`,
     prInvalid: `Could not create the ${t("pr").toLowerCase()}. Please check your input.`,
+    notGithubRemote: `This ${t("branch").toLowerCase()}'s ${t("remote").toLowerCase()} isn't on GitHub.`,
     nothingToCommit: "No files included. Click the checkbox in front of a file.",
     identityMissing: "Your name and email for versions are not set.",
     invalidBranchName: `The ${t("branch").toLowerCase()} name contains characters that are not allowed.`,

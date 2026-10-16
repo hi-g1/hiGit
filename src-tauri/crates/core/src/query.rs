@@ -34,12 +34,16 @@ pub struct Queries {
     /// 앱이 시작한 작업의 표식을 확인하는 키(D-102).
     key: crate::undo::JournalKey,
     /// GitHub 연결(검토 요청 조회, D-112).
-    #[allow(dead_code)]
     github: Arc<crate::github::GitHubService>,
 }
 
 /// 합치기 제안의 겹침 검사가 이보다 오래 걸리면 그 저장소에서는 다시 하지 않는다.
 const SLOW_OVERLAP: Duration = Duration::from_secs(1);
+
+/// 검토 요청 목록 한 쪽의 개수.
+const PR_PAGE: u32 = 30;
+/// 새 검토 요청의 대상 브랜치 후보 최대 개수.
+const PR_BASE_OPTIONS: usize = 100;
 
 /// 한 번에 읽는 버전 기록의 최대 개수.
 pub const MAX_LOG_PAGE: u32 = 500;
@@ -67,6 +71,161 @@ impl Queries {
 
     pub(crate) fn set_github(&mut self, github: Arc<crate::github::GitHubService>) {
         self.github = github;
+    }
+
+    /// 열린 저장소의 호스팅 정보(D-112). 네트워크와 키체인 없이 로컬 정보만.
+    pub fn hosting_context(&self, repo: &Path) -> Result<crate::view::HostingContextView> {
+        let root = self.opened_repo(repo)?;
+        let status = self.github.status();
+        let target = crate::github::pr::pr_target(self.git.as_ref(), &root)?;
+        let github = target.as_ref().and_then(|t| t.repo.as_ref());
+        let (branch, head, base) = match &target {
+            Some(t) => (t.branch.clone(), t.head.clone(), t.default_branch.clone()),
+            None => (self.git.current_branch(&root)?, None, None),
+        };
+        Ok(crate::view::HostingContextView {
+            provider: github.map(|_| crate::view::HostingProviderView::Github),
+            repo: github.map(|r| format!("{}/{}", r.owner, r.name)),
+            configured: status.configured,
+            connected: status.connected,
+            is_default_branch: branch.is_some() && branch == base,
+            branch,
+            head,
+            base,
+        })
+    }
+
+    /// 지금 브랜치가 올리는 GitHub 저장소와 대상. GitHub가 아니면 `NotGithubRemote`.
+    fn github_target(
+        &self,
+        root: &RepoPath,
+    ) -> Result<(crate::github::pr::PrTarget, hosting::RemoteRepo)> {
+        let target =
+            crate::github::pr::pr_target(self.git.as_ref(), root)?.ok_or(CoreError::NoRemote)?;
+        let repo = target.repo.clone().ok_or(CoreError::Github {
+            kind: crate::GithubFailure::NotGithubRemote,
+            detail: None,
+        })?;
+        Ok((target, repo))
+    }
+
+    /// 검토 요청 목록 한 쪽(D-112). 토큰이 필요하고 401이면 연결을 지운다.
+    pub fn pr_list(
+        &self,
+        repo: &Path,
+        request: &crate::view::PrListRequest,
+    ) -> Result<crate::view::PrListView> {
+        let root = self.opened_repo(repo)?;
+        let (target, github) = self.github_target(&root)?;
+        if let Some(branch) = &request.branch
+            && !self.git.check_branch_name(branch)?
+        {
+            return Err(CoreError::InvalidInput("브랜치 이름"));
+        }
+        let query = hosting::PrQuery {
+            state: crate::github::pr::state_filter(request.state),
+            head_branch: request.branch.clone(),
+            page: request.page.max(1),
+            per_page: PR_PAGE,
+        };
+        let page = self
+            .github
+            .call(|provider, token| provider.list_prs(token, &github, &query))?;
+        Ok(crate::view::PrListView {
+            items: page
+                .items
+                .iter()
+                .map(|pr| crate::github::pr::row(pr, target.head.as_deref()))
+                .collect(),
+            has_more: page.has_more,
+        })
+    }
+
+    /// 검토 요청 하나: 합칠 수 있는지와 시험 결과 요약.
+    pub fn pr_detail(&self, repo: &Path, number: u32) -> Result<crate::view::PrDetailView> {
+        let root = self.opened_repo(repo)?;
+        if number == 0 {
+            return Err(CoreError::InvalidInput("검토 요청 번호"));
+        }
+        let (target, github) = self.github_target(&root)?;
+        let detail = self
+            .github
+            .call(|provider, token| provider.pr_detail(token, &github, u64::from(number)))?;
+        Ok(crate::github::pr::detail(&detail, target.head.as_deref()))
+    }
+
+    /// 새 검토 요청 대화상자의 기본값(D-113). 네트워크 없이 로컬 정보만.
+    pub fn pr_draft(&self, repo: &Path) -> Result<crate::view::PrDraftView> {
+        let root = self.opened_repo(repo)?;
+        let (target, _) = self.github_target(&root)?;
+        let branch = target.branch.clone().ok_or(CoreError::InvalidInput(
+            "특정 버전을 보는 중에는 검토 요청을 만들 수 없어요",
+        ))?;
+        let mut options: Vec<String> = target
+            .remote_branches
+            .iter()
+            .filter(|b| Some(*b) != target.head.as_ref() && **b != branch)
+            .cloned()
+            .collect();
+        options.sort();
+        if let Some(default) = &target.default_branch
+            && let Some(i) = options.iter().position(|b| b == default)
+        {
+            let default = options.remove(i);
+            options.insert(0, default);
+        }
+        options.truncate(PR_BASE_OPTIONS);
+        let base = target
+            .default_branch
+            .clone()
+            .filter(|d| options.contains(d))
+            .or_else(|| options.first().cloned())
+            .unwrap_or_default();
+        let ahead = if base.is_empty() {
+            0
+        } else {
+            let base_ref = format!("refs/remotes/{}/{base}", target.remote);
+            match self.git.resolve_ref(&root, &base_ref)? {
+                Some(_) => self.git.count_between(&root, "HEAD", &base_ref)?.0,
+                None => 0,
+            }
+        };
+        let unpushed = match &target.tracking {
+            Some(tracking) => {
+                self.git
+                    .count_between(&root, "HEAD", &format!("refs/remotes/{tracking}"))?
+                    .0
+            }
+            None => ahead,
+        };
+        let only_summary = if ahead == 1 {
+            self.git
+                .log(
+                    &root,
+                    &git::LogQuery {
+                        skip: 0,
+                        limit: 1,
+                        rev: None,
+                    },
+                )?
+                .first()
+                .map(|c| c.summary.clone())
+        } else {
+            None
+        };
+        Ok(crate::view::PrDraftView {
+            suggestion_title: crate::github::pr::suggest_title(
+                &branch,
+                ahead,
+                only_summary.as_deref(),
+            ),
+            branch,
+            head: target.head,
+            base,
+            base_options: options,
+            ahead,
+            unpushed,
+        })
     }
 
     /// 복제 대화상자의 기본값. 저장소를 열지 않아도 된다.

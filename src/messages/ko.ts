@@ -383,6 +383,7 @@ export const ko = {
     prAlreadyExists: `이 ${t("branch")}의 ${josa(t("pr"), "이/가")} 이미 있어요.`,
     prNoDifference: `두 ${t("branch")} 사이에 다른 버전이 없어요.`,
     prInvalid: `${josa(t("pr"), "을/를")} 만들 수 없어요. 입력을 확인해 주세요.`,
+    notGithubRemote: `이 ${t("branch")}의 ${josa(t("remote"), "은/는")} GitHub가 아니에요.`,
     nothingToCommit: "넣은 파일이 없어요. 파일 앞 체크 상자를 눌러 주세요.",
     identityMissing: "버전에 남길 이름과 이메일이 설정되어 있지 않아요.",
     invalidBranchName: `${t("branch")} 이름으로 쓸 수 없는 글자가 있어요.`,

@@ -1,0 +1,283 @@
+//! 검토 요청 조회(D-112, D-113): 대상 원격·브랜치, 목록·상세는 가짜 전송, 초안은 로컬만.
+
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use std::path::Path;
+use std::sync::Arc;
+
+use higit_core::github::{GitHubService, KEYCHAIN_SERVICE};
+use higit_core::view::{
+    ErrorCode, ErrorView, HostingProviderView, MergeableView, OpenHow, PrListRequest,
+    PrStateFilterView, PrStateView,
+};
+use higit_core::{Core, GitBackend};
+use hosting::testing::FakeTransport;
+
+const TOKEN: &str = "gho_TESTSECRET0123456789";
+
+fn git(dir: &Path, args: &[&str]) -> String {
+    let out = std::process::Command::new("git")
+        .args(["-c", "user.name=민지", "-c", "user.email=m@example.com"])
+        .args(["-c", "commit.gpgsign=false", "-c", "core.autocrlf=false"])
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout).unwrap()
+}
+
+fn commit(dir: &Path, file: &str, message: &str) {
+    std::fs::write(dir.join(file), message).unwrap();
+    git(dir, &["add", "-A"]);
+    git(dir, &["commit", "-q", "-m", message]);
+}
+
+/// main에 버전 하나, `url`을 origin으로 두고 origin/main·origin/develop을 흉내 낸 저장소.
+fn repo(url: Option<&str>) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q", "-b", "main"]);
+    commit(p, "a.txt", "첫 버전");
+    if let Some(url) = url {
+        git(p, &["remote", "add", "origin", url]);
+        git(p, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        git(p, &["update-ref", "refs/remotes/origin/develop", "HEAD"]);
+        git(p, &["config", "branch.main.remote", "origin"]);
+        git(p, &["config", "branch.main.merge", "refs/heads/main"]);
+    }
+    dir
+}
+
+struct Fixture {
+    core: Core,
+    fake: Arc<FakeTransport>,
+}
+
+fn core(dir: &Path, connected: bool) -> Fixture {
+    let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+    let fake = Arc::new(FakeTransport::new());
+    let config = hosting::GitHubConfig::new(Some("Ov23liTESTCLIENT01"));
+    let provider = hosting::GitHub::new(fake.clone(), config.clone());
+    let github = GitHubService::new(
+        Arc::new(provider),
+        &config,
+        platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+        None,
+    );
+    if connected {
+        github.connect_for_tests("octocat", TOKEN, true);
+    }
+    let core = Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>)
+        .unwrap()
+        .with_github_for_tests(github);
+    core.open_project(dir, OpenHow::Picked).unwrap();
+    Fixture { core, fake }
+}
+
+fn code(err: &higit_core::CoreError) -> ErrorCode {
+    ErrorView::from(err).code
+}
+
+#[test]
+fn context_reads_local_state_only() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let ctx = f.core.queries().hosting_context(dir.path()).unwrap();
+    assert_eq!(ctx.provider, Some(HostingProviderView::Github));
+    assert_eq!(ctx.repo.as_deref(), Some("octo/hello"));
+    assert!(ctx.configured && ctx.connected);
+    assert_eq!(ctx.branch.as_deref(), Some("main"));
+    assert_eq!(ctx.head.as_deref(), Some("main"));
+    assert_eq!(ctx.base.as_deref(), Some("main"));
+    assert!(ctx.is_default_branch);
+    assert!(f.fake.requests().is_empty(), "네트워크를 쓰지 않는다");
+
+    let ssh = repo(Some("git@github.com:octo/hello.git"));
+    let f = core(ssh.path(), false);
+    let ctx = f.core.queries().hosting_context(ssh.path()).unwrap();
+    assert_eq!(ctx.provider, Some(HostingProviderView::Github));
+    assert!(!ctx.connected);
+
+    for url in [
+        Some("https://gitlab.com/octo/hello.git"),
+        Some("https://evil.example/github.com/x"),
+        None,
+    ] {
+        let dir = repo(url);
+        let f = core(dir.path(), true);
+        let ctx = f.core.queries().hosting_context(dir.path()).unwrap();
+        assert_eq!(ctx.provider, None, "{url:?}");
+        assert_eq!(ctx.repo, None);
+        assert_eq!(ctx.branch.as_deref(), Some("main"));
+    }
+}
+
+#[test]
+fn push_url_decides_the_repo() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    git(
+        dir.path(),
+        &[
+            "config",
+            "remote.origin.pushurl",
+            "https://gitlab.com/octo/hello.git",
+        ],
+    );
+    let f = core(dir.path(), true);
+    let ctx = f.core.queries().hosting_context(dir.path()).unwrap();
+    assert_eq!(ctx.provider, None);
+    let err = f.core.queries().pr_draft(dir.path()).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::NotGithubRemote);
+}
+
+#[test]
+fn draft_counts_and_suggests_title() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let p = dir.path();
+    git(p, &["switch", "-q", "-c", "feature/login-page"]);
+    commit(p, "b.txt", "로그인 화면 추가");
+    let f = core(p, true);
+    let draft = f.core.queries().pr_draft(p).unwrap();
+    assert_eq!(draft.branch, "feature/login-page");
+    assert_eq!(draft.head, None, "아직 올리지 않았다");
+    assert_eq!(draft.base, "main");
+    assert_eq!(draft.base_options, ["main", "develop"]);
+    assert_eq!(draft.ahead, 1);
+    assert_eq!(draft.unpushed, 1);
+    assert_eq!(draft.suggestion_title, "로그인 화면 추가");
+
+    commit(p, "c.txt", "두 번째");
+    // 올린 것처럼: upstream을 지금 버전에 둔다.
+    git(
+        p,
+        &[
+            "update-ref",
+            "refs/remotes/origin/feature/login-page",
+            "HEAD",
+        ],
+    );
+    git(p, &["config", "branch.feature/login-page.remote", "origin"]);
+    git(
+        p,
+        &[
+            "config",
+            "branch.feature/login-page.merge",
+            "refs/heads/feature/login-page",
+        ],
+    );
+    let draft = f.core.queries().pr_draft(p).unwrap();
+    assert_eq!(draft.head.as_deref(), Some("feature/login-page"));
+    assert_eq!(draft.ahead, 2);
+    assert_eq!(draft.unpushed, 0);
+    assert_eq!(draft.suggestion_title, "feature login page");
+    // 지금 브랜치(올라간 이름)는 대상 후보에서 뺀다.
+    assert_eq!(draft.base_options, ["main", "develop"]);
+    assert!(f.fake.requests().is_empty());
+}
+
+fn pull_json(number: u64, head: &str, owner: &str) -> String {
+    format!(
+        r#"{{"number":{number},"title":"제목 {number}","state":"open","draft":false,"merged_at":null,
+           "head":{{"ref":"{head}","sha":"{sha}","repo":{{"owner":{{"login":"{owner}"}}}}}},
+           "base":{{"ref":"main","sha":"{sha}","repo":{{"owner":{{"login":"octo"}}}}}},
+           "user":{{"login":"mona"}},"created_at":"2026-10-01T00:00:00Z",
+           "updated_at":"2026-10-02T00:00:00Z","mergeable_state":"behind"}}"#,
+        sha = "a".repeat(40)
+    )
+}
+
+#[test]
+fn list_and_detail_go_through_the_service() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    f.fake.push_json(
+        200,
+        &format!(
+            "[{},{}]",
+            pull_json(3, "main", "octo"),
+            pull_json(4, "main", "forker")
+        ),
+    );
+    let list = f
+        .core
+        .queries()
+        .pr_list(
+            dir.path(),
+            &PrListRequest {
+                state: PrStateFilterView::Open,
+                branch: Some("main".into()),
+                page: 0,
+            },
+        )
+        .unwrap();
+    assert_eq!(list.items.len(), 2);
+    assert!(list.items[0].is_current_branch);
+    assert!(!list.items[1].is_current_branch, "포크의 같은 이름 브랜치");
+    assert_eq!(list.items[1].head_owner.as_deref(), Some("forker"));
+    assert_eq!(list.items[0].state, PrStateView::Open);
+    let reqs = f.fake.requests();
+    assert_eq!(
+        reqs[0].url,
+        "https://api.github.com/repos/octo/hello/pulls?state=open&per_page=30&page=1&sort=updated&direction=desc&head=octo%3Amain"
+    );
+
+    f.fake.push_json(200, &pull_json(3, "main", "octo"));
+    f.fake.push_json(403, "{}");
+    let detail = f.core.queries().pr_detail(dir.path(), 3).unwrap();
+    assert_eq!(detail.row.number, 3);
+    assert_eq!(detail.mergeable, MergeableView::Behind);
+    assert_eq!(detail.checks, None);
+    let shown = format!("{list:?} {detail:?}");
+    assert!(!shown.contains(TOKEN));
+}
+
+#[test]
+fn list_needs_connection_and_drops_it_on_401() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), false);
+    let request = PrListRequest {
+        state: PrStateFilterView::All,
+        branch: None,
+        page: 1,
+    };
+    let err = f.core.queries().pr_list(dir.path(), &request).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::GithubNotConnected);
+
+    let f = core(dir.path(), true);
+    f.fake.push_json(401, r#"{"message":"Bad credentials"}"#);
+    let err = f.core.queries().pr_list(dir.path(), &request).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::GithubExpired);
+    assert!(!f.core.github_status().connected);
+
+    let err = f
+        .core
+        .queries()
+        .pr_list(
+            dir.path(),
+            &PrListRequest {
+                branch: Some("bad name".into()),
+                ..request
+            },
+        )
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::InvalidInput);
+}
+
+#[test]
+fn queries_need_an_opened_repo() {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let other = repo(Some("https://github.com/octo/other.git"));
+    for err in [
+        f.core.queries().hosting_context(other.path()).unwrap_err(),
+        f.core.queries().pr_draft(other.path()).unwrap_err(),
+        f.core.queries().pr_detail(other.path(), 1).unwrap_err(),
+    ] {
+        assert_eq!(code(&err), ErrorCode::NotOpened);
+    }
+}

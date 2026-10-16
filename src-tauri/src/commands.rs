@@ -7,8 +7,9 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     CloneDefaultsView, CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView,
-    DiffRequest, ErrorCode, ErrorView, FileDiffView, GitHubStatusView, HomeMapView, HostingPage,
-    LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView,
+    DiffRequest, ErrorCode, ErrorView, FileDiffView, GitHubStatusView, HomeMapView,
+    HostingContextView, HostingPage, LogPage, LogQuery, LoginChallengeView, LoginPollView,
+    MergeHintView, OpenHow, PendingWorkView, PrDetailView, PrDraftView, PrListRequest, PrListView,
     PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
     RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
     UndoResult,
@@ -193,6 +194,57 @@ pub fn recent_list(state: State<'_, AppState>) -> CmdResult<Vec<RecentProject>> 
 pub fn recent_remove(state: State<'_, AppState>, path: String) -> CmdResult<()> {
     core(&state)?.remove_recent(&PathBuf::from(path));
     Ok(())
+}
+
+/// 열린 저장소의 호스팅 정보(네트워크 없음).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_hosting_context(
+    state: State<'_, AppState>,
+    repo: String,
+) -> CmdResult<HostingContextView> {
+    blocking(state, move |core| {
+        core.queries().hosting_context(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 검토 요청 목록 한 쪽.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pr_list(
+    state: State<'_, AppState>,
+    repo: String,
+    request: PrListRequest,
+) -> CmdResult<PrListView> {
+    blocking(state, move |core| {
+        core.queries().pr_list(&PathBuf::from(repo), &request)
+    })
+    .await
+}
+
+/// 검토 요청 하나(합칠 수 있는지, 시험 결과).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pr_detail(
+    state: State<'_, AppState>,
+    repo: String,
+    number: u32,
+) -> CmdResult<PrDetailView> {
+    blocking(state, move |core| {
+        core.queries().pr_detail(&PathBuf::from(repo), number)
+    })
+    .await
+}
+
+/// 새 검토 요청 대화상자의 기본값(네트워크 없음).
+#[tauri::command]
+#[specta::specta]
+pub async fn query_pr_draft(state: State<'_, AppState>, repo: String) -> CmdResult<PrDraftView> {
+    blocking(state, move |core| {
+        core.queries().pr_draft(&PathBuf::from(repo))
+    })
+    .await
 }
 
 /// 복제 대화상자의 기본값(부모 폴더 = 홈 폴더).

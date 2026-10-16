@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G12b 끝 (`query_clone_defaults`: 부모 폴더 기본값 = 홈 폴더)
-- 마지막 커밋: (이 갱신과 같은 커밋) app: add clone defaults query
-- 다음 할 일: G13a 검토 요청 조회(hosting_context·pr_list·pr_detail·pr_draft) → G13b pr-create → G14 대화상자 공용 … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G13a 끝 (검토 요청 조회 4개: hosting_context·pr_list·pr_detail·pr_draft)
+- 마지막 커밋: (이 갱신과 같은 커밋) core: add pull request queries
+- 다음 할 일: G13b pr-create(올리기 안 함, NotPushed·PrSameBranch) → G14 대화상자 공용 → G15 설정 … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -184,7 +184,8 @@
 - [x] G11 `git_credential_main`(get만, github.com https·사용자 이름 없음일 때만 키체인, 10초), `main`이 먼저 갈라짐, `auth_for`(주소 모두 github https·로컬 http.*/proxy 없음·이번 실행 키체인), helper 인증 실패 뒤 401이면 연결 끊김, `useAutoFetch` 인증 실패 목록
 - [x] G12a 액션 `clone`(31번째, safe/Nothing), `validate_clone_url`·`validate_clone_name`, Core가 열린 경로 대신 대상 검사(부모 폴더·링크 아님·.git 안 아님·대상 200자·없거나 빈 폴더·Git 보안 기준), 대상 경로로 잠금·진행·취소(정확히 같을 때만), 실패 때 이번에 만든 폴더만 지움, 오류 코드 3개
 - [x] G12b `query_clone_defaults`(네 곳, `api.cloneDefaults`)
-- [ ] G13a 검토 요청 조회 / G13b pr-create
+- [x] G13a 대상 원격(upstream 원격, 없으면 하나뿐·origin)의 올리기 주소가 github.com일 때만, head는 upstream 원격 브랜치 이름. 조회 4개(hosting_context·pr_draft는 네트워크 없음), `NotGithubRemote`
+- [ ] G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 
 ## 다음 반복

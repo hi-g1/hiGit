@@ -46,6 +46,10 @@
     "allow-query-conflict-file",
     "allow-query-project-summary",
     "allow-query-clone-defaults",
+    "allow-query-hosting-context",
+    "allow-query-pr-list",
+    "allow-query-pr-detail",
+    "allow-query-pr-draft",
     "allow-repo-watch",
     "allow-repo-unwatch"
   ]

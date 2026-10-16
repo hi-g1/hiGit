@@ -8,6 +8,7 @@ mod conflict;
 mod diff;
 mod github;
 mod history;
+mod hosting;
 mod input;
 mod map;
 mod merge;
@@ -27,6 +28,10 @@ pub use github::{
 };
 pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
+};
+pub use hosting::{
+    ChecksView, HostingContextView, HostingProviderView, MergeableView, PrDetailView, PrDraftView,
+    PrListRequest, PrListView, PrRowView, PrStateFilterView, PrStateView,
 };
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
@@ -656,6 +661,8 @@ pub enum ErrorCode {
     PrAlreadyExists,
     PrNoDifference,
     PrInvalid,
+    /// 지금 브랜치가 올리는 원격이 github.com이 아니다.
+    NotGithubRemote,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -802,6 +809,7 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::PrAlreadyExists => ErrorCode::PrAlreadyExists,
         G::PrNoDifference => ErrorCode::PrNoDifference,
         G::PrInvalid => ErrorCode::PrInvalid,
+        G::NotGithubRemote => ErrorCode::NotGithubRemote,
     }
 }
 

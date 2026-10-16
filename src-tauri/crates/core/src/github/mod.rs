@@ -5,6 +5,7 @@
 
 mod errors;
 mod helper;
+pub(crate) mod pr;
 mod store;
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};

@@ -41,6 +41,10 @@ const COMMANDS: &[&str] = &[
     "query_conflict_file",
     "query_project_summary",
     "query_clone_defaults",
+    "query_hosting_context",
+    "query_pr_list",
+    "query_pr_detail",
+    "query_pr_draft",
     "repo_watch",
     "repo_unwatch",
 ];

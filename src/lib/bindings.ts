@@ -72,6 +72,14 @@ export const commands = {
 	queryProjectSummary: (repo: string) => __TAURI_INVOKE<ProjectSummaryView>("query_project_summary", { repo }),
 	/**  복제 대화상자의 기본값(부모 폴더 = 홈 폴더). */
 	queryCloneDefaults: () => __TAURI_INVOKE<CloneDefaultsView>("query_clone_defaults"),
+	/**  열린 저장소의 호스팅 정보(네트워크 없음). */
+	queryHostingContext: (repo: string) => __TAURI_INVOKE<HostingContextView>("query_hosting_context", { repo }),
+	/**  검토 요청 목록 한 쪽. */
+	queryPrList: (repo: string, request: PrListRequest) => __TAURI_INVOKE<PrListView>("query_pr_list", { repo, request }),
+	/**  검토 요청 하나(합칠 수 있는지, 시험 결과). */
+	queryPrDetail: (repo: string, number: number) => __TAURI_INVOKE<PrDetailView>("query_pr_detail", { repo, number }),
+	/**  새 검토 요청 대화상자의 기본값(네트워크 없음). */
+	queryPrDraft: (repo: string) => __TAURI_INVOKE<PrDraftView>("query_pr_draft", { repo }),
 	/**  저장소 감시를 시작한다. 변경은 `repo-changed`, 감시 상태는 `watch-status` 이벤트로 온다. */
 	repoWatch: (repo: string) => __TAURI_INVOKE<null>("repo_watch", { repo }),
 	repoUnwatch: () => __TAURI_INVOKE<null>("repo_unwatch"),
@@ -256,6 +264,14 @@ export type ChangedFile = {
 	staged: boolean,
 };
 
+export type ChecksView = {
+	success: number,
+	failed: number,
+	pending: number,
+	/**  100개를 넘어 일부만 셌다. */
+	partial: boolean,
+};
+
 /**  복제 대화상자의 기본값(D-115). 부모 폴더는 홈 폴더. */
 export type CloneDefaultsView = {
 	/**  복제할 폴더를 만들 곳. 홈 폴더를 모르면 `None`(화면이 고르게 한다). */
@@ -422,7 +438,9 @@ export type DiffRequest = {
 	commit?: string | null,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+/**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
+"notGithubRemote" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
 "cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
@@ -492,6 +510,23 @@ export type HomeMapView = {
 	changedFiles: number,
 };
 
+/**  열린 저장소의 호스팅 정보. 네트워크 없이 로컬 정보만으로 만든다. */
+export type HostingContextView = {
+	/**  지금 브랜치가 올리는 원격이 github.com이면 `github`. */
+	provider: HostingProviderView | null,
+	/**  `소유자/이름`. */
+	repo: string | null,
+	configured: boolean,
+	connected: boolean,
+	/**  지금 로컬 브랜치. */
+	branch: string | null,
+	/**  검토 요청의 head가 될 원격 브랜치 이름(upstream). 아직 올린 적 없으면 `None`. */
+	head: string | null,
+	/**  기본 브랜치. */
+	base: string | null,
+	isDefaultBranch: boolean,
+};
+
 /**  앱이 기본 브라우저로 여는 GitHub 페이지. 주소는 core가 상수와 검사한 값으로만 만든다. */
 export type HostingPage = 
 /**  코드를 넣는 페이지. */
@@ -500,6 +535,8 @@ export type HostingPage =
 { kind: "appSettings" } | 
 /**  열린 저장소의 검토 요청 하나. */
 { kind: "pullRequest"; number: number };
+
+export type HostingProviderView = "github";
 
 export type HunkChoice = { kind: "ours" } | { kind: "theirs" } | 
 /**  내 쪽 다음 합칠 쪽. */
@@ -602,6 +639,8 @@ export type MergeIntoInput = {
 	branch: string,
 };
 
+export type MergeableView = "clean" | "conflicts" | "behind" | "blocked" | "unknown";
+
 export type NameProblem = "empty" | 
 /**  git 규칙에 맞지 않거나 `-`로 시작한다. */
 "invalid" | 
@@ -644,6 +683,61 @@ export type PendingWorkView = {
 	/**  다른 도구가 시작해 앱이 끝낼 수 없는 작업. */
 	otherOperation: OtherOperation | null,
 };
+
+export type PrDetailView = {
+	row: PrRowView,
+	mergeable: MergeableView,
+	/**  시험 결과를 볼 수 없으면 `None`. */
+	checks: ChecksView | null,
+};
+
+/**  새 검토 요청 대화상자의 기본값. 로컬 정보만으로 만든다. */
+export type PrDraftView = {
+	branch: string,
+	/**  올라가 있는 원격 브랜치 이름. 아직 올린 적 없으면 `None`(화면이 먼저 올린다). */
+	head: string | null,
+	base: string,
+	/**  그 원격의 브랜치들(기본 브랜치 먼저, 100개까지). 지금 브랜치는 뺀다. */
+	baseOptions: string[],
+	suggestionTitle: string,
+	/**  `base`보다 앞선 버전 수. */
+	ahead: number,
+	/**  아직 올리지 않은 버전 수(upstream이 없으면 앞선 버전 전부). */
+	unpushed: number,
+};
+
+export type PrListRequest = {
+	state: PrStateFilterView,
+	/**  이 원격 브랜치에서 낸 것만. */
+	branch: string | null,
+	/**  1부터. */
+	page: number,
+};
+
+export type PrListView = {
+	items: PrRowView[],
+	hasMore: boolean,
+};
+
+export type PrRowView = {
+	number: number,
+	title: string,
+	state: PrStateView,
+	draft: boolean,
+	head: string,
+	/**  다른 저장소(포크)에서 냈으면 그 소유자. */
+	headOwner: string | null,
+	base: string,
+	author: string | null,
+	/**  unix 초. */
+	updatedAt: number,
+	/**  이 저장소의 지금 브랜치(원격 브랜치 이름이 같음)에서 낸 것. */
+	isCurrentBranch: boolean,
+};
+
+export type PrStateFilterView = "open" | "closed" | "all";
+
+export type PrStateView = "open" | "closed" | "merged";
 
 /**  미리보기와 실행 때 돌려줄 증표. */
 export type PreviewView = {

@@ -8,6 +8,7 @@ import {
   type HostingPage,
   type LogQuery,
   type OpenHow,
+  type PrListRequest,
   type TrustChoice,
 } from "./bindings";
 
@@ -38,6 +39,16 @@ export type {
   MapCommit,
   OpenHow,
   OtherOperation,
+  ChecksView,
+  HostingContextView,
+  MergeableView,
+  PrDetailView,
+  PrDraftView,
+  PrListRequest,
+  PrListView,
+  PrRowView,
+  PrStateFilterView,
+  PrStateView,
   PendingWorkView,
   ProjectOpenResult,
   ProjectSummaryView,
@@ -132,6 +143,12 @@ export const api = {
   recentProjects: () => call(commands.recentList()),
   removeRecent: (path: string) => call(commands.recentRemove(path)),
   projectSummary: (repo: string) => call(commands.queryProjectSummary(repo)),
+  /** 열린 저장소의 호스팅 정보(네트워크 없음). */
+  hostingContext: (repo: string) => call(commands.queryHostingContext(repo)),
+  prList: (repo: string, request: PrListRequest) => call(commands.queryPrList(repo, request)),
+  prDetail: (repo: string, number: number) => call(commands.queryPrDetail(repo, number)),
+  /** 새 검토 요청 대화상자의 기본값(네트워크 없음). */
+  prDraft: (repo: string) => call(commands.queryPrDraft(repo)),
   /** 복제 대화상자의 기본값(부모 폴더). */
   cloneDefaults: () => call(commands.queryCloneDefaults()),
   listActions: () => call(commands.actionList()),
