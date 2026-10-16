@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G18 끝 (새 검토 요청 대화상자: 안 올린 버전은 올리기 먼저, 이미 있음·차이 없음 분기)
-- 마지막 커밋: (이 갱신과 같은 커밋) features: create pull request dialog
-- 다음 할 일: G19 브랜치 목록 "검토 요청" 먼저 → G20 마무리 → 반복 4 끝 점검 (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G19 끝 (브랜치 목록: GitHub 프로젝트면 "검토 요청" 먼저, "main에 합치기"는 글자 단추)
+- 마지막 커밋: (이 갱신과 같은 커밋) features: suggest a pull request before merging in github projects
+- 다음 할 일: G20 마무리(architecture·design·spec·roadmap·progress·code-analyst 점검 줄) → 반복 4 끝 code-analyst 점검 → 반복 4b (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -191,7 +191,8 @@
 - [x] G16 `features/clone`(CloneDialog·cloneStore·suggestName·joinPath), 단축키 표 `clone`(PLANNED에서 이동), 시작 화면 `<Term clone>` Ctrl+Shift+O, 진행·3초 뒤 취소, 성공하면 프로젝트 열기
 - [x] G17 `screens/PullRequests`(listbox, 열림·닫힘·전체, 더 보기, 줄 아래 상세: 시험 결과·겹침·뒤처짐·GitHub에서 열기), `features/pr`(model·PrRow), `view: "pr"`·`selectedPr`, `useHostingContext`·`usePrPages`(60초)·`usePrDetail`·`usePrForBranch`
 - [x] G18 `features/pr/CreatePrDialog`·`prDialogStore`, `usePrDraft`, 올리지 않은 버전이 있으면 `push` → `pr-create`, 이미 열린 요청·차이 없음이면 만들기 꺼짐, 성공 토스트 "열기"
-- [ ] G19 브랜치 목록 "검토 요청" / G20 마무리
+- [x] G19 `features/pr/PrSlot`(미연결 → 연결 패널, 있으면 번호·상태 → 검토 요청 화면의 그 줄, 없으면 새 검토 요청), 브랜치 목록의 "main에 합치기" 자리
+- [ ] G20 마무리
 
 ## 다음 반복
 - [ ] 반복 4b: 설정과 GitHub 넓히기

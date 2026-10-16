@@ -2,7 +2,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
-import { invalidateLog, useBranchNameCheck, useBranches, useMergeHint } from "../../lib/queries";
+import { invalidateLog, useBranchNameCheck, useBranches, useHostingContext, useMergeHint } from "../../lib/queries";
 import { formatDate } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
@@ -10,6 +10,7 @@ import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import { TermTooltip, useTermLabel } from "../../ui/Term";
 import { useMergeAction } from "../merge/useMergeAction";
+import { PrSlot } from "../pr/PrSlot";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./BranchList.module.css";
 import { branchColor } from "./color";
@@ -103,6 +104,8 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
   const view = branches.data;
   // 지금 브랜치만 앞서 있으면 "main에 합치기"(D-071). 노선도 옆이 아니라 여기에 둔다(D-048).
   const hint = useMergeHint(repo).data;
+  // GitHub 프로젝트면 "main에 합치기"보다 "검토 요청"을 먼저 권한다(D-071, D-113).
+  const github = useHostingContext(repo).data?.provider === "github";
   const merge = useMergeAction(repo, onDone);
   const debounced = useDebounced(query.trim(), 300);
   const nameCheck = useBranchNameCheck(repo, view && canOfferCreate(view, debounced) ? debounced : "");
@@ -241,9 +244,11 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming }: PanelPro
         </div>
       )}
       {!query.trim() && hint?.kind === "into" && hint.branch !== null && (
-        <div className={styles.mergeInto}>
+        <div className={`${styles.mergeInto} ${github ? styles.prFirst : ""}`}>
+          {github && <PrSlot repo={repo} onClose={close} />}
           <TermTooltip id="merge">
             <Button
+              variant={github ? "text" : "secondary"}
               disabled={merge.pending}
               onClick={() => {
                 const target = hint.branch;
