@@ -5,7 +5,7 @@ import { useOpenProject } from "../../features/open-project/useOpenProject";
 import { pickLastVersion, pickStatus } from "../../features/start/summary";
 import type { ApiError, ProjectSummaryView, RecentProject } from "../../lib/api";
 import { useRoutePreview } from "../../lib/queries";
-import { formatTime } from "../../lib/time";
+import { formatDate, formatTime } from "../../lib/time";
 import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -54,7 +54,8 @@ export function LastProject({
           (summary.data
             ? `${m.statusSentence(pickStatus(summary.data))} ${m.lastVersionSentence(
                 pickLastVersion(summary.data),
-                summary.data.lastCommit ? formatTime(summary.data.lastCommit.authorTime, now, locale) : "",
+                // 문장 속 날짜("10월 7일에 저장한")라 날짜만 쓴다.
+                summary.data.lastCommit ? formatDate(summary.data.lastCommit.authorTime, now, locale) : "",
               )}`
             : " ")}
       </p>
