@@ -1,9 +1,11 @@
+/* 폭이 모자라면(800px·"아주 크게") 오른쪽 묶음이 통째로 아랫줄로 내려간다. 가로 스크롤 없음(D-138) */
 .bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-1) var(--space-4);
   min-height: 2.75rem;
-  padding: 0 var(--space-4);
+  padding: var(--space-1) var(--space-4);
   border-bottom: var(--border-width) solid var(--border);
   background: var(--bg);
 }
@@ -23,7 +25,28 @@
 }
 
 .branchName {
+  overflow: hidden;
   color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 왼쪽 묶음: 프로젝트 메뉴, 선, 브랜치 */
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* 오른쪽 묶음: 한 덩어리로 오른쪽에 붙고, 그래도 모자라면 그 안에서 줄이 바뀐다 */
+.right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-4);
+  margin-left: auto;
 }
 
 .dot {
@@ -63,8 +86,4 @@
 .on {
   color: var(--text);
   font-weight: var(--font-weight-bold);
-}
-
-.spacer {
-  flex: 1;
 }

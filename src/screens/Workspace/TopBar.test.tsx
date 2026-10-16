@@ -56,6 +56,14 @@ describe("TopBar", () => {
     act(() => useRepoStore.setState({ view: "home" }));
   });
 
+  it("오른쪽 컨트롤은 한 덩어리로 묶여 함께 줄이 바뀐다", () => {
+    render(<TopBar repo={repo} status={status({})} />);
+    const right = screen.getByRole("button", { name: "설정" }).parentElement!;
+    expect(right).toContainElement(screen.getByRole("button", { name: "버전 기록" }));
+    expect(right).toContainElement(screen.getByRole("button", { name: "작업 내역" }));
+    expect(right).not.toContainElement(screen.getByRole("button", { name: /main/ }));
+  });
+
   it("특정 버전을 보는 중이면 브랜치 이름 대신 안내", () => {
     render(<TopBar repo={repo} status={status({ name: null })} />);
     expect(screen.getByText("특정 버전을 보는 중")).toBeInTheDocument();
@@ -74,11 +82,9 @@ describe("TopBar", () => {
   it("오른쪽 컨트롤은 다섯 개를 넘지 않는다", async () => {
     const { container } = render(<TopBar repo={repo} status={status({})} />);
     await screen.findByRole("button", { name: "GitHub 연결" });
-    const header = container.querySelector("header")!;
-    const spacer = [...header.children].findIndex((el) => String(el.className).includes("spacer"));
-    expect(spacer).toBeGreaterThan(0);
-    const right = [...header.children].slice(spacer + 1);
-    expect(right.length).toBeLessThanOrEqual(5);
+    // 오른쪽 묶음(헤더의 둘째 칸)의 컨트롤 수
+    const right = container.querySelector("header")!.children[1]!;
+    expect(right.children.length).toBeLessThanOrEqual(5);
   });
 
   it("GitHub 원격이면 검토 요청 단추, 오른쪽은 다섯 개", async () => {
@@ -95,9 +101,7 @@ describe("TopBar", () => {
     await userEvent.click(pr);
     expect(useRepoStore.getState().view).toBe("pr");
     expect(pr).toHaveAttribute("aria-pressed", "true");
-    const header = container.querySelector("header")!;
-    const spacer = [...header.children].findIndex((el) => String(el.className).includes("spacer"));
-    expect([...header.children].slice(spacer + 1).length).toBeLessThanOrEqual(5);
+    expect(container.querySelector("header")!.children[1]!.children.length).toBeLessThanOrEqual(5);
     act(() => useRepoStore.setState({ view: "home" }));
   });
 });

@@ -47,62 +47,63 @@ export function TopBar({
 
   return (
     <header className={styles.bar}>
-      <ProjectMenu repo={repo} />
-      <span className={styles.divider} aria-hidden="true" />
-      {branch && merging && (
-        <span className={styles.branchName}>{branch.name ?? m.detached}</span>
-      )}
-      {branch && !merging && (
-        <BranchList repo={repo.path} current={branch.name} onDone={onDone}>
-          {branch.name && <span className={styles.dot} style={{ background: branchColor(branch.name, defaultBranch) }} />}
-          <span className={styles.branchName}>{branch.name ?? m.detached}</span>
-          <span aria-hidden="true">▾</span>
-        </BranchList>
-      )}
-      <span className={styles.spacer} />
-      {branch && hasRemote && !merging && (
-        <SyncButton repo={repo.path} branch={branch} changedFiles={status?.files.length ?? 0} />
-      )}
-      {branches && !hasRemote && github?.configured && !github.connected && !merging && (
-        <button type="button" className={styles.textButton} onClick={() => openSettings(true)}>
-          {m.settings.connect}
+      <div className={styles.left}>
+        <ProjectMenu repo={repo} />
+        <span className={styles.divider} aria-hidden="true" />
+        {branch && merging && <span className={styles.branchName}>{branch.name ?? m.detached}</span>}
+        {branch && !merging && (
+          <BranchList repo={repo.path} current={branch.name} onDone={onDone}>
+            {branch.name && <span className={styles.dot} style={{ background: branchColor(branch.name, defaultBranch) }} />}
+            <span className={styles.branchName}>{branch.name ?? m.detached}</span>
+            <span aria-hidden="true">▾</span>
+          </BranchList>
+        )}
+      </div>
+      <div className={styles.right}>
+        {branch && hasRemote && !merging && (
+          <SyncButton repo={repo.path} branch={branch} changedFiles={status?.files.length ?? 0} />
+        )}
+        {branches && !hasRemote && github?.configured && !github.connected && !merging && (
+          <button type="button" className={styles.textButton} onClick={() => openSettings(true)}>
+            {m.settings.connect}
+          </button>
+        )}
+        {showPr && (
+          <button
+            type="button"
+            className={`${styles.textButton} ${view === "pr" ? styles.on : ""}`}
+            aria-pressed={view === "pr"}
+            onClick={togglePr}
+          >
+            <Term id="pr" focusable={false} />
+          </button>
+        )}
+        {!merging && (
+          <button
+            type="button"
+            className={`${styles.textButton} ${view === "history" ? styles.on : ""}`}
+            aria-pressed={view === "history"}
+            aria-keyshortcuts="Control+H"
+            onClick={toggleHistory}
+          >
+            <Term id="log" focusable={false} />
+          </button>
+        )}
+        {!merging && (
+          <button
+            type="button"
+            className={`${styles.textButton} ${view === "activity" ? styles.on : ""}`}
+            aria-pressed={view === "activity"}
+            aria-keyshortcuts="Control+Shift+H"
+            onClick={toggleActivity}
+          >
+            <Term id="reflog" focusable={false} />
+          </button>
+        )}
+        <button type="button" className={styles.textButton} onClick={() => openSettings()}>
+          {m.settings.title}
         </button>
-      )}
-      {showPr && (
-        <button
-          type="button"
-          className={`${styles.textButton} ${view === "pr" ? styles.on : ""}`}
-          aria-pressed={view === "pr"}
-          onClick={togglePr}
-        >
-          <Term id="pr" focusable={false} />
-        </button>
-      )}
-      {!merging && (
-      <button
-        type="button"
-        className={`${styles.textButton} ${view === "history" ? styles.on : ""}`}
-        aria-pressed={view === "history"}
-        aria-keyshortcuts="Control+H"
-        onClick={toggleHistory}
-      >
-        <Term id="log" focusable={false} />
-      </button>
-      )}
-      {!merging && (
-        <button
-          type="button"
-          className={`${styles.textButton} ${view === "activity" ? styles.on : ""}`}
-          aria-pressed={view === "activity"}
-          aria-keyshortcuts="Control+Shift+H"
-          onClick={toggleActivity}
-        >
-          <Term id="reflog" focusable={false} />
-        </button>
-      )}
-      <button type="button" className={styles.textButton} onClick={() => openSettings()}>
-        {m.settings.title}
-      </button>
+      </div>
     </header>
   );
 }
