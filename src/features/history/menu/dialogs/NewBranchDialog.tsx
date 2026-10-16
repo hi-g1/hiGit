@@ -3,8 +3,7 @@ import type { ErrorCode } from "../../../../lib/api";
 import { useBranchNameCheck } from "../../../../lib/queries";
 import { useMessages } from "../../../../messages";
 import { Button } from "../../../../ui/Button";
-import type { MenuCtx } from "../items";
-import { runAction } from "../run";
+import { runAction, type RunCtx } from "../run";
 import { composing, Frame } from "./Frame";
 import styles from "./Dialogs.module.css";
 
@@ -13,7 +12,7 @@ type Props = {
   oid: string;
   shortOid: string;
   summary: string;
-  ctx: MenuCtx;
+  ctx: RunCtx;
   onClose: () => void;
 };
 

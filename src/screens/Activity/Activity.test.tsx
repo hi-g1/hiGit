@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { recovery: vi.fn(), listActions: vi.fn(), executeAction: vi.fn(), openLogFolder: vi.fn() },
+  api: { recovery: vi.fn(), listActions: vi.fn(), executeAction: vi.fn(), openLogFolder: vi.fn(), checkBranchName: vi.fn() },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -70,5 +70,43 @@ describe("작업 내역", () => {
     await screen.findByText("로그인 화면");
     await userEvent.keyboard("{Escape}");
     expect(useRepoStore.getState().view).toBe("home");
+  });
+
+  it("백업 이름은 용어와 브랜치 이름으로, 모르는 이름은 그대로", async () => {
+    vi.mocked(api.recovery).mockResolvedValue({
+      items: [
+        { ...items[2]!, id: "b:1", label: "branch-delete-기능%2F로그인" },
+        { ...items[2]!, id: "b:2", label: "reset", restore: "version" },
+        { ...items[2]!, id: "b:3", label: "이상한-이름" },
+      ],
+    });
+    vi.mocked(api.listActions).mockResolvedValue([]);
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Activity repo="/repo" onDone={vi.fn()} />
+      </AppProviders>,
+    );
+    expect(await screen.findByText("· 기능/로그인", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("브랜치 지우기")).toBeInTheDocument();
+    expect(screen.getByText("이 버전으로 돌아가기")).toBeInTheDocument();
+    expect(screen.getByText("이상한-이름")).toBeInTheDocument();
+  });
+
+  it("되살릴 수 있는 버전은 새 브랜치로 만들 수 있다(서명 안 된 줄은 없음)", async () => {
+    const onDone = show();
+    vi.mocked(api.checkBranchName).mockResolvedValue({ ok: true, problem: null });
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "branchCreated", name: "살림" });
+    const buttons = await screen.findAllByRole("button", { name: "새 브랜치로" });
+    expect(buttons).toHaveLength(2);
+    await userEvent.click(buttons[0]!);
+    const field = await screen.findByRole("textbox", { name: "브랜치 이름" });
+    await userEvent.type(field, "살림");
+    await vi.waitFor(() => expect(api.checkBranchName).toHaveBeenCalledWith("/repo", "살림"));
+    await userEvent.click(screen.getByRole("button", { name: "만들기" }));
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", {
+      id: "branch-create",
+      input: { name: "살림", from: "a".repeat(40) },
+    });
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("살림 브랜치를 만들었어요"));
   });
 });

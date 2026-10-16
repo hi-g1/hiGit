@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryItem } from "../../lib/api";
-import { groupByDay, restoreInput } from "./model";
+import { backupLabel, groupByDay, restoreInput } from "./model";
 
 const item = (over: Partial<RecoveryItem>): RecoveryItem => ({
   id: "x",
@@ -37,5 +37,16 @@ describe("작업 내역 모델", () => {
       input: { source: { kind: "ref", refname: "refs/higit/backup/x/y" } },
     });
     expect(restoreInput(item({ restore: "none" }))).toBeNull();
+  });
+
+  it("백업 이름을 용어와 이름으로", () => {
+    expect(backupLabel("amend")).toEqual({ term: "amend", name: null });
+    expect(backupLabel("rebase-i")).toEqual({ term: "rebase-i", name: null });
+    expect(backupLabel("undo-main")).toEqual({ term: "reflog", name: "main" });
+    expect(backupLabel("conflict-files-기능%2F로그인")).toEqual({ term: "conflict", name: "기능/로그인" });
+    expect(backupLabel("parked-100%25")).toEqual({ term: "park", name: "100%" });
+    expect(backupLabel("branch-delete-옆")).toEqual({ term: "branch-delete", name: "옆" });
+    expect(backupLabel("undo-")).toBeNull();
+    expect(backupLabel("모름")).toBeNull();
   });
 });

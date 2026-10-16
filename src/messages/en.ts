@@ -128,6 +128,7 @@ export const en: Messages = {
   switchedTo: (branch: string) => `Switched to ${branch}`,
   createdBranch: (branch: string) => `Created ${branch}`,
   branchRowMenu: (name: string) => `${name} menu`,
+  toNewBranch: `To a new ${t("branch").toLowerCase()}`,
   branchDeleted: (name: string) => `Deleted ${name}`,
   branchRenamed: (name: string) => `Renamed to ${name}`,
   trustTitle: "This project has settings that run programs when it opens.",

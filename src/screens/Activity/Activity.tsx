@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { groupByDay, restoreInput } from "../../features/activity/model";
+import { backupLabel, groupByDay, restoreInput } from "../../features/activity/model";
+import { NewBranchDialog } from "../../features/history/menu/dialogs/NewBranchDialog";
+import type { RunCtx } from "../../features/history/menu/run";
 import type { TermId } from "../../glossary/types";
 import { ApiError, api, type RecoveryItem } from "../../lib/api";
 import { invalidateLog, useActions, useRecovery } from "../../lib/queries";
@@ -12,6 +14,7 @@ import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
+import { Tooltip } from "../../ui/Tooltip";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./Activity.module.css";
 
@@ -35,6 +38,9 @@ export function Activity({ repo, onDone }: Props) {
   const show = useToastStore((s) => s.show);
   const [now] = useState(() => Date.now());
   const [pending, setPending] = useState<string | null>(null);
+  // "새 브랜치로"로 연 대화상자의 버전.
+  const [branchFrom, setBranchFrom] = useState<RecoveryItem | null>(null);
+  const ctx: RunCtx = { repo, toast: show, queryClient, onDone, openActivity: () => setView("activity"), m };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -91,7 +97,11 @@ export function Activity({ repo, onDone }: Props) {
                   </span>
                   <span className={styles.title}>
                     {term ? <Term id={term} /> : sourceLabel(item)}
-                    {item.source !== "reflog" && item.label && <span className={styles.label}>{item.label}</span>}
+                    {item.source === "backup" ? (
+                      <BackupName label={item.label} />
+                    ) : (
+                      item.source !== "reflog" && item.label && <span className={styles.label}>{item.label}</span>
+                    )}
                   </span>
                   <span className={styles.summary}>{item.summary}</span>
                   {item.source === "reflog" && (
@@ -101,9 +111,17 @@ export function Activity({ repo, onDone }: Props) {
                     </details>
                   )}
                   {input && (
-                    <Button disabled={pending !== null} onClick={() => void run(item)}>
-                      {item.restore === "version" ? m.restoreHere : m.takeOut}
-                    </Button>
+                    <span className={styles.buttons}>
+                      <Button disabled={pending !== null} onClick={() => void run(item)}>
+                        {item.restore === "version" ? m.restoreHere : m.takeOut}
+                      </Button>
+                      {/* 서명이 맞는 줄·git 기록·백업처럼 되살릴 수 있는 버전만(core가 해시를 다시 본다, E18). */}
+                      {item.restore === "version" && item.oid && (
+                        <Button variant="text" disabled={pending !== null} onClick={() => setBranchFrom(item)}>
+                          {m.toNewBranch}
+                        </Button>
+                      )}
+                    </span>
                   )}
                 </li>
               );
@@ -111,11 +129,35 @@ export function Activity({ repo, onDone }: Props) {
           </ul>
         </div>
       ))}
+      {branchFrom?.oid && (
+        <NewBranchDialog
+          oid={branchFrom.oid}
+          shortOid={branchFrom.oid.slice(0, 7)}
+          summary={branchFrom.summary}
+          ctx={ctx}
+          onClose={() => setBranchFrom(null)}
+        />
+      )}
       <div className={styles.footer}>
         <Button variant="text" onClick={() => void api.openLogFolder().catch(() => undefined)}>
           {m.openLogs}
         </Button>
       </div>
     </section>
+  );
+}
+
+/** 백업 이름: 아는 이름은 용어와 브랜치 이름으로, 원문은 툴팁에. 모르는 이름은 원문 그대로. */
+function BackupName({ label }: { label: string }) {
+  const known = backupLabel(label);
+  if (!label) return null;
+  if (!known) return <span className={styles.label}>{label}</span>;
+  return (
+    <Tooltip content={<code>{label}</code>}>
+      <span className={styles.label} tabIndex={0}>
+        <Term id={known.term} focusable={false} />
+        {known.name !== null && <bdi> · {known.name}</bdi>}
+      </span>
+    </Tooltip>
   );
 }
