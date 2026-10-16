@@ -298,6 +298,7 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 - 되돌리면 이미 올린 버전이 빠지는 경우(`RestoreRef`·`RestoreTree`)에는 기록을 지우지 않고 그 변경을 취소하는 새 버전을 만든다(`GitOp::Revert`, 합치기 버전은 `-m 1`, D-073). 되돌릴 버전이 `before` 바로 위가 아니면 `UndoPushed`, 넣은 파일이 있으면 `StagedChanges`. 만든 뒤 경계 줄을 덧붙여 그 앞 줄과 다시 하기를 닫고, `UndoResult.reverted`로 화면이 "되돌리는 새 버전을 만들었어요"를 띄운다.
 - 브랜치별로 맡겨 둔 고친 파일은 `refs/higit/parked/<브랜치>`의 stash 커밋이다(D-047). 브랜치 이름의 `/`는 `%2F`로 적는다(D-064). 일반 stash 목록과 섞지 않는다(만든 뒤 `StashDropIf`로 뺀다). 꺼낸 맡긴 ref는 지우기 전에 백업 ref(`parked-<브랜치>`)로 옮긴다.
 - 작업 내역의 앱 작업 줄(D-204): `undo::run::undo_hints`가 `stacks`와 같은 규칙(`walk`)으로 줄마다 `UndoHint`(next·earlier·done·never·revertCommit)를 내고, 맨 위 줄은 `undo()`처럼 지금 HEAD·브랜치와 진행 중인 작업, 되돌리는 종류(`undoable`), 올린 버전(`reverts`)을 본다. `beforeOid`는 지금 브랜치에서 HEAD를 옮긴 서명된 줄이고 그 버전이 reflog에 있을 때만. `restore`는 빠지는 버전이 올라가 있으면 `reset`과 같은 규칙으로 거절한다.
+- `ActionMetaView.needsInput`(D-199): 입력 없는 `ActionInput` 변형인지를 `{"id": …}`가 읽히는지로 정한다(`tests/executor.rs`가 그 목록을 고정). 명령 팔레트(`src/features/palette/commands.ts`)는 모든 액션 id를 `RUN_DIRECT`(고정 입력)·`OPEN_UI`·`DIMMED`(확인이 필요해 흐림)·`EXCLUDED`(버전·파일을 골라야 함) 중 한 곳에 두고 시험이 빠짐을 막는다. 초성 찾기는 `src/lib/hangul.ts`.
 - 백업 ref는 늘 `undo::backup::backup_oid`로 만든다. `refs/higit/`를 쓰거나 지우는 코드는 core의 `undo`, `actions/switch`(맡기기, 가져가기의 `switch-carry-<브랜치>` 백업), `actions/stash`·`actions/conflict`(꺼낸 맡긴 ref 지우기), `actions/recover_parked`(남은 항목을 맡긴 ref로), 그리고 `parked`의 `retire_to_backup`·`move_ref`(브랜치 지우기·이름 바꾸기와 그 되돌리기가 부른다)에만 둔다. ref 이름 규칙은 `parked`(`ref_name`)와 `undo::backup`(`ref_name`)에 있다.
 
 #### 기록을 바꾸는 액션의 검사 (`core::guard`, D-097, D-099)

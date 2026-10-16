@@ -24,7 +24,7 @@ const items: RecoveryItem[] = [
 function show(onDone = vi.fn()) {
   vi.mocked(api.recovery).mockResolvedValue({ items });
   vi.mocked(api.listActions).mockResolvedValue([
-    { id: "commit", glossaryId: "commit", risk: "safe", undo: "restoreRef" },
+    { id: "commit", glossaryId: "commit", risk: "safe", undo: "restoreRef", needsInput: true },
   ]);
   render(
     <AppProviders client={createQueryClient()}>

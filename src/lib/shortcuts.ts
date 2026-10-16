@@ -75,6 +75,8 @@ export const SHORTCUTS = {
   },
   fontSmaller: { keys: [ctrl("Minus"), ctrl("NumpadSubtract")], label: "Ctrl+-", scope: "global", inTextField: "app" },
   fontReset: { keys: [ctrl("Digit0"), ctrl("Numpad0")], label: "Ctrl+0", scope: "global", inTextField: "app" },
+  /** 명령 팔레트 열기·닫기(D-170, D-199). 입력칸 안에서도 */
+  palette: { keys: [ctrl("KeyK")], label: "Ctrl+K", scope: "global", inTextField: "app" },
   /** 단축키 표 열기·닫기(D-198). 입력칸 안에서도 */
   shortcutHelp: { keys: [ctrl("Slash")], label: "Ctrl+/", scope: "global", inTextField: "app" },
   /** 파일 목록에서 다음·이전 파일 */
@@ -83,9 +85,7 @@ export const SHORTCUTS = {
 } as const satisfies Record<string, Shortcut>;
 
 /** 아직 표에 없지만 계획된 단축키. 겹침 검사에 넣는다. */
-export const PLANNED: readonly Key[] = [
-  ctrl("KeyK"), // 명령 팔레트
-];
+export const PLANNED: readonly Key[] = [];
 
 /**
  * 웹뷰(WebView2, WebKitGTK)와 OS가 쓰는 키. 앱 단축키로 쓰면 앱에 오지 않거나 동작이 섞인다.

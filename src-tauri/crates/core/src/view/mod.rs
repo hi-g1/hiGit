@@ -356,6 +356,8 @@ pub struct ActionMetaView {
     pub glossary_id: String,
     pub risk: RiskView,
     pub undo: UndoKindView,
+    /// 입력이 필요한 액션(`ActionInput`의 그 변형에 칸이 있다). 명령 팔레트가 바로 하기와 화면 열기를 가른다(D-199).
+    pub needs_input: bool,
 }
 
 /// 되돌리기·다시 하기 결과.
@@ -436,6 +438,9 @@ impl From<&ActionMeta> for ActionMetaView {
                 Risk::Danger => RiskView::Danger,
             },
             undo: m.undo.into(),
+            // 입력 없는 변형만 `{"id": …}`로 읽힌다(인접 태그 `id`·`input`).
+            needs_input: serde_json::from_value::<ActionInput>(serde_json::json!({ "id": m.id }))
+                .is_err(),
         }
     }
 }

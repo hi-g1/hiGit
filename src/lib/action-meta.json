@@ -3,264 +3,308 @@
     "id": "init",
     "glossaryId": "init",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": false
   },
   {
     "id": "stage",
     "glossaryId": "stage",
     "risk": "safe",
-    "undo": "restoreIndex"
+    "undo": "restoreIndex",
+    "needsInput": true
   },
   {
     "id": "unstage",
     "glossaryId": "unstage",
     "risk": "safe",
-    "undo": "restoreIndex"
+    "undo": "restoreIndex",
+    "needsInput": true
   },
   {
     "id": "commit",
     "glossaryId": "commit",
     "risk": "safe",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "ignore",
     "glossaryId": "ignore",
     "risk": "safe",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": true
   },
   {
     "id": "merge",
     "glossaryId": "merge",
     "risk": "normal",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "merge-into",
     "glossaryId": "merge",
     "risk": "normal",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "conflict-finish",
     "glossaryId": "conflict",
     "risk": "normal",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "conflict-abort",
     "glossaryId": "merge",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": false
   },
   {
     "id": "stash",
     "glossaryId": "stash",
     "risk": "safe",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": false
   },
   {
     "id": "take-out",
     "glossaryId": "stash",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "discard",
     "glossaryId": "discard",
     "risk": "caution",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": true
   },
   {
     "id": "restore",
     "glossaryId": "reflog",
     "risk": "safe",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "clear-lock",
     "glossaryId": "lock",
     "risk": "caution",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": false
   },
   {
     "id": "recover-parked",
     "glossaryId": "park",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": false
   },
   {
     "id": "switch",
     "glossaryId": "switch",
     "risk": "normal",
-    "undo": "switchBack"
+    "undo": "switchBack",
+    "needsInput": true
   },
   {
     "id": "branch-create",
     "glossaryId": "branch",
     "risk": "safe",
-    "undo": "deleteCreated"
+    "undo": "deleteCreated",
+    "needsInput": true
   },
   {
     "id": "fetch",
     "glossaryId": "fetch",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "pull",
     "glossaryId": "pull",
     "risk": "normal",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": false
   },
   {
     "id": "push",
     "glossaryId": "push",
     "risk": "normal",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": false
   },
   {
     "id": "sync",
     "glossaryId": "sync",
     "risk": "normal",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": true
   },
   {
     "id": "amend",
     "glossaryId": "amend",
     "risk": "caution",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "revert",
     "glossaryId": "revert",
     "risk": "normal",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "cherry-pick",
     "glossaryId": "cherry-pick",
     "risk": "normal",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "reset",
     "glossaryId": "reset",
     "risk": "danger",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "rebase-i",
     "glossaryId": "rebase-i",
     "risk": "danger",
-    "undo": "restoreTree"
+    "undo": "restoreTree",
+    "needsInput": true
   },
   {
     "id": "tag",
     "glossaryId": "tag",
     "risk": "safe",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "tag-delete",
     "glossaryId": "tag",
     "risk": "safe",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "branch-delete",
     "glossaryId": "branch-delete",
     "risk": "caution",
-    "undo": "restoreRef"
+    "undo": "restoreRef",
+    "needsInput": true
   },
   {
     "id": "branch-rename",
     "glossaryId": "branch-rename",
     "risk": "normal",
-    "undo": "inverse"
+    "undo": "inverse",
+    "needsInput": true
   },
   {
     "id": "clone",
     "glossaryId": "clone",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "pr-create",
     "glossaryId": "pr",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "pr-comment",
     "glossaryId": "comment",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "pr-merge",
     "glossaryId": "pr-merge",
     "risk": "normal",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": true
   },
   {
     "id": "pr-close",
     "glossaryId": "pr-close",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "pr-reopen",
     "glossaryId": "pr",
     "risk": "safe",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "fork",
     "glossaryId": "fork",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": false
   },
   {
     "id": "remote-tag-delete",
     "glossaryId": "remote-tag-delete",
     "risk": "danger",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": true
   },
   {
     "id": "identity-set",
     "glossaryId": "identity",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "force-push",
     "glossaryId": "force-push",
     "risk": "danger",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": true
   },
   {
     "id": "remote-branch-delete",
     "glossaryId": "remote-branch-delete",
     "risk": "danger",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": true
   },
   {
     "id": "remote-branch-rename",
     "glossaryId": "remote-branch-rename",
     "risk": "danger",
-    "undo": "irreversible"
+    "undo": "irreversible",
+    "needsInput": true
   },
   {
     "id": "tag-push",
     "glossaryId": "tag-push",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   },
   {
     "id": "publish",
     "glossaryId": "publish",
     "risk": "normal",
-    "undo": "nothing"
+    "undo": "nothing",
+    "needsInput": true
   }
 ]

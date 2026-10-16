@@ -196,6 +196,18 @@ export const ko = {
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
   shortcutsTitle: "단축키",
+  palette: {
+    noRemote: `연결된 ${josa(t("remote"), "이/가")} 없어요`,
+    noUpstream: `${josa(t("remote"), "과/와")} 이어지지 않은 ${t("branch")}예요`,
+    merging: `${josa(t("merge"), "을/를")} 마친 뒤에 할 수 있어요`,
+    switchTo: `${t("branch")} 바꾸기`,
+    where: {
+      notice: "알림 줄에서 해요",
+      pr: `${t("pr")} 화면에서 해요`,
+      branches: `${t("branch")} 목록에서 해요`,
+      tags: `${t("tag")} 목록에서 해요`,
+    },
+  },
   showShortcuts: "단축키 보기",
   shortcutGroup: {
     global: "어디서나",
@@ -225,6 +237,7 @@ export const ko = {
     fontSmaller: "글자 작게",
     fontReset: "글자 보통",
     shortcutHelp: "단축키 보기",
+    palette: "명령 찾기",
     nextFile: "다음 파일",
     prevFile: "이전 파일",
   } satisfies Record<ShortcutId, string>,

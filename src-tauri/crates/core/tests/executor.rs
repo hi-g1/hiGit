@@ -405,3 +405,30 @@ fn irreversible_actions_are_the_confirmed_few() {
         ]
     );
 }
+
+/// 입력 없이 부를 수 있는 액션(명령 팔레트의 바로 하기 후보, D-199). 새 액션이 생기면 여기서 정한다.
+#[test]
+fn actions_without_input_are_known() {
+    let mut registry = Registry::new();
+    actions::register_all(&mut registry).unwrap();
+    let mut plain: Vec<_> = registry
+        .metas()
+        .map(higit_core::view::ActionMetaView::from)
+        .filter(|m| !m.needs_input)
+        .map(|m| m.id)
+        .collect();
+    plain.sort_unstable();
+    assert_eq!(
+        plain,
+        [
+            "clear-lock",
+            "conflict-abort",
+            "fork",
+            "init",
+            "pull",
+            "push",
+            "recover-parked",
+            "stash"
+        ]
+    );
+}

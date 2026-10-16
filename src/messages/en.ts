@@ -171,6 +171,18 @@ export const en: Messages = {
   overlapFiles: (n: number) => `${n} overlapping files`,
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
   shortcutsTitle: "Shortcuts",
+  palette: {
+    noRemote: `No ${t("remote").toLowerCase()} is connected`,
+    noUpstream: `This ${t("branch").toLowerCase()} isn't linked to a ${t("remote").toLowerCase()}`,
+    merging: `Finish the ${t("merge").toLowerCase()} first`,
+    switchTo: `Switch ${t("branch").toLowerCase()}`,
+    where: {
+      notice: "Do this from the notice line",
+      pr: `Do this from the ${t("pr")} screen`,
+      branches: `Do this from the ${t("branch").toLowerCase()} list`,
+      tags: `Do this from the ${t("tag").toLowerCase()} list`,
+    },
+  },
   showShortcuts: "Show shortcuts",
   shortcutGroup: {
     global: "Anywhere",
@@ -200,6 +212,7 @@ export const en: Messages = {
     fontSmaller: "Smaller text",
     fontReset: "Normal text",
     shortcutHelp: "Show shortcuts",
+    palette: "Find a command",
     nextFile: "Next file",
     prevFile: "Previous file",
   },

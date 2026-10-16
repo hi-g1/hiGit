@@ -273,6 +273,8 @@ export type ActionMetaView = {
 	glossaryId: string,
 	risk: RiskView,
 	undo: UndoKindView,
+	/**  입력이 필요한 액션(`ActionInput`의 그 변형에 칸이 있다). 명령 팔레트가 바로 하기와 화면 열기를 가른다(D-199). */
+	needsInput: boolean,
 };
 
 /**  액션 실행 결과. */
