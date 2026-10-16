@@ -191,6 +191,22 @@ describe("역 메뉴", () => {
     await waitFor(() => expect(useHistoryStore.getState().selectedId).toBe(oid(1)));
   });
 
+  it("마우스로 누른 뒤 목록이 포커스를 받아도 메뉴는 열린 채로 남는다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
+    await screen.findByRole("menu");
+    // 실제 웹뷰에서는 누름의 기본 동작으로 목록이 포커스를 받는다.
+    act(() => list.focus());
+    fireEvent.pointerUp(list, { button: 0, clientX: 300, clientY: 70 });
+    fireEvent.click(list, { button: 0, clientX: 300, clientY: 70 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
   it("같은 역을 다시 누르면 닫는다", async () => {
     serve();
     showHistory();

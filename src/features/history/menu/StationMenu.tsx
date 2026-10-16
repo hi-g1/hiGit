@@ -89,7 +89,9 @@ export function StationMenu({ open, onOpenChange, info, env, ctx, items = STATIO
             e.preventDefault();
             returnFocus();
           }}
-          onPointerDownOutside={(e) => {
+          // 목록 안의 누름과 포커스는 바깥으로 보지 않는다: 역을 누르면 목록이 열고(같은 역이면 닫고), 그
+          // 누름의 기본 동작으로 목록이 포커스를 받아도 막 연 메뉴를 닫지 않는다.
+          onInteractOutside={(e) => {
             if (e.target instanceof Node && isInside(e.target)) e.preventDefault();
           }}
         >
