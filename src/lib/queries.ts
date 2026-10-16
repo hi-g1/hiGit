@@ -90,6 +90,15 @@ export function usePrForBranch(repo: string, branch: string | null, enabled: boo
   });
 }
 
+/** 새 검토 요청 대화상자의 기본값(네트워크 없음). 열 때마다 새로 읽는다. */
+export function usePrDraft(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.prDraft>>, ApiError>({
+    queryKey: queryKeys.prDraft(repo),
+    queryFn: () => api.prDraft(repo),
+    staleTime: 0,
+  });
+}
+
 export function usePrDetail(repo: string, number: number | null) {
   return useQuery<Awaited<ReturnType<typeof api.prDetail>>, ApiError>({
     queryKey: queryKeys.prDetail(repo, number ?? 0),

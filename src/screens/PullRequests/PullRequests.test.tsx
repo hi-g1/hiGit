@@ -24,6 +24,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
+import { usePrDialogStore } from "../../features/pr/prDialogStore";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { api } from "../../lib/api";
 import { useRepoStore } from "../../state/repoStore";
@@ -158,5 +159,13 @@ describe("PullRequests", () => {
     vi.mocked(api.prList).mockResolvedValue(page([]));
     show();
     expect(await screen.findByText("검토 요청이 없어요")).toBeInTheDocument();
+  });
+
+  it("기본 브랜치가 아니면 새 검토 요청 단추가 대화상자를 연다", async () => {
+    vi.mocked(api.prList).mockResolvedValue(page([]));
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "새 검토 요청" }));
+    expect(usePrDialogStore.getState().open).toBe(true);
+    act(() => usePrDialogStore.getState().close());
   });
 });

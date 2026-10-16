@@ -22,6 +22,7 @@ import { Conflict } from "../Conflict/Conflict";
 import { Rewrite } from "../Rewrite/Rewrite";
 import { History } from "../History/History";
 import { PullRequests } from "../PullRequests/PullRequests";
+import { CreatePrDialog } from "../../features/pr/CreatePrDialog";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
 import { TopBar } from "./TopBar";
@@ -62,6 +63,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
 
   return (
     <div className={styles.workspace}>
+      <CreatePrDialog repo={repo.path} />
       <TopBar repo={repo} status={status.data} onDone={notifyDone} merging={merging} />
       {watch.active === false && (
         <div className={styles.watchNotice} role="status">

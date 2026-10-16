@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePrDialogStore } from "../../features/pr/prDialogStore";
 import { PrRow } from "../../features/pr/PrRow";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { toApiError, type PrStateFilterView } from "../../lib/api";
@@ -23,6 +24,7 @@ export function PullRequests({ repo }: { repo: string }) {
   const status = useGitHubStatus().data;
   const context = useHostingContext(repo).data;
   const openSettings = useSettingsStore((s) => s.openSettings);
+  const openPrDialog = usePrDialogStore((s) => s.openPrDialog);
   const setView = useRepoStore((s) => s.setView);
   const selected = useRepoStore((s) => s.selectedPr);
   const select = useRepoStore((s) => s.selectPr);
@@ -74,6 +76,11 @@ export function PullRequests({ repo }: { repo: string }) {
         </div>
         <span className={styles.spacer} />
         {context?.repo && <bdi className={styles.repo}>{context.repo}</bdi>}
+        {connected && context?.branch && !context.isDefaultBranch && (
+          <Button variant="primary" onClick={openPrDialog}>
+            {m.pr.newPr}
+          </Button>
+        )}
       </header>
       <div className={styles.body}>
         {status && !status.configured && <p className={styles.muted}>{m.settings.notConfigured}</p>}
