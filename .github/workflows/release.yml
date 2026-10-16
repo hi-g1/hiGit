@@ -42,8 +42,8 @@ jobs:
         os: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      # GitHub 연결용 공개 client id(D-109). 없으면 앱의 GitHub 연결이 "준비 안 됨"이다.
-      HIGIT_GITHUB_CLIENT_ID: ${{ secrets.HIGIT_GITHUB_CLIENT_ID }}
+      # GitHub 연결용 공개 client id(D-109, 비밀이 아니라 저장소 변수). 없으면 앱의 GitHub 연결이 "준비 안 됨"이다.
+      HIGIT_GITHUB_CLIENT_ID: ${{ vars.HIGIT_GITHUB_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

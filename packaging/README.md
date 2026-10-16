@@ -42,7 +42,7 @@ Get-FileHash -Algorithm SHA256 .\hiGit_0.1.0_x64-setup.exe
 | --- | --- | --- |
 | `WINDOWS_SIGN_COMMAND` | Windows 설치 파일과 실행 파일 서명 | Tauri `bundle.windows.signCommand`. 서명할 파일 자리는 `%1` |
 | `LINUX_GPG_KEY` | `SHA256SUMS.asc` | ASCII로 내보낸 GPG 비밀 키(암호 없음) |
-| `HIGIT_GITHUB_CLIENT_ID` | GitHub 연결(D-109) | GitHub OAuth App의 공개 client id |
+| `HIGIT_GITHUB_CLIENT_ID` | GitHub 연결(D-109) | GitHub OAuth App의 공개 client id. 비밀이 아니라 저장소 변수(Settings → Secrets and variables → Actions → Variables) |
 
 `WINDOWS_SIGN_COMMAND` 예시(형태만, 실제 값은 비밀에만):
 
