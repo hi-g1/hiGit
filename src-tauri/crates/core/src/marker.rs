@@ -26,6 +26,8 @@ pub(crate) enum Name {
     Unpark,
     /// 복사·되돌리기·기록 정리(D-101).
     Operation,
+    /// 올린 기록을 바꿨다(D-129, `core::rewrote`).
+    Rewrote,
 }
 
 impl Name {
@@ -33,6 +35,7 @@ impl Name {
         match self {
             Name::Unpark => "unpark",
             Name::Operation => "operation",
+            Name::Rewrote => "rewrote",
         }
     }
 }

@@ -103,6 +103,7 @@ impl Executor {
             repo,
             &journal,
             ctx.settings.allow_published_rewrite,
+            ctx.key,
         )
     }
 

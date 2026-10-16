@@ -28,6 +28,7 @@ pub mod recent;
 mod recovery;
 mod redact;
 mod registry;
+mod rewrote;
 mod secrets;
 pub mod settings;
 mod state;

@@ -101,6 +101,10 @@ pub enum CoreError {
     #[error("이미 올린 버전이 있습니다")]
     PublishedHistory,
 
+    /// 올린 버전의 기록을 바꿔 원격과 갈라졌다. 원격의 옛 버전을 다시 들여오지 않게 멈춘다(D-129).
+    #[error("올린 기록을 바꿔 원격과 갈라졌습니다")]
+    RewrotePublished,
+
     /// 추적 중인 파일을 고쳤거나 넣은 파일이 있다.
     #[error("고친 파일이 있습니다")]
     HasChanges,

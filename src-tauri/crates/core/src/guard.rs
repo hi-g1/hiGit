@@ -160,6 +160,21 @@ pub(crate) fn refuse_published(
     }
 }
 
+/// `base`에서 `tip`으로 가며 바뀌거나 빠지는 버전 가운데 올린 것이 있는지(판정하지 못해도 참).
+/// `Allow`로 기록을 바꿀 때 "올린 기록을 바꿨다" 표식을 남길지 정한다(D-129).
+pub(crate) fn touches_published(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    tip: &Oid,
+    base: &Oid,
+) -> Result<bool> {
+    match refuse_published(git, repo, tip, base, PublishedRule::Refuse) {
+        Ok(()) => Ok(false),
+        Err(CoreError::PublishedHistory) => Ok(true),
+        Err(e) => Err(e),
+    }
+}
+
 /// 버전 하나가 원격 추적 브랜치에 닿는지. 판정하지 못하면 올린 것으로 본다(D-097).
 pub(crate) fn is_published(git: &dyn GitBackend, repo: &RepoPath, oid: &Oid) -> Result<bool> {
     // 첫 부모 아래는 세지 않는다: 이 버전이 닿으면 0, 안 닿으면 적어도 1(자기 자신).

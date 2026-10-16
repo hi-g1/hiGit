@@ -655,6 +655,8 @@ pub enum ErrorCode {
     NoRemote,
     WatchUnavailable,
     PublishedHistory,
+    /// 올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129).
+    RewrotePublished,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -795,6 +797,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,
+            CoreError::RewrotePublished => ErrorCode::RewrotePublished,
             CoreError::HasChanges => ErrorCode::HasChanges,
             CoreError::TagExists => ErrorCode::TagExists,
             CoreError::BranchProtected => ErrorCode::BranchProtected,

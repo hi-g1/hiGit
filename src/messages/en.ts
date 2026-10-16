@@ -440,6 +440,7 @@ export const en: Messages = {
     noRemote: `No ${t("remote").toLowerCase()} is connected.`,
     watchUnavailable: "File changes are not detected automatically. The view reloads when you return to the window.",
     publishedHistory: `Some of these versions are already uploaded, so the history can't change. Try ${t("revert")}.`,
+    rewrotePublished: `You changed uploaded versions, so this ${t("branch").toLowerCase()} and the ${t("remote").toLowerCase()} have split.`,
     hasChanges: `You have changed files. Use ${t("commit")} or ${t("stash")} first.`,
     tagExists: `A ${t("tag").toLowerCase()} with the same name already exists.`,
     branchProtected: `The current ${t("branch").toLowerCase()}, the default one and those used by another working folder can't be deleted.`,

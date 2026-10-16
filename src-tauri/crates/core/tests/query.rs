@@ -346,6 +346,7 @@ fn action_input_tags_match_registry() {
         ActionInput::Push,
         ActionInput::Sync(higit_core::view::SyncInput {
             locale: "ko".into(),
+            merge_anyway: false,
         }),
         ActionInput::Amend(higit_core::view::AmendInput {
             expect_head: "a".repeat(40),

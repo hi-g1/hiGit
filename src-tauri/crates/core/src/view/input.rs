@@ -154,6 +154,7 @@ impl ActionInput {
             }),
             ActionInput::Sync(i) => ActionInput::Sync(SyncInput {
                 locale: journal_locale(&i.locale),
+                merge_anyway: i.merge_anyway,
             }),
             ActionInput::RebaseI(i) => ActionInput::RebaseI(RewriteInput {
                 steps: i
@@ -404,6 +405,11 @@ pub struct RestoreInput {
 pub struct SyncInput {
     /// 합친 버전 메시지에 쓸 앱 언어("ko", "en").
     pub locale: String,
+    /// "그래도 합치기"(D-129): 올린 기록을 바꾼 표식이 있어도 원격 버전을 받아 합친다. 거짓이면
+    /// 직렬화하지 않아 옛 journal 줄의 서명이 그대로 맞는다(계획 010 R6).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[specta(optional)]
+    pub merge_anyway: bool,
 }
 
 #[cfg(test)]
@@ -411,13 +417,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn sync_input_written_before_merge_anyway_is_the_same_text() {
+        // 옛 journal 줄의 서명은 입력 글자에 걸려 있다. 거짓이면 새 칸을 쓰지 않아 글자가 같다(계획 010 R6).
+        let old = r#"{"id":"sync","input":{"locale":"ko"}}"#;
+        let parsed: ActionInput = serde_json::from_str(old).unwrap();
+        assert_eq!(
+            parsed,
+            ActionInput::Sync(SyncInput {
+                locale: "ko".into(),
+                merge_anyway: false,
+            })
+        );
+        assert_eq!(serde_json::to_string(&parsed).unwrap(), old);
+        let anyway = ActionInput::Sync(SyncInput {
+            locale: "ko".into(),
+            merge_anyway: true,
+        });
+        assert_eq!(
+            serde_json::to_string(&anyway).unwrap(),
+            r#"{"id":"sync","input":{"locale":"ko","mergeAnyway":true}}"#
+        );
+    }
+
+    #[test]
     fn journal_copy_keeps_only_the_two_locales() {
         let long = "ko-KR".to_string() + &"x".repeat(10_000);
-        let copy = ActionInput::Sync(SyncInput { locale: long }).journal_copy();
+        let copy = ActionInput::Sync(SyncInput {
+            locale: long,
+            merge_anyway: true,
+        })
+        .journal_copy();
         assert_eq!(
             copy,
             ActionInput::Sync(SyncInput {
-                locale: "ko".into()
+                locale: "ko".into(),
+                merge_anyway: true,
             })
         );
         let copy = ActionInput::Merge(MergeInput {

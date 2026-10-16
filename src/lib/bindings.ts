@@ -41,8 +41,8 @@ export const commands = {
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
 	recentRemove: (path: string) => __TAURI_INVOKE<null>("recent_remove", { path }),
 	actionList: () => __TAURI_INVOKE<ActionMetaView[]>("action_list"),
-	actionPreview: (folder: string, input: ActionInput) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
-	actionExecute: (folder: string, input: ActionInput, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
+	actionPreview: (folder: string, input: ActionInput_Deserialize) => __TAURI_INVOKE<PreviewView>("action_preview", { folder, input }),
+	actionExecute: (folder: string, input: ActionInput_Deserialize, previewToken: string | null) => __TAURI_INVOKE<ActionResult>("action_execute", { folder, input, previewToken }),
 	/**  도는 원격 작업을 취소하거나 멈춘 로컬 쓰기를 강제로 멈춘다(D-080). */
 	actionCancel: (folder: string) => __TAURI_INVOKE<null>("action_cancel", { folder }),
 	/**  마지막 작업을 되돌린다(Ctrl+Z, D-042). */
@@ -101,9 +101,11 @@ export const REPO_CHANGED_EVENT = "repo-changed" as const;
 export const WATCH_STATUS_EVENT = "watch-status" as const;
 
 /* Types */
-export type ActionInput = 
+export type ActionInput = ActionInput_Serialize | ActionInput_Deserialize;
+
+export type ActionInput_Deserialize = 
 /**  관리 시작. 입력 없음. */
-{ id: "init" } | 
+({ id: "init" }) & { input?: never } | 
 /**  원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115). */
 { id: "clone"; input: CloneInput } | 
 /**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
@@ -119,9 +121,9 @@ export type ActionInput =
 /**  충돌 해결 화면에서 고른 것으로 합치기를 마친다(D-069, D-070). */
 { id: "conflict-finish"; input: ConflictFinishInput } | 
 /**  합치기를 그만둔다(D-070). */
-{ id: "conflict-abort" } | 
+({ id: "conflict-abort" }) & { input?: never } | 
 /**  고친 파일을 모두 임시 보관한다(D-076). */
-{ id: "stash" } | 
+({ id: "stash" }) & { input?: never } | 
 /**  보관해 둔 것을 꺼낸다. */
 { id: "take-out"; input: TakeOutInput } | 
 /**  고른 파일의 고친 내용을 버린다(확인 필요, D-074). */
@@ -129,9 +131,59 @@ export type ActionInput =
 /**  작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085). */
 { id: "restore"; input: RestoreInput } | 
 /**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
-{ id: "clear-lock" } | 
+({ id: "clear-lock" }) & { input?: never } | 
 /**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
-{ id: "recover-parked" } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | { id: "pull" } | { id: "push" } | { id: "sync"; input: SyncInput } | 
+({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Deserialize } | 
+/**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
+{ id: "amend"; input: AmendInput } | 
+/**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
+{ id: "revert"; input: OidInput } | 
+/**  다른 브랜치의 버전 하나를 지금 브랜치로 복사한다. */
+{ id: "cherry-pick"; input: OidInput } | 
+/**  지금 브랜치를 고른 옛 버전(지금 위치의 조상)으로 옮긴다(안 올린 버전만 빠짐). */
+{ id: "reset"; input: OidInput } | 
+/**  기록 정리: 고른 구간의 순서 바꾸기·묶기·빼기·메시지 고치기(D-100, D-106). */
+{ id: "rebase-i"; input: RewriteInput } | 
+/**  고른 버전에 가벼운 태그를 단다(D-104). */
+{ id: "tag"; input: TagInput } | 
+/**  태그를 지운다(가벼운 태그만). */
+{ id: "tag-delete"; input: TagDeleteInput } | 
+/**  로컬 브랜치를 지운다(D-103). */
+{ id: "branch-delete"; input: BranchNameInput } | 
+/**  로컬 브랜치 이름을 바꾼다(D-103). */
+{ id: "branch-rename"; input: BranchRenameInput };
+
+export type ActionInput_Serialize = 
+/**  관리 시작. 입력 없음. */
+({ id: "init" }) & { input?: never } | 
+/**  원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115). */
+{ id: "clone"; input: CloneInput } | 
+/**  올라가 있는 지금 브랜치로 새 검토 요청을 만든다(D-113). */
+{ id: "pr-create"; input: PrCreateInput } | 
+/**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
+{ id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
+/**  제외할 파일에 추가(새 파일만, 200개까지). */
+{ id: "ignore"; input: PathsInput } | 
+/**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
+{ id: "merge"; input: MergeInput } | 
+/**  지금 버전으로 기본 브랜치를 앞으로 감는다("main에 합치기", D-071). */
+{ id: "merge-into"; input: MergeIntoInput } | 
+/**  충돌 해결 화면에서 고른 것으로 합치기를 마친다(D-069, D-070). */
+{ id: "conflict-finish"; input: ConflictFinishInput } | 
+/**  합치기를 그만둔다(D-070). */
+({ id: "conflict-abort" }) & { input?: never } | 
+/**  고친 파일을 모두 임시 보관한다(D-076). */
+({ id: "stash" }) & { input?: never } | 
+/**  보관해 둔 것을 꺼낸다. */
+{ id: "take-out"; input: TakeOutInput } | 
+/**  고른 파일의 고친 내용을 버린다(확인 필요, D-074). */
+{ id: "discard"; input: PathsInput } | 
+/**  작업 내역의 버전으로 지금 브랜치를 옮긴다(D-085). */
+{ id: "restore"; input: RestoreInput } | 
+/**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
+({ id: "clear-lock" }) & { input?: never } | 
+/**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
+({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Serialize } | 
 /**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
 { id: "amend"; input: AmendInput } | 
 /**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
@@ -494,7 +546,9 @@ export type DisplayHintsView = {
 	dark: boolean | null,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
+/**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
+"rewrotePublished" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -1075,9 +1129,26 @@ export type SwitchInput = {
 	remote: string | null,
 };
 
-export type SyncInput = {
+export type SyncInput = SyncInput_Serialize | SyncInput_Deserialize;
+
+export type SyncInput_Deserialize = {
 	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
 	locale: string,
+	/**
+	 *  "그래도 합치기"(D-129): 올린 기록을 바꾼 표식이 있어도 원격 버전을 받아 합친다. 거짓이면
+	 *  직렬화하지 않아 옛 journal 줄의 서명이 그대로 맞는다(계획 010 R6).
+	 */
+	mergeAnyway?: boolean,
+};
+
+export type SyncInput_Serialize = {
+	/**  합친 버전 메시지에 쓸 앱 언어("ko", "en"). */
+	locale: string,
+	/**
+	 *  "그래도 합치기"(D-129): 올린 기록을 바꾼 표식이 있어도 원격 버전을 받아 합친다. 거짓이면
+	 *  직렬화하지 않아 옛 journal 줄의 서명이 그대로 맞는다(계획 010 R6).
+	 */
+	mergeAnyway?: boolean,
 };
 
 export type TagDeleteInput = {

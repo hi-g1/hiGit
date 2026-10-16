@@ -103,6 +103,7 @@ impl Action for BranchEditAction {
                 git.run(repo, &GitOp::BranchDelete { name: name.clone() })?;
                 // 지운 뒤에 옮긴다: 지우기가 실패하면 맡긴 파일은 제자리에 있다.
                 crate::parked::retire_to_backup(git, repo, &name)?;
+                crate::rewrote::forget(git, repo, ctx.key, &name)?;
                 Ok(Outcome::BranchDeleted { name })
             }
             ("branch-rename", ActionInput::BranchRename(i)) => {

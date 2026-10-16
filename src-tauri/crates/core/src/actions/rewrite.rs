@@ -194,6 +194,12 @@ impl Action for RewriteAction {
         if !git.has_identity(repo)? {
             return Err(CoreError::IdentityMissing);
         }
+        if rule == guard::PublishedRule::Allow
+            && guard::touches_published(git, repo, &chain.head, &base)?
+        {
+            // 바꾸기 전에 남긴다: 못 남기면 바꾸지 않는다(D-129).
+            crate::rewrote::record(git, repo, ctx.key)?;
+        }
         let git_dir = git.git_dir(repo)?;
         let marker = OpMarker {
             kind: OpKind::Rebase,

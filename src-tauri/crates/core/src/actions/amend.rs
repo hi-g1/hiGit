@@ -70,7 +70,8 @@ impl Action for AmendAction {
             return Err(CoreError::InvalidInput("지금 버전이 바뀌었어요"));
         }
         let rule = guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
-        if rule == guard::PublishedRule::Refuse && guard::is_published(git, repo, &head)? {
+        let published = guard::is_published(git, repo, &head)?;
+        if published && rule == guard::PublishedRule::Refuse {
             return Err(CoreError::PublishedHistory);
         }
         super::refuse_conflicts(git, repo)?;
@@ -88,6 +89,10 @@ impl Action for AmendAction {
         };
         if same_message && !staged {
             return Err(CoreError::NoChange);
+        }
+        if published {
+            // 바꾸기 전에 남긴다: 못 남기면 바꾸지 않는다(D-129).
+            crate::rewrote::record(git, repo, ctx.key)?;
         }
         git.run(
             repo,

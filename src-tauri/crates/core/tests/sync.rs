@@ -6,7 +6,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use higit_core::view::{
-    ActionInput, ActionResult, CommitInput, ErrorCode, ErrorView, FetchInput, OpenHow, SyncInput,
+    ActionInput, ActionResult, AmendInput, AppSettingsPatch, BranchNameInput, CommitInput,
+    ErrorCode, ErrorView, FetchInput, OidInput, OpenHow, SyncInput,
 };
 use higit_core::{Core, GitBackend};
 
@@ -75,6 +76,7 @@ fn sync(core: &Core, dir: &Path) -> Result<ActionResult, higit_core::CoreError> 
         dir,
         &ActionInput::Sync(SyncInput {
             locale: "ko".into(),
+            merge_anyway: false,
         }),
         None,
     )
@@ -334,4 +336,150 @@ fn server_refusal_is_not_retried() {
     assert_eq!(ErrorView::from(&err).code, ErrorCode::RemoteRefused);
     let runs = std::fs::read_to_string(s._remote.path().join("hook-runs")).unwrap();
     assert_eq!(runs.lines().count(), 1, "{runs}");
+}
+
+/// 설정 "올린 버전도 바꾸기"(D-127).
+fn allow_rewrite(core: &Core, on: bool) {
+    core.set_settings(&AppSettingsPatch {
+        allow_published_rewrite: Some(on),
+        ..Default::default()
+    });
+}
+
+/// 내 저장소에 `기능` 브랜치를 만들고 버전 둘을 올린다. (첫째, 둘째)
+fn published_feature(s: &Setup) -> (String, String) {
+    let dir = s.mine.path();
+    git(dir, &["switch", "-q", "-c", "기능"]);
+    commit_file(dir, "f1.txt", "기능 1\n");
+    let first = git(dir, &["rev-parse", "HEAD"]).trim().to_string();
+    commit_file(dir, "f2.txt", "기능 2\n");
+    let second = git(dir, &["rev-parse", "HEAD"]).trim().to_string();
+    git(dir, &["push", "-q", "-u", "origin", "기능"]);
+    (first, second)
+}
+
+fn head(dir: &Path) -> String {
+    git(dir, &["rev-parse", "HEAD"]).trim().to_string()
+}
+
+fn code(e: &higit_core::CoreError) -> ErrorCode {
+    ErrorView::from(e).code
+}
+
+fn sync_anyway(core: &Core, dir: &Path) -> Result<ActionResult, higit_core::CoreError> {
+    core.execute(
+        dir,
+        &ActionInput::Sync(SyncInput {
+            locale: "ko".into(),
+            merge_anyway: true,
+        }),
+        None,
+    )
+}
+
+#[test]
+fn rewritten_published_branch_does_not_take_old_versions_back() {
+    let s = setup();
+    let dir = s.mine.path();
+    let (_, second) = published_feature(&s);
+    let core = core(dir);
+    allow_rewrite(&core, true);
+    core.execute(
+        dir,
+        &ActionInput::Amend(AmendInput {
+            expect_head: second,
+            message: Some("고친 이름".into()),
+        }),
+        None,
+    )
+    .unwrap();
+    let amended = head(dir);
+    // 갈라졌지만 원격의 옛 버전을 합치지 않고 멈춘다.
+    assert_eq!(
+        code(&sync(&core, dir).unwrap_err()),
+        ErrorCode::RewrotePublished
+    );
+    assert_eq!(head(dir), amended);
+    // 설정을 꺼도 표식은 남아 막는다.
+    allow_rewrite(&core, false);
+    assert_eq!(
+        code(&sync(&core, dir).unwrap_err()),
+        ErrorCode::RewrotePublished
+    );
+    // "그래도 합치기"면 받아 합치고 올린다. 그 뒤로는 평범한 동기화.
+    let r = sync_anyway(&core, dir).unwrap();
+    assert!(
+        matches!(r, ActionResult::Synced { merged: true, .. }),
+        "{r:?}"
+    );
+    assert!(!dir.join(".git/higit/rewrote.json").exists());
+    sync(&core, dir).unwrap();
+}
+
+#[test]
+fn going_back_on_a_published_branch_stops_sync_and_pull() {
+    let s = setup();
+    let dir = s.mine.path();
+    let (first, _) = published_feature(&s);
+    let core = core(dir);
+    allow_rewrite(&core, true);
+    core.execute(
+        dir,
+        &ActionInput::Reset(OidInput { oid: first.clone() }),
+        None,
+    )
+    .unwrap();
+    // 원격만 앞선 모양이지만 앞으로 감기(옛 버전 되살리기)를 하지 않는다.
+    assert_eq!(
+        code(&sync(&core, dir).unwrap_err()),
+        ErrorCode::RewrotePublished
+    );
+    assert_eq!(
+        code(&core.execute(dir, &ActionInput::Pull, None).unwrap_err()),
+        ErrorCode::RewrotePublished
+    );
+    assert_eq!(head(dir), first);
+}
+
+#[test]
+fn deleting_the_branch_forgets_its_mark() {
+    let s = setup();
+    let dir = s.mine.path();
+    let (_, second) = published_feature(&s);
+    let core = core(dir);
+    allow_rewrite(&core, true);
+    core.execute(
+        dir,
+        &ActionInput::Amend(AmendInput {
+            expect_head: second,
+            message: Some("고친 이름".into()),
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(dir.join(".git/higit/rewrote.json").exists());
+    git(dir, &["switch", "-q", "main"]);
+    core.execute(
+        dir,
+        &ActionInput::BranchDelete(BranchNameInput {
+            name: "기능".into(),
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(!dir.join(".git/higit/rewrote.json").exists());
+}
+
+#[test]
+fn ordinary_divergence_still_merges_with_the_setting_on() {
+    let s = setup();
+    others_push(&s, "b.txt", "남의 것\n");
+    commit_file(s.mine.path(), "c.txt", "내 것\n");
+    let core = core(s.mine.path());
+    allow_rewrite(&core, true);
+    let r = sync(&core, s.mine.path()).unwrap();
+    assert!(
+        matches!(r, ActionResult::Synced { merged: true, .. }),
+        "{r:?}"
+    );
 }

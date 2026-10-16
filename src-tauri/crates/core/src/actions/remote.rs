@@ -100,6 +100,10 @@ impl Action for RemoteAction {
                 let up = upstream(git, repo)?.ok_or(CoreError::Git(no_upstream()))?;
                 net(false).fetch(&up.remote)?;
                 let (_, behind) = git.count_between(repo, "HEAD", &up.rev())?;
+                // 올린 기록을 바꿨으면 옛 버전을 다시 들여오지 않는다. "그래도 합치기"는 동기화로만(D-129).
+                if behind > 0 && crate::rewrote::active(git, repo, ctx.key)? {
+                    return Err(CoreError::RewrotePublished);
+                }
                 if behind > 0 {
                     git.run(repo, &GitOp::MergeFf { rev: up.rev() })?;
                 }
@@ -115,7 +119,14 @@ impl Action for RemoteAction {
                     ..SyncReport::default()
                 }))
             }
-            ("sync", ActionInput::Sync(i)) => sync(&net(false), i).map(Outcome::Synced),
+            ("sync", ActionInput::Sync(i)) => {
+                let report = sync(&net(false), i, ctx.key)?;
+                if i.merge_anyway {
+                    // 받아 합쳤으면 HEAD가 옛 끝을 품으니 표식은 여기서 지워진다.
+                    crate::rewrote::active(git, repo, ctx.key)?;
+                }
+                Ok(Outcome::Synced(report))
+            }
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }
     }
@@ -299,7 +310,7 @@ fn push(net: &Net<'_>) -> Result<u32> {
     }
 }
 
-fn sync(net: &Net<'_>, input: &SyncInput) -> Result<SyncReport> {
+fn sync(net: &Net<'_>, input: &SyncInput, key: &crate::undo::JournalKey) -> Result<SyncReport> {
     let (git, repo) = (net.git, net.repo);
     if git.remotes(repo)?.is_empty() {
         return Err(CoreError::NoRemote);
@@ -320,6 +331,11 @@ fn sync(net: &Net<'_>, input: &SyncInput) -> Result<SyncReport> {
     for attempt in 0..2 {
         net.fetch(&up.remote)?;
         let (ahead, behind) = git.count_between(repo, "HEAD", &rev)?;
+        // 올린 기록을 바꿨으면(표식) 갈라졌을 때도 원격만 앞섰을 때(돌아가기 뒤)도 원격의 옛 버전을
+        // 들여오지 않고 멈춘다. "그래도 합치기"(`merge_anyway`)면 받는다(D-129).
+        if behind > 0 && !input.merge_anyway && crate::rewrote::active(git, repo, key)? {
+            return Err(CoreError::RewrotePublished);
+        }
         if behind > 0 {
             if ahead == 0 {
                 git.run(repo, &GitOp::MergeFf { rev: rev.clone() })?;

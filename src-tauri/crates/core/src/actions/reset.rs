@@ -61,7 +61,13 @@ impl Action for ResetAction {
             return Err(CoreError::InvalidInput("지금 버전과 같아요"));
         }
         let rule = guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
-        guard::refuse_published(git, repo, &head, &oid, rule)?;
+        if guard::touches_published(git, repo, &head, &oid)? {
+            if rule == guard::PublishedRule::Refuse {
+                return Err(CoreError::PublishedHistory);
+            }
+            // 바꾸기 전에 남긴다: 못 남기면 바꾸지 않는다(D-129).
+            crate::rewrote::record(git, repo, ctx.key)?;
+        }
         let (_, dropped) = git.count_between(repo, oid.as_str(), head.as_str())?;
         git.run(repo, &GitOp::ResetKeep { oid })?;
         Ok(Outcome::Reset { dropped })
