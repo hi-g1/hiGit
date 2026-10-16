@@ -158,6 +158,34 @@ describe("역 메뉴", () => {
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 
+  it("오른쪽 클릭은 웹뷰 기본 메뉴를 막고 그 역을 골라 연다", async () => {
+    serve();
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    // 셋째 행(행 높이 48, y=130)을 오른쪽 클릭.
+    const allowed = fireEvent.contextMenu(list, { clientX: 300, clientY: 130 });
+    expect(allowed).toBe(false);
+    await screen.findByRole("menu");
+    expect(useHistoryStore.getState().selectedId).toBe(oid(2));
+    // 열린 채로 같은 역을 다시 오른쪽 클릭해도 그대로 열려 있다.
+    fireEvent.contextMenu(list, { clientX: 300, clientY: 130 });
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
+  it("접힌 구간을 펼치면 그 안의 가장 새 버전을 고른다", async () => {
+    serve();
+    act(() => useHistoryStore.setState({ zoom: "key" }));
+    showHistory();
+    const list = await screen.findByRole("listbox");
+    list.focus();
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    fireEvent.keyDown(list, { key: "Enter" });
+    await waitFor(() => expect(useHistoryStore.getState().selectedId).toBe(oid(1)));
+  });
+
   it("같은 역을 다시 누르면 닫는다", async () => {
     serve();
     showHistory();
@@ -173,8 +201,25 @@ describe("역 메뉴", () => {
 
 describe("역 메뉴 항목 표", () => {
   const info = stationInfo(commitNode(oid(1), [oid(2)], { summary: "a" }), new Set(), new Set())!;
-  const env: MenuEnv = { repo: "/r", currentBranch: "main", changedFiles: 0, merging: false };
-  const ctx: MenuCtx = { repo: "/r", toast: () => {}, queryClient: new QueryClient(), onDone: () => {}, m: ko };
+  const env: MenuEnv = {
+    repo: "/r",
+    currentBranch: "main",
+    changedFiles: 0,
+    stagedFiles: 0,
+    operation: "none",
+    upstream: null,
+    defaultBranch: "main",
+    zoom: "all",
+  };
+  const ctx: MenuCtx = {
+    repo: "/r",
+    toast: () => {},
+    queryClient: new QueryClient(),
+    onDone: () => {},
+    ask: () => {},
+    openActivity: () => {},
+    m: ko,
+  };
   const item = (id: string, group: "main" | "more", availability: StationMenuItem["availability"]): StationMenuItem => ({
     id,
     group,
@@ -207,9 +252,36 @@ describe("역 메뉴 항목 표", () => {
     expect(await screen.findByRole("menuitem", { name: "보임" })).toBeInTheDocument();
     expect(screen.queryByText("숨김")).not.toBeInTheDocument();
     const dim = screen.getByRole("menuitem", { name: "흐림" });
-    expect(dim).toHaveAttribute("data-disabled");
-    expect(dim).toHaveAttribute("title", "고친 파일이 있어요");
+    // 흐린 항목도 키보드로 닿고(Radix disabled가 아님) 까닭이 툴팁으로 뜬다.
+    expect(dim).toHaveAttribute("aria-disabled", "true");
+    expect(dim).not.toHaveAttribute("data-disabled");
+    act(() => dim.focus());
+    expect((await screen.findByRole("tooltip")).textContent).toContain("고친 파일이 있어요");
     expect(screen.getByText("더 보기")).toBeInTheDocument();
+  });
+
+  it("흐린 항목은 골라도 실행하지 않고 메뉴도 닫지 않는다", async () => {
+    const run = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <AppProviders client={createQueryClient()}>
+        <StationMenu
+          open
+          onOpenChange={onOpenChange}
+          info={info}
+          env={env}
+          ctx={ctx}
+          anchor={{ x: 0, y: 0 }}
+          returnFocus={() => {}}
+          isInside={() => false}
+          items={[{ ...item("흐림", "main", () => ({ disabled: () => "까닭" })), run }]}
+        />
+      </AppProviders>,
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "흐림" }));
+    expect(run).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("2b 실제 표에는 버전 번호 복사뿐이고, 액션 항목은 action-meta에 있는 id여야 한다", () => {

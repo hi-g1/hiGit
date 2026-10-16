@@ -390,7 +390,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 - 클릭·호버 판정은 DOM이 아니라 배치 결과 좌표로 한다. 그래야 Canvas로 바꿔도 상호작용 코드가 그대로다.
 - 확대·축소 단계(모든 버전 / 주요 버전 / 태그만)는 백엔드가 걸러 주지 않는다. 받은 버전을 화면의 순수 함수가 접는다(D-087). `LogQuery`는 단계를 받지 않는다.
 - 홈 두 줄 노선도와 시작 화면의 큰·작은 노선도도 같은 배치 함수와 Renderer로 그린다. 홈 요약(`HomeMapView`)은 어댑터가 노선도 노드로 바꾼다(D-090, D-093). 시작 화면 노선도는 상태 요약이 성공한 프로젝트만, 줄이 보일 때, 동시에 3개까지 부른다.
-- 역 메뉴(D-092): 항목은 `features/history/menu/items.ts`의 표 하나(id, 이름표, 묶음, `availability(역 정보, 화면 상태)`, `run(역 정보, ctx)`)이고 고른 역은 `StationInfo` 하나로 넘긴다. 반복 2b의 항목은 "버전 번호 복사"뿐이다. 반복 3은 이 표에 항목을 더하고 `run`에서 `api.executeAction`으로 core 액션을 부른다. 액션 입력에 담긴 해시는 core가 다시 확인한다(D-085와 같은 방식). 액션 항목의 `actionId`는 `action-meta.json`에 있어야 한다(테스트).
+- 역 메뉴(D-092): 항목은 `features/history/menu/items.tsx`의 표 하나(id, 이름표(`ReactNode`, 용어는 `<Term focusable={false}>`), 묶음, `availability(역 정보, 화면 상태)`, `run(역 정보, ctx)`)이고 고른 역은 `StationInfo` 하나로 넘긴다. 화면 상태 `MenuEnv`는 지금 브랜치·고친 파일 수·넣은 파일 수·`operation`("other"면 다른 도구의 작업 중)·upstream·기본 브랜치·확대 단계. `run`은 `menu/run.ts`의 `runAction(ctx, input, { done, onError })`으로 core 액션을 부른다: 성공이면 `ctx.onDone(문구)`(되돌리기 단추), `…Conflicts` 결과면 충돌 상태를 다시 읽어 작업 화면이 충돌 해결 화면을 열고, 실패는 오류 코드 문구(올린 기록 등은 작업 내역 단추), 끝나면 기록·상태·브랜치·작업 내역·정리 계획 조회를 새로 읽는다. 대화상자가 필요한 항목은 `ctx.ask(StationDialog)`(`menu/ask.ts`)로 열고 버전 기록 화면이 `StationDialogs`로 그린다. 액션 입력에 담긴 해시는 core가 다시 확인한다(D-085와 같은 방식). 액션 항목의 `actionId`는 `action-meta.json`에 있어야 한다(테스트).
 
 ## OS별 처리 (crates/platform)
 | 항목 | Windows | Ubuntu |

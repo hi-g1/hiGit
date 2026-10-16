@@ -1,5 +1,6 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { useMessages } from "../../../messages";
+import { Tooltip } from "../../../ui/Tooltip";
 import type { StationInfo } from "./info";
 import { STATION_ITEMS, type MenuCtx, type MenuEnv, type StationMenuItem } from "./items";
 import styles from "./StationMenu.module.css";
@@ -22,7 +23,8 @@ type Props = {
 /**
  * 역 메뉴(r-log.png, D-092). 항목 표에서 보이는 것만 그린다. "더 보기"는 그 묶음에 보이는 항목이 있을
  * 때만. 비모달이라 열린 채 스크롤하면 목록이 닫는다. Esc는 메뉴만 닫는다(Radix가 그 키를 처리했다고
- * 표시하므로 버전 기록 화면은 홈으로 가지 않는다).
+ * 표시하므로 버전 기록 화면은 홈으로 가지 않는다). 흐린 항목도 키보드로 닿고 까닭이 툴팁으로 뜬다
+ * (`aria-disabled`, 골라도 닫히지 않고 아무 일도 하지 않는다).
  */
 export function StationMenu({ open, onOpenChange, info, env, ctx, items = STATION_ITEMS, anchor, returnFocus, isInside }: Props) {
   const m = useMessages();
@@ -33,16 +35,28 @@ export function StationMenu({ open, onOpenChange, info, env, ctx, items = STATIO
   const main = visible.filter(({ item }) => item.group === "main");
   const more = visible.filter(({ item }) => item.group === "more");
   const render = ({ item, state }: (typeof visible)[number]) => {
-    const disabled = typeof state === "object" ? state.disabled(m) : null;
+    const reason = typeof state === "object" ? state.disabled(m) : null;
+    if (reason !== null) {
+      return (
+        <Tooltip key={item.id} content={reason}>
+          <Menu.Item
+            className={styles.item}
+            aria-disabled="true"
+            aria-description={reason}
+            onSelect={(e) => e.preventDefault()}
+          >
+            {item.label(m)}
+          </Menu.Item>
+        </Tooltip>
+      );
+    }
     return (
       <Menu.Item
         key={item.id}
         className={styles.item}
-        disabled={disabled !== null}
-        title={disabled ?? undefined}
         onSelect={() => {
-          // 누른 순간에 바로 돌린다(클립보드는 사람의 동작 안에서만 쓸 수 있다). 실패하면(반복 3의
-          // 액션 등) 조용히 묻히지 않게 알린다.
+          // 누른 순간에 바로 돌린다(클립보드는 사람의 동작 안에서만 쓸 수 있다). 실패하면 조용히 묻히지
+          // 않게 알린다(액션의 오류는 `runAction`이 이미 알린다).
           const fail = () => ctx.toast(m.errors.internal);
           try {
             void Promise.resolve(item.run(info, ctx)).catch(fail);

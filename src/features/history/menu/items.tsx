@@ -1,0 +1,66 @@
+// 역 메뉴 항목 표(D-092, 계획 008 C11). 반복 3 항목은 이 표에 더하고 `run`에서 `runAction`으로 core
+// 액션을 부른다(`{ id, input: { …, oid: info.oid } }`). 위험도·되돌리기는 action-meta와 실행기가 맡는다.
+// 화면은 git을 직접 부르지 않는다(D-010).
+import type { QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import type { Messages } from "../../../messages";
+import type { ToastAction } from "../../../ui/toastStore";
+import type { Zoom } from "../layout/simplify";
+import type { StationDialog } from "./ask";
+import { copyText } from "./copy";
+import type { StationInfo } from "./info";
+
+/** 역 밖의 화면 상태. 항목이 보일지·흐릴지 정할 때 쓴다. */
+export type MenuEnv = {
+  repo: string;
+  currentBranch: string | null;
+  /** 고친 파일 수(넣은 것 포함). */
+  changedFiles: number;
+  /** 이번 버전에 넣은 파일 수. */
+  stagedFiles: number;
+  /** 다른 도구가 시작한 작업이 멈춰 있으면 "other"(합치는 중이면 충돌 화면이 대신 열린다). */
+  operation: "none" | "other";
+  /** 지금 브랜치의 upstream 이름. */
+  upstream: string | null;
+  defaultBranch: string | null;
+  zoom: Zoom;
+};
+
+export type MenuCtx = {
+  repo: string;
+  toast: (text: string, action?: ToastAction) => void;
+  queryClient: QueryClient;
+  /** 실행 뒤 결과 토스트와 되돌리기(useUndo의 notifyDone). 기록을 다시 읽고 선택은 남긴다. */
+  onDone: (text: string) => void;
+  /** 대화상자를 연다(태그·새 브랜치·고치기·파일 보기). */
+  ask: (dialog: StationDialog) => void;
+  /** 작업 내역 화면으로. */
+  openActivity: () => void;
+  m: Messages;
+};
+
+/** show: 보임, hide: 아예 없음, disabled: 흐린 글자와 툴팁의 까닭. */
+export type Availability = "show" | "hide" | { disabled: (m: Messages) => string };
+
+export type StationMenuItem = {
+  id: string;
+  group: "main" | "more";
+  /** 용어는 `<Term focusable={false}>`(메뉴 항목 안에서 따로 포커스를 받지 않게). */
+  label: (m: Messages) => ReactNode;
+  /** core 액션을 부르는 항목이면 그 액션 id(action-meta.json에 있어야 한다). */
+  actionId?: string;
+  availability: (info: StationInfo, env: MenuEnv) => Availability;
+  run: (info: StationInfo, ctx: MenuCtx) => void | Promise<void>;
+};
+
+export const STATION_ITEMS: readonly StationMenuItem[] = [
+  {
+    id: "copy-id",
+    group: "main",
+    label: (m) => m.copyVersionId,
+    availability: () => "show",
+    run: async (info, ctx) => {
+      ctx.toast((await copyText(info.oid)) ? ctx.m.copied : ctx.m.copyFailed);
+    },
+  },
+];

@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
 } from "react";
@@ -33,6 +34,8 @@ type Props = {
   onSelect: (id: string) => void;
   /** Enter·Space·ContextMenu·Shift+F10이나 역을 눌렀을 때. 접힌 구간이면 펼친다. */
   onActivate: (id: string) => void;
+  /** 마우스 오른쪽 클릭(웹뷰 기본 메뉴는 막는다). 눌린 행은 이미 골라져 있다. */
+  onContextMenu?: (id: string) => void;
   /** 끝에서 두 화면 안으로 스크롤하면(다음 쪽 받기). */
   onNearEnd?: () => void;
   /** 그리는 행 범위가 바뀌면(줄 수 늦게 받기). */
@@ -61,6 +64,7 @@ export function RouteList({
   selectedId,
   onSelect,
   onActivate,
+  onContextMenu,
   onNearEnd,
   onWindow,
   onUserScroll,
@@ -156,17 +160,32 @@ export function RouteList({
     }
   };
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+  /** 누른 자리의 행. 스크롤 막대는 행이 아니다. */
+  const nodeAt = (e: { clientX: number; clientY: number }) => {
     const el = box.current;
-    if (!el || e.button !== 0 || !fromList(e)) return;
+    if (!el) return undefined;
     const rect = el.getBoundingClientRect();
-    // 스크롤 막대를 누른 것은 고르지 않는다.
-    if (e.clientX - rect.left > el.clientWidth) return;
+    if (e.clientX - rect.left > el.clientWidth) return undefined;
     const row = rowAt(e.clientY - rect.top + el.scrollTop, ROW_H, total);
-    const node = row === null ? undefined : nodes[row];
+    return row === null ? undefined : nodes[row];
+  };
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || !fromList(e)) return;
+    const node = nodeAt(e);
     if (!node) return;
     onSelect(node.id);
     onActivate(node.id);
+  };
+
+  const onContext = (e: MouseEvent<HTMLDivElement>) => {
+    if (!fromList(e)) return;
+    // 웹뷰의 기본 메뉴(새로 고침·검사)는 띄우지 않는다.
+    e.preventDefault();
+    const node = nodeAt(e);
+    if (!node || !onContextMenu) return;
+    onSelect(node.id);
+    onContextMenu(node.id);
   };
 
 
@@ -218,6 +237,7 @@ export function RouteList({
       aria-activedescendant={selected >= 0 ? `route-row-${selected}` : undefined}
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
+      onContextMenu={onContext}
       onScroll={onScroll}
     >
       <div className={styles.content} style={{ height: total * ROW_H }}>

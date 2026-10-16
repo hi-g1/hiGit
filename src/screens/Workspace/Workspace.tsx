@@ -76,7 +76,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       {merging && conflict ? (
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
       ) : view === "history" ? (
-        <History repo={repo.path} onDone={notifyDone} />
+        <History repo={repo.path} onDone={notifyDone} otherOperation={conflict?.otherOperation ?? false} />
       ) : view === "activity" ? (
         <Activity repo={repo.path} onDone={notifyDone} />
       ) : (

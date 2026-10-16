@@ -28,7 +28,7 @@
   background: var(--surface-hover);
 }
 
-.item[data-disabled] {
+.item[aria-disabled="true"] {
   color: var(--text-muted);
   cursor: default;
 }

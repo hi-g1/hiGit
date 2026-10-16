@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildRoute, ROW_H, verticalScene } from "../../features/history/layout/route";
 import { simplify, ZOOMS, type Zoom } from "../../features/history/layout/simplify";
+import type { StationDialog } from "../../features/history/menu/ask";
+import { StationDialogs } from "../../features/history/menu/dialogs/StationDialogs";
 import { headAncestors, stationInfo } from "../../features/history/menu/info";
 import type { MenuCtx, MenuEnv } from "../../features/history/menu/items";
 import { StationMenu } from "../../features/history/menu/StationMenu";
@@ -30,11 +32,22 @@ const SEEK_PAGES = 25;
  * 버전 기록 화면(D-058, D-087~D-095): 창 전체 폭 노선도(r-log.png). 머리에 범위 전환과 확대·축소,
  * "지금 여기". Esc나 상단 바 "버전 기록"을 다시 누르면 홈으로 돌아간다.
  */
-export function History({ repo, onDone }: { repo: string; onDone: (text: string) => void }) {
+export function History({
+  repo,
+  onDone,
+  otherOperation = false,
+}: {
+  repo: string;
+  onDone: (text: string) => void;
+  /** 다른 도구가 시작한 작업이 멈춰 있다(편집 항목을 흐린다). */
+  otherOperation?: boolean;
+}) {
   const m = useMessages();
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
-  const changedFiles = useStatus(repo).data?.files.length ?? 0;
+  const status = useStatus(repo).data;
+  const changedFiles = status?.files.length ?? 0;
+  const stagedFiles = status?.files.filter((f) => f.staged).length ?? 0;
   const setView = useRepoStore((s) => s.setView);
   const { selectedId, zoom, scope, expanded, select, setZoom, setScope, expand } = useHistoryStore();
   const log = useLogPages(repo, scope);
@@ -140,12 +153,25 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
       if (node?.kind === "fold") {
         expand(id);
         setMenuOpen(false);
+        // 펼친 구간의 가장 새 버전을 고른다.
+        const newest = node.statOids[0];
+        if (newest) select(newest);
       } else if (node?.kind === "commit") {
         setMenuOpen((open) => !(open && id === selectedId));
       }
     },
-    [shown, expand, selectedId],
+    [shown, expand, select, selectedId],
   );
+  // 오른쪽 클릭: 눌린 역을 고르고 연다(이미 열려 있으면 그대로).
+  const onContextMenu = useCallback(
+    (id: string) => {
+      const node = shown.find((n) => n.id === id);
+      if (node?.kind === "fold") onActivate(id);
+      else if (node?.kind === "commit") setMenuOpen(true);
+    },
+    [shown, onActivate],
+  );
+  const [dialog, setDialog] = useState<StationDialog | null>(null);
   const ancestors = useMemo(() => headAncestors(shown), [shown]);
   const selectedRow = selectedId === null ? -1 : shown.findIndex((n) => n.id === selectedId);
   const selectedNode = selectedRow >= 0 ? shown[selectedRow] : undefined;
@@ -154,8 +180,28 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
     x: (scene.stations.find((s) => s.id === selectedId)?.x ?? 0) + 16,
     y: selectedRow * ROW_H + ROW_H / 2,
   };
-  const env: MenuEnv = { repo, currentBranch: first?.currentBranch ?? null, changedFiles, merging: false };
-  const ctx: MenuCtx = { repo, toast: show, queryClient, onDone, m };
+  const env: MenuEnv = {
+    repo,
+    currentBranch: first?.currentBranch ?? null,
+    changedFiles,
+    stagedFiles,
+    operation: otherOperation ? "other" : "none",
+    upstream: status?.branch.upstream ?? null,
+    defaultBranch: first?.defaultBranch ?? null,
+    zoom,
+  };
+  const ctx: MenuCtx = {
+    repo,
+    toast: show,
+    queryClient,
+    onDone,
+    ask: (d) => {
+      setMenuOpen(false);
+      setDialog(d);
+    },
+    openActivity: () => setView("activity"),
+    m,
+  };
 
   const zoomName = (z: Zoom) =>
     z === "tags" ? (
@@ -235,6 +281,7 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
             selectedId={selectedId}
             onSelect={select}
             onActivate={onActivate}
+            onContextMenu={onContextMenu}
             onNearEnd={more}
             onWindow={onWindow}
             onUserScroll={() => setMenuOpen(false)}
@@ -256,6 +303,15 @@ export function History({ repo, onDone }: { repo: string; onDone: (text: string)
             />
           </RouteList>
         ))}
+      <StationDialogs
+        dialog={dialog}
+        onClose={() => {
+          setDialog(null);
+          listEl.current?.focus();
+        }}
+        env={env}
+        ctx={ctx}
+      />
       {pages && (first?.tipsCut ?? 0) > 0 && (
         <p className={styles.note}>
           <Term id="branch" /> {m.tipsCut(first!.tipsCut)}
