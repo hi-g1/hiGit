@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { diff: vi.fn() },
+  api: { diff: vi.fn(), setSettings: vi.fn(async (p: object) => p) },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
@@ -21,7 +21,52 @@ function show(diff: FileDiffView) {
   );
 }
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.useRealTimers();
+});
+
+const ctx = (n: number) => ({ kind: "context" as const, text: `줄 ${n}`, oldLine: n, newLine: n, noNewlineAtEnd: false });
+const lines = (from: number, count: number) => Array.from({ length: count }, (_, i) => ctx(from + i));
+const spaced: FileDiffView = {
+  binary: false,
+  truncated: false,
+  link: null,
+  hunks: [{ section: "function save()", oldStart: 13, oldLen: 3, newStart: 13, newLen: 3, lines: lines(13, 3) }],
+};
+
+describe("접힌 줄과 줄 바꿈(D-144, D-156)", () => {
+  it("변경 없는 N줄 · 펼치기, 누르면 전체 문맥을 한 번 읽어 그 구간을 펼친다", async () => {
+    vi.mocked(api.diff).mockImplementation(async (_repo, req) =>
+      req.fullContext ? { ...spaced, hunks: [{ ...spaced.hunks[0]!, oldStart: 1, oldLen: 15, newStart: 1, newLen: 15, lines: lines(1, 15) }] } : spaced,
+    );
+    render(
+      <AppProviders client={createQueryClient()}>
+        <DiffView repo="/repo" request={request} />
+      </AppProviders>,
+    );
+    const fold = await screen.findByRole("button", { name: "변경 없는 12줄 · 펼치기" });
+    expect(screen.getByText("function save()")).toBeInTheDocument();
+    expect(screen.queryByText("…")).toBeNull();
+    fireEvent.click(fold);
+    await waitFor(() => expect(screen.getByText("줄 1")).toBeInTheDocument());
+    expect(api.diff).toHaveBeenLastCalledWith("/repo", { ...request, fullContext: true });
+    expect(screen.queryByRole("button", { name: /펼치기/ })).toBeNull();
+  });
+
+  it("줄 바꿈은 기본 켬이고 끄면 저장한다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    show(spaced);
+    const wrap = await screen.findByRole("button", { name: "줄 바꿈" });
+    expect(wrap).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector("table")?.className).toMatch(/wrapOn/);
+    fireEvent.click(wrap);
+    await waitFor(() => expect(screen.getByRole("button", { name: "줄 바꿈" })).toHaveAttribute("aria-pressed", "false"));
+    expect(document.querySelector("table")?.className).not.toMatch(/wrapOn/);
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    expect(api.setSettings).toHaveBeenCalledWith({ diffWrap: false });
+  });
+});
 
 describe("DiffView", () => {
   it("줄 번호, 기호, 요약을 보여준다", async () => {

@@ -272,11 +272,12 @@ export function invalidateLog(client: QueryClient, repo: string): void {
   void client.invalidateQueries({ queryKey: queryKeys.log(repo) });
 }
 
-export function useDiff(repo: string, request: DiffRequest) {
+export function useDiff(repo: string, request: DiffRequest, options: { enabled?: boolean } = {}) {
   const commit = request.commit ?? "";
   return useQuery<Awaited<ReturnType<typeof api.diff>>, ApiError>({
     queryKey: queryKeys.diff(repo, request.path, request.untracked, commit, request.fullContext ?? false),
     queryFn: () => api.diff(repo, request),
+    enabled: options.enabled ?? true,
     // 버전 안의 비교는 바뀌지 않는다.
     staleTime: commit ? Infinity : 0,
   });

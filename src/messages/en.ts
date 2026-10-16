@@ -301,6 +301,8 @@ export const en: Messages = {
   binaryFile: "This is a binary file, so its content can't be compared.",
   noDiff: "No lines changed.",
   diffTruncated: "The file is large, so only the beginning is shown.",
+  diffFold: (n: number) => `${n} unchanged lines · Expand`,
+  wrapLines: "Wrap lines",
   noNewlineAtEnd: "no newline at end of file",
   loading: "Loading…",
   showDetail: "Show details",

@@ -330,6 +330,8 @@ export const ko = {
   binaryFile: "이진 파일이라 내용을 비교할 수 없어요.",
   noDiff: "바뀐 줄이 없어요.",
   diffTruncated: "파일이 커서 앞부분만 보여요.",
+  diffFold: (n: number) => `변경 없는 ${n}줄 · 펼치기`,
+  wrapLines: "줄 바꿈",
   noNewlineAtEnd: "파일 끝 줄바꿈 없음",
   loading: "불러오는 중…",
   showDetail: "자세히 보기",

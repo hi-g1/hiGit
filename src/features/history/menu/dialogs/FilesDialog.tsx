@@ -107,6 +107,7 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
             <div className={styles.diff}>
               {file && (
                 <DiffView
+                  key={file.path}
                   repo={ctx.repo}
                   request={{ path: file.path, origPath: file.origPath, untracked: false, commit: info.oid }}
                 />
