@@ -15,6 +15,7 @@ export const queryKeys = {
   diff: (repo: string, path: string, untracked: boolean, commit: string) =>
     ["diff", repo, path, untracked, commit] as const,
   commitDetail: (repo: string, oid: string) => ["commitDetail", repo, oid] as const,
+  rewritePlan: (repo: string, oids: readonly string[]) => ["rewritePlan", repo, oids.join(",")] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -158,6 +159,15 @@ export function useDiff(repo: string, request: DiffRequest) {
     queryFn: () => api.diff(repo, request),
     // 버전 안의 비교는 바뀌지 않는다.
     staleTime: commit ? Infinity : 0,
+  });
+}
+
+/** 기록 정리 카드 지도의 처음 모습(D-106). `.git`이 바뀌면 다시 읽는다(막힌 까닭이 바뀔 수 있다). */
+export function useRewritePlan(repo: string, oids: readonly string[]) {
+  return useQuery<Awaited<ReturnType<typeof api.rewritePlan>>, ApiError>({
+    queryKey: queryKeys.rewritePlan(repo, oids),
+    queryFn: () => api.rewritePlan(repo, [...oids]),
+    enabled: oids.length > 0,
   });
 }
 

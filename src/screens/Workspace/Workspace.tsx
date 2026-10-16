@@ -19,6 +19,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Activity } from "../Activity/Activity";
 import { Conflict } from "../Conflict/Conflict";
+import { Rewrite } from "../Rewrite/Rewrite";
 import { History } from "../History/History";
 import { ChangedFiles } from "./ChangedFiles";
 import { HomeMap } from "./HomeMap";
@@ -75,7 +76,9 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       <SyncNotice repo={repo.path} />
       {merging && conflict ? (
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
-      ) : view === "history" || view === "rewrite" ? (
+      ) : view === "rewrite" ? (
+        <Rewrite repo={repo.path} onDone={notifyDone} />
+      ) : view === "history" ? (
         <History repo={repo.path} onDone={notifyDone} otherOperation={conflict?.otherOperation ?? false} />
       ) : view === "activity" ? (
         <Activity repo={repo.path} onDone={notifyDone} />

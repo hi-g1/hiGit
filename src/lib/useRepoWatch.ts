@@ -36,6 +36,7 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
     void queryClient.invalidateQueries({ queryKey: queryKeys.mergeState(repo) });
     void queryClient.invalidateQueries({ queryKey: ["conflictFile", repo] });
     void queryClient.invalidateQueries({ queryKey: queryKeys.mergeHint(repo) });
+    void queryClient.invalidateQueries({ queryKey: ["rewritePlan", repo] });
   };
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export function useRepoWatch(repo: string): { active: boolean | null; reload: ()
       if (pending.git) {
         invalidateLog(queryClient, repo);
         void queryClient.invalidateQueries({ queryKey: queryKeys.branches(repo) });
+        void queryClient.invalidateQueries({ queryKey: ["rewritePlan", repo] });
       }
       // 노선도는 버전(.git)과 고친 파일 수(작업 폴더) 둘 다에 따라 바뀐다.
       if (pending.worktree || pending.git) {

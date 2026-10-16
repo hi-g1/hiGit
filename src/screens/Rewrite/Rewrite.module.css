@@ -1,0 +1,65 @@
+/* 기록 정리 화면(D-106): 버전 기록과 같은 머리 줄, 가운데 카드 지도, 아래 요약 줄 */
+.screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: 56px;
+  padding: 0 var(--space-8);
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-6) var(--space-8);
+  overflow: auto;
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  max-width: 560px;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-left: var(--selected-bar) solid var(--deleted);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-md);
+}
+
+.note {
+  max-width: 560px;
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.foot {
+  flex: none;
+  padding: var(--space-2) var(--space-8);
+  border-top: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

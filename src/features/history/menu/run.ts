@@ -4,6 +4,9 @@ import { ApiError, api, type ActionInput, type ActionResult, type ErrorCode } fr
 import { invalidateLog } from "../../../lib/queries";
 import type { MenuCtx } from "./items";
 
+/** 실행에 쓰는 것만(역 메뉴 밖의 화면도 쓴다). */
+export type RunCtx = Pick<MenuCtx, "repo" | "toast" | "queryClient" | "onDone" | "openActivity" | "m">;
+
 export type RunOptions = {
   /** 끝났을 때 토스트 문구. null이면 토스트 없음. */
   done: (result: ActionResult) => string | null;
@@ -17,7 +20,7 @@ const POINT_TO_ACTIVITY: readonly ErrorCode[] = ["publishedHistory", "undoPushed
 /** 실행 뒤 다시 읽는 조회(선택은 그대로 둔다). */
 const REFRESH = ["status", "branches", "homeMap", "summary", "recovery", "mergeHint", "rewritePlan", "stashes", "mergeState"];
 
-export async function runAction(ctx: MenuCtx, input: ActionInput, options: RunOptions): Promise<ActionResult | null> {
+export async function runAction(ctx: RunCtx, input: ActionInput, options: RunOptions): Promise<ActionResult | null> {
   try {
     const result = await api.executeAction(ctx.repo, input);
     // 겹쳐 멈춘 결과는 충돌 상태를 다시 읽으면(아래) 작업 화면이 충돌 해결 화면을 연다.
