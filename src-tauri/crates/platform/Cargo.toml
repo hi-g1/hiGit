@@ -21,6 +21,8 @@ rustix = { version = "1", features = ["process", "fs"] }
 # OS 키체인 저장소(D-110). Windows 자격 증명 관리자, Linux Secret Service(순수 Rust).
 [target.'cfg(windows)'.dependencies]
 windows-native-keyring-store = { workspace = true }
+# 탐색기 우클릭 메뉴(D-214, D-215). 트리에 이미 있는 버전. reg.exe는 따옴표 처리가 틀리기 쉽다.
+winreg = "0.56"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus-secret-service-keyring-store = { workspace = true }

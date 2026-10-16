@@ -487,7 +487,7 @@ layout/scene.ts (Scene) → render/Renderer → SvgRenderer   그리기: 색 키
 | 글자 크기·다크 읽기(D-147, `display_hints`) | 본문 14px. `%SystemRoot%\System32\reg.exe query HKCU\Software\Microsoft\Accessibility /v TextScaleFactor`(100~225%). 다크는 읽지 않음(WebView2가 스스로 따름) | 본문 15px. 글자 배율은 WebKitGTK가 Xft.dpi로 이미 화면 전체에 반영하므로 곱하지 않는다(D-162). 다크만 `/usr/bin/gsettings get org.gnome.desktop.interface color-scheme`. 둘 다 절대 경로·1.5초·출력 256바이트까지, 실패하면 배율 100·다크 모름 |
 | 웹뷰 | WebView2 | WebKitGTK 4.1 |
 
-우클릭 메뉴는 설치한 앱(릴리스 빌드)을 처음 켤 때 묻지 않고 등록하고 설정 "일반"에서 끈다. Windows 설치 파일은 지울 때 HKCU 키를 지우고, Ubuntu 스크립트는 실행 파일이 없으면 스스로 지운다(D-214).
+우클릭 메뉴는 설치한 앱(릴리스 빌드)을 처음 켤 때 묻지 않고 등록하고 설정 "일반"에서 끈다. Windows 설치 파일은 지울 때 HKCU 키를 지우고, Ubuntu 스크립트는 실행 파일이 없으면 스스로 지운다(D-214). 구현은 `platform::shell_menu`: `shell_menu_kind()`(Explorer·NautilusScripts·Unsupported), `shell_menu_status(launcher, label)`(Installed·Outdated(실행 파일·이름이 다름)·NotInstalled·Conflict(같은 이름의 남의 파일)), `shell_menu_install`(예전 이름의 hiGit 항목은 지움, 스크립트는 임시 파일 + rename, 0755), `shell_menu_uninstall`(hiGit 항목만). 스크립트는 둘째 줄 표식 `# higit-shell-menu v1`으로 알아보고 링크는 따라가지 않는다. 실행 파일은 `launcher_path()`(AppImage면 `APPIMAGE`).
 
 ## 새 액션 추가 절차
 1. `docs/spec.md` 용어표에 행 추가(id, 쉬운 이름, 원래 이름, 설명, 위험도).
