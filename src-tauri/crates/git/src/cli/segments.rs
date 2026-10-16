@@ -72,7 +72,7 @@ fn marker_with(line: &[u8], c: u8, label: Option<&str>) -> bool {
     }
 }
 
-fn parse_segments(out: &[u8]) -> Result<Vec<MergeSegment>> {
+pub(super) fn parse_segments(out: &[u8]) -> Result<Vec<MergeSegment>> {
     enum At {
         Same,
         Ours,

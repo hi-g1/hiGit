@@ -167,6 +167,50 @@ mod tests {
         }
     }
 
+    /// 받은 저장소의 원격 주소는 무엇이든 될 수 있다. 고정 씨앗으로 표본을 바꾼 글자 2만 개에 패닉하지 않고,
+    /// 받아들인 것은 늘 검사를 통과한 소유자·이름이다(D-038, D-222).
+    #[test]
+    fn random_urls_never_panic() {
+        let samples = [
+            "https://github.com/octo/hello.git",
+            "git@github.com:octo/hello.git",
+            "ssh://git@github.com:22/octo/hello",
+            "https://user:token@github.com/octo/hello/",
+            "https://ghe.example.com/a/b",
+        ];
+        const SPECIAL: &[char] = &[
+            '/', ':', '@', '.', '%', '?', '#', '\\', ' ', '\n', '\0', '한', 'é', '-', '_',
+        ];
+        let mut seed: u64 = 0xD1B5_4A32_D192_ED03;
+        let mut next = |n: usize| {
+            seed ^= seed >> 12;
+            seed ^= seed << 25;
+            seed ^= seed >> 27;
+            usize::try_from(seed.wrapping_mul(0x2545_F491_4F6C_DD1D) % (n.max(1) as u64))
+                .unwrap_or(0)
+        };
+        for _ in 0..20_000 {
+            let mut text: Vec<char> = samples[next(samples.len())].chars().collect();
+            for _ in 0..next(6) {
+                let i = next(text.len() + 1);
+                match next(3) {
+                    0 if i < text.len() => {
+                        text.remove(i);
+                    }
+                    1 if i < text.len() => text[i] = SPECIAL[next(SPECIAL.len())],
+                    _ => text.insert(i, SPECIAL[next(SPECIAL.len())]),
+                }
+            }
+            let url: String = text.into_iter().collect();
+            if let Some(r) = parse_remote(&url) {
+                assert!(
+                    valid_owner(&r.owner) && valid_name(&r.name),
+                    "{url:?} → {r:?}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn accepts_common_remote_forms() {
         let cases = [

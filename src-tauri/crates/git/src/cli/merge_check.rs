@@ -177,7 +177,7 @@ impl CliBackend {
 }
 
 /// `ls-files -u -z`: `모드 해시 단계\t경로\0`. 경로별로 단계 1·2·3 blob을 모은다.
-fn unmerged(out: &str) -> Result<Vec<(String, [Option<String>; 3])>> {
+pub(super) fn unmerged(out: &str) -> Result<Vec<(String, [Option<String>; 3])>> {
     let mut found: Vec<(String, [Option<String>; 3])> = Vec::new();
     for record in out.split('\0').filter(|r| !r.is_empty()) {
         let (meta, path) = record

@@ -141,7 +141,7 @@ impl CliBackend {
 }
 
 /// `<oid>\t<ref>` 줄 가운데 ref 전체가 `refname`과 정확히 같은 것(짧은 이름은 꼬리 일치로 다른 ref도 걸린다).
-fn parse_ls_remote(text: &str, refname: &str) -> Option<Oid> {
+pub(super) fn parse_ls_remote(text: &str, refname: &str) -> Option<Oid> {
     text.lines().find_map(|line| {
         let (oid, name) = line.split_once('\t')?;
         (name == refname).then(|| Oid::parse(oid)).flatten()
@@ -149,7 +149,7 @@ fn parse_ls_remote(text: &str, refname: &str) -> Option<Oid> {
 }
 
 /// `ref: refs/heads/main\tHEAD` 줄의 브랜치 이름.
-fn parse_symref_head(text: &str) -> Option<String> {
+pub(super) fn parse_symref_head(text: &str) -> Option<String> {
     text.lines().find_map(|line| {
         let target = line.strip_prefix("ref: ")?.strip_suffix("\tHEAD")?;
         target.strip_prefix("refs/heads/").map(str::to_string)

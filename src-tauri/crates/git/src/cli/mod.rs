@@ -36,6 +36,8 @@ pub use park::safe_relative;
 #[cfg(test)]
 mod park_tests;
 #[cfg(test)]
+mod random_tests;
+#[cfg(test)]
 mod ref_tests;
 mod refpush;
 #[cfg(test)]
@@ -240,6 +242,38 @@ impl CliBackend {
             Err(e) => Err(e),
         }
     }
+}
+
+/// `config --show-scope --list -z`의 `범위\0키\n값\0` 레코드에서 local·worktree만.
+pub(crate) fn parse_config(text: &str) -> Vec<(String, String)> {
+    let fields: Vec<&str> = text.split('\0').collect();
+    let (pairs, _) = fields.as_chunks::<2>();
+    pairs
+        .iter()
+        .filter(|[scope, _]| matches!(*scope, "local" | "worktree"))
+        .map(|[_, record]| match record.split_once('\n') {
+            Some((k, v)) => (k.to_string(), v.to_string()),
+            // 값 없이 키만 쓴 불리언(`[core] bare`)
+            None => (record.to_string(), String::new()),
+        })
+        .collect()
+}
+
+/// `log -g -z --format=%H%x00%ct%x00%gs%x00%s`. 형식이 틀린 레코드는 뺀다.
+pub(crate) fn parse_reflog(text: &str) -> Vec<ReflogEntry> {
+    let fields: Vec<&str> = text.split('\0').collect();
+    let (records, _) = fields.as_chunks::<4>();
+    records
+        .iter()
+        .filter_map(|[oid, at, subject, summary]| {
+            Some(ReflogEntry {
+                oid: Oid::parse(oid.trim_start_matches('\n'))?,
+                at: at.parse().ok()?,
+                subject: subject.to_string(),
+                summary: summary.to_string(),
+            })
+        })
+        .collect()
 }
 
 impl GitBackend for CliBackend {
@@ -803,18 +837,7 @@ impl GitBackend for CliBackend {
             Err(GitError::Failed { code: Some(1), .. }) => return Ok(Vec::new()),
             Err(e) => return Err(e),
         };
-        let text = out.stdout_lossy();
-        let fields: Vec<&str> = text.split('\0').collect();
-        let (pairs, _) = fields.as_chunks::<2>();
-        Ok(pairs
-            .iter()
-            .filter(|[scope, _]| matches!(*scope, "local" | "worktree"))
-            .map(|[_, record]| match record.split_once('\n') {
-                Some((k, v)) => (k.to_string(), v.to_string()),
-                // 값 없이 키만 쓴 불리언(`[core] bare`)
-                None => (record.to_string(), String::new()),
-            })
-            .collect())
+        Ok(parse_config(&out.stdout_lossy()))
     }
 
     fn reflog(&self, repo: &RepoPath, limit: u32) -> Result<Vec<ReflogEntry>> {
@@ -833,20 +856,7 @@ impl GitBackend for CliBackend {
                 "HEAD",
             ],
         )?;
-        let text = out.stdout_lossy();
-        let fields: Vec<&str> = text.split('\0').collect();
-        let (records, _) = fields.as_chunks::<4>();
-        Ok(records
-            .iter()
-            .filter_map(|[oid, at, subject, summary]| {
-                Some(ReflogEntry {
-                    oid: Oid::parse(oid.trim_start_matches('\n'))?,
-                    at: at.parse().ok()?,
-                    subject: subject.to_string(),
-                    summary: summary.to_string(),
-                })
-            })
-            .collect())
+        Ok(parse_reflog(&out.stdout_lossy()))
     }
 
     fn stash_list(&self, repo: &RepoPath) -> Result<Vec<StashEntry>> {

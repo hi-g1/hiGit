@@ -423,19 +423,7 @@ impl CliBackend {
             Some(repo.as_path()),
             &["log", "-g", "-z", "--format=%H%x00%ct%x00%gs", "refs/stash"],
         )?;
-        let text = out.stdout_lossy();
-        let fields: Vec<&str> = text.split('\0').collect();
-        let (records, _) = fields.as_chunks::<3>();
-        Ok(records
-            .iter()
-            .filter_map(|[oid, at, subject]| {
-                Some(crate::StashEntry {
-                    oid: Oid::parse(oid.trim_start_matches('\n'))?,
-                    at: at.parse().ok()?,
-                    subject: subject.to_string(),
-                })
-            })
-            .collect())
+        Ok(parse_stashes(&out.stdout_lossy()))
     }
 
     /// stash 목록에서 `oid` 항목을 뺀다. 위치를 찾은 뒤 빼기 직전에 그 자리가 같은지 다시 본다.
@@ -629,6 +617,22 @@ fn remove_inside(dir: &Path, rel: &str) {
             let _ = std::fs::remove_file(&at);
         }
     }
+}
+
+/// `log -g -z --format=%H%x00%ct%x00%gs refs/stash`. 형식이 틀린 레코드는 뺀다.
+pub(super) fn parse_stashes(text: &str) -> Vec<crate::StashEntry> {
+    let fields: Vec<&str> = text.split('\0').collect();
+    let (records, _) = fields.as_chunks::<3>();
+    records
+        .iter()
+        .filter_map(|[oid, at, subject]| {
+            Some(crate::StashEntry {
+                oid: Oid::parse(oid.trim_start_matches('\n'))?,
+                at: at.parse().ok()?,
+                subject: subject.to_string(),
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]

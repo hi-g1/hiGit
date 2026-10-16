@@ -432,6 +432,59 @@ mod tests {
         }
     }
 
+    /// 깨진 journal 파일에도 읽기·덧붙이기·옮기기가 패닉하지 않는다(D-038, D-222). 고정 씨앗 xorshift로
+    /// 실제 줄을 자르고 바이트를 바꾼 파일을 600번(파일 쓰기와 서명 확인이 있어 git 파서보다 적게).
+    #[test]
+    fn random_files_never_panic() {
+        let dir = tempfile::tempdir().unwrap();
+        let journal = Journal::at(dir.path(), JournalKey::ephemeral());
+        journal.append(&action("1")).unwrap();
+        journal
+            .append(&Body::Barrier {
+                at: 2,
+                action: RESTART.into(),
+            })
+            .unwrap();
+        journal.append(&action("3")).unwrap();
+        let path = dir.path().join("higit/journal.jsonl");
+        let good = std::fs::read(&path).unwrap();
+        let v1 = v1_line_for_tests(&JournalKey::ephemeral(), &action("옛"));
+        let mut seed: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut next = |n: usize| {
+            seed ^= seed >> 12;
+            seed ^= seed << 25;
+            seed ^= seed >> 27;
+            usize::try_from(seed.wrapping_mul(0x2545_F491_4F6C_DD1D) % (n.max(1) as u64))
+                .unwrap_or(0)
+        };
+        const SPECIAL: &[u8] = b"\n{}[]\":,0123456789abcdef\\ ";
+        for round in 0..600 {
+            let mut bytes = if round % 3 == 0 {
+                v1.clone().into_bytes()
+            } else {
+                good.clone()
+            };
+            let cut = next(bytes.len() + 1);
+            bytes.truncate(cut.max(bytes.len() / 2));
+            for _ in 0..next(12) {
+                if bytes.is_empty() {
+                    break;
+                }
+                let i = next(bytes.len());
+                bytes[i] = if next(2) == 0 {
+                    SPECIAL[next(SPECIAL.len())]
+                } else {
+                    u8::try_from(next(256)).unwrap_or(0)
+                };
+            }
+            std::fs::write(&path, &bytes).unwrap();
+            let _ = journal.read_all();
+            let _ = journal.migrate_v1();
+            let _ = journal.append(&action("다음"));
+            let _ = journal.read();
+        }
+    }
+
     #[test]
     fn append_and_read_back() {
         let dir = tempfile::tempdir().unwrap();

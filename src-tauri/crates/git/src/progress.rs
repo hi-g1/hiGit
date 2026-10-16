@@ -31,7 +31,7 @@ const PHASES: [(&str, ProgressPhase); 5] = [
 ];
 
 /// 한 줄(`Receiving objects:  45% (90/200), 1.2 MiB | 3 MiB/s`)을 읽는다. 서버 쪽 줄(`remote:`)과 모르는 줄은 `None`.
-fn parse_line(line: &str) -> Option<ProgressCount> {
+pub(crate) fn parse_line(line: &str) -> Option<ProgressCount> {
     let line = line.trim();
     let (phase, rest) = PHASES
         .iter()

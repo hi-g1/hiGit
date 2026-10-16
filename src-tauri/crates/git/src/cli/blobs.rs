@@ -168,7 +168,7 @@ pub(super) fn parse_index(text: &str) -> Result<Vec<IndexEntry>> {
 }
 
 /// `cat-file --batch` 출력: `<해시> <종류> <크기>\n<내용>\n`이 이어진다.
-fn parse_batch(mut out: &[u8]) -> Result<Vec<(Oid, Vec<u8>)>> {
+pub(super) fn parse_batch(mut out: &[u8]) -> Result<Vec<(Oid, Vec<u8>)>> {
     let mut blobs = Vec::new();
     while !out.is_empty() {
         let bad = || GitError::Parse("cat-file --batch".into());
