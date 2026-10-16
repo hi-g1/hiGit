@@ -5,15 +5,173 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>hiGit guide</title>
 <style>
-  body { margin: 0; padding: 32px 16px; font-family: system-ui, sans-serif; line-height: 1.6; color: #1c1917; background: #fafaf9; }
-  main { max-width: 720px; margin: 0 auto; }
-  @media (prefers-color-scheme: dark) { body { color: #e7e5e4; background: #1c1917; } }
+  :root {
+    --bg: #fafaf9; --surface: #fff; --sunken: #f2f2f0; --border: #e5e5e2;
+    --text: #24292f; --muted: #6a6f75; --accent: #3a6ea5;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161718; --surface: #1c1d1f; --sunken: #121314; --border: #2b2d30; --text: #ececea; --muted: #9ea3a8; --accent: #7fa7d6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 system-ui, "Segoe UI", "Ubuntu", sans-serif; }
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1120px; margin: 0 auto; }
+  nav { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 32px 16px; border-right: 1px solid var(--border); }
+  nav h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  nav ol { margin: 0; padding-left: 20px; font-size: 14px; }
+  nav li { margin: 4px 0; }
+  nav a { color: var(--text); text-decoration: none; }
+  nav a:hover { color: var(--accent); }
+  main { padding: 32px 40px 80px; min-width: 0; }
+  h1 { margin: 0 0 8px; font-size: 30px; }
+  .lead { margin: 0 0 32px; color: var(--muted); }
+  section { padding: 24px 0; border-top: 1px solid var(--border); }
+  h2 { margin: 0 0 8px; font-size: 22px; }
+  h3 { margin: 16px 0 4px; font-size: 16px; }
+  p { margin: 8px 0; }
+  ol.steps { margin: 8px 0; padding-left: 22px; }
+  ol.steps li { margin: 4px 0; }
+  figure { margin: 16px 0 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  figcaption { margin-top: 6px; font-size: 14px; color: var(--muted); }
+  kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--sunken); font: 13px "JetBrains Mono", ui-monospace, monospace; }
+  code { padding: 1px 4px; border-radius: 4px; background: var(--sunken); font: 14px "JetBrains Mono", ui-monospace, monospace; }
+  .git { margin-left: 4px; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 12px; vertical-align: 2px; }
+  .term { font-weight: 600; }
+  .note { margin: 12px 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  td, th { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  dt { margin-top: 12px; font-weight: 600; }
+  dd { margin: 4px 0 0; }
+  @media (max-width: 760px) {
+    .layout { display: block; }
+    nav { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    main { padding: 16px 16px 64px; }
+  }
 </style>
 </head>
 <body>
+<div class="layout">
+<nav aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#first">First start, name and email</a></li>
+    <li><a href="#open">Open a folder or clone</a></li>
+    <li><a href="#commit">Save a version</a></li>
+    <li><a href="#diff">Compare</a></li>
+    <li><a href="#log">Version history</a></li>
+    <li><a href="#undo">Undo and activity</a></li>
+    <li><a href="#branch">Branches</a></li>
+    <li><a href="#merge">Combine and conflicts</a></li>
+    <li><a href="#stash">Set aside</a></li>
+    <li><a href="#github">GitHub and sync</a></li>
+    <li><a href="#pr">Review requests</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#keys">Keyboard shortcuts</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ol>
+</nav>
 <main>
 <h1>hiGit guide</h1>
-<p>This guide ships with the installer. The chapters are filled in before the pre-release.</p>
+<p class="lead">hiGit lets you save, compare and undo versions of your files without knowing Git. Hover a word on the screen to see the original Git name. The Korean guide has screenshots for each chapter.</p>
+
+<section id="install">
+<h2>1. Install</h2>
+<p>hiGit uses the Git installed on your computer. If Git is missing, the app tells you where to get it.</p>
+<ol class="steps">
+  <li><strong>Windows:</strong> install <a href="https://git-scm.com/download/win">Git for Windows</a>, then run <code>hiGit_version_x64-setup.exe</code>. It installs for your user only, without an admin prompt. If "Windows protected your PC" appears, choose <span class="term">More info</span> and then <span class="term">Run anyway</span>; this pre-release is not signed yet.</li>
+  <li><strong>Ubuntu:</strong> run <code>sudo apt install ./hiGit_version_amd64.deb</code>, which also installs Git. The AppImage needs <code>libfuse2</code> and Git.</li>
+</ol>
+</section>
+
+<section id="first">
+<h2>2. First start, name and email</h2>
+<p>Every saved version records who saved it. Set your name and email once on the start screen; you can change them later in Settings, General. Connecting GitHub can wait.</p>
+</section>
+
+<section id="open">
+<h2>3. Open a folder or clone</h2>
+<ol class="steps">
+  <li>Choose <span class="term">Open folder</span> or press <kbd>Ctrl</kbd>+<kbd>O</kbd>. A folder that is not under version control yet offers <span class="term">Start version control</span><span class="git">init</span>, which keeps your files and starts recording.</li>
+  <li>To get a repository from GitHub, choose <span class="term">Clone</span><span class="git">clone</span> or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>.</li>
+  <li>The app reopens your last project. Use the project name at the top left to switch. With the installed app you can also right-click a folder and choose <span class="term">Manage with Git</span>.</li>
+</ol>
+</section>
+
+<section id="commit">
+<h2>4. Save a version</h2>
+<ol class="steps">
+  <li>Changed files are listed under <span class="term">Changes</span><span class="git">status</span>.</li>
+  <li>Check the files to <span class="term">include in version</span><span class="git">stage</span>; if none are checked, all are included.</li>
+  <li>Describe what you did and choose <span class="term">Save version</span><span class="git">commit</span> or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>. The notice offers undo, or press <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</li>
+</ol>
+</section>
+
+<section id="diff">
+<h2>5. Compare</h2>
+<p>Select a file to see <span class="term">Compare</span><span class="git">diff</span>: green lines were added, red lines removed, with + and − signs. Unchanged lines are folded; click to expand. Turn on line wrap for long lines. Right-click a file for Show in folder, Open with default app, Copy path and Discard changes. Files that can run are not opened with the default app.</p>
+</section>
+
+<section id="log">
+<h2>6. Version history</h2>
+<p>Choose <span class="term">Version history</span><span class="git">log</span> or press <kbd>Ctrl</kbd>+<kbd>H</kbd>; <kbd>Esc</kbd> goes back. Branches are lines and versions are stations. Click a station for a menu: view files at that time, go back to it, undo it, or start a new branch there.</p>
+</section>
+
+<section id="undo">
+<h2>7. Undo and activity</h2>
+<p>Most actions can be undone with <kbd>Ctrl</kbd>+<kbd>Z</kbd> and redone with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>. For older work open <span class="term">Activity</span><span class="git">reflog</span> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd>) and choose <span class="term">Go back to this point</span>; your changed files stay. Versions you already uploaded are undone with a new version instead of being removed.</p>
+</section>
+
+<section id="branch">
+<h2>8. Branches</h2>
+<p>A <span class="term">branch</span><span class="git">branch</span> is a separate line of work. Click the branch name or press <kbd>Ctrl</kbd>+<kbd>B</kbd>, type a new name and choose <span class="term">To a new branch</span>. Choosing another branch switches to it; if you have changed files, the app asks whether to move them to a new branch or leave them here.</p>
+</section>
+
+<section id="merge">
+<h2>9. Combine and conflicts</h2>
+<p><span class="term">Combine</span><span class="git">merge</span> brings work from another branch. When both changed the same lines, the conflict screen asks one place at a time: your branch, the incoming branch, both, or edit by hand. The preview below updates at once. When every place is chosen, finish; you can always cancel. Keys <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> choose and <kbd>Ctrl</kbd>+<kbd>↑</kbd> <kbd>Ctrl</kbd>+<kbd>↓</kbd> move. Your choices survive a restart.</p>
+</section>
+
+<section id="stash">
+<h2>10. Set aside</h2>
+<p><span class="term">Set aside</span><span class="git">stash</span> at the bottom of Home puts your changes away and restores the last version. Take them out again from Activity. "Leave here" when switching branches works the same way for that branch.</p>
+</section>
+
+<section id="github">
+<h2>11. GitHub and sync</h2>
+<p>In Settings, GitHub, choose Connect and enter the shown code in your browser. <span class="term">Sync</span><span class="git">sync</span> gets new versions and then uploads yours; the ↑ number is how many will be uploaded. Projects without a remote can be published as a new GitHub repository. The app quietly checks the remote every few minutes.</p>
+</section>
+
+<section id="pr">
+<h2>12. Review requests</h2>
+<p>For projects with a GitHub remote, <span class="term">Review request</span><span class="git">Pull Request</span> lists requests and lets you create one, read checks and comments, comment and combine.</p>
+</section>
+
+<section id="settings">
+<h2>13. Settings</h2>
+<p>General: name and email, text size, language, appearance, term tips, folder right-click menu, first-time tips. GitHub: connection. Advanced: Git location, log folder, rewriting uploaded versions. About: this guide and open source licenses. <kbd>Ctrl</kbd>+<kbd>=</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd> change the text size.</p>
+</section>
+
+<section id="keys">
+<h2>14. Keyboard shortcuts</h2>
+<p>Press <kbd>Ctrl</kbd>+<kbd>/</kbd> anywhere for the full list, and <kbd>Ctrl</kbd>+<kbd>K</kbd> to find any action by name.</p>
+</section>
+
+<section id="faq">
+<h2>15. FAQ</h2>
+<dl>
+  <dt>A window asks "Trust and open" or "Open with them turned off".</dt>
+  <dd>The project has settings that run programs or change where it uploads. If you don't know where it came from, open with them turned off; such settings don't run, and sync is disabled when upload targets were changed.</dd>
+  <dt>Undo says it can't.</dt>
+  <dd>Git was used outside the app or the version was already uploaded. Find the earlier state in Activity.</dd>
+  <dt>Where are my versions?</dt>
+  <dd>Inside the project folder. Uninstalling hiGit keeps your projects and history.</dd>
+  <dt>Where do I report problems?</dt>
+  <dd>Open an issue in the repository. For security problems use the private report described in SECURITY.md.</dd>
+</dl>
+</section>
 </main>
+</div>
 </body>
 </html>

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hiGit 사용법</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #fff; --sunken: #f2f2f0; --border: #e5e5e2;
+    --text: #24292f; --muted: #6a6f75; --accent: #3a6ea5;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161718; --surface: #1c1d1f; --sunken: #121314; --border: #2b2d30; --text: #ececea; --muted: #9ea3a8; --accent: #7fa7d6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 "Pretendard", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1120px; margin: 0 auto; }
+  nav { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 32px 16px; border-right: 1px solid var(--border); }
+  nav h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  nav ol { margin: 0; padding-left: 20px; font-size: 14px; }
+  nav li { margin: 4px 0; }
+  nav a { color: var(--text); text-decoration: none; }
+  nav a:hover { color: var(--accent); }
+  main { padding: 32px 40px 80px; min-width: 0; }
+  h1 { margin: 0 0 8px; font-size: 30px; }
+  .lead { margin: 0 0 32px; color: var(--muted); }
+  section { padding: 24px 0; border-top: 1px solid var(--border); }
+  h2 { margin: 0 0 8px; font-size: 22px; }
+  h3 { margin: 16px 0 4px; font-size: 16px; }
+  p { margin: 8px 0; }
+  ol.steps { margin: 8px 0; padding-left: 22px; }
+  ol.steps li { margin: 4px 0; }
+  figure { margin: 16px 0 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  figcaption { margin-top: 6px; font-size: 14px; color: var(--muted); }
+  kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--sunken); font: 13px "JetBrains Mono", ui-monospace, monospace; }
+  code { padding: 1px 4px; border-radius: 4px; background: var(--sunken); font: 14px "JetBrains Mono", ui-monospace, monospace; }
+  .git { margin-left: 4px; padding: 0 5px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: 12px; vertical-align: 2px; }
+  .term { font-weight: 600; }
+  .note { margin: 12px 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  td, th { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  dt { margin-top: 12px; font-weight: 600; }
+  dd { margin: 4px 0 0; }
+  @media (max-width: 760px) {
+    .layout { display: block; }
+    nav { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    main { padding: 16px 16px 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav aria-label="차례">
+  <h2>차례</h2>
+  <ol>
+    <li><a href="#install">설치하기</a></li>
+    <li><a href="#first">처음 켜기와 이름·이메일</a></li>
+    <li><a href="#open">폴더 열기와 복제</a></li>
+    <li><a href="#commit">버전 저장</a></li>
+    <li><a href="#diff">비교 보기</a></li>
+    <li><a href="#log">버전 기록 노선도</a></li>
+    <li><a href="#undo">되돌리기와 작업 내역</a></li>
+    <li><a href="#branch">브랜치 만들기와 바꾸기</a></li>
+    <li><a href="#merge">합치기와 충돌 해결</a></li>
+    <li><a href="#stash">임시 보관</a></li>
+    <li><a href="#github">GitHub 연결과 동기화</a></li>
+    <li><a href="#pr">검토 요청</a></li>
+    <li><a href="#settings">설정</a></li>
+    <li><a href="#keys">단축키 표</a></li>
+    <li><a href="#faq">자주 묻는 것</a></li>
+  </ol>
+</nav>
+<main>
+<h1>hiGit 사용법</h1>
+<p class="lead">hiGit은 Git을 몰라도 파일의 버전을 저장하고, 비교하고, 되돌릴 수 있게 해 주는 앱이에요. 화면의 낱말에 마우스를 올리면 Git에서 부르는 원래 이름이 보여요.</p>
+
+<section id="install">
+<h2>1. 설치하기</h2>
+<p>hiGit은 컴퓨터에 설치된 Git을 써요. Git이 없으면 앱이 처음 켤 때 내려받는 곳을 알려 줘요.</p>
+<h3>Windows</h3>
+<ol class="steps">
+  <li><a href="https://git-scm.com/download/win">Git for Windows</a>를 먼저 설치해요.</li>
+  <li><code>hiGit_버전_x64-setup.exe</code>를 실행해요. 관리자 확인 없이 지금 사용자에게만 설치돼요.</li>
+  <li>"Windows의 PC 보호" 창이 뜨면 <span class="term">추가 정보</span>를 누른 뒤 <span class="term">실행</span>을 눌러요. 아직 서명하지 않은 시험판이라 뜨는 창이에요.</li>
+</ol>
+<h3>Ubuntu</h3>
+<ol class="steps">
+  <li>터미널에서 <code>sudo apt install ./hiGit_버전_amd64.deb</code>를 실행해요. Git도 함께 설치돼요.</li>
+  <li>AppImage를 쓰려면 <code>libfuse2</code>와 Git을 설치하고, 파일에 실행 권한을 준 뒤 더블클릭해요.</li>
+</ol>
+</section>
+
+<section id="first">
+<h2>2. 처음 켜기와 이름·이메일</h2>
+<p>저장한 버전마다 누가 저장했는지 남아요. 처음 한 번 이름과 이메일을 정해요.</p>
+<ol class="steps">
+  <li>앱을 켜면 "버전에 남길 이름부터 정해요"가 보여요.</li>
+  <li>이름과 이메일을 쓰고 저장해요. 나중에 설정의 "일반"에서 바꿀 수 있어요.</li>
+  <li>GitHub를 쓸 거라면 <span class="term">GitHub 연결</span>을 눌러요. 나중에 해도 돼요.</li>
+</ol>
+<figure><img src="img/first.webp" alt="처음 켠 시작 화면. 이름과 이메일을 쓰는 칸과 GitHub 연결 단추가 있다"><figcaption>처음 켠 시작 화면</figcaption></figure>
+</section>
+
+<section id="open">
+<h2>3. 폴더 열기와 복제</h2>
+<p>hiGit에서는 폴더 하나가 프로젝트 하나예요. 이미 있는 폴더를 열거나, 인터넷의 저장소를 내 컴퓨터로 받아요.</p>
+<ol class="steps">
+  <li>오른쪽 위의 <span class="term">폴더 열기</span>를 누르거나 <kbd>Ctrl</kbd>+<kbd>O</kbd>를 눌러 폴더를 골라요.</li>
+  <li>아직 버전 관리를 하지 않는 폴더면 <span class="term">버전 관리 시작</span><span class="git">init</span>을 눌러요. 파일은 그대로 두고 기록만 시작해요.</li>
+  <li>GitHub 같은 곳의 저장소를 받으려면 <span class="term">복제</span><span class="git">clone</span>를 누르거나 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>를 눌러 주소와 저장할 곳을 정해요.</li>
+</ol>
+<p>앱을 다시 켜면 마지막으로 연 프로젝트가 바로 열려요. 다른 프로젝트는 왼쪽 위 프로젝트 이름을 눌러 골라요. 설치한 앱은 폴더를 오른쪽 클릭했을 때 나오는 <span class="term">Git으로 관리</span>로도 열 수 있어요.</p>
+<figure><img src="img/start.webp" alt="시작 화면. 마지막으로 하던 곳과 다른 프로젝트 목록"><figcaption>시작 화면의 마지막으로 하던 곳</figcaption></figure>
+<figure><img src="img/clone.webp" alt="복제 대화상자. 주소와 저장할 곳을 쓰는 칸"><figcaption>복제</figcaption></figure>
+</section>
+
+<section id="commit">
+<h2>4. 버전 저장</h2>
+<p>파일을 고친 뒤 지금 모습을 한 버전으로 남기는 일이에요. 언제든 그 버전으로 돌아갈 수 있어요.</p>
+<ol class="steps">
+  <li>홈 왼쪽 <span class="term">변경 사항</span><span class="git">status</span>에 고친 파일이 보여요.</li>
+  <li>이번 버전에 넣을 파일만 체크해요. 아무것도 고르지 않으면 모두 넣어요. 이것을 <span class="term">이번 버전에 넣기</span><span class="git">stage</span>라고 해요.</li>
+  <li>위의 메시지는 고친 파일 이름으로 미리 채워져 있어요. 무엇을 했는지 알아보기 쉽게 고치고, 필요하면 <span class="term">설명 추가</span>에 더 적어요.</li>
+  <li><span class="term">버전 저장</span><span class="git">commit</span>을 누르거나 <kbd>Ctrl</kbd>+<kbd>Enter</kbd>를 눌러요.</li>
+</ol>
+<p>저장하면 아래에 "되돌리기"가 있는 알림이 떠요. 바로 취소하고 싶으면 그 단추나 <kbd>Ctrl</kbd>+<kbd>Z</kbd>를 눌러요.</p>
+<figure><img src="img/commit.webp" alt="홈 화면. 왼쪽에 고친 파일 목록과 버전 저장 칸, 오른쪽에 비교 칸"><figcaption>홈: 고친 파일과 버전 저장</figcaption></figure>
+</section>
+
+<section id="diff">
+<h2>5. 비교 보기</h2>
+<p>마지막으로 저장한 버전과 지금 파일이 무엇이 다른지 보여 줘요.</p>
+<ol class="steps">
+  <li>고친 파일 목록에서 파일을 누르면 오른쪽에 <span class="term">비교 보기</span><span class="git">diff</span>가 열려요.</li>
+  <li>초록 줄은 새로 쓴 줄, 빨간 줄은 지운 줄이에요. 줄 앞에 + 와 − 도 함께 보여요.</li>
+  <li>바뀌지 않은 줄은 "변경 없는 N줄 · 펼치기"로 접혀 있어요. 누르면 펼쳐져요.</li>
+  <li>긴 줄이 잘리면 오른쪽 위 <span class="term">줄 바꿈</span>을 켜요.</li>
+</ol>
+<p>파일을 오른쪽 클릭하면 <span class="term">폴더에서 보기</span>, <span class="term">기본 앱으로 열기</span>, <span class="term">경로 복사</span>, <span class="term">고친 것 버리기</span><span class="git">restore</span>가 있어요. 실행할 수 있는 파일은 기본 앱으로 열지 않아요.</p>
+<figure><img src="img/diff.webp" alt="비교 칸. 새로 쓴 줄이 초록으로 표시된다"><figcaption>비교 보기</figcaption></figure>
+</section>
+
+<section id="log">
+<h2>6. 버전 기록 노선도</h2>
+<p>지금까지 저장한 버전을 지하철 노선도처럼 보여 줘요. 브랜치는 노선, 버전은 역이에요.</p>
+<ol class="steps">
+  <li>위의 <span class="term">버전 기록</span><span class="git">log</span>을 누르거나 <kbd>Ctrl</kbd>+<kbd>H</kbd>를 눌러요. <kbd>Esc</kbd>를 누르면 홈으로 돌아와요.</li>
+  <li>역을 누르면 작은 메뉴가 열려요. <span class="term">이때 파일 보기</span>, <span class="term">여기서 새 브랜치</span>, <span class="term">되돌리기</span>가 있고, <span class="term">더 보기</span>에 <span class="term">이 버전으로 돌아가기</span>같은 일이 더 있어요.</li>
+  <li><span class="term">− 모든 버전 +</span>로 주요 버전만 보거나 모두 볼 수 있어요.</li>
+</ol>
+<figure><img src="img/log.webp" alt="버전 기록 노선도. 역 하나의 메뉴가 열려 있다"><figcaption>버전 기록과 역 메뉴</figcaption></figure>
+</section>
+
+<section id="undo">
+<h2>7. 되돌리기와 작업 내역</h2>
+<p>앱에서 한 일은 대부분 되돌릴 수 있어요. 실수했으면 먼저 <kbd>Ctrl</kbd>+<kbd>Z</kbd>를 눌러 보세요.</p>
+<ol class="steps">
+  <li>방금 한 일은 알림의 <span class="term">되돌리기</span>나 <kbd>Ctrl</kbd>+<kbd>Z</kbd>로 되돌려요. 다시 하려면 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>를 눌러요.</li>
+  <li>더 예전 일은 위의 <span class="term">작업 내역</span><span class="git">reflog</span>을 누르거나 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd>를 눌러 찾아요.</li>
+  <li>카드의 <span class="term">이 시점으로 되돌리기</span>를 누르면 지금 브랜치가 그때 버전으로 돌아가요. 고친 파일은 그대로 남아요.</li>
+</ol>
+<div class="note">이미 올린 버전은 기록에서 빼지 않고, 되돌리는 새 버전을 만들어요. 다른 사람의 기록이 꼬이지 않게 하려는 거예요.</div>
+<figure><img src="img/activity.webp" alt="작업 내역 화면. 날짜별 카드 목록"><figcaption>작업 내역</figcaption></figure>
+</section>
+
+<section id="branch">
+<h2>8. 브랜치 만들기와 바꾸기</h2>
+<p><span class="term">브랜치</span><span class="git">branch</span>는 같은 프로젝트에서 따로 작업하는 길이에요. 새 기능을 만들 때 브랜치를 나누면 원래 작업을 망가뜨리지 않아요.</p>
+<ol class="steps">
+  <li>왼쪽 위 브랜치 이름을 누르거나 <kbd>Ctrl</kbd>+<kbd>B</kbd>를 눌러 브랜치 목록을 열어요.</li>
+  <li>찾기 칸에 새 이름을 쓰고 <span class="term">새 브랜치로</span>를 누르면 만들고 바로 옮겨 가요.</li>
+  <li>다른 브랜치를 누르면 그 브랜치로 바꿔요. 고친 파일이 있으면 "새 브랜치로 옮기기"와 "여기 두기" 중에서 고르게 물어요.</li>
+</ol>
+<figure><img src="img/branches.webp" alt="브랜치 목록. 찾기 칸과 브랜치 줄"><figcaption>브랜치 목록</figcaption></figure>
+</section>
+
+<section id="merge">
+<h2>9. 합치기와 충돌 해결</h2>
+<p>다른 브랜치에서 한 일을 지금 브랜치로 가져오는 일이 <span class="term">합치기</span><span class="git">merge</span>예요.</p>
+<ol class="steps">
+  <li>홈 노선도 오른쪽에 "main에 새 버전 N개"와 <span class="term">main 가져와 합치기</span>가 보이면 눌러요. 브랜치 목록에서도 합칠 수 있어요.</li>
+  <li>두 브랜치가 같은 줄을 다르게 고쳤으면 <span class="term">충돌</span>이 나고 충돌 해결 화면이 열려요.</li>
+  <li>한 곳씩 남길 쪽을 골라요. <span class="term">내 브랜치</span><span class="git">ours</span>나 <span class="term">합칠 브랜치</span><span class="git">theirs</span> 카드의 <span class="term">이걸로</span>, 또는 <span class="term">둘 다 쓰기</span>나 <span class="term">직접 고치기</span>를 눌러요. 아래 "저장될 모습"이 바로 바뀌어요.</li>
+  <li>모든 곳을 고르면 <span class="term">합치기 마치기</span>를 눌러요. 그만두고 싶으면 언제든 <span class="term">합치기 그만두기</span>를 눌러요.</li>
+</ol>
+<p>단축키 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>로 고르고 <kbd>Ctrl</kbd>+<kbd>↑</kbd> <kbd>Ctrl</kbd>+<kbd>↓</kbd>로 앞뒤 곳으로 옮겨요. 앱을 껐다 켜도 고른 것이 남아 있어요.</p>
+<figure><img src="img/conflict.webp" alt="충돌 해결 화면. 내 브랜치와 합칠 브랜치 카드, 아래 저장될 모습"><figcaption>충돌 해결</figcaption></figure>
+</section>
+
+<section id="stash">
+<h2>10. 임시 보관</h2>
+<p>아직 버전으로 저장하기엔 이른 고친 내용을 잠깐 치워 두는 곳이에요.</p>
+<ol class="steps">
+  <li>홈 아래의 <span class="term">임시 보관</span><span class="git">stash</span>을 누르면 고친 파일이 보관되고 파일은 마지막 버전 모습으로 돌아가요.</li>
+  <li>다시 꺼내려면 작업 내역에서 그 카드의 <span class="term">꺼내기</span>를 눌러요.</li>
+  <li>브랜치를 바꿀 때 고른 "여기 두기"도 같은 방법으로 그 브랜치에 고친 파일을 두고 가요. 그 브랜치로 돌아오면 꺼낼 수 있어요.</li>
+</ol>
+</section>
+
+<section id="github">
+<h2>11. GitHub 연결과 동기화</h2>
+<p>GitHub에 연결하면 내 버전을 인터넷 저장소에 올리고, 다른 사람이 올린 버전을 받아요.</p>
+<ol class="steps">
+  <li>설정의 "GitHub"에서 <span class="term">연결</span>을 누르면 브라우저에서 코드를 넣는 페이지가 열려요. 화면에 보인 코드를 넣고 허락해요.</li>
+  <li>위의 <span class="term">동기화</span><span class="git">sync</span>를 누르면 새 버전을 가져온 다음 내 버전을 올려요. 단추 옆 ↑ 숫자는 올릴 버전 수예요.</li>
+  <li>원격 저장소가 없는 프로젝트는 <span class="term">GitHub에 올리기</span>로 새 저장소를 만들어 올려요.</li>
+</ol>
+<p>앱은 몇 분마다 조용히 <span class="term">원격 확인</span><span class="git">fetch</span>을 해서 받을 버전이 있는지 알려 줘요.</p>
+<p>설정에 "이 앱에는 GitHub 연결이 준비되지 않았어요"가 보이면 그 설치 파일에는 GitHub 연결이 들어 있지 않은 거예요. 그때도 원격 저장소 주소로 동기화는 할 수 있어요.</p>
+<figure><img src="img/github.webp" alt="설정의 GitHub 구역. 연결 단추"><figcaption>설정의 GitHub 구역</figcaption></figure>
+</section>
+
+<section id="pr">
+<h2>12. 검토 요청</h2>
+<p>브랜치에서 한 일을 다른 사람에게 보여 주고 합쳐 달라고 부탁하는 일이에요. GitHub 원격이 있는 프로젝트에서 써요.</p>
+<ol class="steps">
+  <li>위의 <span class="term">검토 요청</span><span class="git">Pull Request</span>을 눌러 목록을 열어요.</li>
+  <li><span class="term">새 검토 요청</span>에서 제목과 설명을 쓰고 합칠 브랜치를 골라요. 아직 올리지 않았으면 먼저 올려요.</li>
+  <li>요청을 고르면 시험 결과, 댓글, 겹침 여부가 보이고 댓글을 달거나 합칠 수 있어요.</li>
+</ol>
+</section>
+
+<section id="settings">
+<h2>13. 설정</h2>
+<p>위의 <span class="term">설정</span>을 눌러 열어요.</p>
+<dl>
+  <dt>일반</dt><dd>이름과 이메일, 글자 크기, 언어, 화면 모드, 용어 설명 보기, 폴더 오른쪽 클릭 메뉴, 처음 하는 일 안내.</dd>
+  <dt>GitHub</dt><dd>연결과 끊기, 올리기와 가져오기에 이 연결을 쓸지.</dd>
+  <dt>고급</dt><dd>Git 위치, 로그 폴더, 올린 버전도 바꾸기.</dd>
+  <dt>정보</dt><dd>이 사용법과 오픈 소스 라이선스.</dd>
+</dl>
+<p><kbd>Ctrl</kbd>+<kbd>=</kbd>와 <kbd>Ctrl</kbd>+<kbd>-</kbd>로 글자 크기를 바로 바꿀 수도 있어요.</p>
+<figure><img src="img/settings.webp" alt="설정 대화상자의 일반 구역"><figcaption>설정</figcaption></figure>
+</section>
+
+<section id="keys">
+<h2>14. 단축키 표</h2>
+<p><kbd>Ctrl</kbd>+<kbd>/</kbd>를 누르면 어디서나 단축키 표가 열려요. <kbd>Ctrl</kbd>+<kbd>K</kbd>로 <span class="term">명령 찾기</span>를 열면 할 일을 이름으로 찾아 바로 할 수 있어요.</p>
+<table>
+  <tr><th>할 일</th><th>단축키</th></tr>
+  <tr><td>버전 저장</td><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td></tr>
+  <tr><td>되돌리기 · 다시 하기</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td></tr>
+  <tr><td>버전 기록 · 작업 내역</td><td><kbd>Ctrl</kbd>+<kbd>H</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd></td></tr>
+  <tr><td>브랜치 목록 · 동기화</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td></tr>
+  <tr><td>폴더 열기 · 복제</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd></td></tr>
+  <tr><td>명령 찾기 · 단축키 표</td><td><kbd>Ctrl</kbd>+<kbd>K</kbd> · <kbd>Ctrl</kbd>+<kbd>/</kbd></td></tr>
+</table>
+<figure><img src="img/shortcuts.webp" alt="단축키 표 대화상자"><figcaption>단축키 표</figcaption></figure>
+</section>
+
+<section id="faq">
+<h2>15. 자주 묻는 것</h2>
+<dl>
+  <dt>"믿고 열기"와 "끄고 열기"를 묻는 창이 떠요.</dt>
+  <dd>받은 프로젝트에 열 때 프로그램을 실행하거나 올리는 곳을 바꾸는 설정이 있으면 물어요. 어디서 받았는지 모르면 <span class="term">끄고 열기</span>를 고르세요. 끄고 열면 그 설정은 돌지 않고, 올리는 곳을 바꾸는 설정이 있으면 동기화도 하지 않아요.</dd>
+  <dt>되돌리기가 안 된다고 해요.</dt>
+  <dd>앱 밖에서 Git을 써서 기록이 바뀌었거나, 이미 올린 버전이면 그래요. <span class="term">작업 내역</span>에서 그때 모습을 찾아 되살릴 수 있어요.</dd>
+  <dt>"원격 확인 못 함"이 보여요.</dt>
+  <dd>인터넷 연결이나 GitHub 로그인을 확인해 주세요. 알림의 단추로 다시 해 볼 수 있어요.</dd>
+  <dt>버전과 파일은 어디에 있나요?</dt>
+  <dd>모두 그 프로젝트 폴더 안에 있어요. hiGit을 지워도 프로젝트와 기록은 그대로예요.</dd>
+  <dt>문제가 생기면 어디에 알리나요?</dt>
+  <dd>저장소의 Issues에 알려 주세요. 보안 문제는 SECURITY.md의 비공개 신고를 써 주세요.</dd>
+</dl>
+</section>
+</main>
+</div>
+</body>
+</html>
