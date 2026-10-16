@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { executeAction: vi.fn(), previewAction: vi.fn() },
+  api: { executeAction: vi.fn(), previewAction: vi.fn(), fileOpen: vi.fn(), fileReveal: vi.fn() },
 }));
 vi.mock("../../lib/copy", () => ({ copyText: vi.fn(async () => true) }));
 
@@ -97,6 +97,50 @@ describe("ChangedFiles", () => {
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["docs/한글.md"] } });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await waitFor(() => expect(onDone).toHaveBeenCalledWith("버렸어요"));
+  });
+
+  it("폴더에서 보기·기본 앱으로 열기, 못 쓰면 흐리고 까닭이 있다(D-216)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.fileOpen).mockResolvedValue(null);
+    vi.mocked(api.fileReveal).mockResolvedValue(null);
+    renderList([file("문서/a.md", false), file("run.sh", false), file("지움.txt", false, { change: "deleted" })]);
+    fireEvent.contextMenu(screen.getByRole("row", { name: /a\.md/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "기본 앱으로 열기" }));
+    expect(api.fileOpen).toHaveBeenCalledWith("/repo", "문서/a.md");
+    fireEvent.contextMenu(screen.getByRole("row", { name: /a\.md/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "폴더에서 보기" }));
+    expect(api.fileReveal).toHaveBeenCalledWith("/repo", "문서/a.md");
+    act(() => {
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    });
+
+    fireEvent.contextMenu(screen.getByRole("row", { name: /run\.sh/ }));
+    const blocked = await screen.findByRole("menuitem", { name: "기본 앱으로 열기" });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    expect(blocked).toHaveAttribute("aria-description", "실행할 수 있는 파일은 열지 않아요");
+    expect(screen.getByRole("menuitem", { name: "폴더에서 보기" })).not.toHaveAttribute("aria-disabled");
+    act(() => {
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    });
+
+    fireEvent.contextMenu(screen.getByRole("row", { name: /지움\.txt/ }));
+    const gone = await screen.findByRole("menuitem", { name: "폴더에서 보기" });
+    expect(gone).toHaveAttribute("aria-description", "지운 파일이에요");
+    expect(screen.getByRole("menuitem", { name: "기본 앱으로 열기" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("줄을 더블클릭하면 기본 앱으로 열고, 막히면 폴더에서 보기를 해결 버튼으로 준다", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.fileOpen).mockRejectedValue(new ApiError({ code: "openRefused", detail: null }));
+    vi.mocked(api.fileReveal).mockResolvedValue(null);
+    renderList([file("tool", false)]);
+    await user.dblClick(screen.getByRole("row", { name: /tool/ }));
+    expect(api.fileOpen).toHaveBeenCalledTimes(1);
+    expect(api.fileOpen).toHaveBeenCalledWith("/repo", "tool");
+    await waitFor(() => expect(useToastStore.getState().toast?.action?.label).toBe("폴더에서 보기"));
+    act(() => useToastStore.getState().toast?.action?.onClick());
+    expect(api.fileReveal).toHaveBeenCalledWith("/repo", "tool");
+    act(() => useToastStore.getState().clear());
   });
 
   it("메뉴 키·Shift+F10으로도 연다", async () => {

@@ -19,7 +19,7 @@ const RECENT_IN_MENU = 5;
 
 /**
  * 상단 바의 프로젝트 이름 = 프로젝트 메뉴 단추(D-032, D-203). 최근 프로젝트(고정 먼저), 이 프로젝트 고정,
- * 폴더 열기·복제, 다른 프로젝트 열기(시작 화면).
+ * 폴더 위치 열기(D-216), 폴더 열기·복제, 다른 프로젝트 열기(시작 화면).
  */
 export function ProjectMenu({ repo }: { repo: RepoInfo }) {
   const m = useMessages();
@@ -77,6 +77,12 @@ export function ProjectMenu({ repo }: { repo: RepoInfo }) {
               {self.pinned ? m.unpin : m.pinProject(repo.name)}
             </Menu.Item>
           )}
+          <Menu.Item
+            className={styles.item}
+            onSelect={() => void api.projectReveal(repo.path).catch((e: unknown) => showError(e))}
+          >
+            {m.projectReveal}
+          </Menu.Item>
           <Menu.Item className={styles.item} onSelect={() => void openFolder.pick()}>
             <span className={styles.itemName}>{m.openFolder}</span>
             <Kbd>{SHORTCUTS.openFolder.label}</Kbd>

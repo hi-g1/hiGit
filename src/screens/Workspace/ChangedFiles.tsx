@@ -1,4 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react";
+import { useOpenFile } from "../../features/files/useOpenFile";
 import { useDiscardFlow } from "../../features/stash/useDiscardFlow";
 import { useStageMutation } from "../../features/stage/useStageMutation";
 import type { ChangedFile } from "../../lib/api";
@@ -41,6 +42,7 @@ export function ChangedFiles({
   const select = useRepoStore((s) => s.selectPath);
   const stage = useStageMutation(folder);
   const discard = useDiscardFlow(folder, onDone);
+  const openFile = useOpenFile(folder);
   const [menu, setMenu] = useState<{ file: ChangedFile; x: number; y: number } | null>(null);
   /** 메뉴는 목록 안 좌표에 붙는다(누른 자리, 키로 열면 줄의 왼쪽 아래). */
   const openMenu = (file: ChangedFile, list: HTMLElement, at: { clientX: number; clientY: number }) => {
@@ -121,6 +123,8 @@ export function ChangedFiles({
           setMenu(null);
           discard.run(file);
         }}
+        onReveal={(file) => openFile.reveal(file.path)}
+        onOpen={(file) => openFile.open(file.path)}
       />
       <div className={`${rowStyles.row} ${styles.head}`}>
         <TermTooltip id={all ? "unstage" : "stage"}>
@@ -155,6 +159,11 @@ export function ChangedFiles({
               aria-label={m.fileRow(file.path, m.changeKind[file.change], included)}
               className={`${rowStyles.row} ${styles.two} ${styles.fileRow} ${isSelected ? styles.selected : ""}`}
               onClick={() => select(file.path)}
+              // 더블클릭은 기본 앱으로 열기(첫 클릭은 지금처럼 고르기, D-216). 체크 상자는 제외.
+              onDoubleClick={(e) => {
+                if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return;
+                openFile.open(file.path);
+              }}
               onFocus={(e) => {
                 // 포커스를 따라 고른다(Tab으로 들어오거나 누름).
                 if (e.target === e.currentTarget && !isSelected) select(file.path);

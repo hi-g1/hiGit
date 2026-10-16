@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { recentProjects: vi.fn(), pinProject: vi.fn(), openProject: vi.fn() },
+  api: { recentProjects: vi.fn(), pinProject: vi.fn(), openProject: vi.fn(), projectReveal: vi.fn() },
 }));
 vi.mock("../../lib/dialog", () => ({ pickFolder: vi.fn() }));
 
@@ -49,9 +49,26 @@ describe("프로젝트 메뉴(D-203)", () => {
     await vi.waitFor(() => expect(api.recentProjects).toHaveBeenCalled());
     await userEvent.click(screen.getByRole("button", { name: "프로젝트 메뉴: 지금" }));
     const items = (await screen.findAllByRole("menuitem")).map((i) => i.textContent);
-    expect(items).toEqual(["b고정", "a", "c", "지금 고정", "폴더 열기Ctrl+O", "복제Ctrl+Shift+O", "다른 프로젝트 열기"]);
+    expect(items).toEqual([
+      "b고정",
+      "a",
+      "c",
+      "지금 고정",
+      "폴더 위치 열기",
+      "폴더 열기Ctrl+O",
+      "복제Ctrl+Shift+O",
+      "다른 프로젝트 열기",
+    ]);
     await userEvent.click(screen.getByRole("menuitem", { name: "지금 고정" }));
     expect(api.pinProject).toHaveBeenCalledWith("/home/me/지금", true);
+  });
+
+  it("폴더 위치 열기는 이 프로젝트 폴더를 연다(D-216)", async () => {
+    vi.mocked(api.projectReveal).mockResolvedValue(null);
+    show();
+    await userEvent.click(screen.getByRole("button", { name: "프로젝트 메뉴: 지금" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "폴더 위치 열기" }));
+    expect(api.projectReveal).toHaveBeenCalledWith("/home/me/지금");
   });
 
   it("고정한 프로젝트면 고정 풀기", async () => {

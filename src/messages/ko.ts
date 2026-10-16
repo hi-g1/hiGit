@@ -559,6 +559,11 @@ export const ko = {
   // 설정과 GitHub 연결(D-109, D-116)
   paneWidth: "칸 폭",
   fileMenu: "파일 메뉴",
+  revealInFolder: "폴더에서 보기",
+  openDefault: "기본 앱으로 열기",
+  openBlocked: "실행할 수 있는 파일은 열지 않아요",
+  openMissing: "지운 파일이에요",
+  projectReveal: "폴더 위치 열기",
   copyPath: "경로 복사",
   thisFile: "이 파일",
   earlierVersions: (n: number) => `이전 ${n}개`,
