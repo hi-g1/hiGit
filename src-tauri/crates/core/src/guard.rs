@@ -112,7 +112,6 @@ pub(crate) fn refuse_staged(git: &dyn GitBackend, repo: &RepoPath) -> Result<()>
 }
 
 /// 추적 중인 파일을 고쳤거나 넣은 파일이 있으면 거절한다. 새 파일(추적 안 함)은 둔다.
-#[allow(dead_code)] // 계획 008 E19부터 쓴다.
 pub(crate) fn refuse_dirty(git: &dyn GitBackend, repo: &RepoPath) -> Result<()> {
     let clean = |c: Change| matches!(c, Change::Unmodified | Change::Untracked);
     let dirty = git
@@ -131,6 +130,133 @@ pub(crate) fn require_branch(git: &dyn GitBackend, repo: &RepoPath) -> Result<St
     git.current_branch(repo)?.ok_or(CoreError::InvalidInput(
         "특정 버전을 보는 중에는 할 수 없어요",
     ))
+}
+
+/// 기록 정리에서 한 번에 고르는 버전 수 상한(D-100).
+pub(crate) const MAX_REWRITE: usize = 50;
+/// 고른 구간 맨 아래의 부모부터 지금 위치까지 버전 수 상한(위쪽 버전도 다시 놓인다).
+const MAX_CHAIN: usize = 1000;
+
+/// 기록 정리할 구간. 모든 목록은 새 것부터.
+#[allow(dead_code)] // `branch`·`head`·`base`는 계획 008 E14b의 액션이 쓴다.
+#[derive(Debug, Clone)]
+pub(crate) struct RewriteChain {
+    pub branch: String,
+    pub head: Oid,
+    /// 고른 구간 맨 아래 버전의 부모(정리의 바탕). 첫 버전이 들어 있으면 없다.
+    pub base: Option<Oid>,
+    pub selected: Vec<git::Commit>,
+    /// 고른 구간 위(새 쪽)부터 지금 위치까지. 순서 그대로 다시 놓인다.
+    pub above: Vec<git::Commit>,
+}
+
+/// 기록 정리 검사 결과. 구간을 찾았으면 막혔어도 `chain`이 있다(화면이 카드를 보여준다).
+#[derive(Debug, Clone)]
+pub(crate) struct RewriteCheck {
+    pub chain: Option<RewriteChain>,
+    pub blocked: Option<crate::view::RewriteBlocked>,
+}
+
+/// 고른 버전이 기록 정리할 수 있는 구간인지(D-100, D-106). 조회는 막힌 까닭을 화면에 알리고
+/// 액션은 같은 검사를 실행 때 다시 해 오류로 낸다. 지금 브랜치의 첫 부모 선을 지금 위치부터
+/// 따라가 고른 버전이 그 선 위의 연속 구간이고, 구간부터 지금 위치까지 합친 버전·첫 버전이 없고,
+/// 바뀔 버전이 하나도 올라가지 않았고, 고친 파일과 진행 중인 작업이 없어야 한다.
+pub(crate) fn rewrite_chain(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    oids: &[String],
+) -> Result<RewriteCheck> {
+    use crate::view::RewriteBlocked as B;
+    let blocked = |b: B| {
+        Ok(RewriteCheck {
+            chain: None,
+            blocked: Some(b),
+        })
+    };
+    let Some(branch) = git.current_branch(repo)? else {
+        return blocked(B::Detached);
+    };
+    if crate::actions::switch::refuse_during_operation(git, repo).is_err()
+        || git.index_entries(repo)?.iter().any(|e| e.stage > 0)
+    {
+        return blocked(B::OtherOperation);
+    }
+    if oids.len() > MAX_REWRITE {
+        return blocked(B::TooMany);
+    }
+    let Some(wanted) = oids
+        .iter()
+        .map(|o| Oid::parse(o))
+        .collect::<Option<Vec<_>>>()
+    else {
+        return blocked(B::NotOnBranchLine);
+    };
+    let mut set: std::collections::HashSet<&str> = wanted.iter().map(Oid::as_str).collect();
+    if set.is_empty() || set.len() != wanted.len() {
+        return blocked(B::NotOnBranchLine);
+    }
+    let Some(head) = git.resolve_ref(repo, "HEAD")? else {
+        return blocked(B::NotOnBranchLine);
+    };
+    let line = git.log(
+        repo,
+        &git::LogQuery {
+            skip: 0,
+            limit: (MAX_CHAIN + 1) as u32,
+            rev: Some(head.to_string()),
+        },
+    )?;
+    let (mut above, mut selected) = (Vec::new(), Vec::new());
+    for commit in line {
+        if commit.parents.len() > 1 {
+            return blocked(B::HasMerge);
+        }
+        if set.remove(commit.oid.as_str()) {
+            selected.push(commit);
+            if set.is_empty() {
+                break;
+            }
+        } else if !selected.is_empty() {
+            // 고른 구간 사이에 안 고른 버전이 끼어 있다.
+            return blocked(B::NotOnBranchLine);
+        } else {
+            above.push(commit);
+        }
+    }
+    if !set.is_empty() {
+        // 선 위에서 다 찾지 못했다(다른 브랜치의 버전, 너무 멂).
+        let far = above.len() + selected.len() > MAX_CHAIN;
+        return blocked(if far { B::TooMany } else { B::NotOnBranchLine });
+    }
+    let base = selected
+        .last()
+        .and_then(|c| c.parents.first())
+        .and_then(|p| Oid::parse(p));
+    let mut check = RewriteCheck {
+        chain: Some(RewriteChain {
+            branch,
+            head: head.clone(),
+            base: base.clone(),
+            selected,
+            above,
+        }),
+        blocked: None,
+    };
+    let Some(base) = base else {
+        check.blocked = Some(B::IncludesFirstVersion);
+        return Ok(check);
+    };
+    match refuse_published(git, repo, &head, &base) {
+        Err(CoreError::PublishedHistory) => check.blocked = Some(B::Published),
+        other => other?,
+    }
+    if check.blocked.is_none() {
+        match refuse_dirty(git, repo) {
+            Err(CoreError::HasChanges) => check.blocked = Some(B::HasChanges),
+            other => other?,
+        }
+    }
+    Ok(check)
 }
 
 #[cfg(test)]

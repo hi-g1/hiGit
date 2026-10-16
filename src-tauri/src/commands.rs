@@ -9,7 +9,8 @@ use higit_core::view::{
     CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView,
     FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PendingWorkView,
     PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
-    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
+    RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
+    UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -209,6 +210,20 @@ pub async fn query_route_preview(
 ) -> CmdResult<HomeMapView> {
     blocking(state, move |core| {
         core.queries().route_preview(&PathBuf::from(repo), limit)
+    })
+    .await
+}
+
+/// 기록 정리 카드 지도의 처음 모습(D-106). 고른 버전 50개까지.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_rewrite_plan(
+    state: State<'_, AppState>,
+    repo: String,
+    oids: Vec<String>,
+) -> CmdResult<RewritePlanView> {
+    blocking(state, move |core| {
+        core.queries().rewrite_plan(&PathBuf::from(repo), oids)
     })
     .await
 }

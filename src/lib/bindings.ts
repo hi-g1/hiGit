@@ -33,6 +33,8 @@ export const commands = {
 	queryLogStats: (repo: string, oids: string[]) => __TAURI_INVOKE<CommitStatView[]>("query_log_stats", { repo, oids }),
 	/**  시작 화면 노선도(D-093). 홈과 같은 요약이고 지금 줄 버전 수만 `limit`. */
 	queryRoutePreview: (repo: string, limit: number) => __TAURI_INVOKE<HomeMapView>("query_route_preview", { repo, limit }),
+	/**  기록 정리 카드 지도의 처음 모습(D-106). 고른 버전 50개까지. */
+	queryRewritePlan: (repo: string, oids: string[]) => __TAURI_INVOKE<RewritePlanView>("query_rewrite_plan", { repo, oids }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
@@ -629,6 +631,45 @@ export type RestoreInput = {
 
 /**  되살리는 방법. `Version`은 "이 시점으로 되돌리기", `Changes`는 "꺼내기". */
 export type RestoreKind = "none" | "version" | "changes";
+
+/**  기록 정리를 할 수 없는 까닭. 실행할 때 core가 같은 검사를 다시 한다. */
+export type RewriteBlocked = 
+/**  특정 버전을 보는 중(브랜치 없음). */
+"detached" | 
+/**  고른 버전이 지금 브랜치 첫 부모 선 위의 연속 구간이 아니다. */
+"notOnBranchLine" | 
+/**  고른 구간부터 지금 위치까지 합친 버전이 있다. */
+"hasMerge" | 
+/**  첫 버전(부모 없음)이 들어 있다. */
+"includesFirstVersion" | 
+/**  바뀔 버전 중 올린 것이 있다(D-097). */
+"published" | 
+/**  고른 버전이 50개를 넘거나 지금 위치까지가 너무 멀다. */
+"tooMany" | 
+/**  추적 중인 파일을 고쳤다. */
+"hasChanges" | 
+/**  합치기·다른 정리 등 진행 중인 작업이 있다. */
+"otherOperation";
+
+/**  기록 정리 카드 하나(새 버전 먼저). */
+export type RewriteCardView = {
+	oid: string,
+	shortOid: string,
+	summary: string,
+	/**  전체 메시지(메시지 고치기의 처음 값). */
+	message: string,
+	author: string,
+	/**  작성 시각(unix 초). */
+	time: number,
+};
+
+export type RewritePlanView = {
+	/**  고른 버전들(새 것 먼저). 구간을 알 수 없으면 비어 있다. */
+	cards: RewriteCardView[],
+	blocked: RewriteBlocked | null,
+	/**  정리하면 옛 버전을 가리키게 될 다른 브랜치·태그 수(막지는 않는다). */
+	staleLabels: number,
+};
 
 export type RiskView = "safe" | "normal" | "caution" | "danger";
 

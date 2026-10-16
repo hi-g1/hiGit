@@ -851,6 +851,72 @@ impl Queries {
             .collect())
     }
 
+    /// 기록 정리 카드 지도의 처음 모습(D-100, D-106). 고른 버전이 정리할 수 있는 구간이 아니면
+    /// `blocked`로 까닭을 알린다. 실행할 때 core가 같은 검사를 다시 한다. 읽기만 한다.
+    pub fn rewrite_plan(
+        &self,
+        repo: &Path,
+        oids: Vec<String>,
+    ) -> Result<crate::view::RewritePlanView> {
+        use crate::view::{RewriteCardView, RewritePlanView};
+        let root = self.opened_repo(repo)?;
+        let check = crate::guard::rewrite_chain(self.git.as_ref(), &root, &oids)?;
+        let Some(chain) = check.chain else {
+            return Ok(RewritePlanView {
+                cards: Vec::new(),
+                blocked: check.blocked,
+                stale_labels: 0,
+            });
+        };
+        let oids: Vec<git::Oid> = chain
+            .selected
+            .iter()
+            .filter_map(|c| git::Oid::parse(&c.oid))
+            .collect();
+        let messages = self.git.commit_messages(&root, &oids)?;
+        let cards = chain
+            .selected
+            .iter()
+            .map(|c| RewriteCardView {
+                oid: c.oid.clone(),
+                short_oid: c.short_oid.clone(),
+                summary: c.summary.clone(),
+                message: messages
+                    .iter()
+                    .find(|m| m.oid.as_str() == c.oid)
+                    .map(|m| m.message.clone())
+                    .unwrap_or_else(|| c.summary.clone()),
+                author: c.author_name.clone(),
+                time: c.author_time,
+            })
+            .collect();
+        // 다시 놓이는 버전(고른 것과 그 위)을 가리키는 다른 브랜치·태그는 옛 버전에 남는다.
+        let moved: HashSet<&str> = chain
+            .selected
+            .iter()
+            .chain(chain.above.iter())
+            .map(|c| c.oid.as_str())
+            .collect();
+        let branches = self
+            .git
+            .branches(&root)?
+            .into_iter()
+            .filter(|b| b.kind == git::BranchKind::Local && !b.is_head)
+            .filter(|b| moved.contains(b.oid.as_str()))
+            .count();
+        let tags = self
+            .git
+            .tags(&root)?
+            .into_iter()
+            .filter(|t| moved.contains(t.commit.as_str()))
+            .count();
+        Ok(RewritePlanView {
+            cards,
+            blocked: check.blocked,
+            stale_labels: u32::try_from(branches + tags).unwrap_or(u32::MAX),
+        })
+    }
+
     /// 지금 브랜치에서 upstream에 아직 없는 버전(최대 500개). upstream이 없으면 빈 목록.
     fn unpushed(
         &self,

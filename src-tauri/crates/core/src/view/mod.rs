@@ -6,6 +6,7 @@ use std::path::Path;
 mod branch;
 mod conflict;
 mod diff;
+mod history;
 mod input;
 mod map;
 mod merge;
@@ -20,6 +21,7 @@ pub use conflict::{
     ConflictSide, ConflictStateView, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
+pub use history::{RewriteBlocked, RewriteCardView, RewritePlanView};
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, CommitInput, ConflictFinishInput, FetchInput,
     FileChoice, FileResolution, HunkChoice, MergeInput, MergeIntoInput, OidInput, PathsInput,

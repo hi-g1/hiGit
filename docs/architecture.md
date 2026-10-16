@@ -222,6 +222,7 @@ impl Queries {
     pub fn project_summary(&self, repo: &Path) -> Result<view::ProjectSummaryView>; // 시작 화면
     pub fn secret_check(&self, repo: &Path, r: &view::SecretCheckRequest) -> Result<view::SecretCheckView>; // 반복 2. 경로·규칙·줄 번호만(D-077)
     pub fn merge_hint(&self, repo: &Path) -> Result<view::MergeHintView>;      // 반복 2. 방향 하나(D-048, D-071)
+    pub fn rewrite_plan(&self, repo: &Path, oids: Vec<String>) -> Result<view::RewritePlanView>; // 반복 3. 기록 정리 카드(새 것 먼저, 전체 메시지), 막힌 까닭, 옛 버전에 남을 이름표 수. 50개까지
     pub fn conflict_state(&self, repo: &Path) -> Result<view::ConflictStateView>; // 반복 2. 맥락 Merge·Unpark(반복 3: CherryPick·Revert·Rebase), 충돌 파일 200개까지. 명령은 `Core::conflict_state`를 거쳐 앱 작업이 돌면 `Busy`(화면은 받은 상태를 둔다)
     pub fn conflict_file(&self, repo: &Path, path: &str) -> Result<view::ConflictFileView>; // 반복 2. 구간(text) 또는 파일 단위(whole)
     pub fn stashes(&self, repo: &Path) -> Result<view::StashListView>;        // 반복 2. 맡겨 두기가 잠깐 만든 항목은 뺌
@@ -288,6 +289,7 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 #### 기록을 바꾸는 액션의 검사 (`core::guard`, D-097, D-099)
 - 화면이 준 해시·이름은 낡거나 조작될 수 있어 core가 다시 확인한다. 순서는 `require_branch`(특정 버전을 보는 중이면 거절) → `refuse_during_operation` → `verified_commit(oid, Scope)`(전체 해시이고 커밋인지, `HeadAncestor`·`BranchReachable`·`BranchOrActivity`) → 상태 검사(`refuse_staged`: 넣은 파일 → `StagedChanges`, `refuse_dirty`: 추적 중인 파일을 고쳤거나 넣은 파일 → `HasChanges`, 새 파일은 둠, `refuse_published(tip, base)`: `base`에 없고 `tip`에 있는 버전이 하나라도 올라갔으면 → `PublishedHistory`).
 - 새 오류 코드: `PublishedHistory`, `HasChanges`, `TagExists`, `BranchProtected`, `NoChange`(하려는 결과가 지금과 같음. `NothingToCommit`과 따로).
+- 기록 정리 구간(`guard::rewrite_chain`, D-100, D-106): 지금 위치부터 기록을 1001개까지 읽어 고른 버전이 첫 부모 선 위의 연속 구간인지 본다. 구간 위·안에 합친 버전이 있으면 `HasMerge`(부모가 하나뿐인 버전만 이어지면 그 사이에 곁가지가 없다), 첫 버전이 들어 있으면 `IncludesFirstVersion`, 그 밖에 `Detached`·`OtherOperation`·`TooMany`(50개 또는 지금 위치까지 1000개)·`NotOnBranchLine`·`Published`(바탕 ~ 지금 위치)·`HasChanges`. 구간을 찾았으면 막혀도 카드를 준다. 조회와 액션이 같은 함수를 쓰고 액션은 실행 때 다시 계산한다.
 - 작업 내역 안의 버전인지(`guard::in_activity`)는 reflog 200줄과 버전 모양 백업 ref로 본다. `restore`도 같은 함수를 쓴다.
 
 #### 작업 내역 (D-085)
@@ -344,7 +346,7 @@ GitHub 먼저. 토큰은 `platform`의 키체인(Windows 자격 증명 관리자
 
 ## 프론트와 백엔드 계약
 - 프로젝트 열기는 한 곳: 앱을 켤 때 열기, 최근 목록, 폴더 고르기, 프로젝트 메뉴는 모두 `project_open` 명령 → `Core::open_project` 하나를 거친다(D-032). 저장소 신뢰 확인은 그 함수 안에 넣는다. 화면은 `useOpenProject` 훅 하나로 연다.
-- Tauri 명령 이름은 `<영역>_<동사>`. 목록의 원본은 `src-tauri/build.rs`의 `COMMANDS`다. 반복 2까지: `app_status`, `app_open_git_download`, `app_open_log_folder`, `project_open`, `project_trust`, `project_allow_owner`, `recent_list`, `recent_remove`, `action_list`, `action_preview`, `action_execute`, `action_cancel`, `undo_last`, `redo_last`, `query_status`, `query_log`, `query_log_stats`, `query_route_preview`, `query_diff`, `query_branches`, `query_branch_name`, `query_home_map`, `query_secret_check`, `query_merge_hint`, `query_stashes`, `query_recovery`, `query_pending_work`, `query_conflict_state`, `query_conflict_file`, `query_project_summary`, `repo_watch`, `repo_unwatch`.
+- Tauri 명령 이름은 `<영역>_<동사>`. 목록의 원본은 `src-tauri/build.rs`의 `COMMANDS`다. 반복 2까지: `app_status`, `app_open_git_download`, `app_open_log_folder`, `project_open`, `project_trust`, `project_allow_owner`, `recent_list`, `recent_remove`, `action_list`, `action_preview`, `action_execute`, `action_cancel`, `undo_last`, `redo_last`, `query_status`, `query_log`, `query_log_stats`, `query_route_preview`, `query_diff`, `query_branches`, `query_branch_name`, `query_home_map`, `query_secret_check`, `query_merge_hint`, `query_stashes`, `query_recovery`, `query_pending_work`, `query_conflict_state`, `query_conflict_file`, `query_project_summary`, `repo_watch`, `repo_unwatch`. 반복 3: `query_rewrite_plan`.
 - 명령 등록과 TS 내보내기는 `src-tauri/src/bindings.rs` 한 파일에 모은다. 바인딩 라이브러리를 바꾸면 이 파일과 `core::view`만 고친다(D-019).
 - 액션 입력은 `core::view::ActionInput` enum으로 보낸다(D-020). 액션 id는 enum 태그에서 얻으므로 `action_preview(folder, input)`, `action_execute(folder, input, previewToken)`에는 id 인자가 없다. 입력이 있는 액션은 전용 UI(`src/features/<id>/`)가 입력 구조체를 채운다.
 - 실패한 명령의 Promise는 `ErrorView { code, detail }`로 reject된다. 화면은 `src/lib/api.ts`가 바꿔 주는 `ApiError`만 다룬다.

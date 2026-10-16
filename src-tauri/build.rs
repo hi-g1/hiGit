@@ -20,6 +20,7 @@ const COMMANDS: &[&str] = &[
     "query_log",
     "query_log_stats",
     "query_route_preview",
+    "query_rewrite_plan",
     "query_diff",
     "query_branches",
     "query_branch_name",

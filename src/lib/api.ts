@@ -125,6 +125,7 @@ export const api = {
   logStats: (repo: string, oids: string[]) => call(commands.queryLogStats(repo, oids)),
   /** 시작 화면 노선도(D-093). 최근 목록의 프로젝트도 열지 않고 읽는다. */
   routePreview: (repo: string, limit: number) => call(commands.queryRoutePreview(repo, limit)),
+  rewritePlan: (repo: string, oids: string[]) => call(commands.queryRewritePlan(repo, oids)),
   diff: (repo: string, request: DiffRequest) => call(commands.queryDiff(repo, request)),
   branches: (repo: string) => call(commands.queryBranches(repo)),
   homeMap: (repo: string) => call(commands.queryHomeMap(repo)),
