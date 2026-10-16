@@ -102,9 +102,10 @@ function CloneForm() {
       </label>
       <div className={styles.row}>
         <span className={styles.label}>{m.clone.saveIn}</span>
-        <bdi className={styles.parent} title={parent}>
-          {parent}
-        </bdi>
+        <span className={styles.parent} title={parent}>
+          {/* 앞쪽을 줄이려고 바깥은 오른쪽부터 쓰고, 경로 글자는 왼쪽부터(앞의 / 가 뒤로 가지 않게). */}
+          <bdi dir="ltr">{parent}</bdi>
+        </span>
         <Button
           variant="text"
           disabled={running}
@@ -131,7 +132,7 @@ function CloneForm() {
           }}
         />
       </label>
-      {target && <p className={styles.target}>{target}</p>}
+      {name.trim() !== "" && parent !== "" && <p className={styles.target}>{target}</p>}
       {outdated && (
         <label className={styles.check}>
           <Checkbox checked={acceptOld} disabled={running} onChange={(e) => setAcceptOld(e.target.checked)} />
