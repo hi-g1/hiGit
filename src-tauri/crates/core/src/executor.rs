@@ -96,6 +96,15 @@ impl Executor {
         crate::recovery::collect(ctx.git, repo, &journal)
     }
 
+    /// 옛 v1 journal 줄을 v2 사슬로 한 번 옮긴다(D-209). 저장소를 열 때 부른다.
+    pub(crate) fn migrate_journal(
+        &self,
+        git: &dyn git::GitBackend,
+        repo: &git::RepoPath,
+    ) -> Result<usize> {
+        Journal::at(&git.git_dir(repo)?, self.journal_key.clone()).migrate_v1()
+    }
+
     /// 마지막으로 되돌린 작업을 다시 한다. 그 뒤에 새 작업이 있으면 할 것이 없다.
     pub fn redo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
         let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;

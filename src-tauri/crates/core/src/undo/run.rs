@@ -804,6 +804,25 @@ mod tests {
     }
 
     #[test]
+    fn opening_moves_old_v1_lines_and_undo_still_works() {
+        let (tmp, first, second) = two_versions();
+        let dir = tmp.path();
+        let backend = git::CliBackend::new("git", Arc::new(|_| {}));
+        let core = crate::Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>).unwrap();
+        // 지난 앱이 쓴 v1 줄(같은 키, 줄 하나만 서명, D-209).
+        let body = line(UndoKind::RestoreTree, state(&first), state(&second));
+        let v1 = super::super::journal::v1_line_for_tests(core.key_for_tests(), &body);
+        std::fs::create_dir_all(dir.join(".git/higit")).unwrap();
+        std::fs::write(dir.join(".git/higit/journal.jsonl"), format!("{v1}\n")).unwrap();
+        core.open_project(dir, crate::view::OpenHow::Picked)
+            .unwrap();
+        let text = std::fs::read_to_string(dir.join(".git/higit/journal.jsonl")).unwrap();
+        assert!(text.starts_with("{\"v\":2,\"seq\":1,"), "{text}");
+        core.undo(dir).unwrap();
+        assert_eq!(git(dir, &["rev-parse", "HEAD"]), first);
+    }
+
+    #[test]
     fn tree_undo_keeps_unrelated_edits_and_redo_comes_back() {
         let (tmp, first, second) = two_versions();
         let dir = tmp.path();

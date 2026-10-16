@@ -64,7 +64,7 @@ fn place_ok(git_dir: &Path, name: Name) -> bool {
 }
 
 /// git 폴더의 실제 경로 글자. 쓸 때와 읽을 때 같은 함수로 만든다.
-fn real_dir(git_dir: &Path) -> Option<String> {
+pub(crate) fn real_dir(git_dir: &Path) -> Option<String> {
     std::fs::canonicalize(git_dir)
         .ok()
         .map(|p| p.to_string_lossy().into_owned())
