@@ -57,3 +57,10 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 이름·이메일이 없어 저장이 막혔을 때 바로 아래에 여는 입력(ux.md 높음) */
+.identity {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+}

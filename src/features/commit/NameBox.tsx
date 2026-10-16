@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ChangedFile, SecretFinding } from "../../lib/api";
-import { api } from "../../lib/api";
+import { ApiError, api } from "../../lib/api";
 import { invalidateLog, queryKeys } from "../../lib/queries";
 import { SHORTCUTS, matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { IdentityForm } from "../identity/IdentityForm";
 import { Kbd } from "../../ui/Kbd";
 import { Term } from "../../ui/Term";
 import { SecretNotice } from "../secrets/SecretNotice";
@@ -133,50 +134,59 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
     }
   };
 
+  const identityMissing = commit.error instanceof ApiError && commit.error.code === "identityMissing";
   return (
-    <form
-      className={styles.box}
-      onSubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-    >
-      <input
-        ref={nameRef}
-        className={styles.name}
-        value={name}
-        placeholder={suggestion}
-        aria-label={m.versionName}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={onKeyDown}
-      />
-      <textarea
-        className={styles.description}
-        value={description}
-        placeholder={m.descriptionPlaceholder}
-        aria-label={m.descriptionPlaceholder}
-        rows={1}
-        onChange={(e) => setDescription(e.target.value)}
-        onKeyDown={onKeyDown}
-      />
-      <div className={styles.actions}>
-        <Kbd>{SHORTCUTS.commit.label}</Kbd>
-        <Button type="submit" variant="primary" disabled={!canCommit}>
-          <Term id="commit" focusable={false} />
-        </Button>
-      </div>
-      {files.length === 0 && <p className={styles.hint}>{m.noChangedFiles}</p>}
-      {notice !== null && notice.signature === signature && (
-        <SecretNotice
-          findings={notice.findings}
-          files={files}
-          busy={fixing || commit.isPending}
-          onUnstage={(paths) => void fix("unstage", paths)}
-          onIgnore={(paths) => void fix("ignore", paths)}
-          onSaveAnyway={() => void save()}
+    <>
+      <form
+        className={styles.box}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <input
+          ref={nameRef}
+          className={styles.name}
+          value={name}
+          placeholder={suggestion}
+          aria-label={m.versionName}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={onKeyDown}
         />
+        <textarea
+          className={styles.description}
+          value={description}
+          placeholder={m.descriptionPlaceholder}
+          aria-label={m.descriptionPlaceholder}
+          rows={1}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        <div className={styles.actions}>
+          <Kbd>{SHORTCUTS.commit.label}</Kbd>
+          <Button type="submit" variant="primary" disabled={!canCommit}>
+            <Term id="commit" focusable={false} />
+          </Button>
+        </div>
+        {files.length === 0 && <p className={styles.hint}>{m.noChangedFiles}</p>}
+        {notice !== null && notice.signature === signature && (
+          <SecretNotice
+            findings={notice.findings}
+            files={files}
+            busy={fixing || commit.isPending}
+            onUnstage={(paths) => void fix("unstage", paths)}
+            onIgnore={(paths) => void fix("ignore", paths)}
+            onSaveAnyway={() => void save()}
+          />
+        )}
+        {commit.error && <ErrorNotice error={commit.error} />}
+      </form>
+      {/* 처음 저장이 이름·이메일 때문에 막히면 그 자리에서 바로 정한다(ux.md 높음, D-125). */}
+      {identityMissing && (
+        <div className={styles.identity}>
+          <IdentityForm onSaved={() => commit.reset()} />
+        </div>
       )}
-      {commit.error && <ErrorNotice error={commit.error} />}
-    </form>
+    </>
   );
 }

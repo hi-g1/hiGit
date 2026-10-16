@@ -390,6 +390,7 @@ export const ko = {
   },
   // 설정과 GitHub 연결(D-109, D-116)
   paneWidth: "칸 폭",
+  identity: { title: "이름과 이메일", name: "이름", email: "이메일", save: "저장", saved: "저장했어요" },
   settings: {
     title: "설정",
     general: "일반",

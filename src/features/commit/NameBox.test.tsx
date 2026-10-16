@@ -4,11 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { executeAction: vi.fn(), secretCheck: vi.fn() },
+  api: {
+    executeAction: vi.fn(),
+    secretCheck: vi.fn(),
+    identity: vi.fn(async () => ({ name: null, email: null, complete: false })),
+  },
 }));
 
 import { AppProviders, createQueryClient } from "../../App";
-import { api, type ChangedFile } from "../../lib/api";
+import { ApiError, api, type ChangedFile } from "../../lib/api";
 import { useUndoStore } from "../undo/undoStore";
 import { NameBox, composeMessage, splitMessage } from "./NameBox";
 
@@ -39,6 +43,27 @@ describe("버전 이름 칸", () => {
     expect(composeMessage("  ", "", "제안")).toBe("제안");
     expect(composeMessage("이름", " 설명 ", "제안")).toBe("이름\n\n설명");
     expect(splitMessage("이름\n\n설명\n둘째 줄")).toEqual({ name: "이름", description: "설명\n둘째 줄" });
+  });
+
+  it("이름·이메일이 없어 막히면 그 자리에서 정한다(ux.md 높음)", async () => {
+    show();
+    vi.mocked(api.executeAction).mockRejectedValueOnce(new ApiError({ code: "identityMissing", detail: null }));
+    await userEvent.click(screen.getByLabelText("버전 이름"));
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    const form = await screen.findByRole("form", { name: "이름과 이메일" });
+    expect(screen.getByRole("alert")).toHaveTextContent("이름과 이메일이 설정되어 있지 않아요");
+    vi.mocked(api.executeAction).mockResolvedValueOnce({ kind: "identitySaved" });
+    await userEvent.type(screen.getByLabelText("이름"), "김지원");
+    await userEvent.type(screen.getByLabelText("이메일"), "ji@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "저장" }));
+    await vi.waitFor(() =>
+      expect(api.executeAction).toHaveBeenLastCalledWith("", {
+        id: "identity-set",
+        input: { name: "김지원", email: "ji@example.com" },
+      }),
+    );
+    await vi.waitFor(() => expect(form).not.toBeInTheDocument());
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("비워 두고 Ctrl+Enter면 제안 이름으로, 고친 파일을 모두 넣고 저장한다", async () => {
