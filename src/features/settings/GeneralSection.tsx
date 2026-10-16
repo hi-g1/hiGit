@@ -8,7 +8,9 @@ import { Checkbox } from "../../ui/Checkbox";
 import { Choice } from "../../ui/Choice";
 import styles from "./SettingsDialog.module.css";
 
-/** 설정의 "일반" 구역(D-145, D-160): 글자 크기, 용어 설명 보기. 고르면 바로 바뀌고 저장된다. */
+const LANGUAGES = ["system", "ko", "en"] as const;
+
+/** 설정의 "일반" 구역(D-145, D-160): 글자 크기, 언어, 용어 설명 보기. 고르면 바로 바뀌고 저장된다. */
 export function GeneralSection() {
   const m = useMessages();
   const client = useQueryClient();
@@ -25,6 +27,15 @@ export function GeneralSection() {
           value={settings.fontSize}
           options={FONT_STEPS.map((step) => ({ value: step, label: m.settings.fontSizes[step] }))}
           onChange={(fontSize) => changeSettings(client, { fontSize })}
+        />
+      </div>
+      <div className={styles.field}>
+        <span className={styles.fieldName}>{m.settings.language}</span>
+        <Choice
+          label={m.settings.language}
+          value={settings.language}
+          options={LANGUAGES.map((language) => ({ value: language, label: m.settings.languages[language] }))}
+          onChange={(language) => changeSettings(client, { language })}
         />
       </div>
       <label className={styles.field}>

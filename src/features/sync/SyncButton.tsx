@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, api, type BranchView } from "../../lib/api";
-import { formatRelative } from "../../lib/time";
+import { formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -86,8 +86,8 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
         <span
           className={styles.failed}
           role="img"
-          aria-label={m.fetchFailed(formatRelative(fetchFailedAt / 1000, now, locale))}
-          title={m.fetchFailed(formatRelative(fetchFailedAt / 1000, now, locale))}
+          aria-label={m.fetchFailed(formatTime(Math.floor(fetchFailedAt / 1000), now, locale))}
+          title={m.fetchFailed(formatTime(Math.floor(fetchFailedAt / 1000), now, locale))}
         />
       )}
     </span>

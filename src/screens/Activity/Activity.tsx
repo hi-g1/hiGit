@@ -6,7 +6,7 @@ import type { RunCtx } from "../../features/history/menu/run";
 import type { TermId } from "../../glossary/types";
 import { ApiError, api, type RecoveryItem } from "../../lib/api";
 import { invalidateLog, useActions, useRecovery } from "../../lib/queries";
-import { formatDate } from "../../lib/time";
+import { formatClock, formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { useUiStore } from "../../state/uiStore";
@@ -93,7 +93,7 @@ export function Activity({ repo, onDone }: Props) {
               return (
                 <li key={item.id} className={`${styles.card} ${item.undone ? styles.undone : ""}`}>
                   <span className={styles.time}>
-                    {new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(item.at * 1000)}
+                    {formatClock(item.at, locale)}
                   </span>
                   <span className={styles.title}>
                     {term ? <Term id={term} /> : sourceLabel(item)}

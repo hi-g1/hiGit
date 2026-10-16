@@ -2,6 +2,7 @@
 // 함수를 부른다. 입력만 보고 루트 요소와 화면 스토어를 바꾼다.
 import type { AppSettingsView, DisplayHintsView } from "./api";
 import { computeUiScale, DEFAULT_HINTS } from "./fontScale";
+import { resolveLocale, systemLanguages } from "./locale";
 import { useUiStore } from "../state/uiStore";
 
 /** 설정을 읽지 못했을 때(Git이 없음 등). core의 기본값과 같다. */
@@ -18,7 +19,10 @@ export function applyDisplay(settings: AppSettingsView | undefined, hints: Displ
   const s = settings ?? DEFAULT_SETTINGS;
   const scale = computeUiScale(hints ?? DEFAULT_HINTS, s.fontSize);
   document.documentElement.style.fontSize = `${16 * scale}px`;
+  const locale = resolveLocale(s.language, systemLanguages());
+  document.documentElement.lang = locale;
   const ui = useUiStore.getState();
   ui.setUiScale(scale);
   ui.setTermHelp(s.termHelp);
+  ui.setLocale(locale);
 }

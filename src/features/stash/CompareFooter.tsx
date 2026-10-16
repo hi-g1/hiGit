@@ -4,10 +4,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { ApiError, api, type ChangedFile } from "../../lib/api";
 import { useStashes } from "../../lib/queries";
-import { formatRelative } from "../../lib/time";
+import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
-import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
@@ -29,7 +28,6 @@ type Props = {
  */
 export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const m = useMessages();
-  const locale = useUiStore((s) => s.locale);
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
   const setView = useRepoStore((s) => s.setView);
@@ -116,7 +114,7 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
                   <li key={s.oid} className={styles.item}>
                     <span className={styles.itemName}>{s.branch ?? s.message}</span>
                     <span className={styles.itemMeta}>
-                      {formatRelative(s.at, now, locale)} · {m.filesCount(s.files)}
+                      <Time at={s.at} now={now} /> · {m.filesCount(s.files)}
                     </span>
                     <Button
                       disabled={pending || hasChanges}

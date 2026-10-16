@@ -5,6 +5,7 @@ import { en as glossaryEn } from "../glossary/en";
 import { ko as glossaryKo } from "../glossary/ko";
 import { en } from "./en";
 import { ko } from "./ko";
+import { messageStrings as strings } from "./samples";
 
 /** D-024 이전의 쉬운 이름. 화면 문구에 다시 쓰지 않는다. */
 const OLD_TERMS = [
@@ -20,58 +21,6 @@ const OLD_TERMS = [
   "겹친 부분",
   "바뀐 내용",
 ];
-
-/** 상태 종류를 받는 문구는 종류마다 불러 모든 문장을 검사한다. 나머지는 ("예시", 3). */
-const SAMPLES: Record<string, unknown[][]> = {
-  statusSentence: [
-    [{ kind: "conflict", files: 2 }],
-    [{ kind: "changed", files: 3, branch: "main" }],
-    [{ kind: "clean", branch: "main" }],
-    [{ kind: "detached" }],
-  ],
-  lastVersionSentence: [
-    [{ kind: "last", time: 0, summary: "비밀번호 확인 추가" }, "10월 7일"],
-    [{ kind: "none" }, ""],
-  ],
-  shortStatus: [
-    [{ kind: "conflict", files: 2 }],
-    [{ kind: "changed", files: 3 }],
-    [{ kind: "ahead", versions: 1 }],
-    [{ kind: "behind", versions: 5 }],
-    [{ kind: "notUploaded" }],
-    [{ kind: "upToDate" }],
-  ],
-  routeRowLabel: [
-    [
-      {
-        summary: "로그인 화면",
-        author: "지원",
-        date: "10월 7일",
-        branches: ["기능"],
-        tags: ["v1"],
-        head: true,
-        merge: true,
-        unpushed: true,
-        position: 3,
-      },
-    ],
-  ],
-
-};
-
-/** 메시지 객체 안의 모든 문자열. 함수형 문구는 예시 인자로 불러 문자열로 만든다. */
-function strings(value: unknown, path = ""): [string, string][] {
-  if (typeof value === "string") return [[path, value]];
-  if (typeof value === "function") {
-    const key = path.split(".").at(-1) ?? "";
-    const calls = SAMPLES[key] ?? [["예시", 3]];
-    return calls.map((args, i): [string, string] => [`${path}#${i}`, String(value(...args))]);
-  }
-  if (value && typeof value === "object") {
-    return Object.entries(value).flatMap(([k, v]) => strings(v, path ? `${path}.${k}` : k));
-  }
-  return [];
-}
 
 function glossaryStrings(glossary: typeof glossaryKo): [string, string][] {
   return Object.entries(glossary).flatMap(([id, t]) => [

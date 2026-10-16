@@ -26,6 +26,25 @@ describe("화면 코드 린트", () => {
     expect((await errors(code)).length).toBeGreaterThan(0);
   });
 
+  it.each([
+    ["Intl.DateTimeFormat", `export const f = (d: Date) => new Intl.DateTimeFormat("ko").format(d);`],
+    ["Intl.RelativeTimeFormat", `export const f = () => new Intl.RelativeTimeFormat("ko").format(1, "day");`],
+    ["toLocaleDateString", `export const f = (d: Date) => d.toLocaleDateString();`],
+    ["navigator.language", `export const f = () => navigator.language;`],
+    ["navigator.languages", `export const f = () => navigator.languages[0];`],
+  ])("화면 코드의 %s는 오류(D-149, D-150)", async (_name, code) => {
+    expect((await errors(code)).length).toBeGreaterThan(0);
+  });
+
+  it("시각·언어 파일에서는 통과", async () => {
+    const [time] = await eslint.lintText(`export const f = (d: Date) => new Intl.DateTimeFormat("ko").format(d);`, {
+      filePath: `${ROOT}src/lib/time.ts`,
+    });
+    expect(time.messages.filter((m) => m.severity === 2)).toEqual([]);
+    const [locale] = await eslint.lintText(`export const f = () => navigator.languages;`, { filePath: `${ROOT}src/lib/locale.ts` });
+    expect(locale.messages.filter((m) => m.severity === 2)).toEqual([]);
+  });
+
   it("평범한 JSX 글자는 통과", async () => {
     expect(await errors(`export const A = (p: { s: string }) => <p>{p.s}</p>;`)).toEqual([]);
   });

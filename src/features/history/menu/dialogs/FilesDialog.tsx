@@ -3,9 +3,8 @@ import { DiffView } from "../../../diff/DiffView";
 import type { ChangeKind } from "../../../../lib/api";
 import { listKey } from "../../../../lib/listKeys";
 import { useCommitDetail } from "../../../../lib/queries";
-import { formatDate } from "../../../../lib/time";
+import { Time } from "../../../../ui/Time";
 import { useMessages } from "../../../../messages";
-import { useUiStore } from "../../../../state/uiStore";
 import { Button } from "../../../../ui/Button";
 import { ErrorNotice } from "../../../../ui/ErrorNotice";
 import type { StationInfo } from "../info";
@@ -32,7 +31,6 @@ const LETTER: Record<ChangeKind, string> = {
  */
 export function FilesDialog({ info, ctx, onClose }: Props) {
   const m = useMessages();
-  const locale = useUiStore((s) => s.locale);
   const [now] = useState(() => Date.now());
   const detail = useCommitDetail(ctx.repo, info.oid);
   const files = detail.data?.files ?? [];
@@ -61,7 +59,7 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
       className={styles.files}
     >
       <p className={styles.meta}>
-        <bdi>{info.author}</bdi> · {formatDate(info.time, now, locale)}
+        <bdi>{info.author}</bdi> · <Time at={info.time} now={now} />
       </p>
       {detail.error && <ErrorNotice error={detail.error} />}
       {detail.data &&

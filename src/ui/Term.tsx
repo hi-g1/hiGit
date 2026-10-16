@@ -25,6 +25,8 @@ export function TermTooltip({ id, children }: { id: TermId; children: ReactEleme
   const termHelp = useUiStore((s) => s.termHelp);
   const term = getTerm(id, locale);
   const heading = termDisplay === "git" ? term.friendly : term.gitName;
+  // English에서 화면 이름과 원래 이름이 같으면("Push"·"push") 이름 줄을 뺀다(D-139).
+  const showHeading = term.friendly.toLowerCase() !== term.gitName.toLowerCase();
   if (!termHelp) return children;
 
   return (
@@ -32,7 +34,7 @@ export function TermTooltip({ id, children }: { id: TermId; children: ReactEleme
       delay={TERM_TOOLTIP_DELAY_MS}
       content={
         <span className={styles.tip}>
-          <span className={styles.heading}>{heading}</span>
+          {showHeading && <span className={styles.heading}>{heading}</span>}
           {term.command !== null && <code className={styles.command}>{term.command}</code>}
           <span className={styles.description}>{term.description}</span>
         </span>

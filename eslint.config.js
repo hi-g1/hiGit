@@ -29,6 +29,18 @@ export default defineConfig(
           selector,
           message: "저장소에서 온 글자는 React로 그대로 그립니다(D-037).",
         })),
+        {
+          selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
+          message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150).",
+        },
+      ],
+      // 날짜·시각 형식은 src/lib/time.ts, OS 언어는 src/lib/locale.ts에서만(D-149, D-150).
+      "no-restricted-properties": [
+        "error",
+        { object: "Intl", property: "DateTimeFormat", message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150)." },
+        { object: "Intl", property: "RelativeTimeFormat", message: "날짜·시각 글자는 src/lib/time.ts로 만듭니다(D-150)." },
+        { object: "navigator", property: "language", message: "OS 언어는 src/lib/locale.ts에서만 읽습니다(D-149)." },
+        { object: "navigator", property: "languages", message: "OS 언어는 src/lib/locale.ts에서만 읽습니다(D-149)." },
       ],
       // 화면은 백엔드를 src/lib/를 통해서만 부른다(D-010). invoke를 직접 쓰지 않는다.
       "no-restricted-imports": [
@@ -51,6 +63,10 @@ export default defineConfig(
   {
     files: ["src/lib/**/*.{ts,tsx}"],
     rules: { "no-restricted-imports": "off" },
+  },
+  {
+    files: ["src/lib/time.ts", "src/lib/locale.ts", "src/**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-properties": "off" },
   },
   {
     files: ["*.config.{js,ts}", "scripts/**/*.mjs"],

@@ -5,9 +5,8 @@ import { branchPrefix, pickShort } from "../../features/start/summary";
 import type { RecentProject } from "../../lib/api";
 import { useProjectSummary, useRoutePreview } from "../../lib/queries";
 import { useInView } from "../../lib/useInView";
-import { formatRelative } from "../../lib/time";
+import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
-import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import styles from "./Start.module.css";
 
@@ -25,7 +24,6 @@ export function ProjectRow({
   onRemove: () => void;
 }) {
   const m = useMessages();
-  const locale = useUiStore((s) => s.locale);
   const open = useOpenProject();
   const summary = useProjectSummary(project.path);
   const gone =
@@ -69,7 +67,7 @@ export function ProjectRow({
         </Button>
       ) : (
         <span className={styles.rowWhen}>
-          {formatRelative(project.lastOpenedAt, now, locale)}
+          <Time at={project.lastOpenedAt} now={now} />
         </span>
       )}
     </li>

@@ -88,6 +88,24 @@ describe("Term", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
+  it("English에서 이름이 같으면 툴팁 이름 줄을 뺀다", async () => {
+    act(() => useUiStore.setState({ locale: "en" }));
+    const user = userEvent.setup();
+    render(<Term id="branch" />);
+    await user.tab();
+    const tooltip = await screen.findByRole("tooltip");
+    // 명령·설명 두 줄만 남는다.
+    expect(tooltip.querySelector("code")?.parentElement?.children).toHaveLength(2);
+  });
+
+  it("한국어는 이름 줄이 늘 있다", async () => {
+    const user = userEvent.setup();
+    render(<Term id="branch" />);
+    await user.tab();
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.querySelector("code")?.parentElement?.children).toHaveLength(3);
+  });
+
   it("영어 용어표를 쓸 수 있다", () => {
     act(() => useUiStore.setState({ locale: "en" }));
     render(<Term id="commit" />);

@@ -363,6 +363,8 @@ export const en: Messages = {
     fontSize: "Text size",
     fontSizes: { small: "Small", normal: "Normal", large: "Large", xlarge: "Extra large" },
     termHelp: "Show term tips",
+    language: "Language",
+    languages: { system: "Follow system", ko: "한국어", en: "English" },
     github: "GitHub",
     notConfigured: "GitHub connection isn't set up in this app",
     connect: "Connect GitHub",

@@ -9,6 +9,14 @@ describe("화면 설정 적용", () => {
     expect(useUiStore.getState().uiScale).toBeCloseTo(18 / 14);
   });
 
+  it("언어를 정해 스토어와 문서 lang에", () => {
+    applyDisplay({ ...DEFAULT_SETTINGS, language: "en" }, undefined);
+    expect(useUiStore.getState().locale).toBe("en");
+    expect(document.documentElement.lang).toBe("en");
+    applyDisplay({ ...DEFAULT_SETTINGS, language: "ko" }, undefined);
+    expect(useUiStore.getState().locale).toBe("ko");
+  });
+
   it("용어 설명 보기 설정을 스토어에", () => {
     applyDisplay({ ...DEFAULT_SETTINGS, termHelp: false }, undefined);
     expect(useUiStore.getState().termHelp).toBe(false);

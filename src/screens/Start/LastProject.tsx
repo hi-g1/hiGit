@@ -5,7 +5,7 @@ import { useOpenProject } from "../../features/open-project/useOpenProject";
 import { pickLastVersion, pickStatus } from "../../features/start/summary";
 import type { ApiError, ProjectSummaryView, RecentProject } from "../../lib/api";
 import { useRoutePreview } from "../../lib/queries";
-import { formatDate, formatRelative } from "../../lib/time";
+import { formatTime } from "../../lib/time";
 import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
@@ -44,7 +44,7 @@ export function LastProject({
 
   return (
     <div className={styles.last}>
-      <p className={styles.small}>{m.lastPlace(formatRelative(project.lastOpenedAt, now, locale))}</p>
+      <p className={styles.small}>{m.lastPlace(formatTime(project.lastOpenedAt, now, locale))}</p>
       <div className={styles.nameLine}>
         <h1 className={gone ? `${styles.name} ${styles.muted}` : styles.name}>{project.name}</h1>
         <span className={styles.path}>{project.path}</span>
@@ -54,7 +54,7 @@ export function LastProject({
           (summary.data
             ? `${m.statusSentence(pickStatus(summary.data))} ${m.lastVersionSentence(
                 pickLastVersion(summary.data),
-                summary.data.lastCommit ? formatDate(summary.data.lastCommit.authorTime, now, locale) : "",
+                summary.data.lastCommit ? formatTime(summary.data.lastCommit.authorTime, now, locale) : "",
               )}`
             : " ")}
       </p>

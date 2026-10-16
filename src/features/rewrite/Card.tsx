@@ -1,8 +1,7 @@
 import { forwardRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { matches } from "../../lib/shortcuts";
-import { formatDate } from "../../lib/time";
+import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
-import { useUiStore } from "../../state/uiStore";
 import type { Card as CardModel, CardStatus } from "./model";
 import styles from "./CardMap.module.css";
 
@@ -69,7 +68,6 @@ function Editor({ initial, onMessage, onClose }: { initial: string; onMessage: (
 export const Card = forwardRef<HTMLLIElement, Props>(function Card(props, ref) {
   const { card, status, position, total, groupSize, canUp, canDown, canJoin, readOnly, active, editing } = props;
   const m = useMessages();
-  const locale = useUiStore((s) => s.locale);
   const [now] = useState(() => Date.now());
   const statusText = status === null ? null : m.cardStatus[status];
   const head = groupSize > 0;
@@ -110,7 +108,7 @@ export const Card = forwardRef<HTMLLIElement, Props>(function Card(props, ref) {
         {statusText && <span className={styles.status}>{statusText}</span>}
       </div>
       <span className={styles.meta}>
-        <bdi>{card.author}</bdi> · {formatDate(card.time, now, locale)}
+        <bdi>{card.author}</bdi> · <Time at={card.time} now={now} />
       </span>
       {editing ? (
         <Editor initial={card.newMessage ?? card.message.trimEnd()} onMessage={props.onMessage} onClose={props.onCloseEdit} />

@@ -1,8 +1,7 @@
 import { api, type PrRowView } from "../../lib/api";
 import { usePrDetail } from "../../lib/queries";
-import { formatDate } from "../../lib/time";
+import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
-import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Term } from "../../ui/Term";
@@ -24,7 +23,6 @@ export function PrRow({
   onSelect: () => void;
 }) {
   const m = useMessages();
-  const locale = useUiStore((s) => s.locale);
   const label = stateLabel(row, m);
   return (
     <li
@@ -42,7 +40,7 @@ export function PrRow({
       <div className={styles.bottom}>
         <bdi className={styles.branches}>{branchLine(row)}</bdi>
         {row.author && <bdi>{row.author}</bdi>}
-        <span>{formatDate(row.updatedAt, now, locale)}</span>
+        <Time at={row.updatedAt} now={now} />
         {row.isCurrentBranch && <span className={styles.current}>{m.pr.currentBranch}</span>}
       </div>
       {selected && <PrDetail repo={repo} number={row.number} />}

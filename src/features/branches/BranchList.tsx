@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ApiError, api, type ActionInput, type BranchListView } from "../../lib/api";
 import { invalidateLog, useBranchNameCheck, useBranches, useHostingContext, useMergeHint } from "../../lib/queries";
-import { formatDate } from "../../lib/time";
+import { formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -315,7 +315,7 @@ function List({
       case "newVersions":
         return m.newVersions(r.count);
       case "author":
-        return `${r.author} · ${formatDate(r.at, now, locale)}`;
+        return `${r.author} · ${formatTime(r.at, now, locale)}`;
     }
   };
   const s = sections(view);

@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { isExtendClick, listKey } from "../../lib/listKeys";
-import { formatDate } from "../../lib/time";
+import { formatTime } from "../../lib/time";
+import { Time } from "../../ui/Time";
 import { useUiScale } from "../../lib/useUiScale";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
@@ -236,7 +237,7 @@ export function RouteList({
     return m.routeRowLabel({
       summary: spoken(node.summary),
       author: spoken(node.author),
-      date: formatDate(node.time, now, locale),
+      date: formatTime(node.time, now, locale),
       branches: node.branches.map(spoken),
       tags: node.tags.map(spoken),
       head: node.isHead,
@@ -308,7 +309,9 @@ export function RouteList({
                     ))}
                   </span>
                   <bdi className={styles.author}>{node.author}</bdi>
-                  <span className={styles.date}>{formatDate(node.time, now, locale)}</span>
+                  <span className={styles.date}>
+                    <Time at={node.time} now={now} />
+                  </span>
                 </>
               )}
             </div>

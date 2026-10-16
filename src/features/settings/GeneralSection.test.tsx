@@ -16,7 +16,13 @@ import { DEFAULT_SETTINGS as DEFAULTS } from "../../lib/display";
 import { queryKeys } from "../../lib/queries";
 import { currentSettings, SAVE_DELAY_MS } from "../../lib/settingsSave";
 import { GeneralSection } from "./GeneralSection";
+import { useDisplaySync } from "../../lib/useDisplaySync";
 import { useFontShortcuts } from "./useFontShortcuts";
+
+function DisplaySync() {
+  useDisplaySync();
+  return null;
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -49,6 +55,22 @@ describe("설정 일반 구역", () => {
     await waitFor(() => expect(screen.getByRole("radio", { name: "아주 크게" })).toHaveAttribute("aria-checked", "true"));
     await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
     expect(setSettings).toHaveBeenCalledWith({ fontSize: "xlarge" });
+  });
+
+  it("언어를 고르면 바로 영어가 되고 저장된다", async () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.settings, { ...DEFAULTS, language: "ko" });
+    render(
+      <AppProviders client={client}>
+        <DisplaySync />
+        <GeneralSection />
+      </AppProviders>,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "English" }));
+    expect(await screen.findByRole("heading", { name: "General" })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("en");
+    await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
+    expect(setSettings).toHaveBeenCalledWith({ language: "en" });
   });
 
   it("용어 설명 보기를 끄면 저장된다", async () => {

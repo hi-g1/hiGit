@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { ConflictFileView, ConflictHunkView, ConflictSide, SideState } from "../../lib/api";
-import { formatDate } from "../../lib/time";
+import { formatTime } from "../../lib/time";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
@@ -24,7 +24,7 @@ function SideHeader({ side, info, name }: { side: Side; info: ConflictSide | nul
       {name ?? <Term id={side} />}
       {info && (
         <span className={styles.meta}>
-          {[info.label, info.author, formatDate(info.at, now, locale), info.summary].filter(Boolean).join(" · ")}
+          {[info.label, info.author, formatTime(info.at, now, locale), info.summary].filter(Boolean).join(" · ")}
         </span>
       )}
     </span>
