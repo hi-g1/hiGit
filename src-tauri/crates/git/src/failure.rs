@@ -67,6 +67,10 @@ pub enum FailureKind {
     UnparkConflict,
     /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).
     ProtocolNotAllowed,
+    /// GitHub가 100MB 넘는 파일이 든 버전의 올리기를 막았다(GH001, D-194). 그 버전에서 빼야 풀린다.
+    FileTooLarge,
+    /// 다른 프로그램이 파일을 쓰고 있어 바꾸지 못했다(D-194). "Permission denied"는 권한 문제라 넣지 않는다.
+    FileInUse,
     Other,
 }
 
@@ -92,6 +96,23 @@ const RULES: &[(FailureKind, &[&str])] = &[
             "transport 'file' not allowed",
             "transport 'http' not allowed",
             "transport 'fd' not allowed",
+        ],
+    ),
+    // 큰 파일 거절은 "[remote rejected]"와 함께 오고, 파일 사용 중은 어느 명령에서나 와서 원격·인증 판정보다 먼저 본다.
+    (
+        FailureKind::FileTooLarge,
+        &[
+            "GH001",
+            "Large files detected",
+            "exceeds GitHub's file size limit",
+        ],
+    ),
+    (
+        FailureKind::FileInUse,
+        &[
+            "Unlink of file",
+            "Device or resource busy",
+            "being used by another process",
         ],
     ),
     (
@@ -342,6 +363,26 @@ mod tests {
             (
                 " ! [remote rejected] main (refusing to delete the current branch: refs/heads/main)\n",
                 FailureKind::RemoteRefused,
+            ),
+            (
+                "remote: error: Trace: 1234\nremote: error: See https://gh.io/lfs for more information.\nremote: error: File big.bin is 120.00 MB; this exceeds GitHub's file size limit of 100.00 MB\nremote: error: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.\n ! [remote rejected] main -> main (pre-receive hook declined)\n",
+                FailureKind::FileTooLarge,
+            ),
+            (
+                "Unlink of file 'src/app.exe' failed. Should I try again? (y/n) ",
+                FailureKind::FileInUse,
+            ),
+            (
+                "error: unable to unlink old 'a.txt': Device or resource busy\n",
+                FailureKind::FileInUse,
+            ),
+            (
+                "error: open(\"a.txt\"): The process cannot access the file because it is being used by another process.\n",
+                FailureKind::FileInUse,
+            ),
+            (
+                "error: unable to unlink old 'a.txt': Permission denied\n",
+                FailureKind::Other,
             ),
             (
                 "remote: error: GH007: Your push would publish a private email address.\nremote: You can make your email public or disable this protection by visiting:\n ! [remote rejected] main -> main (push declined due to email privacy restrictions)\nerror: failed to push some refs to 'https://github.com/o/r.git'\n",

@@ -628,6 +628,8 @@ export const en: Messages = {
     httpForbidden: `You don't have access to the ${t("remote").toLowerCase()}.`,
     remoteNotFound: `Could not find the ${t("remote").toLowerCase()}. Check the address and your access.`,
     githubWorkflowScope: `Versions that change the .github/workflows folder can't use ${t("push")} over the GitHub connection.`,
+    fileTooLarge: "GitHub refused a version with a file over 100MB. Remove the file from that version.",
+    fileInUse: "Another program is using the file. Close it and try again.",
     privateEmailBlocked: "GitHub blocked a version with a private email. Change your email to your GitHub address and save that version again.",
     cloneTargetExists: "A folder with that name already exists. Please use another name.",
     cloneUrlInvalid: "This address can't be cloned. Please use an https or ssh address.",

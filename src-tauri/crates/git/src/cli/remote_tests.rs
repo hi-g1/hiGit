@@ -205,6 +205,33 @@ fn server_hook_refusal_is_remote_refused() {
     assert_eq!(err.kind(), FailureKind::RemoteRefused, "{}", err.detail());
 }
 
+/// GitHub의 큰 파일 거절(GH001) 문구를 hook으로 흉내 내면 `FileTooLarge`다(D-194).
+#[cfg(unix)]
+#[test]
+fn large_file_refusal_is_its_own_kind() {
+    use std::os::unix::fs::PermissionsExt;
+    let s = setup();
+    let hook = s._remote.path().join("hooks").join("pre-receive");
+    std::fs::write(
+        &hook,
+        "#!/bin/sh\necho 'error: GH001: Large files detected. You may want to try Git Large File Storage.' >&2\nexit 1\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    commit(s.mine.path(), "c.txt", "내 것\n");
+    let err = backend()
+        .run(
+            &RepoPath::new(s.mine.path()),
+            &GitOp::Push {
+                target: None,
+                set_upstream: false,
+                auth: AuthMode::UserDefault,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), FailureKind::FileTooLarge, "{}", err.detail());
+}
+
 /// GitHub의 비공개 이메일 거절(GH007) 문구를 hook으로 흉내 내면 `PrivateEmailBlocked`다(D-186).
 #[cfg(unix)]
 #[test]

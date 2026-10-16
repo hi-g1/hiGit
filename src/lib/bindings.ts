@@ -684,6 +684,10 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 "nameConfirmMismatch" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186). */
 "privateEmailBlocked" | 
+/**  GitHub가 100MB 넘는 파일이 든 버전을 막았다(GH001, D-194). */
+"fileTooLarge" | 
+/**  다른 프로그램이 파일을 쓰고 있다(D-194). */
+"fileInUse" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
 "cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */

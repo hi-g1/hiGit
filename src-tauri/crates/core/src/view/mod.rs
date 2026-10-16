@@ -817,6 +817,10 @@ pub enum ErrorCode {
     GithubWorkflowScope,
     /// GitHub가 비공개 이메일이 든 버전을 막았다(GH007, D-186).
     PrivateEmailBlocked,
+    /// GitHub가 100MB 넘는 파일이 든 버전을 막았다(GH001, D-194).
+    FileTooLarge,
+    /// 다른 프로그램이 파일을 쓰고 있다(D-194).
+    FileInUse,
     /// 복제할 폴더가 이미 있고 비어 있지 않다.
     CloneTargetExists,
     CloneUrlInvalid,
@@ -852,6 +856,8 @@ impl From<git::FailureKind> for ErrorCode {
             F::LeaseStale => ErrorCode::RemoteMoved,
             F::RemoteRefused => ErrorCode::RemoteRefused,
             F::PrivateEmailBlocked => ErrorCode::PrivateEmailBlocked,
+            F::FileTooLarge => ErrorCode::FileTooLarge,
+            F::FileInUse => ErrorCode::FileInUse,
             F::RemoteRefExists => ErrorCode::RemoteRefExists,
             F::RemoteRefMissing => ErrorCode::RemoteRefMissing,
             F::NoUpstream => ErrorCode::NoUpstream,
