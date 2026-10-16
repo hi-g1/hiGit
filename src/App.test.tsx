@@ -10,6 +10,7 @@ vi.mock("./lib/api", async (importOriginal) => ({
     openProject: vi.fn(),
     recentProjects: vi.fn(async () => []),
     takeLaunchFolder: vi.fn(async () => null),
+    shellMenuSync: vi.fn(async () => ({ kind: "unsupported", installed: false })),
     listActions: vi.fn(),
     previewAction: vi.fn(),
     executeAction: vi.fn(),

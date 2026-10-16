@@ -7,6 +7,7 @@ import { useCloneStore } from "./features/clone/cloneStore";
 import { useLaunchRequests } from "./features/open-project/useLaunchRequests";
 import { TrustDialog } from "./features/open-project/TrustDialog";
 import { SettingsDialog } from "./features/settings/SettingsDialog";
+import { useShellMenuSync } from "./features/settings/useShellMenuSync";
 import { useFontShortcuts } from "./features/settings/useFontShortcuts";
 import { useOpenFolder } from "./features/open-project/useOpenFolder";
 import { api } from "./lib/api";
@@ -89,6 +90,8 @@ function Screens() {
   const ready = useStartup();
   // 이미 켜진 이 앱에 두 번째 실행이 넘긴 폴더(D-213)
   useLaunchRequests(ready && gitReady);
+  // 폴더 오른쪽 클릭 메뉴: 처음 켤 때 등록, 언어를 바꾸면 이름도(D-214)
+  useShellMenuSync(gitReady);
   if (!ready) return null;
   return (
     <>

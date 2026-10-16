@@ -102,6 +102,10 @@ pub enum CoreError {
     #[error("파일 변경을 감시할 수 없습니다")]
     WatchUnavailable(String),
 
+    /// 폴더 오른쪽 클릭 메뉴를 만들거나 지우지 못했다(D-214). 내용은 io 오류 종류.
+    #[error("오른쪽 클릭 메뉴를 바꾸지 못했습니다")]
+    ShellMenu(String),
+
     /// 화면이 액션과 맞지 않는 입력 변형을 보냈다(화면 버그).
     #[error("액션에 맞지 않는 입력입니다: {0}")]
     InputMismatch(&'static str),
@@ -274,6 +278,7 @@ impl CoreError {
             CoreError::FolderNotFound(e) => Some(e.to_string()),
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
+            CoreError::ShellMenu(detail) => Some(detail.clone()),
             CoreError::ParkBlocked(detail) => Some(detail.clone()),
             CoreError::CarryBlocked(detail) if !detail.is_empty() => Some(detail.clone()),
             CoreError::Github { detail, .. } => detail.clone(),

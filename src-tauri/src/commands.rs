@@ -241,6 +241,38 @@ pub async fn project_trust(
     .await
 }
 
+/// 폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름이고 core가 검사한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_shell_menu_status(
+    state: State<'_, AppState>,
+    label: String,
+) -> CmdResult<higit_core::view::ShellMenuView> {
+    blocking(state, move |core| core.shell_menu_status(&label)).await
+}
+
+/// 앱을 켤 때와 언어를 바꿨을 때. 릴리스 빌드만 아직 정하지 않은 메뉴를 등록한다(개발 빌드는 등록하지 않는다).
+#[tauri::command]
+#[specta::specta]
+pub async fn app_shell_menu_sync(
+    state: State<'_, AppState>,
+    label: String,
+) -> CmdResult<higit_core::view::ShellMenuView> {
+    let auto = !cfg!(debug_assertions);
+    blocking(state, move |core| core.shell_menu_sync(&label, auto)).await
+}
+
+/// 설정에서 오른쪽 클릭 메뉴를 켜고 끈다.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_shell_menu_set(
+    state: State<'_, AppState>,
+    on: bool,
+    label: String,
+) -> CmdResult<higit_core::view::ShellMenuView> {
+    blocking(state, move |core| core.shell_menu_set(on, &label)).await
+}
+
 /// 실행 인자로 받은 열 폴더를 한 번만 준다(D-213). 화면은 그 경로를 `project_open(path, "picked")`으로 연다.
 #[tauri::command]
 #[specta::specta]

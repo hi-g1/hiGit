@@ -62,6 +62,8 @@ pub struct Core {
     settings: Arc<crate::settings::SettingsStore>,
     /// 전역 이름·이메일 쓰기를 한 번에 하나로(D-125).
     identity_lock: Mutex<()>,
+    /// 폴더 오른쪽 클릭 메뉴 등록(D-214). 시험은 가짜를 쓴다.
+    shell_menu: Arc<dyn crate::shell_menu::ShellMenuPort>,
 }
 
 /// 도는 작업 하나.
@@ -333,6 +335,7 @@ impl Core {
             allow_local_clone: false,
             settings: Arc::new(crate::settings::SettingsStore::in_memory()),
             identity_lock: Mutex::new(()),
+            shell_menu: Arc::new(crate::shell_menu::PlatformShellMenu),
         })
     }
 
@@ -381,6 +384,42 @@ impl Core {
         patch: &crate::view::AppSettingsPatch,
     ) -> crate::view::AppSettingsView {
         self.settings.set(patch).into()
+    }
+
+    /// 폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름.
+    pub fn shell_menu_status(&self, label: &str) -> Result<crate::view::ShellMenuView> {
+        crate::shell_menu::check_label(label)?;
+        Ok(crate::shell_menu::view(self.shell_menu.as_ref(), label))
+    }
+
+    /// 앱을 켤 때와 언어를 바꿨을 때. `auto`는 릴리스 빌드(아직 정하지 않았으면 등록한다).
+    pub fn shell_menu_sync(&self, label: &str, auto: bool) -> Result<crate::view::ShellMenuView> {
+        let chosen = self.settings.get().shell_menu;
+        let result = crate::shell_menu::sync(self.shell_menu.as_ref(), chosen, label, auto);
+        self.logger.action("shell-menu", "sync", &result);
+        let next = result?;
+        if next != chosen {
+            self.settings.set_shell_menu(next);
+        }
+        Ok(crate::shell_menu::view(self.shell_menu.as_ref(), label))
+    }
+
+    /// 설정 "폴더 오른쪽 클릭 메뉴"를 켜고 끈다.
+    pub fn shell_menu_set(&self, on: bool, label: &str) -> Result<crate::view::ShellMenuView> {
+        let result = crate::shell_menu::set(self.shell_menu.as_ref(), on, label);
+        self.logger.action("shell-menu", "set", &result);
+        self.settings.set_shell_menu(Some(result?));
+        Ok(crate::shell_menu::view(self.shell_menu.as_ref(), label))
+    }
+
+    /// **테스트 전용.** 오른쪽 클릭 메뉴 등록을 가짜로 바꾼다.
+    #[doc(hidden)]
+    pub fn with_shell_menu_for_tests(
+        mut self,
+        port: Arc<dyn crate::shell_menu::ShellMenuPort>,
+    ) -> Self {
+        self.shell_menu = port;
+        self
     }
 
     /// **테스트 전용.** 앱 데이터 폴더처럼 `dir`의 `settings.json`을 쓴다.

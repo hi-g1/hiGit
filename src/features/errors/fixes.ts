@@ -40,6 +40,7 @@ export const ERROR_FIX: Record<ErrorCode, FixKind> = {
   needsTrust: "none",
   noRemote: "none",
   watchUnavailable: "none",
+  shellMenuFailed: "none",
   publishedHistory: "none",
   rewrotePublished: "none",
   forcePushDisabled: "none",

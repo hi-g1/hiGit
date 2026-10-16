@@ -64,7 +64,7 @@ pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use settings::{
     AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, LanguageSetting,
-    ThemeSetting, TipId, TipsSeenView,
+    ShellMenuKindView, ShellMenuView, ThemeSetting, TipId, TipsSeenView,
 };
 pub use stash::{StashItem, StashListView};
 
@@ -761,6 +761,8 @@ pub enum ErrorCode {
     NeedsTrust,
     NoRemote,
     WatchUnavailable,
+    /// 폴더 오른쪽 클릭 메뉴를 바꾸지 못했다(D-214).
+    ShellMenuFailed,
     PublishedHistory,
     /// 올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129).
     RewrotePublished,
@@ -946,6 +948,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::PinLimit => ErrorCode::PinLimit,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
+            CoreError::ShellMenu(_) => ErrorCode::ShellMenuFailed,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,
             CoreError::RewrotePublished => ErrorCode::RewrotePublished,
             CoreError::ForcePushDisabled => ErrorCode::ForcePushDisabled,

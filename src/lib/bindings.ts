@@ -45,6 +45,12 @@ export const commands = {
 	projectReaskTrust: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_reask_trust", { path }),
 	/**  실행 인자로 받은 열 폴더를 한 번만 준다(D-213). 화면은 그 경로를 `project_open(path, "picked")`으로 연다. */
 	appTakeLaunchFolder: () => __TAURI_INVOKE<string | null>("app_take_launch_folder"),
+	/**  폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름이고 core가 검사한다. */
+	appShellMenuStatus: (label: string) => __TAURI_INVOKE<ShellMenuView>("app_shell_menu_status", { label }),
+	/**  앱을 켤 때와 언어를 바꿨을 때. 릴리스 빌드만 아직 정하지 않은 메뉴를 등록한다(개발 빌드는 등록하지 않는다). */
+	appShellMenuSync: (label: string) => __TAURI_INVOKE<ShellMenuView>("app_shell_menu_sync", { label }),
+	/**  설정에서 오른쪽 클릭 메뉴를 켜고 끈다. */
+	appShellMenuSet: (on: boolean, label: string) => __TAURI_INVOKE<ShellMenuView>("app_shell_menu_set", { on, label }),
 	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
@@ -705,7 +711,9 @@ export type EmailCheckView = {
 	state: EmailCheckState,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "pinLimit" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "pinLimit" | "needsTrust" | "noRemote" | "watchUnavailable" | 
+/**  폴더 오른쪽 클릭 메뉴를 바꾸지 못했다(D-214). */
+"shellMenuFailed" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
 "rewrotePublished" | 
 /**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */
@@ -1621,6 +1629,15 @@ export type SecretRule =
 "archive" | 
 /**  새 실행 파일(.exe, ELF 등) */
 "executable";
+
+/**  폴더 오른쪽 클릭 메뉴 종류(D-214). 화면은 이것으로 설명 문구를 고르고 `unsupported`면 행을 숨긴다. */
+export type ShellMenuKindView = "explorer" | "nautilusScripts" | "unsupported";
+
+/**  오른쪽 클릭 메뉴의 지금 상태. `installed`는 실제 등록을 읽은 것이다. */
+export type ShellMenuView = {
+	kind: ShellMenuKindView,
+	installed: boolean,
+};
 
 /**  한쪽 파일의 모양. */
 export type SideState = { kind: "text" } | { kind: "binary" } | 

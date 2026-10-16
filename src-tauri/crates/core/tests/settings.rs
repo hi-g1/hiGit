@@ -136,3 +136,168 @@ fn a_temporary_undo_key_is_reported() {
     let json = serde_json::to_value(&status).unwrap();
     assert_eq!(json["undoKey"], "temporary");
 }
+
+/// 오른쪽 클릭 메뉴 가짜 등록(D-214). 실제 OS는 건드리지 않는다.
+mod shell_menu {
+    use std::path::{Path, PathBuf};
+    use std::sync::{Arc, Mutex};
+
+    use higit_core::shell_menu::ShellMenuPort;
+    use higit_core::view::{ErrorCode, ErrorView, ShellMenuKindView};
+    use platform::ShellMenuState;
+
+    #[derive(Default)]
+    struct Fake {
+        /// 등록된 (실행 파일, 이름).
+        installed: Mutex<Option<(PathBuf, String)>>,
+        launcher: Mutex<PathBuf>,
+        calls: Mutex<Vec<String>>,
+    }
+
+    impl Fake {
+        fn new() -> Arc<Self> {
+            let fake = Self::default();
+            *fake.launcher.lock().unwrap() = PathBuf::from("/opt/higit/higit");
+            Arc::new(fake)
+        }
+        fn calls(&self) -> Vec<String> {
+            std::mem::take(&mut self.calls.lock().unwrap())
+        }
+    }
+
+    impl ShellMenuPort for Fake {
+        fn kind(&self) -> ShellMenuKindView {
+            ShellMenuKindView::NautilusScripts
+        }
+        fn launcher(&self) -> Option<PathBuf> {
+            Some(self.launcher.lock().unwrap().clone())
+        }
+        fn status(&self, launcher: &Path, label: &str) -> std::io::Result<ShellMenuState> {
+            Ok(match &*self.installed.lock().unwrap() {
+                None => ShellMenuState::NotInstalled,
+                Some((l, n)) if l == launcher && n == label => ShellMenuState::Installed,
+                Some(_) => ShellMenuState::Outdated,
+            })
+        }
+        fn install(&self, launcher: &Path, label: &str) -> std::io::Result<()> {
+            self.calls.lock().unwrap().push(format!("install {label}"));
+            *self.installed.lock().unwrap() = Some((launcher.to_path_buf(), label.to_string()));
+            Ok(())
+        }
+        fn uninstall(&self) -> std::io::Result<()> {
+            self.calls.lock().unwrap().push("uninstall".into());
+            *self.installed.lock().unwrap() = None;
+            Ok(())
+        }
+    }
+
+    fn core(dir: &Path, fake: &Arc<Fake>) -> higit_core::Core {
+        super::core(dir).with_shell_menu_for_tests(fake.clone())
+    }
+
+    #[test]
+    fn first_release_run_installs_and_remembers() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new();
+        // 개발 빌드는 아직 정하지 않았으면 아무것도 하지 않는다.
+        let view = core(dir.path(), &fake)
+            .shell_menu_sync("hiGit으로 열기", false)
+            .unwrap();
+        assert!(!view.installed);
+        assert!(fake.calls().is_empty());
+        // 릴리스 빌드는 처음 켤 때 등록하고 켬으로 남긴다.
+        let view = core(dir.path(), &fake)
+            .shell_menu_sync("hiGit으로 열기", true)
+            .unwrap();
+        assert!(view.installed);
+        assert_eq!(view.kind, ShellMenuKindView::NautilusScripts);
+        assert_eq!(fake.calls(), ["install hiGit으로 열기"]);
+        // 같은 실행 파일·이름이면 다시 등록하지 않는다.
+        core(dir.path(), &fake)
+            .shell_menu_sync("hiGit으로 열기", true)
+            .unwrap();
+        assert!(fake.calls().is_empty());
+    }
+
+    #[test]
+    fn on_reinstalls_when_the_app_or_label_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new();
+        core(dir.path(), &fake)
+            .shell_menu_sync("hiGit으로 열기", true)
+            .unwrap();
+        fake.calls();
+        *fake.launcher.lock().unwrap() = PathBuf::from("/새 곳/higit");
+        // 개발 빌드여도 사람이 켠 메뉴는 고친다.
+        core(dir.path(), &fake)
+            .shell_menu_sync("hiGit으로 열기", false)
+            .unwrap();
+        assert_eq!(fake.calls(), ["install hiGit으로 열기"]);
+        core(dir.path(), &fake)
+            .shell_menu_sync("Open in hiGit", false)
+            .unwrap();
+        assert_eq!(fake.calls(), ["install Open in hiGit"]);
+    }
+
+    #[test]
+    fn turning_off_sticks_across_restarts() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new();
+        let c = core(dir.path(), &fake);
+        assert!(c.shell_menu_set(true, "열기").unwrap().installed);
+        assert!(!c.shell_menu_set(false, "열기").unwrap().installed);
+        assert_eq!(fake.calls(), ["install 열기", "uninstall"]);
+        let view = core(dir.path(), &fake)
+            .shell_menu_sync("열기", true)
+            .unwrap();
+        assert!(!view.installed);
+        assert!(fake.calls().is_empty(), "끈 메뉴는 다시 켜지 않는다");
+        // 화면 설정 칸은 오른쪽 클릭 메뉴 값을 지우지 않는다.
+        core(dir.path(), &fake).set_settings(&higit_core::view::AppSettingsPatch {
+            term_help: Some(false),
+            ..Default::default()
+        });
+        core(dir.path(), &fake)
+            .shell_menu_sync("열기", true)
+            .unwrap();
+        assert!(fake.calls().is_empty());
+    }
+
+    #[test]
+    fn labels_are_checked() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = Fake::new();
+        let c = core(dir.path(), &fake);
+        for bad in ["", "  ", "줄\n바꿈", "a/b", &"가".repeat(22)] {
+            let err = c.shell_menu_sync(bad, true).unwrap_err();
+            assert_eq!(
+                ErrorView::from(&err).code,
+                ErrorCode::InvalidInput,
+                "{bad:?}"
+            );
+            assert!(c.shell_menu_set(true, bad).is_err());
+        }
+        assert!(fake.calls().is_empty());
+        // 64바이트까지는 된다(한글 21자 = 63바이트).
+        c.shell_menu_set(true, &"가".repeat(21)).unwrap();
+    }
+
+    #[test]
+    fn old_settings_file_reads_as_undecided() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("settings.json"),
+            r#"{"v":1,"allow_published_rewrite":false}"#,
+        )
+        .unwrap();
+        let fake = Fake::new();
+        assert!(
+            core(dir.path(), &fake)
+                .shell_menu_sync("열기", true)
+                .unwrap()
+                .installed
+        );
+        let text = std::fs::read_to_string(dir.path().join("settings.json")).unwrap();
+        assert!(text.contains(r#""shell_menu":true"#), "{text}");
+    }
+}

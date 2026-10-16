@@ -11,12 +11,16 @@ import { IdentityForm } from "../identity/IdentityForm";
 import { useShortcutsStore } from "../shortcuts/shortcutsStore";
 import { useSettingsStore } from "./settingsStore";
 import { EmailCheckLine } from "./EmailCheckLine";
+import { ShellMenuRow } from "./ShellMenuRow";
 import styles from "./SettingsDialog.module.css";
 
 const LANGUAGES = ["system", "ko", "en"] as const;
 const THEMES = ["system", "light", "dark"] as const;
 
-/** 설정의 "일반" 구역(D-145, D-160): 이름과 이메일, 글자 크기, 언어, 화면 모드, 용어 설명 보기. 고르면 바로 바뀌고 저장된다. */
+/**
+ * 설정의 "일반" 구역(D-145, D-160): 이름과 이메일, 글자 크기, 언어, 화면 모드, 용어 설명 보기, 폴더 오른쪽 클릭
+ * 메뉴(D-214). 고르면 바로 바뀌고 저장된다.
+ */
 export function GeneralSection() {
   const m = useMessages();
   const client = useQueryClient();
@@ -64,6 +68,7 @@ export function GeneralSection() {
           onChange={(e) => changeSettings(client, { termHelp: e.currentTarget.checked })}
         />
       </label>
+      <ShellMenuRow />
       <div className={styles.field}>
         <label className={styles.fieldName} htmlFor="settings-tips">
           {m.settings.tips}

@@ -17,6 +17,7 @@ export const HISTORY_LIMIT = 200;
 
 export const queryKeys = {
   appStatus: ["appStatus"] as const,
+  shellMenu: (label: string) => ["shellMenu", label] as const,
   actions: ["actions"] as const,
   recent: ["recent"] as const,
   summary: (repo: string) => ["summary", repo] as const,

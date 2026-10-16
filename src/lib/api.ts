@@ -184,6 +184,10 @@ export const api = {
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */
   trustProject: (path: string, choice: TrustChoice) => call(commands.projectTrust(path, choice)),
+  /** 폴더 오른쪽 클릭 메뉴(D-214). `label`은 화면 언어의 항목 이름. */
+  shellMenuStatus: (label: string) => call(commands.appShellMenuStatus(label)),
+  shellMenuSync: (label: string) => call(commands.appShellMenuSync(label)),
+  shellMenuSet: (on: boolean, label: string) => call(commands.appShellMenuSet(on, label)),
   /** 실행 인자로 받은 열 폴더(한 번만 준다, D-213). */
   takeLaunchFolder: () => call(commands.appTakeLaunchFolder()),
   /** 끄고 연 저장소의 신뢰 확인을 다시 띄운다(D-212). */

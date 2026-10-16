@@ -148,3 +148,20 @@ pub struct DisplayHintsView {
     /// OS가 다크 모드인지. 모르면 null(화면은 CSS에 맡긴다).
     pub dark: Option<bool>,
 }
+
+/// 폴더 오른쪽 클릭 메뉴 종류(D-214). 화면은 이것으로 설명 문구를 고르고 `unsupported`면 행을 숨긴다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ShellMenuKindView {
+    Explorer,
+    NautilusScripts,
+    Unsupported,
+}
+
+/// 오른쪽 클릭 메뉴의 지금 상태. `installed`는 실제 등록을 읽은 것이다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellMenuView {
+    pub kind: ShellMenuKindView,
+    pub installed: bool,
+}

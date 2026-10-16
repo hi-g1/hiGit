@@ -44,6 +44,9 @@ pub struct AppSettings {
     /// "처음 하는 일 안내"(D-205)와 이미 닫은 안내 비트(`TipId::bit`).
     pub tips_on: bool,
     pub tips_seen: u8,
+    /// 폴더 오른쪽 클릭 메뉴를 사람이 켜거나 껐는지(D-214). 없으면 아직 정하지 않았다(릴리스 빌드는 처음 켤 때 켠다).
+    /// 실제 등록 상태는 OS에서 읽는다. 화면 설정 칸(`AppSettingsPatch`)으로는 바꾸지 않는다.
+    pub shell_menu: Option<bool>,
 }
 
 /// 알려진 안내 비트. 모르는 비트는 읽을 때 버린다.
@@ -64,6 +67,7 @@ impl Default for AppSettings {
             git_helper: true,
             tips_on: true,
             tips_seen: 0,
+            shell_menu: None,
         }
     }
 }
@@ -108,6 +112,8 @@ struct SettingsFile {
     tips_on: bool,
     #[serde(default, skip_serializing_if = "is_zero")]
     tips_seen: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    shell_menu: Option<bool>,
 }
 
 impl From<AppSettings> for SettingsFile {
@@ -126,6 +132,7 @@ impl From<AppSettings> for SettingsFile {
             git_helper: s.git_helper,
             tips_on: s.tips_on,
             tips_seen: s.tips_seen,
+            shell_menu: s.shell_menu,
         }
     }
 }
@@ -145,6 +152,7 @@ impl From<SettingsFile> for AppSettings {
             git_helper: f.git_helper,
             tips_on: f.tips_on,
             tips_seen: f.tips_seen & TIP_BITS,
+            shell_menu: f.shell_menu,
         }
     }
 }
@@ -198,7 +206,23 @@ impl SettingsStore {
             } else {
                 current.tips_seen | patch.tip_seen.map_or(0, |t| t.bit())
             },
+            shell_menu: current.shell_menu,
         };
+        self.replace(&mut current, next);
+        next
+    }
+
+    /// 오른쪽 클릭 메뉴를 사람이 정한 값(D-214).
+    pub(crate) fn set_shell_menu(&self, on: Option<bool>) {
+        let mut current = self.current.lock().unwrap_or_else(PoisonError::into_inner);
+        let next = AppSettings {
+            shell_menu: on,
+            ..*current
+        };
+        self.replace(&mut current, next);
+    }
+
+    fn replace(&self, current: &mut AppSettings, next: AppSettings) {
         if next != *current {
             *current = next;
             if let Some(path) = &self.path
@@ -207,7 +231,6 @@ impl SettingsStore {
                 let _ = platform::write_private_file(path, &bytes);
             }
         }
-        next
     }
 }
 

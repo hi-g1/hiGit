@@ -34,6 +34,7 @@ mod registry;
 mod rewrote;
 mod secrets;
 pub mod settings;
+pub mod shell_menu;
 mod state;
 pub mod trust;
 pub mod undo;
