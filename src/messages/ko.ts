@@ -116,6 +116,7 @@ export const ko = {
   // 비밀 파일 알림 줄(D-077)
   secretTitle: (n: number) => `키나 비밀번호로 보이는 파일 ${n}개`,
   heavyTitle: (n: number) => `압축·실행 파일 ${n}개`,
+  bigTitle: (n: number) => `큰 파일 ${n}개`,
   secretRule: {
     envFile: "환경 설정 파일",
     sshKey: "SSH 키",
@@ -127,6 +128,7 @@ export const ko = {
     slackToken: "Slack 토큰",
     apiKey: "API 키",
     largeFile: "50MB 넘는 파일",
+    hugeFile: "100MB 넘는 파일 · GitHub가 올리기를 거절해요",
     archive: "압축 파일",
     executable: "실행 파일",
   } satisfies Record<SecretRule, string>,

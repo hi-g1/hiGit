@@ -1512,6 +1512,8 @@ export type SecretRule =
 "privateKey" | "githubToken" | "awsKey" | "slackToken" | "apiKey" | 
 /**  50MB 이상 */
 "largeFile" | 
+/**  100MB 이상(GitHub가 올리기를 거절함, D-194) */
+"hugeFile" | 
 /**  새 압축 파일(.zip 등, 비밀이 아니어도 한 번 알린다, D-158) */
 "archive" | 
 /**  새 실행 파일(.exe, ELF 등) */

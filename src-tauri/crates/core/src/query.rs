@@ -707,6 +707,8 @@ impl Queries {
                 || crate::secrets::content_rule(&head).map(|(rule, line)| (rule, Some(line)));
             let finding = if let Some(rule) = crate::secrets::name_rule(&path) {
                 Some((rule, None))
+            } else if size >= crate::secrets::HUGE_BYTES {
+                Some((SecretRule::HugeFile, None))
             } else if size >= crate::secrets::LARGE_BYTES {
                 Some((SecretRule::LargeFile, None))
             } else if let Some((rule, true)) = kind {

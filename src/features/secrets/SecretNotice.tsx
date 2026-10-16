@@ -10,6 +10,8 @@ const SHOWN = 3;
 
 /** 비밀은 아니지만 같은 알림 줄에 한 번 알리는 규칙(D-158). */
 const HEAVY = new Set(["archive", "executable"]);
+/** 크기로 걸린 파일(50MB·100MB, D-194). 비밀처럼 말하지 않는다. */
+const BIG = new Set(["largeFile", "hugeFile"]);
 
 type Props = {
   findings: SecretFinding[];
@@ -37,8 +39,15 @@ export function SecretNotice({ findings, files, onUnstage, onIgnore, onSaveAnywa
     return change === "untracked" || change === "added";
   });
   const heavy = findings.filter((f) => HEAVY.has(f.rule)).length;
-  const secret = findings.length - heavy;
-  const title = [secret > 0 ? m.secretTitle(secret) : null, heavy > 0 ? m.heavyTitle(heavy) : null].filter(Boolean).join(" · ");
+  const big = findings.filter((f) => BIG.has(f.rule)).length;
+  const secret = findings.length - heavy - big;
+  const title = [
+    secret > 0 ? m.secretTitle(secret) : null,
+    big > 0 ? m.bigTitle(big) : null,
+    heavy > 0 ? m.heavyTitle(heavy) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div className={styles.notice} role="status">
       <p className={styles.title}>{title}</p>

@@ -833,6 +833,42 @@ mod secrets {
         core
     }
 
+    /// 50MB 넘는 파일은 큰 파일, 100MB 넘으면 GitHub가 거절하는 파일로 미리 알린다(D-194). 희소 파일이라 디스크를 쓰지 않는다.
+    #[cfg(unix)]
+    #[test]
+    fn large_and_huge_files_are_told_apart() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path();
+        git(dir, &["init", "-q", "-b", "main"]);
+        let mb = 1024 * 1024;
+        std::fs::File::create(dir.join("큰.bin"))
+            .unwrap()
+            .set_len(60 * mb)
+            .unwrap();
+        std::fs::File::create(dir.join("아주 큰.bin"))
+            .unwrap()
+            .set_len(120 * mb)
+            .unwrap();
+        let core = opened(dir);
+        let view = core
+            .queries()
+            .secret_check(dir, &SecretCheckRequest { stage_all: true })
+            .unwrap();
+        let mut found: Vec<(String, SecretRule)> = view
+            .findings
+            .iter()
+            .map(|f| (f.path.clone(), f.rule))
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            found,
+            vec![
+                ("아주 큰.bin".to_string(), SecretRule::HugeFile),
+                ("큰.bin".to_string(), SecretRule::LargeFile),
+            ]
+        );
+    }
+
     #[test]
     fn finds_names_tokens_and_keys_without_the_secret_text() {
         let repo = tempfile::tempdir().unwrap();

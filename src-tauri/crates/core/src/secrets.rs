@@ -6,6 +6,8 @@ use crate::view::SecretRule;
 
 /// 이 크기 이상이면 GitHub 한도(100MB)에 닿기 전에 알린다.
 pub(crate) const LARGE_BYTES: u64 = 50 * 1024 * 1024;
+/// 이만큼 넘으면 GitHub가 올리기를 거절한다(GH001, D-194). 저장 전에 미리 말한다.
+pub(crate) const HUGE_BYTES: u64 = 100 * 1024 * 1024;
 /// 파일마다 앞에서부터 이만큼만 내용을 본다.
 pub(crate) const SCAN_BYTES: usize = 256 * 1024;
 
