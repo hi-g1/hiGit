@@ -34,7 +34,7 @@ pub enum ThemeSetting {
     Dark,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsView {
     /// "올린 버전도 바꾸기". 켜면 덮어쓰며 올리기도 보인다.
@@ -46,10 +46,14 @@ pub struct AppSettingsView {
     pub term_help: bool,
     /// 비교 칸 "줄 바꿈"(D-144).
     pub diff_wrap: bool,
+    /// 칸 나눔선으로 정한 왼쪽 칸 폭(rem, D-164). null이면 화면의 기본 폭.
+    pub workspace_pane: Option<f32>,
+    pub conflict_pane: Option<f32>,
+    pub files_pane: Option<f32>,
 }
 
-/// 바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형과 참·거짓뿐이다.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+/// 바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형·참거짓·칸 폭 숫자뿐이다.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsPatch {
     #[serde(default)]
@@ -64,6 +68,13 @@ pub struct AppSettingsPatch {
     pub term_help: Option<bool>,
     #[serde(default)]
     pub diff_wrap: Option<bool>,
+    /// rem. 10~80 밖이면 무시한다.
+    #[serde(default)]
+    pub workspace_pane: Option<f32>,
+    #[serde(default)]
+    pub conflict_pane: Option<f32>,
+    #[serde(default)]
+    pub files_pane: Option<f32>,
 }
 
 /// 화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다.

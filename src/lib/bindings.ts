@@ -190,7 +190,7 @@ export type AmendInput = {
 	message: string | null,
 };
 
-/**  바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형과 참·거짓뿐이다. */
+/**  바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형·참거짓·칸 폭 숫자뿐이다. */
 export type AppSettingsPatch = {
 	allowPublishedRewrite?: boolean | null,
 	language?: LanguageSetting | null,
@@ -198,6 +198,10 @@ export type AppSettingsPatch = {
 	theme?: ThemeSetting | null,
 	termHelp?: boolean | null,
 	diffWrap?: boolean | null,
+	/**  rem. 10~80 밖이면 무시한다. */
+	workspacePane?: number | null,
+	conflictPane?: number | null,
+	filesPane?: number | null,
 };
 
 export type AppSettingsView = {
@@ -210,6 +214,10 @@ export type AppSettingsView = {
 	termHelp: boolean,
 	/**  비교 칸 "줄 바꿈"(D-144). */
 	diffWrap: boolean,
+	/**  칸 나눔선으로 정한 왼쪽 칸 폭(rem, D-164). null이면 화면의 기본 폭. */
+	workspacePane: number | null,
+	conflictPane: number | null,
+	filesPane: number | null,
 };
 
 /**  앱 시작 시 확인한 환경. */

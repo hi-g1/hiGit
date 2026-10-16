@@ -13,6 +13,9 @@ export const DEFAULT_SETTINGS: AppSettingsView = {
   theme: "system",
   termHelp: true,
   diffWrap: true,
+  workspacePane: null,
+  conflictPane: null,
+  filesPane: null,
 };
 
 /**

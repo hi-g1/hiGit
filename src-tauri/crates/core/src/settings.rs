@@ -2,7 +2,7 @@
 //!
 //! 읽기는 링크가 아니고 4KB 이하·알 수 없는 칸 없음·`v == 1`일 때만, 아니면 기본값. 쓰기는
 //! 임시 파일 뒤 바꿔 넣기(`platform::write_private_file`). 쓰지 못하면 이번 실행 동안만 메모리.
-//! 화면 설정 칸(언어·글자 크기·화면 모드·용어 설명·줄 바꿈)은 없으면 기본값으로 읽어 옛 파일도 읽힌다.
+//! 화면 설정 칸(언어·글자 크기·화면 모드·용어 설명·줄 바꿈·칸 폭)은 없으면 기본값으로 읽어 옛 파일도 읽힌다.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
@@ -18,8 +18,15 @@ const FILE: &str = "settings.json";
 const MAX_BYTES: u64 = 4096;
 const VERSION: u32 = 1;
 
+/// 칸 폭(rem)으로 받는 범위. 밖이면 기본 폭(`None`)으로 본다.
+const PANE_REM: std::ops::RangeInclusive<f32> = 10.0..=80.0;
+
+fn pane(rem: Option<f32>) -> Option<f32> {
+    rem.filter(|r| r.is_finite() && PANE_REM.contains(r))
+}
+
 /// 실행마다 `ExecCtx`에 주는 설정 복사본. 실행기는 `allow_published_rewrite`만 읽는다.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AppSettings {
     /// "올린 버전도 바꾸기"(D-127). 켜면 올린 버전의 기록도 고치고 덮어쓰며 올릴 수 있다.
     pub allow_published_rewrite: bool,
@@ -28,6 +35,10 @@ pub struct AppSettings {
     pub theme: ThemeSetting,
     pub term_help: bool,
     pub diff_wrap: bool,
+    /// 칸 나눔선으로 정한 왼쪽 칸 폭(rem, D-164). 없으면 화면의 기본 폭.
+    pub workspace_pane: Option<f32>,
+    pub conflict_pane: Option<f32>,
+    pub files_pane: Option<f32>,
 }
 
 impl Default for AppSettings {
@@ -39,6 +50,9 @@ impl Default for AppSettings {
             theme: ThemeSetting::default(),
             term_help: true,
             diff_wrap: true,
+            workspace_pane: None,
+            conflict_pane: None,
+            files_pane: None,
         }
     }
 }
@@ -62,6 +76,12 @@ struct SettingsFile {
     term_help: bool,
     #[serde(default = "yes")]
     diff_wrap: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    workspace_pane: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    conflict_pane: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    files_pane: Option<f32>,
 }
 
 impl From<AppSettings> for SettingsFile {
@@ -74,6 +94,9 @@ impl From<AppSettings> for SettingsFile {
             theme: s.theme,
             term_help: s.term_help,
             diff_wrap: s.diff_wrap,
+            workspace_pane: s.workspace_pane,
+            conflict_pane: s.conflict_pane,
+            files_pane: s.files_pane,
         }
     }
 }
@@ -87,6 +110,9 @@ impl From<SettingsFile> for AppSettings {
             theme: f.theme,
             term_help: f.term_help,
             diff_wrap: f.diff_wrap,
+            workspace_pane: pane(f.workspace_pane),
+            conflict_pane: pane(f.conflict_pane),
+            files_pane: pane(f.files_pane),
         }
     }
 }
@@ -129,6 +155,10 @@ impl SettingsStore {
             theme: patch.theme.unwrap_or(current.theme),
             term_help: patch.term_help.unwrap_or(current.term_help),
             diff_wrap: patch.diff_wrap.unwrap_or(current.diff_wrap),
+            // 범위 밖 값은 무시하고 지금 값을 둔다.
+            workspace_pane: pane(patch.workspace_pane).or(current.workspace_pane),
+            conflict_pane: pane(patch.conflict_pane).or(current.conflict_pane),
+            files_pane: pane(patch.files_pane).or(current.files_pane),
         };
         if next != *current {
             *current = next;
@@ -161,6 +191,9 @@ impl From<AppSettings> for AppSettingsView {
             theme: s.theme,
             term_help: s.term_help,
             diff_wrap: s.diff_wrap,
+            workspace_pane: s.workspace_pane,
+            conflict_pane: s.conflict_pane,
+            files_pane: s.files_pane,
         }
     }
 }
@@ -250,6 +283,39 @@ mod tests {
             text.contains(r#""language":"en","font_size":"small","theme":"dark""#),
             "{text}"
         );
+    }
+
+    #[test]
+    fn pane_widths_persist_per_screen_and_ignore_odd_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::open(dir.path());
+        store.set(&AppSettingsPatch {
+            workspace_pane: Some(24.5),
+            conflict_pane: Some(18.0),
+            ..AppSettingsPatch::default()
+        });
+        let got = SettingsStore::open(dir.path()).get();
+        assert_eq!(got.workspace_pane, Some(24.5));
+        assert_eq!(got.conflict_pane, Some(18.0));
+        assert_eq!(got.files_pane, None);
+        // 범위 밖·숫자 아님은 무시하고 지금 값을 둔다.
+        for odd in [f32::NAN, f32::INFINITY, 2.0, 500.0] {
+            let next = store.set(&AppSettingsPatch {
+                workspace_pane: Some(odd),
+                ..AppSettingsPatch::default()
+            });
+            assert_eq!(next.workspace_pane, Some(24.5), "{odd}");
+        }
+        // 파일에 범위 밖 값이 있으면 그 칸만 기본 폭.
+        std::fs::write(
+            dir.path().join(FILE),
+            r#"{"v":1,"allow_published_rewrite":true,"workspace_pane":3.0,"files_pane":20.0}"#,
+        )
+        .unwrap();
+        let got = SettingsStore::open(dir.path()).get();
+        assert!(got.allow_published_rewrite);
+        assert_eq!(got.workspace_pane, None);
+        assert_eq!(got.files_pane, Some(20.0));
     }
 
     #[test]
