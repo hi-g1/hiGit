@@ -6,11 +6,11 @@ use std::sync::Arc;
 
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
-    CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode, ErrorView,
-    FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow, PendingWorkView,
-    PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView,
-    RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice,
-    UndoResult,
+    CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode,
+    ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow,
+    PendingWorkView, PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject,
+    RecoveryView, RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView,
+    TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -210,6 +210,20 @@ pub async fn query_route_preview(
 ) -> CmdResult<HomeMapView> {
     blocking(state, move |core| {
         core.queries().route_preview(&PathBuf::from(repo), limit)
+    })
+    .await
+}
+
+/// 버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_commit_detail(
+    state: State<'_, AppState>,
+    repo: String,
+    oid: String,
+) -> CmdResult<CommitDetailView> {
+    blocking(state, move |core| {
+        core.queries().commit_detail(&PathBuf::from(repo), &oid)
     })
     .await
 }

@@ -12,7 +12,9 @@ export const queryKeys = {
   summary: (repo: string) => ["summary", repo] as const,
   status: (repo: string) => ["status", repo] as const,
   log: (repo: string) => ["log", repo] as const,
-  diff: (repo: string, path: string, untracked: boolean) => ["diff", repo, path, untracked] as const,
+  diff: (repo: string, path: string, untracked: boolean, commit: string) =>
+    ["diff", repo, path, untracked, commit] as const,
+  commitDetail: (repo: string, oid: string) => ["commitDetail", repo, oid] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -150,9 +152,22 @@ export function invalidateLog(client: QueryClient, repo: string): void {
 }
 
 export function useDiff(repo: string, request: DiffRequest) {
+  const commit = request.commit ?? "";
   return useQuery<Awaited<ReturnType<typeof api.diff>>, ApiError>({
-    queryKey: queryKeys.diff(repo, request.path, request.untracked),
+    queryKey: queryKeys.diff(repo, request.path, request.untracked, commit),
     queryFn: () => api.diff(repo, request),
+    // 버전 안의 비교는 바뀌지 않는다.
+    staleTime: commit ? Infinity : 0,
+  });
+}
+
+/** 버전 상세(D-105). 버전은 바뀌지 않으므로 다시 받지 않는다. */
+export function useCommitDetail(repo: string, oid: string | null) {
+  return useQuery<Awaited<ReturnType<typeof api.commitDetail>>, ApiError>({
+    queryKey: queryKeys.commitDetail(repo, oid ?? ""),
+    queryFn: () => api.commitDetail(repo, oid ?? ""),
+    enabled: oid !== null,
+    staleTime: Infinity,
   });
 }
 

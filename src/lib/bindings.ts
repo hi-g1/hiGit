@@ -35,6 +35,8 @@ export const commands = {
 	queryRoutePreview: (repo: string, limit: number) => __TAURI_INVOKE<HomeMapView>("query_route_preview", { repo, limit }),
 	/**  기록 정리 카드 지도의 처음 모습(D-106). 고른 버전 50개까지. */
 	queryRewritePlan: (repo: string, oids: string[]) => __TAURI_INVOKE<RewritePlanView>("query_rewrite_plan", { repo, oids }),
+	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
+	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
 	queryBranches: (repo: string) => __TAURI_INVOKE<BranchListView>("query_branches", { repo }),
 	queryBranchName: (repo: string, name: string) => __TAURI_INVOKE<BranchNameCheck>("query_branch_name", { repo, name }),
@@ -236,6 +238,29 @@ export type ChangedFile = {
 	staged: boolean,
 };
 
+/**  버전 상세(이때 파일 보기, 마지막 버전 고치기의 처음 값, D-105). */
+export type CommitDetailView = {
+	oid: string,
+	shortOid: string,
+	/**  전체 메시지(64KB까지). */
+	message: string,
+	author: string,
+	/**  작성 시각(unix 초). */
+	time: number,
+	parents: string[],
+	/**  첫 부모와 비교해 바뀐 파일(500개까지). */
+	files: CommitFileView[],
+	/**  500개를 넘어 보내지 않은 파일 수. */
+	moreFiles: number,
+};
+
+/**  버전 하나에서 바뀐 파일. */
+export type CommitFileView = {
+	path: string,
+	origPath: string | null,
+	change: ChangeKind,
+};
+
 export type CommitInput = {
 	message: string,
 	/**  넣은 파일이 없으면 고친 파일을 모두 넣고 저장한다(D-062). */
@@ -361,6 +386,8 @@ export type DiffRequest = {
 	origPath: string | null,
 	/**  아직 추적하지 않는 새 파일이면 true. */
 	untracked: boolean,
+	/**  이 버전에서 바뀐 것(첫 부모와 비교)을 본다(D-105). 없으면 작업 폴더의 변경. */
+	commit?: string | null,
 };
 
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 

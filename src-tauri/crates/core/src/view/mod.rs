@@ -21,7 +21,9 @@ pub use conflict::{
     ConflictSide, ConflictStateView, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
-pub use history::{RewriteBlocked, RewriteCardView, RewritePlanView};
+pub use history::{
+    CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
+};
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CommitInput,
     ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice, MergeInput,

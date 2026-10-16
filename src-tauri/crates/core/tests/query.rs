@@ -417,6 +417,7 @@ fn diff_lines_get_line_numbers() {
                 path: "a.txt".into(),
                 orig_path: None,
                 untracked: false,
+                commit: None,
             },
         )
         .unwrap();
@@ -494,6 +495,7 @@ fn diff_rejects_paths_outside_repo() {
                     path: path.into(),
                     orig_path: orig.map(str::to_string),
                     untracked: true,
+                    commit: None,
                 },
             )
             .unwrap_err();
@@ -534,6 +536,7 @@ fn diff_shows_outside_link_target_without_reading_it() {
                     path: "링크.txt".into(),
                     orig_path: None,
                     untracked,
+                    commit: None,
                 },
             )
             .unwrap();
@@ -569,6 +572,7 @@ fn diff_rejects_files_under_outside_folder_link() {
                 path: path.into(),
                 orig_path: None,
                 untracked: true,
+                commit: None,
             },
         );
         match (path, result) {
@@ -595,6 +599,7 @@ fn diff_rejects_absolute_and_drive_paths() {
                     path: path.into(),
                     orig_path: None,
                     untracked: true,
+                    commit: None,
                 },
             )
             .unwrap_err();
@@ -628,6 +633,7 @@ fn diff_allows_symlink_inside_repo() {
         path: "링크.txt".into(),
         orig_path: None,
         untracked: true,
+        commit: None,
     };
     let view = core.queries().diff(&repo, &request).unwrap();
     assert!(view.link.is_some(), "안쪽 링크도 대상만 보여준다");
@@ -664,6 +670,7 @@ fn unopened_paths_are_rejected() {
         path: "a.txt".into(),
         orig_path: None,
         untracked: false,
+        commit: None,
     };
     not_opened(q.diff(dir.path(), &request).map(drop));
     not_opened(q.branches(dir.path()).map(drop));

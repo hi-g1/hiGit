@@ -1,4 +1,4 @@
-//! 버전 기록 화면의 기록 정리 조회(D-100, D-106).
+//! 버전 기록 화면의 조회: 기록 정리 계획(D-100, D-106), 버전 상세(D-105).
 
 use serde::Serialize;
 use specta::Type;
@@ -48,4 +48,51 @@ pub struct RewritePlanView {
     pub blocked: Option<RewriteBlocked>,
     /// 정리하면 옛 버전을 가리키게 될 다른 브랜치·태그 수(막지는 않는다).
     pub stale_labels: u32,
+}
+
+/// 버전 하나에서 바뀐 파일.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitFileView {
+    pub path: String,
+    pub orig_path: Option<String>,
+    pub change: super::ChangeKind,
+}
+
+/// 버전 상세(이때 파일 보기, 마지막 버전 고치기의 처음 값, D-105).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitDetailView {
+    pub oid: String,
+    pub short_oid: String,
+    /// 전체 메시지(64KB까지).
+    pub message: String,
+    pub author: String,
+    /// 작성 시각(unix 초).
+    #[specta(type = u32)]
+    pub time: i64,
+    pub parents: Vec<String>,
+    /// 첫 부모와 비교해 바뀐 파일(500개까지).
+    pub files: Vec<CommitFileView>,
+    /// 500개를 넘어 보내지 않은 파일 수.
+    pub more_files: u32,
+}
+
+impl From<git::CommitFile> for CommitFileView {
+    fn from(f: git::CommitFile) -> Self {
+        use git::Change as C;
+        Self {
+            path: f.path,
+            orig_path: f.orig_path,
+            change: match f.change {
+                C::Added | C::Copied => super::ChangeKind::Added,
+                C::Deleted => super::ChangeKind::Deleted,
+                C::Renamed => super::ChangeKind::Renamed,
+                C::TypeChanged => super::ChangeKind::TypeChanged,
+                C::Unmerged => super::ChangeKind::Conflicted,
+                C::Untracked => super::ChangeKind::Untracked,
+                C::Modified | C::Unmodified => super::ChangeKind::Modified,
+            },
+        }
+    }
 }

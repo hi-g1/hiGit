@@ -26,6 +26,7 @@
     "allow-query-log-stats",
     "allow-query-route-preview",
     "allow-query-rewrite-plan",
+    "allow-query-commit-detail",
     "allow-query-diff",
     "allow-query-branches",
     "allow-query-branch-name",

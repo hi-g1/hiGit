@@ -11,6 +11,9 @@ pub struct DiffRequest {
     pub orig_path: Option<String>,
     /// 아직 추적하지 않는 새 파일이면 true.
     pub untracked: bool,
+    /// 이 버전에서 바뀐 것(첫 부모와 비교)을 본다(D-105). 없으면 작업 폴더의 변경.
+    #[serde(default)]
+    pub commit: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -67,6 +70,7 @@ impl From<&DiffRequest> for git::DiffTarget {
         git::DiffTarget {
             path: r.path.clone(),
             orig_path: r.orig_path.clone(),
+            // 버전 안의 비교(`commit`)는 해시를 다시 확인하는 `Queries::diff`가 따로 만든다.
             kind: if r.untracked {
                 git::DiffKind::Untracked
             } else {

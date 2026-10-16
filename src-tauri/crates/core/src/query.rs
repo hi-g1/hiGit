@@ -316,6 +316,21 @@ impl Queries {
         for path in std::iter::once(&request.path).chain(request.orig_path.as_ref()) {
             paths::validate_one(path)?;
         }
+        // 버전 안의 비교는 object database의 블롭만 읽는다(작업 폴더와 무관, D-105).
+        if let Some(commit) = &request.commit {
+            let oid = crate::guard::verified_commit(
+                self.git.as_ref(),
+                &root,
+                commit,
+                crate::guard::Scope::BranchOrActivity,
+            )?;
+            let target = git::DiffTarget {
+                path: request.path.clone(),
+                orig_path: request.orig_path.clone(),
+                kind: git::DiffKind::Commit { oid },
+            };
+            return Ok(self.git.diff(&root, &target)?.into());
+        }
         // 링크는 안·밖 어디를 가리키든 따라가 읽지 않고 대상만 보여준다(D-052).
         // 링크 자신이 밖을 가리키는 폴더 링크 아래에 있으면 막는다.
         if let Some(target) = link_target(root.as_path(), &request.path) {
@@ -821,6 +836,58 @@ impl Queries {
                 removed: s.removed,
             })
             .collect())
+    }
+
+    /// 버전 상세(D-105): 전체 메시지(64KB까지), 작성자·시각·부모, 첫 부모와 비교해 바뀐 파일
+    /// (500개까지). 해시는 브랜치에서 닿거나 작업 내역에 있는 버전만 받는다. 읽기만 한다.
+    pub fn commit_detail(&self, repo: &Path, oid: &str) -> Result<crate::view::CommitDetailView> {
+        const MAX_MESSAGE: usize = 64 * 1024;
+        let root = self.opened_repo(repo)?;
+        let oid = crate::guard::verified_commit(
+            self.git.as_ref(),
+            &root,
+            oid,
+            crate::guard::Scope::BranchOrActivity,
+        )?;
+        let commit = self
+            .git
+            .log(
+                &root,
+                &git::LogQuery {
+                    skip: 0,
+                    limit: 1,
+                    rev: Some(oid.to_string()),
+                },
+            )?
+            .into_iter()
+            .next()
+            .ok_or(CoreError::InvalidInput("없는 버전이에요"))?;
+        let mut message = self
+            .git
+            .commit_messages(&root, std::slice::from_ref(&oid))?
+            .into_iter()
+            .next()
+            .map(|m| m.message)
+            .unwrap_or_else(|| commit.summary.clone());
+        if message.len() > MAX_MESSAGE {
+            let mut cut = MAX_MESSAGE;
+            while !message.is_char_boundary(cut) {
+                cut -= 1;
+            }
+            message.truncate(cut);
+        }
+        let files = self.git.commit_files(&root, &oid)?;
+        let shown = u32::try_from(files.files.len()).unwrap_or(u32::MAX);
+        Ok(crate::view::CommitDetailView {
+            oid: commit.oid,
+            short_oid: commit.short_oid,
+            message,
+            author: commit.author_name,
+            time: commit.author_time,
+            parents: commit.parents,
+            more_files: files.total.saturating_sub(shown),
+            files: files.files.into_iter().map(Into::into).collect(),
+        })
     }
 
     /// 기록 정리 카드 지도의 처음 모습(D-100, D-106). 고른 버전이 정리할 수 있는 구간이 아니면
