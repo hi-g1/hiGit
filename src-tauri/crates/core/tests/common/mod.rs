@@ -48,6 +48,10 @@ pub struct FakeGit {
     pub unpublished: Mutex<Option<u32>>,
     /// `set_helper_program`으로 받은 경로.
     pub helper: Mutex<Option<std::path::PathBuf>>,
+    /// 원격별 올리기 주소(`pushurl` 흉내). 없으면 받기 주소와 같다.
+    pub push_urls: Mutex<Vec<(String, Vec<String>)>>,
+    /// 있으면 다음 `run` 하나가 이 오류로 실패한다.
+    pub run_error: Mutex<Option<git::GitError>>,
 }
 
 impl FakeGit {
@@ -79,6 +83,8 @@ impl FakeGit {
             tags: Mutex::new(Vec::new()),
             unpublished: Mutex::new(Some(0)),
             helper: Mutex::new(None),
+            push_urls: Mutex::new(Vec::new()),
+            run_error: Mutex::new(None),
         }
     }
 
@@ -229,10 +235,15 @@ impl GitBackend for FakeGit {
             .filter(|r| r.name == remote)
             .map(|r| r.url.clone())
             .collect();
-        Ok(git::RemoteUrls {
-            fetch: urls.clone(),
-            push: urls,
-        })
+        let push = self
+            .push_urls
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(name, _)| name == remote)
+            .map(|(_, urls)| urls.clone())
+            .unwrap_or_else(|| urls.clone());
+        Ok(git::RemoteUrls { fetch: urls, push })
     }
 
     fn list_refs(&self, _repo: &RepoPath, prefix: &str) -> git::Result<Vec<RefEntry>> {
@@ -446,6 +457,9 @@ impl GitBackend for FakeGit {
         self.entered.store(true, Ordering::SeqCst);
         while self.hold.load(Ordering::SeqCst) {
             std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        if let Some(err) = self.run_error.lock().unwrap().take() {
+            return Err(err);
         }
         match op {
             GitOp::Init => *self.repo.lock().unwrap() = Some(repo.clone()),

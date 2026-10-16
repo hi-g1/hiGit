@@ -3,7 +3,7 @@
 //! 동기화 = 원격 확인 → (받을 것이 있으면) 합치기 → (보낼 것이 있으면) 올리기. 합칠 때 겹치면
 //! 합치기를 시작하지 않는다(충돌 해결은 반복 2). 겹침은 작업 폴더를 건드리지 않고 미리 본다.
 
-use git::{AuthMode, GitBackend, GitOp, LogQuery, RepoPath};
+use git::{AuthMode, GitBackend, GitOp, LogQuery, OpOutput, RepoPath};
 
 use super::{names, needs_repo, repo_of};
 use crate::undo::backup;
@@ -84,22 +84,21 @@ impl Action for RemoteAction {
     fn execute(&self, ctx: &ExecCtx<'_>, input: &ActionInput) -> Result<Outcome> {
         let git = ctx.git;
         let repo = repo_of(ctx)?;
+        let net = |background| Net {
+            git,
+            repo,
+            github: ctx.github,
+            background,
+        };
         match (self.meta.id, input) {
             ("fetch", ActionInput::Fetch(i)) => {
                 let remote = pick_remote(git, repo)?;
-                git.run(
-                    repo,
-                    &GitOp::Fetch {
-                        remote: Some(remote),
-                        background: i.background,
-                        auth: AuthMode::UserDefault,
-                    },
-                )?;
+                net(i.background).fetch(&remote)?;
                 Ok(Outcome::Fetched)
             }
             ("pull", ActionInput::Pull) => {
                 let up = upstream(git, repo)?.ok_or(CoreError::Git(no_upstream()))?;
-                fetch_remote(git, repo, &up.remote)?;
+                net(false).fetch(&up.remote)?;
                 let (_, behind) = git.count_between(repo, "HEAD", &up.rev())?;
                 if behind > 0 {
                     git.run(repo, &GitOp::MergeFf { rev: up.rev() })?;
@@ -110,13 +109,13 @@ impl Action for RemoteAction {
                 }))
             }
             ("push", ActionInput::Push) => {
-                let sent = push(git, repo)?;
+                let sent = push(&net(false))?;
                 Ok(Outcome::Synced(SyncReport {
                     sent,
                     ..SyncReport::default()
                 }))
             }
-            ("sync", ActionInput::Sync(i)) => sync(git, repo, i).map(Outcome::Synced),
+            ("sync", ActionInput::Sync(i)) => sync(&net(false), i).map(Outcome::Synced),
             _ => Err(CoreError::InputMismatch(self.meta.id)),
         }
     }
@@ -191,16 +190,71 @@ fn pick_remote(git: &dyn GitBackend, repo: &RepoPath) -> Result<String> {
     Ok(name)
 }
 
-fn fetch_remote(git: &dyn GitBackend, repo: &RepoPath, remote: &str) -> Result<()> {
-    git.run(
-        repo,
-        &GitOp::Fetch {
-            remote: Some(remote.to_string()),
-            background: false,
-            auth: AuthMode::UserDefault,
-        },
-    )?;
-    Ok(())
+/// 원격 호출 하나에 필요한 것. 인증 방식은 호출마다 core가 정한다(D-111).
+struct Net<'a> {
+    git: &'a dyn GitBackend,
+    repo: &'a RepoPath,
+    github: &'a crate::github::GitHubService,
+    /// 저절로 하는 원격 확인.
+    background: bool,
+}
+
+impl Net<'_> {
+    fn fetch(&self, remote: &str) -> Result<()> {
+        let auth = self
+            .github
+            .auth_for(self.git, self.repo, remote, self.background);
+        self.run(
+            auth,
+            &GitOp::Fetch {
+                remote: Some(remote.to_string()),
+                background: self.background,
+                auth,
+            },
+        )?;
+        Ok(())
+    }
+
+    fn push(&self, (remote, branch): (String, String), set_upstream: bool) -> Result<OpOutput> {
+        let auth = self.github.auth_for(self.git, self.repo, &remote, false);
+        self.run(
+            auth,
+            &GitOp::Push {
+                target: Some((remote, branch)),
+                set_upstream,
+                auth,
+            },
+        )
+    }
+
+    /// hiGit helper로 인증한 호출이 인증·권한 문제로 실패하면 토큰을 한 번 확인한다. 401이면
+    /// 연결을 지우고 "연결이 끊겼어요"로 바꾸고, 그 밖(네트워크 등)이면 원래 오류 그대로.
+    fn run(&self, auth: AuthMode, op: &GitOp) -> Result<OpOutput> {
+        match self.git.run(self.repo, op) {
+            Err(e)
+                if auth == AuthMode::Helper
+                    && !self.background
+                    && matches!(
+                        e.kind(),
+                        git::FailureKind::HttpAuthFailed | git::FailureKind::HttpForbidden
+                    ) =>
+            {
+                match self
+                    .github
+                    .call(|provider, token| provider.current_user(token))
+                {
+                    Err(
+                        expired @ CoreError::Github {
+                            kind: crate::GithubFailure::Expired,
+                            ..
+                        },
+                    ) => Err(expired),
+                    _ => Err(e.into()),
+                }
+            }
+            result => result.map_err(Into::into),
+        }
+    }
 }
 
 fn no_upstream() -> git::GitError {
@@ -211,7 +265,8 @@ fn no_upstream() -> git::GitError {
 }
 
 /// 올린다. upstream이 없으면 원격을 골라 같은 이름으로 올리고 연결한다. 올린 버전 수.
-fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
+fn push(net: &Net<'_>) -> Result<u32> {
+    let (git, repo) = (net.git, net.repo);
     let branch = git.current_branch(repo)?.ok_or(CoreError::InvalidInput(
         "특정 버전을 보는 중에는 올릴 수 없어요",
     ))?;
@@ -219,14 +274,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
         Some(up) => {
             let (ahead, _) = git.count_between(repo, "HEAD", &up.rev())?;
             if ahead > 0 {
-                git.run(
-                    repo,
-                    &GitOp::Push {
-                        target: Some(up.push_target(git)?),
-                        set_upstream: false,
-                        auth: AuthMode::UserDefault,
-                    },
-                )?;
+                net.push(up.push_target(git)?, false)?;
             }
             Ok(ahead)
         }
@@ -235,14 +283,7 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
             if !git.check_branch_name(&branch)? {
                 return Err(CoreError::InvalidInput("올릴 수 없는 브랜치 이름이에요"));
             }
-            git.run(
-                repo,
-                &GitOp::Push {
-                    target: Some((remote, branch)),
-                    set_upstream: true,
-                    auth: AuthMode::UserDefault,
-                },
-            )?;
+            net.push((remote, branch), true)?;
             let count = git
                 .log(
                     repo,
@@ -258,13 +299,14 @@ fn push(git: &dyn GitBackend, repo: &RepoPath) -> Result<u32> {
     }
 }
 
-fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<SyncReport> {
+fn sync(net: &Net<'_>, input: &SyncInput) -> Result<SyncReport> {
+    let (git, repo) = (net.git, net.repo);
     if git.remotes(repo)?.is_empty() {
         return Err(CoreError::NoRemote);
     }
     let Some(up) = upstream(git, repo)? else {
         // 처음 올리는 브랜치: 받을 것이 없으니 올리고 연결만 한다.
-        let sent = push(git, repo)?;
+        let sent = push(net)?;
         return Ok(SyncReport {
             sent,
             ..SyncReport::default()
@@ -276,7 +318,7 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
     let rev = up.rev();
     // 그사이 누가 올려 거부되면 한 번만 처음부터 다시 한다.
     for attempt in 0..2 {
-        fetch_remote(git, repo, &up.remote)?;
+        net.fetch(&up.remote)?;
         let (ahead, behind) = git.count_between(repo, "HEAD", &rev)?;
         if behind > 0 {
             if ahead == 0 {
@@ -299,20 +341,17 @@ fn sync(git: &dyn GitBackend, repo: &RepoPath, input: &SyncInput) -> Result<Sync
         if ahead == 0 {
             return Ok(report);
         }
-        match git.run(
-            repo,
-            &GitOp::Push {
-                target: Some(up.push_target(git)?),
-                set_upstream: false,
-                auth: AuthMode::UserDefault,
-            },
-        ) {
+        match net.push(up.push_target(git)?, false) {
             Ok(_) => {
                 report.sent = ahead;
                 return Ok(report);
             }
-            Err(e) if e.kind() == git::FailureKind::PushRejected && attempt == 0 => continue,
-            Err(e) => return Err(e.into()),
+            Err(CoreError::Git(e))
+                if e.kind() == git::FailureKind::PushRejected && attempt == 0 =>
+            {
+                continue;
+            }
+            Err(e) => return Err(e),
         }
     }
     Ok(report)

@@ -488,6 +488,7 @@ mod tests {
             git: &NoGit,
             state: &state,
             key: &JournalKey::ephemeral(),
+            github: crate::github::GitHubService::none(),
         };
         for _ in 0..3 {
             exec.preview(&ctx, "safe", &ActionInput::Init).unwrap();
@@ -508,6 +509,7 @@ mod tests {
             git: &NoGit,
             state: &state,
             key: &JournalKey::ephemeral(),
+            github: crate::github::GitHubService::none(),
         };
         for _ in 0..3 {
             exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();

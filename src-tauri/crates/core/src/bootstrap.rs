@@ -155,6 +155,8 @@ pub fn init() -> Result<Core> {
         Some(dir) => TrustStore::open(dir),
         None => TrustStore::in_memory(),
     };
+    // git이 credential helper로 다시 실행할 앱 실행 파일(D-111). 없으면 helper를 붙이지 않는다.
+    backend.set_helper_program(platform::current_exe_path());
     let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
     core.set_github(github_service(data_dir.as_deref()));
@@ -573,6 +575,7 @@ impl Core {
             git: self.git.as_ref(),
             state: &state,
             key: self.executor.journal_key(),
+            github: &self.github,
         };
         let (_preview, token) = self.executor.preview(&ctx, input.action_id(), input)?;
         Ok(PreviewView { token: token.0 })
@@ -638,6 +641,7 @@ impl Core {
             git: self.git.as_ref(),
             state: &state,
             key: self.executor.journal_key(),
+            github: &self.github,
         };
         Ok(crate::view::RecoveryView {
             items: self.executor.recovery(&ctx)?,
@@ -780,6 +784,7 @@ impl Core {
             git: self.git.as_ref(),
             state: &state,
             key: self.executor.journal_key(),
+            github: &self.github,
         };
         f(&self.executor, &ctx)
     }

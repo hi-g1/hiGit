@@ -42,6 +42,7 @@ pub use action::{
 pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
 pub use error::{CoreError, GithubFailure, Result};
 pub use executor::{Executor, PreviewToken};
+pub use github::git_credential_main;
 pub use query::{MAX_LOG_PAGE, Queries};
 pub use registry::Registry;
 pub use state::RepoState;

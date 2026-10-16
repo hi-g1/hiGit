@@ -8,7 +8,14 @@ export const FETCH_INTERVAL_MS = 5 * 60_000;
 /** 창으로 돌아왔을 때 이보다 오래됐으면 다시 확인한다. */
 export const FOCUS_MIN_GAP_MS = 60_000;
 
-const AUTH_FAILURES: ErrorCode[] = ["sshAuthFailed", "httpAuthFailed", "sshHostUnverified"];
+const AUTH_FAILURES: ErrorCode[] = [
+  "sshAuthFailed",
+  "httpAuthFailed",
+  "sshHostUnverified",
+  "httpForbidden",
+  "remoteNotFound",
+  "githubExpired",
+];
 
 /**
  * 저절로 하는 원격 확인(D-045, D-055). 열 때 한 번, 창이 보이는 동안 5분마다, 창으로 돌아왔을 때

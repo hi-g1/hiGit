@@ -154,6 +154,7 @@ pub trait GitBackend: Send + Sync {
 
 - 사용자가 SSH 명령을 정하지 않았으면 `GIT_SSH_COMMAND=ssh -o BatchMode=yes`(D-023). 백그라운드는 `GCM_INTERACTIVE=never`, `credential.interactive=never`, `SSH_ASKPASS_REQUIRE=never`, `gc.auto=0`.
 - 믿지 않기로 한 저장소(D-039)는 모든 호출에 실행 설정을 끄는 `-c` 덮어쓰기를 붙인다.
+- GitHub 인증(D-111): 원격 작업마다 core가 `AuthMode`를 정한다. git이 실제로 쓸 받기·올리기 주소(`remote_urls`)가 모두 사용자 정보 없는 `https://github.com/…`이고, 저장소 로컬·워크트리 설정에 `http.*`·`remote.*.proxy`가 없고, 이번 실행에 키체인에서 토큰을 읽었거나 썼을 때만 `Helper`(사람이 시킨 작업은 키체인을 읽어 보고, 저절로 하는 확인은 읽지 않는다). `Helper` 호출에만 `-c credential.helper=`와 상수 helper 설정을 붙이고 앱 실행 파일 경로를 `HIGIT_CREDENTIAL_HELPER`로 넘긴다. git이 앱을 `--git-credential get`으로 다시 실행하면 `main`이 창·플러그인보다 먼저 갈라져 `higit_core::git_credential_main`이 답한다: `protocol=https`·`host=github.com`(포트 없음)·사용자 이름 없음일 때만 키체인을 읽어 `username=x-access-token`·`password=<토큰>`을 표준 출력에 쓰고, 그 밖(`store`·`erase`·다른 호스트·입력 8KB·64줄 초과)은 아무것도 쓰지 않고 0으로 끝난다(전체 10초). helper를 쓴 호출이 인증·권한 실패면 토큰을 한 번 확인해 401이면 연결을 지우고 `githubExpired`로 알린다.
 
 ### Action (crates/core) — 상태를 바꾸는 기능
 

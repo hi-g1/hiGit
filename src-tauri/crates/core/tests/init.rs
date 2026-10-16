@@ -30,6 +30,7 @@ fn init_turns_folder_into_repo() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
@@ -62,6 +63,7 @@ fn stage_and_commit_with_real_git() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let Outcome::RepoCreated(repo) = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
@@ -86,6 +88,7 @@ fn stage_and_commit_with_real_git() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     exec.execute(
         &ctx,

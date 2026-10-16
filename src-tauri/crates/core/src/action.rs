@@ -227,4 +227,6 @@ pub struct ExecCtx<'a> {
     pub state: &'a RepoState,
     /// 앱이 시작한 작업의 표식을 서명하는 키(D-102). 앱에서는 journal 키와 같다.
     pub key: &'a crate::undo::JournalKey,
+    /// GitHub 연결(인증된 원격 작업·복제·검토 요청, D-111).
+    pub github: &'a crate::github::GitHubService,
 }

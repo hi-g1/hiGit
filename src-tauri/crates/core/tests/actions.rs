@@ -40,6 +40,7 @@ fn stage_and_unstage_call_git_with_paths() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
 
     let out = exec
@@ -78,6 +79,7 @@ fn commit_returns_new_summary() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
 
     let out = exec
@@ -98,6 +100,7 @@ fn inputs_are_checked_before_git() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let invalid = |r: higit_core::Result<Outcome>| matches!(r, Err(CoreError::InvalidInput(_)));
 
@@ -141,6 +144,7 @@ fn actions_need_a_repo() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a"]))),
@@ -285,6 +289,7 @@ fn stage_and_commit_refuse_while_files_are_in_conflict() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     for (id, input) in [
         ("stage", ActionInput::Stage(paths(&["a.txt"]))),

@@ -4,6 +4,7 @@
 //! 비밀이 아닌 연결 정보는 `github.json`. 화면 타입·로그·오류에는 토큰이 들어가지 않는다.
 
 mod errors;
+mod helper;
 mod store;
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -15,6 +16,7 @@ use hosting::{
 };
 
 pub(crate) use errors::from_hosting;
+pub use helper::git_credential_main;
 use store::{StatusFile, StatusStore};
 
 use crate::error::{CoreError, GithubFailure, Result};
@@ -63,15 +65,11 @@ struct PendingLogin {
 }
 
 /// 연결된 토큰과 그 세대.
-// 원격 작업(G11)·검토 요청(G13)이 쓴다.
-#[allow(dead_code)]
 pub(crate) struct TokenRef {
     pub token: SecretString,
     pub generation: u64,
 }
 
-// token·remembered·on_unauthorized·call은 원격 작업(G11)·검토 요청(G13)이 쓴다.
-#[allow(dead_code)]
 impl GitHubService {
     pub fn new(
         provider: Arc<dyn HostingProvider>,
@@ -103,6 +101,28 @@ impl GitHubService {
             platform::Keychain::in_memory(KEYCHAIN_SERVICE),
             None,
         )
+    }
+
+    /// 준비 안 된 서비스 하나(실행기 시험 등 GitHub를 쓰지 않는 곳의 `ExecCtx`용).
+    pub fn none() -> &'static Self {
+        static NONE: std::sync::OnceLock<GitHubService> = std::sync::OnceLock::new();
+        NONE.get_or_init(Self::unconfigured)
+    }
+
+    /// **테스트 전용.** 로그인 흐름 없이 연결된 상태로 둔다. `remembered`면 키체인과 상태 파일에도
+    /// 쓴 것처럼(이번 실행에 키체인을 쓴 것으로) 둔다.
+    #[doc(hidden)]
+    pub fn connect_for_tests(&self, login: &str, token: &str, remembered: bool) {
+        let token = SecretString::from(token.to_owned());
+        if remembered {
+            let _ = self.keychain.set(KEYCHAIN_ACCOUNT, &token);
+            let _ = self.store.write(&StatusFile::new(login, 1));
+        }
+        let mut state = self.state();
+        state.token = Some(token);
+        state.generation += 1;
+        state.remembered = remembered;
+        state.session_login = (!remembered).then(|| login.to_owned());
     }
 
     /// **테스트 전용.** 시각을 정한다.
@@ -403,6 +423,40 @@ impl GitHubService {
         }
     }
 
+    /// 원격 하나의 인증 방식(D-111). git이 실제로 쓸 받기·올리기 주소가 **모두**
+    /// `https://github.com/…`이고, 저장소 로컬·워크트리 설정에 `http.*`·`remote.*.proxy`가 없고,
+    /// 이번 실행에 키체인에서 토큰을 읽었거나 썼을 때만 `Helper`. 사람이 시킨 작업은 연결된
+    /// 토큰을 키체인에서 읽어 보고(잠금 해제 창이 뜰 수 있다), 저절로 하는 확인은 읽지 않는다.
+    pub(crate) fn auth_for(
+        &self,
+        git: &dyn git::GitBackend,
+        repo: &git::RepoPath,
+        remote: &str,
+        background: bool,
+    ) -> git::AuthMode {
+        use git::AuthMode;
+        let Ok(urls) = git.remote_urls(repo, remote) else {
+            return AuthMode::UserDefault;
+        };
+        if !github_https_only(&urls.fetch) || !github_https_only(&urls.push) {
+            return AuthMode::UserDefault;
+        }
+        match git.local_config(repo) {
+            Ok(config) if !config.iter().any(|(key, _)| redirects_transport(key)) => {}
+            _ => return AuthMode::UserDefault,
+        }
+        let ready = if background {
+            self.remembered()
+        } else {
+            self.token().is_ok() && self.remembered()
+        };
+        if ready {
+            AuthMode::Helper
+        } else {
+            AuthMode::UserDefault
+        }
+    }
+
     /// 코드를 넣는 페이지 주소(설정의 상수).
     pub fn device_login_url(&self) -> String {
         format!("{}/login/device", self.web_base)
@@ -423,6 +477,19 @@ impl GitHubService {
             self.web_base, repo.owner, repo.name
         ))
     }
+}
+
+/// 비어 있지 않고 모두 사용자 정보 없는 `https://github.com/…`인지.
+pub(crate) fn github_https_only(urls: &[String]) -> bool {
+    !urls.is_empty()
+        && urls
+            .iter()
+            .all(|url| url.starts_with("https://") && hosting::GitHub::detect(url).is_some())
+}
+
+/// 받은 저장소가 연결을 돌리거나 TLS 검증을 끌 수 있는 설정 키(소문자, D-111).
+fn redirects_transport(key: &str) -> bool {
+    key.starts_with("http.") || (key.starts_with("remote.") && key.ends_with(".proxy"))
 }
 
 fn pending_view(interval: Duration) -> LoginPollView {

@@ -65,6 +65,7 @@ fn unknown_action_is_rejected() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let err = exec
         .execute(&ctx, "없음", &ActionInput::Init, None)
@@ -81,6 +82,7 @@ fn safe_and_normal_run_without_preview() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
 
     exec.execute(&ctx, "safe", &ActionInput::Init, None)
@@ -120,6 +122,7 @@ fn caution_and_danger_back_up_head_before_running() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let input = ActionInput::Init;
 
@@ -155,6 +158,7 @@ fn no_backup_means_no_run() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
     assert!(
@@ -173,6 +177,7 @@ fn caution_without_any_version_runs_without_backup() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
     exec.execute(&ctx, "caution", &ActionInput::Init, Some(&token))
@@ -190,6 +195,7 @@ fn preview_token_must_match() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let input = ActionInput::Init;
     let mismatch = |r: higit_core::Result<Outcome>| matches!(r, Err(CoreError::PreviewMismatch));
@@ -228,6 +234,7 @@ fn preview_token_must_match() {
         git: &git,
         state: &other_state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let (_, token) = exec.preview(&other_ctx, "caution", &input).unwrap();
     assert!(mismatch(exec.execute(
@@ -257,6 +264,7 @@ fn expired_token_is_rejected() {
         git: &git,
         state: &state,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let (_, token) = exec.preview(&ctx, "caution", &ActionInput::Init).unwrap();
     let err = exec
@@ -277,6 +285,7 @@ fn init_runs_only_outside_repo() {
         git: &git,
         state: &in_repo,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let err = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
@@ -292,6 +301,7 @@ fn init_runs_only_outside_repo() {
         git: &git,
         state: &folder,
         key: &higit_core::undo::JournalKey::ephemeral(),
+        github: higit_core::github::GitHubService::none(),
     };
     let outcome = exec
         .execute(&ctx, "init", &ActionInput::Init, None)
