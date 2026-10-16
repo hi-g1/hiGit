@@ -39,7 +39,10 @@ type Props = {
   palette: Palette;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  /** Enter·Space·ContextMenu·Shift+F10이나 역을 눌렀을 때. 접힌 구간이면 펼친다. */
+  /**
+   * Enter·Space·ContextMenu·Shift+F10, 고른 역을 다시 누름, 고른 줄의 `⋯`(D-202). 접힌 구간은 한 번 눌러도
+   * 부른다(펼친다).
+   */
   onActivate: (id: string) => void;
   /** 마우스 오른쪽 클릭(웹뷰 기본 메뉴는 막는다). 눌린 행은 이미 골라져 있다. */
   onContextMenu?: (id: string) => void;
@@ -201,8 +204,10 @@ export function RouteList({
       onExtendTo(node.id);
       return;
     }
+    // 처음 누르면 고르기만, 고른 역을 다시 누르면 메뉴(D-202). 접힌 구간은 한 번에 펼친다.
+    const again = node.id === selectedId;
     onSelect(node.id);
-    onActivate(node.id);
+    if (again || node.kind === "fold") onActivate(node.id);
   };
 
   const onContext = (e: MouseEvent<HTMLDivElement>) => {
@@ -317,6 +322,19 @@ export function RouteList({
                   <span className={styles.date}>
                     <Time at={node.time} now={now} />
                   </span>
+                  {i === selected && (
+                    // 마우스용 메뉴 단추(D-202). 키보드는 Enter·메뉴 키.
+                    <button
+                      type="button"
+                      className={styles.more}
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => onActivate(node.id)}
+                    >
+                      ⋯
+                    </button>
+                  )}
                 </>
               )}
             </div>

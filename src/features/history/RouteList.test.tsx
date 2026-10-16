@@ -81,7 +81,7 @@ describe("노선도 목록", () => {
     expect(onActivate).toHaveBeenLastCalledWith("c0".padEnd(40, "0"));
   });
 
-  it("누르면 장면 좌표로 행을 골라 연다", () => {
+  it("처음 누르면 장면 좌표로 행을 고르기만, 고른 역을 다시 누르거나 ⋯를 누르면 연다(D-202)", () => {
     const onActivate = vi.fn();
     render(<List list={nodes(5)} onActivate={onActivate} />);
     const list = screen.getByRole("listbox");
@@ -89,10 +89,20 @@ describe("노선도 목록", () => {
     Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
     fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: ROW_H * 2 + 5 });
     expect(list.getAttribute("aria-activedescendant")).toBe("route-row-2");
+    expect(onActivate).not.toHaveBeenCalled();
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: ROW_H * 2 + 5 });
     expect(onActivate).toHaveBeenCalledWith("c2".padEnd(40, "0"));
     // 스크롤 막대는 고르지 않는다.
     fireEvent.pointerDown(list, { button: 0, clientX: 790, clientY: 5 });
     expect(onActivate).toHaveBeenCalledTimes(1);
+    // 고른 줄 끝의 ⋯(마우스용, 읽기 프로그램에서 숨김).
+    const more = document.querySelector<HTMLButtonElement>("#route-row-2 button")!;
+    expect(more).toHaveAttribute("aria-hidden", "true");
+    expect(more).toHaveAttribute("tabindex", "-1");
+    fireEvent.pointerDown(more, { button: 0 });
+    fireEvent.click(more);
+    expect(onActivate).toHaveBeenCalledTimes(2);
+    expect(document.querySelectorAll("[role=option] button")).toHaveLength(1);
   });
 
   it("배율 2면 행 높이·그래프 폭이 두 배이고 누른 자리의 행을 고른다", () => {
@@ -108,7 +118,7 @@ describe("노선도 목록", () => {
     list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
     Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
     fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: ROW_H * 2 * 2 + 5 });
-    expect(onActivate).toHaveBeenCalledWith("c2".padEnd(40, "0"));
+    expect(list.getAttribute("aria-activedescendant")).toBe("route-row-2");
   });
 
   it("저장소 글자는 bdi 안에 글자로, 행 이름에 이름·작성자·표시를 담는다", () => {
@@ -149,6 +159,21 @@ describe("노선도 목록", () => {
     fireEvent.keyDown(box, { key: "ArrowDown" });
     fireEvent.keyDown(box, { key: "ArrowDown" });
     fireEvent.keyDown(box, { key: "Enter" });
+    expect(onActivate).toHaveBeenCalledWith("fold");
+  });
+
+  it("접힌 구간 줄은 한 번 눌러도 펼친다", () => {
+    const onActivate = vi.fn();
+    const list = [
+      commitNode("h".repeat(40), ["fold"], { summary: "위" }),
+      { ...commitNode("fold", ["r".repeat(40)]), kind: "fold" as const, count: 12 },
+      commitNode("r".repeat(40), [], { summary: "처음" }),
+    ];
+    render(<List list={list} onActivate={onActivate} />);
+    const box = screen.getByRole("listbox");
+    box.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    Object.defineProperty(box, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(box, { button: 0, clientX: 300, clientY: ROW_H + 5 });
     expect(onActivate).toHaveBeenCalledWith("fold");
   });
 });

@@ -95,3 +95,23 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 고른 줄 끝의 메뉴 단추(D-202): 24px, 마우스용 */
+.more {
+  position: absolute;
+  right: var(--space-1);
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: default;
+}
+
+.more:hover {
+  background: var(--surface);
+  color: var(--text);
+}

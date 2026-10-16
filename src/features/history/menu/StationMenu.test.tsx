@@ -198,6 +198,9 @@ describe("역 메뉴", () => {
     const list = await screen.findByRole("listbox");
     list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
     Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    // 처음 누르면 고르기만, 다시 누르면 메뉴(D-202).
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
     await screen.findByRole("menu");
     // 실제 웹뷰에서는 누름의 기본 동작으로 목록이 포커스를 받는다.
@@ -223,12 +226,13 @@ describe("역 메뉴", () => {
     expect(useRepoStore.getState().view).toBe("history");
   });
 
-  it("같은 역을 다시 누르면 닫는다", async () => {
+  it("열린 역을 한 번 더 누르면 닫는다", async () => {
     serve();
     showHistory();
     const list = await screen.findByRole("listbox");
     list.getBoundingClientRect = () => ({ top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
     Object.defineProperty(list, "clientWidth", { value: 780, configurable: true });
+    fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
     fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
     await screen.findByRole("menu");
     fireEvent.pointerDown(list, { button: 0, clientX: 300, clientY: 70 });
