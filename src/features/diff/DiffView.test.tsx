@@ -32,6 +32,10 @@ describe("DiffView", () => {
       hunks: [
         {
           section: "",
+          oldStart: 1,
+          oldLen: 2,
+          newStart: 1,
+          newLen: 2,
           lines: [
             { kind: "context", text: "가", oldLine: 1, newLine: 1, noNewlineAtEnd: false },
             { kind: "removed", text: "나", oldLine: 2, newLine: null, noNewlineAtEnd: false },
@@ -60,7 +64,16 @@ describe("DiffView", () => {
       binary: false,
       truncated: true,
       link: null,
-      hunks: [{ section: "", lines: [{ kind: "added", text: "x", oldLine: null, newLine: 1, noNewlineAtEnd: false }] }],
+      hunks: [
+        {
+          section: "",
+          oldStart: 0,
+          oldLen: 0,
+          newStart: 1,
+          newLen: 1,
+          lines: [{ kind: "added", text: "x", oldLine: null, newLine: 1, noNewlineAtEnd: false }],
+        },
+      ],
     });
     expect(await screen.findByText("파일이 커서 앞부분만 보여요.")).toBeInTheDocument();
   });

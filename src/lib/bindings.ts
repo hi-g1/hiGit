@@ -478,6 +478,8 @@ export type DiffRequest = {
 	untracked: boolean,
 	/**  이 버전에서 바뀐 것(첫 부모와 비교)을 본다(D-105). 없으면 작업 폴더의 변경. */
 	commit?: string | null,
+	/**  파일 전체를 문맥으로 읽는다(접힌 줄 펼치기, D-156). 없으면 거짓. */
+	fullContext?: boolean,
 };
 
 /**  화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다. */
@@ -605,6 +607,11 @@ export type HunkChoice = { kind: "ours" } | { kind: "theirs" } |
 
 export type HunkView = {
 	section: string,
+	/**  묶음의 시작 줄과 길이(마지막 저장 쪽·지금 쪽). 묶음 사이에 접힌 줄 수를 센다(D-156). */
+	oldStart: number,
+	oldLen: number,
+	newStart: number,
+	newLen: number,
 	lines: DiffLineView[],
 };
 

@@ -14,6 +14,9 @@ pub struct DiffRequest {
     /// 이 버전에서 바뀐 것(첫 부모와 비교)을 본다(D-105). 없으면 작업 폴더의 변경.
     #[serde(default)]
     pub commit: Option<String>,
+    /// 파일 전체를 문맥으로 읽는다(접힌 줄 펼치기, D-156). 없으면 거짓.
+    #[serde(default)]
+    pub full_context: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -41,6 +44,11 @@ impl FileDiffView {
 #[serde(rename_all = "camelCase")]
 pub struct HunkView {
     pub section: String,
+    /// 묶음의 시작 줄과 길이(마지막 저장 쪽·지금 쪽). 묶음 사이에 접힌 줄 수를 센다(D-156).
+    pub old_start: u32,
+    pub old_len: u32,
+    pub new_start: u32,
+    pub new_len: u32,
     pub lines: Vec<DiffLineView>,
 }
 
@@ -76,6 +84,7 @@ impl From<&DiffRequest> for git::DiffTarget {
             } else {
                 git::DiffKind::Tracked
             },
+            full_context: r.full_context,
         }
     }
 }
@@ -126,7 +135,45 @@ impl From<git::Hunk> for HunkView {
             .collect();
         Self {
             section: h.section,
+            old_start: h.old_start,
+            old_len: h.old_len,
+            new_start: h.new_start,
+            new_len: h.new_len,
             lines,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn old_requests_read_full_context_as_false() {
+        let r: DiffRequest =
+            serde_json::from_str(r#"{"path":"a.txt","origPath":null,"untracked":false}"#).unwrap();
+        assert!(!r.full_context);
+        assert!(git::DiffTarget::from(&r).full_context == r.full_context);
+        let full: DiffRequest = serde_json::from_str(
+            r#"{"path":"a.txt","origPath":null,"untracked":false,"fullContext":true}"#,
+        )
+        .unwrap();
+        assert!(git::DiffTarget::from(&full).full_context);
+    }
+
+    #[test]
+    fn hunk_view_keeps_ranges() {
+        let view = HunkView::from(git::Hunk {
+            old_start: 10,
+            old_len: 3,
+            new_start: 12,
+            new_len: 4,
+            section: "fn a()".into(),
+            lines: Vec::new(),
+        });
+        assert_eq!(
+            (view.old_start, view.old_len, view.new_start, view.new_len),
+            (10, 3, 12, 4)
+        );
     }
 }

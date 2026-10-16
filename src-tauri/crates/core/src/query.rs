@@ -514,6 +514,7 @@ impl Queries {
                 path: request.path.clone(),
                 orig_path: request.orig_path.clone(),
                 kind: git::DiffKind::Commit { oid },
+                full_context: request.full_context,
             };
             return Ok(self.git.diff(&root, &target)?.into());
         }

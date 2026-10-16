@@ -20,8 +20,8 @@ export const queryKeys = {
   summary: (repo: string) => ["summary", repo] as const,
   status: (repo: string) => ["status", repo] as const,
   log: (repo: string) => ["log", repo] as const,
-  diff: (repo: string, path: string, untracked: boolean, commit: string) =>
-    ["diff", repo, path, untracked, commit] as const,
+  diff: (repo: string, path: string, untracked: boolean, commit: string, fullContext = false) =>
+    ["diff", repo, path, untracked, commit, fullContext] as const,
   commitDetail: (repo: string, oid: string) => ["commitDetail", repo, oid] as const,
   rewritePlan: (repo: string, oids: readonly string[]) => ["rewritePlan", repo, oids.join(",")] as const,
   branches: (repo: string) => ["branches", repo] as const,
@@ -275,7 +275,7 @@ export function invalidateLog(client: QueryClient, repo: string): void {
 export function useDiff(repo: string, request: DiffRequest) {
   const commit = request.commit ?? "";
   return useQuery<Awaited<ReturnType<typeof api.diff>>, ApiError>({
-    queryKey: queryKeys.diff(repo, request.path, request.untracked, commit),
+    queryKey: queryKeys.diff(repo, request.path, request.untracked, commit, request.fullContext ?? false),
     queryFn: () => api.diff(repo, request),
     // 버전 안의 비교는 바뀌지 않는다.
     staleTime: commit ? Infinity : 0,

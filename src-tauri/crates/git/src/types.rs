@@ -542,6 +542,8 @@ pub struct DiffTarget {
     /// 이름 바꿈의 원래 경로.
     pub orig_path: Option<String>,
     pub kind: DiffKind,
+    /// 파일 전체를 문맥으로(접힌 줄 펼치기, D-156). 거짓이면 3줄.
+    pub full_context: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -151,6 +151,7 @@ fn commit_diff_ignores_the_working_folder() {
         orig_path: None,
         untracked: false,
         commit,
+        full_context: false,
     };
     let view = core
         .queries()

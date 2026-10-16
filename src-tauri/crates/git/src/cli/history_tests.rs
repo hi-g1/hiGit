@@ -225,6 +225,7 @@ fn commit_diff_shows_one_file_of_a_version() {
         path: "a.txt".into(),
         orig_path: None,
         kind: crate::DiffKind::Commit { oid: oid.clone() },
+        full_context: false,
     };
     let d = b.diff(&RepoPath::new(p), &target(&second)).unwrap();
     let added: Vec<&str> = d.hunks[0]

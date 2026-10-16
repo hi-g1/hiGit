@@ -417,6 +417,7 @@ impl GitBackend for CliBackend {
                 };
                 let mut args = vec!["--literal-pathspecs", "diff"];
                 args.extend_from_slice(diff::COMMON_ARGS);
+                args.push(diff::context_arg(target.full_context));
                 push_revs(&mut args, Cmd::Diff, self.git_version(), &[&base]);
                 args.push("--");
                 args.push(&target.path);
@@ -436,6 +437,7 @@ impl GitBackend for CliBackend {
                 }
                 let mut args = vec!["diff", "--no-index"];
                 args.extend_from_slice(diff::COMMON_ARGS);
+                args.push(diff::context_arg(target.full_context));
                 args.extend(["--", "/dev/null", &target.path]);
                 // --no-index는 차이가 있으면 종료 코드 1이다(오류가 아님). run_capped가 받는다.
                 self.runner.run_capped(dir, &args, diff::MAX_OUTPUT)?
@@ -445,6 +447,7 @@ impl GitBackend for CliBackend {
                 let revs = self.commit_diff_revs(repo, oid)?;
                 let mut args = vec!["--literal-pathspecs", "diff-tree", "-p", "--no-commit-id"];
                 args.extend_from_slice(diff::COMMON_ARGS);
+                args.push(diff::context_arg(target.full_context));
                 if revs.len() == 1 {
                     args.push("--root");
                 }

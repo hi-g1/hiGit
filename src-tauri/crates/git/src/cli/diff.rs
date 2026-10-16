@@ -56,9 +56,13 @@ pub(crate) fn untracked_prefix(path: &std::path::Path) -> Result<FileDiff> {
 /// 저장이 하나도 없는 저장소에서 비교 기준으로 쓰는 빈 트리를 만드는 입력(빈 stdin).
 pub(crate) const EMPTY_TREE_ARGS: &[&str] = &["hash-object", "-t", "tree", "--stdin"];
 
-/// 사용자 설정(diff.external, textconv, 색, 줄 수)에 흔들리지 않게 고정하는 옵션.
-pub(crate) const COMMON_ARGS: &[&str] =
-    &["--no-color", "--no-ext-diff", "--no-textconv", "-U3", "-M"];
+/// 사용자 설정(diff.external, textconv, 색, 줄 수)에 흔들리지 않게 고정하는 옵션. 문맥 줄 수는 [`context_arg`].
+pub(crate) const COMMON_ARGS: &[&str] = &["--no-color", "--no-ext-diff", "--no-textconv", "-M"];
+
+/// 문맥 줄 수 인자. 보통 3줄, 접힌 줄을 펼칠 때는 파일 전체(D-156). 상수 둘에서만 고른다.
+pub(crate) fn context_arg(full: bool) -> &'static str {
+    if full { "-U1000000" } else { "-U3" }
+}
 
 pub(crate) fn parse(text: &str) -> Result<FileDiff> {
     let mut diff = FileDiff::default();
@@ -211,6 +215,7 @@ mod tests {
                     path: path.into(),
                     orig_path: None,
                     kind,
+                    full_context: false,
                 },
             )
             .unwrap()
@@ -274,6 +279,7 @@ mod tests {
                     path: "새 이름.txt".into(),
                     orig_path: Some("옛 이름.txt".into()),
                     kind: DiffKind::Tracked,
+                    full_context: false,
                 },
             )
             .unwrap();

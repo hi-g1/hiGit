@@ -9,6 +9,10 @@ const diff: FileDiffView = {
   hunks: [
     {
       section: "함수",
+      oldStart: 1,
+      oldLen: 3,
+      newStart: 1,
+      newLen: 3,
       lines: [
         { kind: "context", text: "가", oldLine: 1, newLine: 1, noNewlineAtEnd: false },
         { kind: "removed", text: "나", oldLine: 2, newLine: null, noNewlineAtEnd: false },
