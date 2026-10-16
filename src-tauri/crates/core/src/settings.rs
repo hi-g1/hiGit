@@ -41,7 +41,13 @@ pub struct AppSettings {
     pub files_pane: Option<f32>,
     /// "올리기와 가져오기에 이 연결 쓰기"(D-187). 끄면 git에 hiGit 로그인을 붙이지 않는다.
     pub git_helper: bool,
+    /// "처음 하는 일 안내"(D-205)와 이미 닫은 안내 비트(`TipId::bit`).
+    pub tips_on: bool,
+    pub tips_seen: u8,
 }
+
+/// 알려진 안내 비트. 모르는 비트는 읽을 때 버린다.
+const TIP_BITS: u8 = 0b1111;
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -56,12 +62,22 @@ impl Default for AppSettings {
             conflict_pane: None,
             files_pane: None,
             git_helper: true,
+            tips_on: true,
+            tips_seen: 0,
         }
     }
 }
 
 fn yes() -> bool {
     true
+}
+
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
+fn is_zero(v: &u8) -> bool {
+    *v == 0
 }
 
 #[derive(Serialize, Deserialize)]
@@ -87,6 +103,11 @@ struct SettingsFile {
     files_pane: Option<f32>,
     #[serde(default = "yes")]
     git_helper: bool,
+    /// 기본값이면 쓰지 않아 옛 파일과 글자가 같다.
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
+    tips_on: bool,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    tips_seen: u8,
 }
 
 impl From<AppSettings> for SettingsFile {
@@ -103,6 +124,8 @@ impl From<AppSettings> for SettingsFile {
             conflict_pane: s.conflict_pane,
             files_pane: s.files_pane,
             git_helper: s.git_helper,
+            tips_on: s.tips_on,
+            tips_seen: s.tips_seen,
         }
     }
 }
@@ -120,6 +143,8 @@ impl From<SettingsFile> for AppSettings {
             conflict_pane: pane(f.conflict_pane),
             files_pane: pane(f.files_pane),
             git_helper: f.git_helper,
+            tips_on: f.tips_on,
+            tips_seen: f.tips_seen & TIP_BITS,
         }
     }
 }
@@ -167,6 +192,12 @@ impl SettingsStore {
             conflict_pane: pane(patch.conflict_pane).or(current.conflict_pane),
             files_pane: pane(patch.files_pane).or(current.files_pane),
             git_helper: patch.git_helper.unwrap_or(current.git_helper),
+            tips_on: patch.tips_on.unwrap_or(current.tips_on),
+            tips_seen: if patch.reset_tips {
+                0
+            } else {
+                current.tips_seen | patch.tip_seen.map_or(0, |t| t.bit())
+            },
         };
         if next != *current {
             *current = next;
@@ -203,6 +234,8 @@ impl From<AppSettings> for AppSettingsView {
             conflict_pane: s.conflict_pane,
             files_pane: s.files_pane,
             git_helper: s.git_helper,
+            tips_on: s.tips_on,
+            tips_seen: s.tips_seen.into(),
         }
     }
 }

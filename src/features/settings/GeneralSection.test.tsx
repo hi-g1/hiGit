@@ -90,6 +90,24 @@ describe("설정 일반 구역", () => {
     delete document.documentElement.dataset.theme;
   });
 
+  it("처음 하는 일 안내 켬·끔과 다시 보기(D-205)", async () => {
+    const client = createQueryClient();
+    client.setQueryData(queryKeys.settings, { ...DEFAULTS, tipsSeen: { ...DEFAULTS.tipsSeen, firstSync: true } });
+    render(
+      <AppProviders client={client}>
+        <GeneralSection />
+      </AppProviders>,
+    );
+    const box = screen.getByRole("checkbox", { name: "처음 하는 일 안내" });
+    expect(box).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "다시 보기" }));
+    expect(setSettings).toHaveBeenCalledWith({ resetTips: true });
+    expect(currentSettings(client).tipsSeen.firstSync).toBe(false);
+    fireEvent.click(box);
+    await act(() => vi.advanceTimersByTimeAsync(SAVE_DELAY_MS));
+    expect(setSettings).toHaveBeenLastCalledWith({ tipsOn: false });
+  });
+
   it("용어 설명 보기를 끄면 저장된다", async () => {
     const client = createQueryClient();
     client.setQueryData(queryKeys.settings, { ...DEFAULTS });

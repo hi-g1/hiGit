@@ -65,6 +65,19 @@ export function GeneralSection() {
         />
       </label>
       <div className={styles.field}>
+        <label className={styles.fieldName} htmlFor="settings-tips">
+          {m.settings.tips}
+        </label>
+        <Checkbox
+          id="settings-tips"
+          checked={settings.tipsOn}
+          onChange={(e) => changeSettings(client, { tipsOn: e.currentTarget.checked })}
+        />
+        <Button variant="text" onClick={() => changeSettings(client, { resetTips: true })}>
+          {m.settings.tipsReset}
+        </Button>
+      </div>
+      <div className={styles.field}>
         <Button
           variant="text"
           onClick={() => {

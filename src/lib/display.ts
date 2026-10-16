@@ -17,6 +17,8 @@ export const DEFAULT_SETTINGS: AppSettingsView = {
   conflictPane: null,
   filesPane: null,
   gitHelper: true,
+  tipsOn: true,
+  tipsSeen: { firstBranch: false, firstConflict: false, firstSync: false, firstUndo: false },
 };
 
 /**

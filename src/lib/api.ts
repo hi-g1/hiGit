@@ -25,6 +25,7 @@ export type {
   BranchRow,
   CarryBlock,
   DirtyChoice,
+  TipId,
   SwitchPlanView,
   GitHubRepoListView,
   GitHubRepoRowView,

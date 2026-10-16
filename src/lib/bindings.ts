@@ -334,6 +334,11 @@ export type AppSettingsPatch = {
 	conflictPane?: number | null,
 	filesPane?: number | null,
 	gitHelper?: boolean | null,
+	tipsOn?: boolean | null,
+	/**  이 안내를 닫았다(다시 뜨지 않는다). */
+	tipSeen?: TipId | null,
+	/**  모든 안내를 다시 보인다("다시 보기"). */
+	resetTips?: boolean,
 };
 
 export type AppSettingsView = {
@@ -352,6 +357,9 @@ export type AppSettingsView = {
 	filesPane: number | null,
 	/**  "올리기와 가져오기에 이 연결 쓰기"(D-187). */
 	gitHelper: boolean,
+	/**  "처음 하는 일 안내"(D-205). */
+	tipsOn: boolean,
+	tipsSeen: TipsSeenView,
 };
 
 /**  앱 시작 시 확인한 환경. */
@@ -1672,6 +1680,17 @@ export type TakeOutSource =
 
 /**  화면 모드(D-145, D-151). */
 export type ThemeSetting = "system" | "light" | "dark";
+
+/**  처음 하는 일 안내(D-168, D-205). */
+export type TipId = "firstBranch" | "firstConflict" | "firstSync" | "firstUndo";
+
+/**  이미 닫은 안내. */
+export type TipsSeenView = {
+	firstBranch: boolean,
+	firstConflict: boolean,
+	firstSync: boolean,
+	firstUndo: boolean,
+};
 
 /**  신뢰 확인에서 고른 것(D-039). */
 export type TrustChoice = 

@@ -62,7 +62,7 @@ pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use settings::{
     AppSettingsPatch, AppSettingsView, DisplayHintsView, FontSizeSetting, LanguageSetting,
-    ThemeSetting,
+    ThemeSetting, TipId, TipsSeenView,
 };
 pub use stash::{StashItem, StashListView};
 

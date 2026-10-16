@@ -34,6 +34,50 @@ pub enum ThemeSetting {
     Dark,
 }
 
+/// 처음 하는 일 안내(D-168, D-205).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TipId {
+    FirstBranch,
+    FirstConflict,
+    FirstSync,
+    FirstUndo,
+}
+
+impl TipId {
+    /// `settings.json`의 `tips_seen` 비트.
+    pub fn bit(self) -> u8 {
+        match self {
+            TipId::FirstBranch => 1,
+            TipId::FirstConflict => 2,
+            TipId::FirstSync => 4,
+            TipId::FirstUndo => 8,
+        }
+    }
+}
+
+/// 이미 닫은 안내.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TipsSeenView {
+    pub first_branch: bool,
+    pub first_conflict: bool,
+    pub first_sync: bool,
+    pub first_undo: bool,
+}
+
+impl From<u8> for TipsSeenView {
+    fn from(bits: u8) -> Self {
+        let has = |t: TipId| bits & t.bit() != 0;
+        Self {
+            first_branch: has(TipId::FirstBranch),
+            first_conflict: has(TipId::FirstConflict),
+            first_sync: has(TipId::FirstSync),
+            first_undo: has(TipId::FirstUndo),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettingsView {
@@ -52,6 +96,9 @@ pub struct AppSettingsView {
     pub files_pane: Option<f32>,
     /// "올리기와 가져오기에 이 연결 쓰기"(D-187).
     pub git_helper: bool,
+    /// "처음 하는 일 안내"(D-205).
+    pub tips_on: bool,
+    pub tips_seen: TipsSeenView,
 }
 
 /// 바꿀 칸만 담는다. 없는 칸은 그대로. 고정 열거형·참거짓·칸 폭 숫자뿐이다.
@@ -79,6 +126,15 @@ pub struct AppSettingsPatch {
     pub files_pane: Option<f32>,
     #[serde(default)]
     pub git_helper: Option<bool>,
+    #[serde(default)]
+    pub tips_on: Option<bool>,
+    /// 이 안내를 닫았다(다시 뜨지 않는다).
+    #[serde(default)]
+    pub tip_seen: Option<TipId>,
+    /// 모든 안내를 다시 보인다("다시 보기").
+    #[serde(default)]
+    #[specta(optional)]
+    pub reset_tips: bool,
 }
 
 /// 화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다.

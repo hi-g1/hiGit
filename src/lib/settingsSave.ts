@@ -16,10 +16,14 @@ export function currentSettings(client: QueryClient): AppSettingsView {
 }
 
 function merge(base: AppSettingsView, patch: AppSettingsPatch): AppSettingsView {
+  const { tipSeen, resetTips, ...plain } = patch;
   const next = { ...base };
-  for (const [key, value] of Object.entries(patch) as [keyof AppSettingsView, unknown][]) {
+  for (const [key, value] of Object.entries(plain) as [keyof AppSettingsView, unknown][]) {
     if (value !== undefined && value !== null) (next as Record<string, unknown>)[key] = value;
   }
+  // 안내 비트는 칸 이름이 달라 따로 맞춘다(D-205).
+  if (resetTips) next.tipsSeen = { firstBranch: false, firstConflict: false, firstSync: false, firstUndo: false };
+  if (tipSeen) next.tipsSeen = { ...next.tipsSeen, [tipSeen]: true };
   return next;
 }
 
@@ -27,6 +31,11 @@ export function changeSettings(client: QueryClient, patch: AppSettingsPatch): vo
   // 읽는 중인 옛 값이 바꾼 값을 덮지 않게 한다.
   void client.cancelQueries({ queryKey: queryKeys.settings });
   client.setQueryData<AppSettingsView>(queryKeys.settings, merge(currentSettings(client), patch));
+  // 안내 닫기·다시 보기는 드물고 서로 합칠 수 없어(닫은 안내 둘) 기다리지 않고 따로 보낸다.
+  if (patch.tipSeen || patch.resetTips) {
+    void api.setSettings(patch).catch(() => undefined);
+    return;
+  }
   pending = { ...pending, ...patch };
   if (timer !== null) clearTimeout(timer);
   timer = setTimeout(() => {

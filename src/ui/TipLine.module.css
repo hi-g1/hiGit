@@ -1,0 +1,17 @@
+/* 처음 하는 일 안내 줄(D-205): 알림 줄 모양, 왼쪽 2px --accent 띠 */
+.tip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border);
+  box-shadow: inset var(--selected-bar) 0 0 var(--accent);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
