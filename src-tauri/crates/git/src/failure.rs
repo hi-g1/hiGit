@@ -29,7 +29,13 @@ pub enum FailureKind {
     SshAuthFailed,
     /// HTTPS 인증이 필요하거나 실패했다.
     HttpAuthFailed,
-    /// 원격에 닿을 수 없다(주소, 네트워크, 저장소 없음).
+    /// HTTPS 원격이 접근을 거절했다(403). 로그인은 됐지만 권한이 없다.
+    HttpForbidden,
+    /// 원격 저장소가 없거나 볼 권한이 없다(GitHub는 권한이 없어도 "없음"이라 한다).
+    RemoteNotFound,
+    /// GitHub가 `workflow` 권한 없는 앱의 `.github/workflows` 변경 올리기를 거절했다(D-109).
+    GithubWorkflowScope,
+    /// 원격에 닿을 수 없다(주소, 네트워크).
     RemoteUnreachable,
     /// 폴더가 저장소가 아니다(`discover`가 씀).
     NotARepository,
@@ -94,6 +100,25 @@ const RULES: &[(FailureKind, &[&str])] = &[
             "could not read Username",
             "could not read Password",
             "terminal prompts disabled",
+        ],
+    ),
+    // 아래 셋은 "unable to access"·"[remote rejected]"와 함께 오므로 원격 연결·올리기 거절보다 먼저 본다.
+    (
+        FailureKind::GithubWorkflowScope,
+        &[
+            "refusing to allow an OAuth App to create or update workflow",
+            "without `workflow` scope",
+        ],
+    ),
+    (
+        FailureKind::HttpForbidden,
+        &["The requested URL returned error: 403"],
+    ),
+    (
+        FailureKind::RemoteNotFound,
+        &[
+            "Repository not found",
+            "The requested URL returned error: 404",
         ],
     ),
     (
@@ -228,6 +253,26 @@ mod tests {
             (
                 "fatal: Unable to create '/r/.git/index.lock': File exists.\n\nAnother git process seems to be running in this repository\n",
                 FailureKind::Locked,
+            ),
+            (
+                "remote: Permission to octo/hello.git denied to mona.\nfatal: unable to access 'https://github.com/octo/hello.git/': The requested URL returned error: 403\n",
+                FailureKind::HttpForbidden,
+            ),
+            (
+                "remote: Repository not found.\nfatal: repository 'https://github.com/octo/nope.git/' not found\n",
+                FailureKind::RemoteNotFound,
+            ),
+            (
+                "fatal: unable to access 'https://example.com/x.git/': The requested URL returned error: 404\n",
+                FailureKind::RemoteNotFound,
+            ),
+            (
+                "ERROR: Repository not found.\nfatal: Could not read from remote repository.\n",
+                FailureKind::RemoteNotFound,
+            ),
+            (
+                " ! [remote rejected] main -> main (refusing to allow an OAuth App to create or update workflow `.github/workflows/ci.yml` without `workflow` scope)\nerror: failed to push some refs to 'https://github.com/octo/hello.git'\n",
+                FailureKind::GithubWorkflowScope,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];
