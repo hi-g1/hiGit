@@ -5,6 +5,7 @@
     "color-named": "never",
     "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color", "color-mix"],
     "selector-class-pattern": null,
+    "selector-pseudo-class-no-unknown": [true, { "ignorePseudoClasses": ["global"] }],
     "declaration-property-value-disallowed-list": {
       "/^text-decoration(-line)?$/": ["/underline/"],
       "/^border(-(top|right|bottom|left))?$/": ["/dotted/"],

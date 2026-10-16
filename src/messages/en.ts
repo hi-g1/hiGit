@@ -367,6 +367,7 @@ export const en: Messages = {
     languages: { system: "Follow system", ko: "한국어", en: "English" },
     theme: "Appearance",
     themes: { system: "Follow system", light: "Light", dark: "Dark" },
+    info: "About",
     github: "GitHub",
     notConfigured: "GitHub connection isn't set up in this app",
     connect: "Connect GitHub",

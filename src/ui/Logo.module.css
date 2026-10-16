@@ -1,0 +1,43 @@
+/* 로고(design.md "브랜드"). 높이: 시작 화면 28px, 설정 20px 안팎 */
+.logo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.logo img {
+  display: block;
+  width: auto;
+  height: 100%;
+}
+
+.start {
+  height: 1.75rem;
+}
+
+.settings {
+  height: 1.25rem;
+}
+
+/* 보이는 로고는 tokens.css의 화면 모드 규칙과 같다(D-151) */
+.logo .dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .logo .light {
+    display: none;
+  }
+
+  :global(:root:not([data-theme="light"])) .logo .dark {
+    display: block;
+  }
+}
+
+:global(:root[data-theme="dark"]) .logo .light {
+  display: none;
+}
+
+:global(:root[data-theme="dark"]) .logo .dark {
+  display: block;
+}

@@ -65,6 +65,13 @@ afterEach(() => {
 });
 
 describe("시작 화면", () => {
+  it("상단 바 맨 앞에 로고", async () => {
+    vi.mocked(api.recentProjects).mockResolvedValue([]);
+    renderStart();
+    const bar = screen.getByRole("banner");
+    expect(bar.firstElementChild?.querySelector('img[alt="hiGit"]')).not.toBeNull();
+  });
+
   it("맨 앞 프로젝트를 위쪽에, 나머지를 아래 목록에", async () => {
     vi.mocked(api.recentProjects).mockResolvedValue([
       project("my-shop", 10),

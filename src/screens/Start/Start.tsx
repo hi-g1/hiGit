@@ -11,6 +11,7 @@ import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import { Kbd } from "../../ui/Kbd";
+import { Logo } from "../../ui/Logo";
 import { Term } from "../../ui/Term";
 import { LastProject } from "./LastProject";
 import { ProjectRow } from "./ProjectRow";
@@ -42,6 +43,7 @@ export function Start() {
   return (
     <div className={styles.start}>
       <header className={styles.bar}>
+        <Logo size="start" />
         <span className={styles.barTitle}>{m.startTitle}</span>
         <span className={styles.spacer} />
         <button

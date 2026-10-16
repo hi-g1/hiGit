@@ -48,6 +48,15 @@ afterEach(() => {
 });
 
 describe("SettingsDialog", () => {
+  it("구역은 일반·GitHub·정보이고 정보에 로고", async () => {
+    status.mockResolvedValue(notConnected);
+    show();
+    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    expect(headings).toEqual(["일반", "GitHub", "정보"]);
+    const info = screen.getByRole("heading", { name: "정보" }).closest("section")!;
+    expect(info.querySelector('img[alt="hiGit"]')).not.toBeNull();
+  });
+
   it("준비 안 됨이면 까닭과 꺼진 연결 단추", async () => {
     status.mockResolvedValue({ ...notConnected, configured: false });
     show();

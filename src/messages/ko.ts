@@ -399,6 +399,7 @@ export const ko = {
     languages: { system: "시스템 따라가기", ko: "한국어", en: "English" },
     theme: "화면 모드",
     themes: { system: "시스템 따라가기", light: "라이트", dark: "다크" },
+    info: "정보",
     github: "GitHub",
     notConfigured: "이 앱에는 GitHub 연결이 준비되지 않았어요",
     connect: "GitHub 연결",
