@@ -25,7 +25,18 @@ describe("불러오는 표시 지연(D-159)", () => {
     expect(result.current).toBe(false);
     act(() => vi.advanceTimersByTime(301));
     expect(result.current).toBe(true);
+  });
+
+  it("한 번 켜지면 곧바로 끝나도 0.5초는 남는다(D-193)", () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(({ pending }) => useDelayedFlag(pending), { initialProps: { pending: true } });
+    act(() => vi.advanceTimersByTime(301));
+    expect(result.current).toBe(true);
     rerender({ pending: false });
+    expect(result.current).toBe(true);
+    act(() => vi.advanceTimersByTime(450));
+    expect(result.current).toBe(true);
+    act(() => vi.advanceTimersByTime(60));
     expect(result.current).toBe(false);
   });
 });

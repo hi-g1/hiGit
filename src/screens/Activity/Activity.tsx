@@ -83,7 +83,7 @@ export function Activity({ repo, onDone }: Props) {
   return (
     <section className={styles.activity} aria-label={m.activityArea}>
       <p className={styles.note}>{m.activityNote}</p>
-      <Loading pending={recovery.isPending} />
+      <Loading pending={recovery.isPending} skeleton={5} />
       {recovery.error && <ErrorNotice error={recovery.error} />}
       {recovery.data && items.length === 0 && <EmptyState>{m.activityEmpty}</EmptyState>}
       {groups.map((g) => (

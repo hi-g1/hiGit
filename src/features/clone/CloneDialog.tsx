@@ -200,7 +200,7 @@ function CloneForm() {
             {m.clone.close}
           </Button>
         )}
-        <Button variant="primary" disabled={!ready || running} onClick={() => void run()}>
+        <Button variant="primary" disabled={!ready} busy={running} onClick={() => void run()}>
           {m.clone.run}
         </Button>
       </div>

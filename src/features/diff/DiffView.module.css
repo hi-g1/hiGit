@@ -168,3 +168,10 @@
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 다른 파일을 읽는 데 300ms가 넘을 때 머리 오른쪽(D-193) */
+.loading {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}

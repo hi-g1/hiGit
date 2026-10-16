@@ -338,6 +338,20 @@ export function useDiff(repo: string, request: DiffRequest, options: { enabled?:
   });
 }
 
+/**
+ * 비교 칸의 비교(D-193). 결과에 그 요청을 함께 담아, 다른 파일을 고른 동안에도 이전 파일의 머리와 줄을 함께
+ * 보인다(같은 저장소의 이전 결과일 때만). 300ms 넘게 걸리면 화면이 머리에 "불러오는 중…"을 보인다.
+ */
+export function useDiffView(repo: string, request: DiffRequest) {
+  const commit = request.commit ?? "";
+  return useQuery<{ request: DiffRequest; view: Awaited<ReturnType<typeof api.diff>> }, ApiError>({
+    queryKey: [...queryKeys.diff(repo, request.path, request.untracked, commit, false), "view"],
+    queryFn: async () => ({ request, view: await api.diff(repo, request) }),
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === repo ? previous : undefined),
+    staleTime: commit ? Infinity : 0,
+  });
+}
+
 /** 기록 정리 카드 지도의 처음 모습(D-106). `.git`이 바뀌면 다시 읽는다(막힌 까닭이 바뀔 수 있다). */
 export function useRewritePlan(repo: string, oids: readonly string[]) {
   return useQuery<Awaited<ReturnType<typeof api.rewritePlan>>, ApiError>({

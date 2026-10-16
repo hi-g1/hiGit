@@ -13,17 +13,31 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
    * `aria-describedby`로 나오며 누름은 무시한다. 진행 중 꺼짐은 이것 대신 `disabled`를 쓴다.
    */
   disabledReason?: string | null;
+  /** 진행 중(D-193): 글자는 그대로 두고 오른쪽에 작은 진행 표시, `aria-busy`, 누름은 막는다. */
+  busy?: boolean;
 };
 
 /** ref를 넘긴다(툴팁·팝오버의 `asChild` 트리거가 위치를 잡으려면 필요하다). */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "secondary", className, type = "button", disabledReason, onClick, ...rest },
+  { variant = "secondary", className, type = "button", disabledReason, busy = false, onClick, children, ...rest },
   ref,
 ) {
   const reasonId = useId();
   const classes = [styles.button, styles[variant], className].filter(Boolean).join(" ");
+  if (busy) {
+    return (
+      <button ref={ref} type={type} className={classes} {...rest} disabled aria-busy="true">
+        {children}
+        <span className={styles.spinner} aria-hidden="true" />
+      </button>
+    );
+  }
   if (!disabledReason) {
-    return <button ref={ref} type={type} className={classes} onClick={onClick} {...rest} />;
+    return (
+      <button ref={ref} type={type} className={classes} onClick={onClick} {...rest}>
+        {children}
+      </button>
+    );
   }
   const ignore = (e: MouseEvent<HTMLButtonElement>) => e.preventDefault();
   return (
@@ -38,7 +52,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           aria-disabled="true"
           aria-describedby={reasonId}
           onClick={ignore}
-        />
+        >
+          {children}
+        </button>
       </Tooltip>
       <span id={reasonId} hidden>
         {disabledReason}

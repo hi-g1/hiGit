@@ -107,7 +107,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
         <div className={styles.twoPane} style={{ "--pane-width": `${pane.rem}rem` } as CSSProperties}>
           <section className={styles.left}>
             <div className={styles.scroll}>
-              <Loading pending={status.isPending} />
+              <Loading pending={status.isPending} skeleton={4} />
               {status.error && <ErrorNotice error={status.error} />}
               {status.data && (
                 <>
@@ -133,7 +133,6 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
             {selected ? (
               <>
                 <DiffView
-                  key={selected.path}
                   repo={repo.path}
                   request={{
                     path: selected.path,

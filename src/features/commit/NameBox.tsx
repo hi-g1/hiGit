@@ -167,7 +167,7 @@ export function NameBox({ folder, files, onSaved, focusAfterSave }: Props) {
           <Button
             type="submit"
             variant="primary"
-            disabled={commit.isPending || checking}
+            busy={commit.isPending || checking}
             disabledReason={files.length === 0 ? m.disabledReasons.noChanges : null}
           >
             <Term id="commit" focusable={false} />

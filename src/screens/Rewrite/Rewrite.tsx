@@ -88,7 +88,7 @@ export function Rewrite({ repo, onDone }: Props) {
         </Button>
       </header>
       <div className={styles.body}>
-        <Loading pending={plan.isPending} />
+        <Loading pending={plan.isPending} skeleton={4} />
         {plan.error && <ErrorNotice error={plan.error} />}
         {blocked !== null && (
           <p className={styles.notice} role="alert">

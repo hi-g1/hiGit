@@ -56,3 +56,26 @@
   border-color: var(--border-strong);
   background: var(--surface-sunken);
 }
+
+/* 진행 중 표시(D-193): 글자 오른쪽 작은 회전, 모션 줄이기면 멈춘 점 */
+.spinner {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    border-right-color: currentcolor;
+    animation: none;
+  }
+}

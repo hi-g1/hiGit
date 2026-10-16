@@ -322,7 +322,7 @@ export function History({
           {m.zoomStatus(m.zoomNames[zoom], shown.length)}
         </span>
       </header>
-      <Loading pending={log.isPending} />
+      <Loading pending={log.isPending} skeleton={6} />
       {log.error && <ErrorNotice error={log.error} />}
       {pages &&
         (received === 0 ? (

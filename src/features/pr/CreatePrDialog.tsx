@@ -224,7 +224,7 @@ function CreatePrForm({ repo }: { repo: string }) {
             {m.pr.close}
           </Button>
         )}
-        <Button variant="primary" disabled={!ready || running !== null} onClick={() => void submit()}>
+        <Button variant="primary" disabled={!ready} busy={running !== null} onClick={() => void submit()}>
           {m.pr.create}
         </Button>
       </div>
