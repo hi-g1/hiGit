@@ -311,6 +311,25 @@ impl Core {
         result
     }
 
+    /// 기본 브라우저로 열 GitHub 페이지 주소. 화면은 주소를 넘기지 않고 종류만 고른다.
+    /// 검토 요청은 열린 저장소(`folder`)의 GitHub 원격에서 만든다.
+    pub fn hosting_page_url(
+        &self,
+        folder: Option<&Path>,
+        page: crate::view::HostingPage,
+    ) -> Result<String> {
+        use crate::view::HostingPage;
+        match page {
+            HostingPage::DeviceLogin => Ok(self.github.device_login_url()),
+            HostingPage::AppSettings => Ok(self.github.app_settings_url()),
+            HostingPage::PullRequest { number } => {
+                let folder = folder.ok_or(CoreError::NotOpened)?;
+                let repo = self.queries.github_repo(folder)?;
+                self.github.pull_request_url(&repo, number)
+            }
+        }
+    }
+
     /// 오래 걸리는 작업의 진행을 받을 곳(앱이 화면 이벤트로 보낸다, D-080).
     pub fn set_progress_sink(&self, sink: Arc<dyn Fn(crate::view::OpProgress) + Send + Sync>) {
         let running = self.running.clone();

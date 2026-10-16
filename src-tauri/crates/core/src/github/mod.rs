@@ -407,6 +407,22 @@ impl GitHubService {
     pub fn device_login_url(&self) -> String {
         format!("{}/login/device", self.web_base)
     }
+
+    /// 앱 권한 페이지(GitHub 쪽 연결 취소).
+    pub fn app_settings_url(&self) -> String {
+        format!("{}/settings/applications", self.web_base)
+    }
+
+    /// 검토 요청 하나의 페이지. 소유자·이름은 `parse_remote`가 검사한 값이고 번호는 1 이상.
+    pub fn pull_request_url(&self, repo: &hosting::RemoteRepo, number: u32) -> Result<String> {
+        if number == 0 || !hosting::valid_owner(&repo.owner) || !hosting::valid_name(&repo.name) {
+            return Err(CoreError::InvalidInput("pull request page"));
+        }
+        Ok(format!(
+            "{}/{}/{}/pull/{number}",
+            self.web_base, repo.owner, repo.name
+        ))
+    }
 }
 
 fn pending_view(interval: Duration) -> LoginPollView {

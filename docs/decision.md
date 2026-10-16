@@ -976,3 +976,11 @@
 - 대안: core가 스레드로 폴링하고 이벤트로 알리기.
 - 영향: D-037, D-040(계획 009 C13, 검토 반영).
 
+
+## D-122 GitHub 오류 코드와 열 페이지 (자동 결정)
+- 상태: 확정
+- 날짜: 2026-10-16
+- 결정: hosting 오류는 core 한 함수에서 `ErrorCode`로 바꾼다. 계획의 목록에 더해 SSO 승인 필요(`githubSsoRequired`, 403 + `X-GitHub-SSO`), GitHub 쪽 문제(`githubUnavailable`, 5xx), 키체인 실패(`githubKeychain`, 잠김·거절·오류)를 따로 둔다. 422는 `prAlreadyExists`·`prNoDifference`·`prInvalid`. 로그인 결과의 만료·거절은 오류가 아니라 `LoginPollView`의 값이다. 앱이 여는 페이지는 셋: 코드 넣기(`{web}/login/device`), 앱 권한(`{web}/settings/applications`), 검토 요청(`{web}/{소유자}/{이름}/pull/{번호}`, 열린 저장소의 GitHub 원격 중 `origin`을 먼저, 없으면 처음 나오는 것). 상태 화면의 `remembered`는 "키체인에 저장한 연결"이고, helper 조건(D-111)은 core 안의 "이번 실행에 키체인에서 읽었거나 썼다"를 따로 본다.
+- 이유: 사람이 할 일이 다른 실패(SSO 승인, 잠시 뒤 다시, 키체인 열기)는 문구를 나눠야 안내가 짧아진다. 페이지 주소를 core가 상수로 만들면 화면이 주소를 넘길 일이 없다.
+- 대안: 403·5xx·키체인을 한 코드로 묶기.
+- 영향: D-109, D-111, D-112(계획 009 G10).

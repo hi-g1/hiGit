@@ -7,10 +7,10 @@ use std::sync::Arc;
 use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppStatus, BranchListView, BranchNameCheck,
     CommitDetailView, CommitStatView, ConflictFileView, ConflictStateView, DiffRequest, ErrorCode,
-    ErrorView, FileDiffView, HomeMapView, LogPage, LogQuery, MergeHintView, OpenHow,
-    PendingWorkView, PreviewView, ProjectOpenResult, ProjectSummaryView, RecentProject,
-    RecoveryView, RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView, StatusView,
-    TrustChoice, UndoResult,
+    ErrorView, FileDiffView, GitHubStatusView, HomeMapView, HostingPage, LogPage, LogQuery,
+    LoginChallengeView, LoginPollView, MergeHintView, OpenHow, PendingWorkView, PreviewView,
+    ProjectOpenResult, ProjectSummaryView, RecentProject, RecoveryView, RewritePlanView,
+    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -59,6 +59,67 @@ pub fn app_open_git_download(app: AppHandle, state: State<'_, AppState>) -> CmdR
             code: ErrorCode::Internal,
             detail: Some(e.to_string()),
         })
+}
+
+/// GitHub 페이지를 기본 브라우저로 연다(D-109). 화면은 페이지 종류만 고르고 주소는 core가
+/// 상수와 검사한 값으로 만든다. 검토 요청은 열린 저장소(`folder`)만.
+#[tauri::command]
+#[specta::specta]
+pub async fn app_open_hosting_page(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder: Option<String>,
+    page: HostingPage,
+) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let url = blocking(state, move |core| {
+        core.hosting_page_url(folder.as_deref().map(std::path::Path::new), page)
+    })
+    .await?;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| ErrorView {
+            code: ErrorCode::Internal,
+            detail: Some(e.to_string()),
+        })
+}
+
+/// 설정의 GitHub 구역 상태. 키체인을 건드리지 않는다.
+#[tauri::command]
+#[specta::specta]
+pub async fn github_status(state: State<'_, AppState>) -> CmdResult<GitHubStatusView> {
+    blocking(state, |core| Ok(core.github_status())).await
+}
+
+/// GitHub 로그인(device flow)을 시작한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn github_connect_start(state: State<'_, AppState>) -> CmdResult<LoginChallengeView> {
+    blocking(state, |core| core.github_connect_start()).await
+}
+
+/// 승인됐는지 묻는다. 간격 안이면 core가 네트워크 없이 답한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn github_connect_poll(state: State<'_, AppState>) -> CmdResult<LoginPollView> {
+    blocking(state, |core| core.github_connect_poll()).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn github_connect_cancel(state: State<'_, AppState>) -> CmdResult<()> {
+    blocking(state, |core| {
+        core.github_connect_cancel();
+        Ok(())
+    })
+    .await
+}
+
+/// 이 컴퓨터에서 GitHub 연결을 끊는다.
+#[tauri::command]
+#[specta::specta]
+pub async fn github_disconnect(state: State<'_, AppState>) -> CmdResult<()> {
+    blocking(state, |core| core.github_disconnect()).await
 }
 
 /// 로그 폴더를 파일 관리자로 연다(D-078). 위치는 core가 정하고 화면은 넘기지 않는다.

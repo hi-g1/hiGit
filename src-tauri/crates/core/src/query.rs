@@ -69,6 +69,17 @@ impl Queries {
         self.github = github;
     }
 
+    /// 열린 저장소의 GitHub 저장소. `origin`이 GitHub면 그것, 아니면 처음 나오는 GitHub 원격.
+    pub(crate) fn github_repo(&self, repo: &Path) -> Result<hosting::RemoteRepo> {
+        let root = self.opened_repo(repo)?;
+        let remotes = self.git.remotes(&root)?;
+        let found = remotes
+            .iter()
+            .filter_map(|r| hosting::GitHub::detect(&r.url).map(|g| (r.name == "origin", g)))
+            .max_by_key(|(origin, _)| *origin);
+        found.map(|(_, g)| g).ok_or(CoreError::NoRemote)
+    }
+
     pub(crate) fn set_key(&mut self, key: crate::undo::JournalKey) {
         self.key = key;
     }

@@ -5,6 +5,7 @@ import {
   type DiffRequest,
   type ErrorCode,
   type ErrorView,
+  type HostingPage,
   type LogQuery,
   type OpenHow,
   type TrustChoice,
@@ -27,7 +28,11 @@ export type {
   DiffRequest,
   ErrorCode,
   FileDiffView,
+  GitHubStatusView,
   HomeMapView,
+  HostingPage,
+  LoginChallengeView,
+  LoginPollView,
   MapCommit,
   OpenHow,
   OtherOperation,
@@ -107,6 +112,15 @@ export const api = {
   openGitDownload: () => call(commands.appOpenGitDownload()),
   /** 로그 폴더를 연다(D-078). 위치는 core가 정한다. */
   openLogFolder: () => call(commands.appOpenLogFolder()),
+  /** GitHub 페이지를 연다(D-109). 주소는 core가 만들고, 검토 요청은 열린 저장소만. */
+  openHostingPage: (folder: string | null, page: HostingPage) =>
+    call(commands.appOpenHostingPage(folder, page)),
+  githubStatus: () => call(commands.githubStatus()),
+  githubConnectStart: () => call(commands.githubConnectStart()),
+  /** 간격 안이면 core가 네트워크 없이 기다리라고 답한다. */
+  githubConnectPoll: () => call(commands.githubConnectPoll()),
+  githubConnectCancel: () => call(commands.githubConnectCancel()),
+  githubDisconnect: () => call(commands.githubDisconnect()),
   /** 프로젝트 열기. 화면에서는 features/open-project/useOpenProject만 부른다(D-032). */
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */

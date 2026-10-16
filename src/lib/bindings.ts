@@ -11,6 +11,20 @@ export const commands = {
 	appOpenGitDownload: () => __TAURI_INVOKE<null>("app_open_git_download"),
 	/**  로그 폴더를 파일 관리자로 연다(D-078). 위치는 core가 정하고 화면은 넘기지 않는다. */
 	appOpenLogFolder: () => __TAURI_INVOKE<null>("app_open_log_folder"),
+	/**
+	 *  GitHub 페이지를 기본 브라우저로 연다(D-109). 화면은 페이지 종류만 고르고 주소는 core가
+	 *  상수와 검사한 값으로 만든다. 검토 요청은 열린 저장소(`folder`)만.
+	 */
+	appOpenHostingPage: (folder: string | null, page: HostingPage) => __TAURI_INVOKE<null>("app_open_hosting_page", { folder, page }),
+	/**  설정의 GitHub 구역 상태. 키체인을 건드리지 않는다. */
+	githubStatus: () => __TAURI_INVOKE<GitHubStatusView>("github_status"),
+	/**  GitHub 로그인(device flow)을 시작한다. */
+	githubConnectStart: () => __TAURI_INVOKE<LoginChallengeView>("github_connect_start"),
+	/**  승인됐는지 묻는다. 간격 안이면 core가 네트워크 없이 답한다. */
+	githubConnectPoll: () => __TAURI_INVOKE<LoginPollView>("github_connect_poll"),
+	githubConnectCancel: () => __TAURI_INVOKE<null>("github_connect_cancel"),
+	/**  이 컴퓨터에서 GitHub 연결을 끊는다. */
+	githubDisconnect: () => __TAURI_INVOKE<null>("github_disconnect"),
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
 	/**  신뢰 확인에서 고른 결과로 연다(D-039). */
 	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),
@@ -425,6 +439,16 @@ export type FileResolution = {
 	choice: FileChoice,
 };
 
+/**  설정의 GitHub 구역이 그리는 상태. 키체인을 건드리지 않고 만든다. */
+export type GitHubStatusView = {
+	/**  client id가 있어 연결할 수 있다. 아니면 "준비 안 됨". */
+	configured: boolean,
+	connected: boolean,
+	login: string | null,
+	/**  키체인에 저장한 연결. 연결됐는데 거짓이면 "이번 실행에만 저장됨". */
+	remembered: boolean,
+};
+
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
 export type GitSecurity = "ok" | "outdated" | "distroManaged";
 
@@ -449,6 +473,15 @@ export type HomeMapView = {
 	upstreamLabel: string | null,
 	changedFiles: number,
 };
+
+/**  앱이 기본 브라우저로 여는 GitHub 페이지. 주소는 core가 상수와 검사한 값으로만 만든다. */
+export type HostingPage = 
+/**  코드를 넣는 페이지. */
+{ kind: "deviceLogin" } | 
+/**  앱 권한 페이지(GitHub 쪽 연결 취소). */
+{ kind: "appSettings" } | 
+/**  열린 저장소의 검토 요청 하나. */
+{ kind: "pullRequest"; number: number };
 
 export type HunkChoice = { kind: "ours" } | { kind: "theirs" } | 
 /**  내 쪽 다음 합칠 쪽. */
@@ -501,6 +534,16 @@ export type LogScope =
 "all" | 
 /**  지금 위치의 조상만. */
 "current";
+
+/**  로그인 시작: 사람이 브라우저에 넣을 코드. */
+export type LoginChallengeView = {
+	userCode: string,
+	expiresInSecs: number,
+	intervalSecs: number,
+};
+
+/**  한 번 물어본 결과. */
+export type LoginPollView = { kind: "pending"; intervalSecs: number } | { kind: "connected"; login: string } | { kind: "expired" } | { kind: "denied" };
 
 export type MapCommit = {
 	oid: string,
