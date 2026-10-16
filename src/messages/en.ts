@@ -450,6 +450,14 @@ export const en: Messages = {
     open: "Open",
   },
   tagPush: { push: "Upload", done: "Tag uploaded" },
+  textMenu: {
+    label: "Edit",
+    cut: "Cut",
+    copy: "Copy",
+    paste: "Paste",
+    selectAll: "Select all",
+    pasteWithKeys: "Press Ctrl+V",
+  },
   remoteTag: {
     deleteOnRemote: "Delete on remote",
     delete: "Delete",

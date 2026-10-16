@@ -489,6 +489,15 @@ export const ko = {
   },
   // 태그 올리기(D-131)
   tagPush: { push: "올리기", done: "태그를 올렸어요" },
+  // 입력칸 앱 메뉴(D-189)
+  textMenu: {
+    label: "편집",
+    cut: "잘라내기",
+    copy: "복사",
+    paste: "붙여넣기",
+    selectAll: "모두 선택",
+    pasteWithKeys: "Ctrl+V를 눌러 주세요",
+  },
   // 원격 태그 지우기(D-182)
   remoteTag: {
     deleteOnRemote: "원격에서 지우기",

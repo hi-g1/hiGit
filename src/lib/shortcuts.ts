@@ -100,6 +100,8 @@ export const RESERVED: readonly Key[] = [
   ctrl("KeyI", true),
   ctrl("KeyJ", true),
   ctrl("KeyC", true),
+  ctrl("KeyR", true),
+  plain("F3"),
   plain("F5"),
   plain("F12"),
   { code: "ArrowLeft", ctrl: false, shift: false, alt: true },

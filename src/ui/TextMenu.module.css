@@ -1,0 +1,43 @@
+/* 입력칸·선택한 글자의 앱 메뉴(design.md "데스크톱 느낌"). 역 메뉴와 같은 판 */
+.anchor {
+  position: fixed;
+  width: 0.0625rem;
+  height: 0.0625rem;
+  pointer-events: none;
+}
+
+.content {
+  z-index: 200;
+  min-width: 11rem;
+  padding: var(--space-1) 0;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--target-min, 1.5rem);
+  padding: var(--space-1) var(--space-3);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+
+.item[data-highlighted] {
+  background: var(--surface-hover);
+}
+
+.item[aria-disabled="true"] {
+  color: var(--text-muted);
+}
+
+@media (forced-colors: active) {
+  .content {
+    border-color: CanvasText;
+  }
+}

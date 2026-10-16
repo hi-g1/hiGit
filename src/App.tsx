@@ -17,6 +17,7 @@ import { useStartup } from "./state/useStartup";
 import { RemoteRefusedFix } from "./features/github/RemoteRefusedFix";
 import { WorkflowFix } from "./features/github/WorkflowFix";
 import { ErrorActionsContext, type ErrorActions } from "./ui/errorActions";
+import { TextMenu } from "./ui/TextMenu";
 import { ToastHost } from "./ui/Toast";
 
 export function createQueryClient() {
@@ -44,6 +45,7 @@ export function AppProviders({ children, client }: { children: ReactNode; client
       <ErrorActionsContext.Provider value={ERROR_ACTIONS}>
         {children}
         <ToastHost />
+        <TextMenu />
       </ErrorActionsContext.Provider>
     </QueryClientProvider>
   );

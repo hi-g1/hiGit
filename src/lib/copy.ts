@@ -24,3 +24,21 @@ export async function copyText(text: string): Promise<boolean> {
     area.remove();
   }
 }
+
+/**
+ * 클립보드 글자 읽기(입력칸 앱 메뉴의 붙여넣기, D-189). 사람의 동작 안에서만 부른다. 웹뷰가 막거나 없으면
+ * `null`이고 화면은 "Ctrl+V를 눌러 주세요"로 안내한다. 읽은 값은 저장하거나 기록하지 않는다.
+ */
+export async function readText(): Promise<string | null> {
+  try {
+    if (!navigator.clipboard?.readText) return null;
+    return await navigator.clipboard.readText();
+  } catch {
+    return null;
+  }
+}
+
+/** 클립보드에서 글자를 읽을 수 있어 보이는지(항목을 미리 끌지 정한다). */
+export function canReadText(): boolean {
+  return typeof navigator.clipboard?.readText === "function";
+}
