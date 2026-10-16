@@ -13,6 +13,7 @@ mod conflict;
 mod error;
 mod executor;
 pub mod git_security;
+pub mod github;
 mod guard;
 mod history;
 mod locks;
@@ -39,7 +40,7 @@ pub use action::{
     UnavailableReason,
 };
 pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, init};
-pub use error::{CoreError, Result};
+pub use error::{CoreError, GithubFailure, Result};
 pub use executor::{Executor, PreviewToken};
 pub use query::{MAX_LOG_PAGE, Queries};
 pub use registry::Registry;

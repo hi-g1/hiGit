@@ -6,6 +6,7 @@ use std::path::Path;
 mod branch;
 mod conflict;
 mod diff;
+mod github;
 mod history;
 mod input;
 mod map;
@@ -21,6 +22,7 @@ pub use conflict::{
     ConflictSide, ConflictStateView, SideState,
 };
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
+pub use github::{GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView};
 pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
 };
@@ -636,6 +638,22 @@ pub enum ErrorCode {
     BranchProtected,
     NoChange,
     AnnotatedTag,
+    // GitHub 연결·API(D-109)
+    GithubNotConfigured,
+    GithubNotConnected,
+    GithubExpired,
+    GithubForbidden,
+    GithubRateLimited,
+    GithubSsoRequired,
+    GithubNotFound,
+    GithubMoved,
+    GithubUnreachable,
+    GithubUnavailable,
+    GithubBadResponse,
+    GithubKeychain,
+    PrAlreadyExists,
+    PrNoDifference,
+    PrInvalid,
     // 아래는 git 실패 종류(D-021)
     NothingToCommit,
     IdentityMissing,
@@ -738,6 +756,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::IdentityMissing => ErrorCode::IdentityMissing,
             CoreError::AnnotatedTag => ErrorCode::AnnotatedTag,
             CoreError::Git(e) => e.kind().into(),
+            CoreError::Github { kind, .. } => github_code(*kind),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {
                 ErrorCode::Internal
             }
@@ -752,6 +771,28 @@ impl From<&CoreError> for ErrorView {
         let home = platform::home_dir().map(|h| h.to_string_lossy().into_owned());
         let detail = detail.map(|d| crate::redact::redact(&d, home.as_deref()));
         Self { code, detail }
+    }
+}
+
+fn github_code(kind: crate::GithubFailure) -> ErrorCode {
+    use crate::GithubFailure as G;
+    match kind {
+        G::NotConfigured => ErrorCode::GithubNotConfigured,
+        G::NotConnected => ErrorCode::GithubNotConnected,
+        G::Expired => ErrorCode::GithubExpired,
+        G::Forbidden => ErrorCode::GithubForbidden,
+        G::RateLimited => ErrorCode::GithubRateLimited,
+        G::SsoRequired => ErrorCode::GithubSsoRequired,
+        G::NotFound => ErrorCode::GithubNotFound,
+        G::Moved => ErrorCode::GithubMoved,
+        G::Unreachable => ErrorCode::GithubUnreachable,
+        G::Unavailable => ErrorCode::GithubUnavailable,
+        G::BadResponse => ErrorCode::GithubBadResponse,
+        G::Keychain => ErrorCode::GithubKeychain,
+        G::Cancelled => ErrorCode::Cancelled,
+        G::PrAlreadyExists => ErrorCode::PrAlreadyExists,
+        G::PrNoDifference => ErrorCode::PrNoDifference,
+        G::PrInvalid => ErrorCode::PrInvalid,
     }
 }
 

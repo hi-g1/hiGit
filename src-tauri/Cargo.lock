@@ -1678,6 +1678,7 @@ dependencies = [
  "getrandom 0.3.4",
  "git",
  "hmac 0.12.1",
+ "hosting",
  "platform",
  "serde",
  "serde_json",

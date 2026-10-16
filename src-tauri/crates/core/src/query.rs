@@ -33,6 +33,9 @@ pub struct Queries {
     slow_overlap: Mutex<HashSet<PathBuf>>,
     /// 앱이 시작한 작업의 표식을 확인하는 키(D-102).
     key: crate::undo::JournalKey,
+    /// GitHub 연결(검토 요청 조회, D-112).
+    #[allow(dead_code)]
+    github: Arc<crate::github::GitHubService>,
 }
 
 /// 합치기 제안의 겹침 검사가 이보다 오래 걸리면 그 저장소에서는 다시 하지 않는다.
@@ -48,6 +51,7 @@ impl Queries {
         recent: Arc<RecentStore>,
         trust: Arc<TrustStore>,
         key: crate::undo::JournalKey,
+        github: Arc<crate::github::GitHubService>,
     ) -> Self {
         Self {
             git,
@@ -57,7 +61,12 @@ impl Queries {
             hint_cache: Mutex::new(HashMap::new()),
             slow_overlap: Mutex::new(HashSet::new()),
             key,
+            github,
         }
+    }
+
+    pub(crate) fn set_github(&mut self, github: Arc<crate::github::GitHubService>) {
+        self.github = github;
     }
 
     pub(crate) fn set_key(&mut self, key: crate::undo::JournalKey) {
@@ -678,7 +687,7 @@ impl Queries {
                 .filter(|r| upstream.starts_with(&format!("{}/", r.name)))
                 .max_by_key(|r| r.name.len());
             view.upstream_label = remote.map(|r| {
-                if remote_host(&r.url).is_some_and(|h| h.eq_ignore_ascii_case("github.com")) {
+                if hosting::GitHub::detect(&r.url).is_some() {
                     "GitHub".to_string()
                 } else {
                     r.name.clone()
@@ -996,20 +1005,6 @@ impl Queries {
     }
 }
 
-/// 화면이 보낸 경로를 폴더 열기 때와 같은 형식으로 정규화한다.
-/// 원격 주소의 호스트. `https://host/…`, `ssh://user@host:22/…`, `user@host:path`.
-/// 경로에 든 글자(`https://evil/github.com/x`)로 판단하지 않게 호스트만 꺼낸다.
-fn remote_host(url: &str) -> Option<&str> {
-    let rest = match url.split_once("://") {
-        Some((_, rest)) => rest.split('/').next()?,
-        // scp 형식: 첫 `:` 앞이 `[user@]host`
-        None => url.split_once(':')?.0,
-    };
-    let host = rest.rsplit_once('@').map_or(rest, |(_, h)| h);
-    let host = host.split(':').next()?;
-    (!host.is_empty()).then_some(host)
-}
-
 /// 파일 앞부분(비밀 검사 상한까지).
 fn read_head(path: &Path) -> Vec<u8> {
     use std::io::Read;
@@ -1099,27 +1094,15 @@ pub(crate) fn default_branch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
-    fn host_comes_from_the_host_part_only() {
-        assert_eq!(
-            remote_host("https://github.com/a/b.git"),
-            Some("github.com")
-        );
-        assert_eq!(
-            remote_host("https://user:pw@GitHub.com/a/b"),
-            Some("GitHub.com")
-        );
-        assert_eq!(
-            remote_host("ssh://git@github.com:22/a/b"),
-            Some("github.com")
-        );
-        assert_eq!(remote_host("git@github.com:a/b.git"), Some("github.com"));
-        assert_eq!(
-            remote_host("https://evil.example/github.com/x"),
-            Some("evil.example")
-        );
-        assert_eq!(remote_host("/local/path"), None);
+    fn github_label_comes_from_the_host_part_only() {
+        let github = |url: &str| hosting::GitHub::detect(url).is_some();
+        assert!(github("https://github.com/a/b.git"));
+        assert!(github("ssh://git@github.com:22/a/b"));
+        assert!(github("git@github.com:a/b.git"));
+        assert!(!github("https://evil.example/github.com/x"));
+        assert!(!github("/local/path"));
+        // 사용자 정보가 든 https 주소는 GitHub 이름표를 붙이지 않는다(반복 4에서 바뀜).
+        assert!(!github("https://user:pw@GitHub.com/a/b"));
     }
 }

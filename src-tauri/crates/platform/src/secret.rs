@@ -91,6 +91,22 @@ impl Keychain {
         }
     }
 
+    /// **테스트 전용.** 모의 저장소면 이 계정의 다음 호출 하나를 `Denied`로 실패시킨다.
+    #[doc(hidden)]
+    pub fn deny_next_for_tests(&self, account: &str) {
+        let Source::Given(store) = &self.source else {
+            return;
+        };
+        let Ok(entry) = store.build(&self.service, account, None) else {
+            return;
+        };
+        if let Some(cred) = entry.as_any().downcast_ref::<keyring_core::mock::Cred>() {
+            cred.set_error(Error::NoStorageAccess(Box::new(std::io::Error::other(
+                "locked",
+            ))));
+        }
+    }
+
     /// 값을 읽는다. 없으면 `None`.
     pub fn get(&self, account: &str) -> Result<Option<SecretString>, KeychainError> {
         let entry = self.entry(account)?;

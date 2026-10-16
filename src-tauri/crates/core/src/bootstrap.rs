@@ -50,6 +50,8 @@ pub struct Core {
     running: Arc<Mutex<std::collections::HashMap<PathBuf, Running>>>,
     /// 신뢰 확인을 물은 경로. 신뢰·주인 허용 명령은 core가 물은 경로만 받는다(D-037).
     asked: Mutex<Vec<(PathBuf, Ask)>>,
+    /// GitHub 연결(D-109).
+    github: Arc<crate::github::GitHubService>,
 }
 
 /// 도는 작업 하나.
@@ -155,6 +157,7 @@ pub fn init() -> Result<Core> {
     };
     let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
+    core.set_github(github_service(data_dir.as_deref()));
     if let Some(dir) = &data_dir {
         core.logger = crate::log::Logger::open(dir);
     }
@@ -165,7 +168,41 @@ pub fn init() -> Result<Core> {
     Ok(core)
 }
 
+/// GitHub OAuth App의 client id(D-109). 빌드 때 넣고, 디버그 빌드만 실행 때 같은 변수도 받는다.
+fn github_client_id() -> Option<String> {
+    let built = option_env!("HIGIT_GITHUB_CLIENT_ID").map(str::to_owned);
+    if cfg!(debug_assertions) {
+        built.or_else(|| std::env::var("HIGIT_GITHUB_CLIENT_ID").ok())
+    } else {
+        built
+    }
+}
+
+fn github_service(data_dir: Option<&Path>) -> crate::github::GitHubService {
+    let config = hosting::GitHubConfig::new(github_client_id().as_deref());
+    let provider = hosting::GitHub::new(Arc::new(hosting::UreqTransport::new()), config.clone());
+    crate::github::GitHubService::new(
+        Arc::new(provider),
+        &config,
+        platform::Keychain::new(crate::github::KEYCHAIN_SERVICE),
+        data_dir,
+    )
+}
+
 impl Core {
+    /// **테스트 전용.** GitHub 연결 서비스를 바꾼다(가짜 전송·메모리 키체인).
+    #[doc(hidden)]
+    pub fn with_github_for_tests(mut self, github: crate::github::GitHubService) -> Self {
+        self.set_github(github);
+        self
+    }
+
+    fn set_github(&mut self, github: crate::github::GitHubService) {
+        let github = Arc::new(github);
+        self.queries.set_github(github.clone());
+        self.github = github;
+    }
+
     /// **테스트 전용.** 앱 데이터 폴더처럼 `dir`의 키 파일을 쓴다(껐다 켠 뒤에도 같은 키).
     #[doc(hidden)]
     pub fn with_key_dir_for_tests(mut self, dir: &Path) -> Self {
@@ -214,6 +251,7 @@ impl Core {
         let trust = Arc::new(trust);
         // 실행기(journal·표식 쓰기)와 조회(표식 읽기)가 같은 키를 쓴다.
         let key = crate::undo::JournalKey::ephemeral();
+        let github = Arc::new(crate::github::GitHubService::unconfigured());
         Ok(Self {
             executor: Executor::new(registry).with_journal_key(key.clone()),
             queries: Queries::new(
@@ -222,6 +260,7 @@ impl Core {
                 recent.clone(),
                 trust.clone(),
                 key,
+                github.clone(),
             ),
             git,
             git_version,
@@ -236,7 +275,40 @@ impl Core {
             asked: Mutex::new(Vec::new()),
             logger: crate::log::Logger::disabled(),
             running: Arc::default(),
+            github,
         })
+    }
+
+    /// 설정의 GitHub 구역 상태. 키체인을 건드리지 않는다.
+    pub fn github_status(&self) -> crate::view::GitHubStatusView {
+        self.github.status()
+    }
+
+    /// GitHub 로그인(device flow)을 시작한다.
+    pub fn github_connect_start(&self) -> Result<crate::view::LoginChallengeView> {
+        let result = self.github.connect_start();
+        self.logger.action("github", "connect-start", &result);
+        result
+    }
+
+    /// 승인됐는지 묻는다. 간격 안이면 네트워크 없이 기다리라고 답한다.
+    pub fn github_connect_poll(&self) -> Result<crate::view::LoginPollView> {
+        let result = self.github.connect_poll();
+        if !matches!(result, Ok(crate::view::LoginPollView::Pending { .. })) {
+            self.logger.action("github", "connect-poll", &result);
+        }
+        result
+    }
+
+    pub fn github_connect_cancel(&self) {
+        self.github.connect_cancel();
+    }
+
+    /// 연결을 끊는다(이 컴퓨터에서만).
+    pub fn github_disconnect(&self) -> Result<()> {
+        let result = self.github.disconnect();
+        self.logger.action("github", "disconnect", &result);
+        result
     }
 
     /// 오래 걸리는 작업의 진행을 받을 곳(앱이 화면 이벤트로 보낸다, D-080).

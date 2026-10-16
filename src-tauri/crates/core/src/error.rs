@@ -133,6 +133,40 @@ pub enum CoreError {
 
     #[error("git 작업이 실패했습니다")]
     Git(#[from] GitError),
+
+    /// GitHub 연결·API 실패(D-109). 설명은 서버·전송이 준 짧은 글(비밀은 지운 뒤).
+    #[error("GitHub 작업이 실패했습니다")]
+    Github {
+        kind: GithubFailure,
+        detail: Option<String>,
+    },
+}
+
+/// GitHub 연결·API 실패 종류.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GithubFailure {
+    /// client id가 없어 연결할 수 없다(준비 안 됨).
+    NotConfigured,
+    /// 연결되어 있지 않다.
+    NotConnected,
+    /// 토큰을 더는 쓸 수 없어 연결을 끊었다(401).
+    Expired,
+    Forbidden,
+    RateLimited,
+    /// 조직의 SSO 승인이 필요하다.
+    SsoRequired,
+    NotFound,
+    Moved,
+    Unreachable,
+    /// GitHub 쪽 문제(5xx).
+    Unavailable,
+    BadResponse,
+    /// 키체인을 쓰지 못했다(잠김·거절·오류).
+    Keychain,
+    Cancelled,
+    PrAlreadyExists,
+    PrNoDifference,
+    PrInvalid,
 }
 
 impl CoreError {
@@ -144,6 +178,7 @@ impl CoreError {
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
             CoreError::ParkBlocked(detail) => Some(detail.clone()),
+            CoreError::Github { detail, .. } => detail.clone(),
             _ => None,
         }
     }
