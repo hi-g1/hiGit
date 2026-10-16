@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 3 (계획 008, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: E7 끝 (git 쪽 E2~E6, core 검사 모듈 E7)
-- 마지막 커밋: 64fcc11 core: add history guards, errors and tag refs in undo state
-- 다음 할 일: E8 서명 표식(`core::marker`) → E9 작업 맥락 → E10 amend … (바뀐 순서는 계획 008 검토 반영 절)
+- 단계: E14a 끝 (core: 검사·표식·맥락·amend·revert·cherry-pick·마치기·reset·정리 계획 조회)
+- 마지막 커밋: d3316a5 core: add history rewrite plan query
+- 다음 할 일: E14b `rebase-i` 액션과 `edit` 멈춤 처리 → E15 정리 충돌 → E16 태그 … (바뀐 순서는 계획 008 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -152,8 +152,8 @@
 - [x] 계획 a255841(planner + code-analyst 검토 반영)
 - [x] E1 결정·용어
 - [x] E2 올림 판정·메시지 / E3 버전 파일·비교 / E4 amend·cherry-pick·revert git / E5 태그·브랜치 git / E6 rebase -i git
-- [x] E7 guard
-- [ ] E8 서명 표식 / E9 작업 맥락 / E10 amend / E11 revert·cherry-pick / E12 마치기·그만두기 / E13 reset / E14a 계획 조회 / E14b rebase-i / E15 정리 충돌 / E16 태그 / E17 브랜치 지우기·이름 / E18 새 브랜치 from / E19 버전 상세 / E20 작업 내역 신뢰 경계
+- [x] E7 guard / E8 서명 표식 / E9 작업 맥락 / E10 amend / E11 revert·cherry-pick / E12 마치기·그만두기 / E13 reset / E14a 계획 조회
+- [ ] E14b rebase-i / E15 정리 충돌 / E16 태그 / E17 브랜치 지우기·이름 / E18 새 브랜치 from / E19 버전 상세 / E20 작업 내역 신뢰 경계
 - [ ] E21 메뉴 틀 보완 / E26 충돌 화면 새 맥락 / E22 되돌리기·복사·돌아가기 / E23 태그·새 브랜치 / E24 고치기 / E25 파일 보기 / E27 여러 역 선택 / E28 카드 모델 / E29a 카드 지도 / E29b 끌기 / E30 브랜치 목록 / E31 작업 내역
 - [ ] E32 마무리·점검
 - 반복 4 이후로 넘김(D-097): 설정 화면 + 덮어쓰며 올리기 + 올린 기록 바꾸기, 원격 브랜치 지우기·이름 바꾸기, 태그 올리기
