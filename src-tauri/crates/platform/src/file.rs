@@ -35,6 +35,20 @@ pub fn open_regular_no_follow(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
+/// 실행 권한 비트가 있는지(D-216). Windows는 비트가 없어 늘 거짓이다(확장자로 가른다).
+pub fn is_executable(meta: &std::fs::Metadata) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = meta;
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

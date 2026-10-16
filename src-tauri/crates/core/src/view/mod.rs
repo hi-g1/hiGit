@@ -763,6 +763,12 @@ pub enum ErrorCode {
     WatchUnavailable,
     /// 폴더 오른쪽 클릭 메뉴를 바꾸지 못했다(D-214).
     ShellMenuFailed,
+    /// 실행될 수 있는 파일이라 기본 앱으로 열지 않았다, 또는 열 수 없는 경로(D-216).
+    OpenRefused,
+    /// 지운 파일이다(D-216).
+    OpenMissing,
+    /// 이 파일을 열 앱을 찾지 못했다(D-216).
+    OpenFailed,
     PublishedHistory,
     /// 올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129).
     RewrotePublished,
@@ -949,6 +955,9 @@ impl From<&CoreError> for ErrorView {
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::ShellMenu(_) => ErrorCode::ShellMenuFailed,
+            CoreError::OpenRefused(_) => ErrorCode::OpenRefused,
+            CoreError::OpenMissing => ErrorCode::OpenMissing,
+            CoreError::OpenFailed(_) => ErrorCode::OpenFailed,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,
             CoreError::RewrotePublished => ErrorCode::RewrotePublished,
             CoreError::ForcePushDisabled => ErrorCode::ForcePushDisabled,

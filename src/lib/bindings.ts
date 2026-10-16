@@ -51,6 +51,12 @@ export const commands = {
 	appShellMenuSync: (label: string) => __TAURI_INVOKE<ShellMenuView>("app_shell_menu_sync", { label }),
 	/**  설정에서 오른쪽 클릭 메뉴를 켜고 끈다. */
 	appShellMenuSet: (on: boolean, label: string) => __TAURI_INVOKE<ShellMenuView>("app_shell_menu_set", { on, label }),
+	/**  열린 저장소 안의 파일을 파일 관리자에서 고른 채 연다(D-216). 경로는 core가 검사하고 화면에 돌려주지 않는다. */
+	fileReveal: (folder: string, path: string) => __TAURI_INVOKE<null>("file_reveal", { folder, path }),
+	/**  열린 저장소 안의 파일을 OS 기본 앱으로 연다(D-216). 실행될 수 있는 파일은 core가 거절한다. */
+	fileOpen: (folder: string, path: string) => __TAURI_INVOKE<null>("file_open", { folder, path }),
+	/**  열린 저장소의 폴더를 파일 관리자로 연다("폴더 위치 열기", D-216). */
+	projectReveal: (folder: string) => __TAURI_INVOKE<null>("project_reveal", { folder }),
 	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
@@ -135,6 +141,8 @@ export const commands = {
 };
 
 /* Constants */
+export const OPEN_BLOCKED_EXTENSIONS = ["exe","com","bat","cmd","msi","msp","mst","msix","msixbundle","appx","appxbundle","appinstaller","scr","pif","cpl","dll","sys","drv","ocx","inf","ins","isp","msc","reg","lnk","url","scf","hta","chm","hlp","gadget","application","appref-ms","settingcontent-ms","library-ms","search-ms","searchconnector-ms","diagcab","diagpkg","xbap","website","shb","shs","sct","jnlp","iso","img","vhd","vhdx","js","jse","vb","vbs","vbe","wsf","wsh","wsc","ws","ps1","ps1xml","ps2","ps2xml","psc1","psc2","psm1","psd1","sh","bash","zsh","csh","ksh","fish","command","run","bin","out","desktop","appimage","deb","rpm","snap","flatpakref","py","pyw","pl","rb","php","jar"] as const;
+
 export const OPEN_FOLDER_EVENT = "open-folder" as const;
 
 export const OP_PROGRESS_EVENT = "op-progress" as const;
@@ -713,7 +721,13 @@ export type EmailCheckView = {
 
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "pinLimit" | "needsTrust" | "noRemote" | "watchUnavailable" | 
 /**  폴더 오른쪽 클릭 메뉴를 바꾸지 못했다(D-214). */
-"shellMenuFailed" | "publishedHistory" | 
+"shellMenuFailed" | 
+/**  실행될 수 있는 파일이라 기본 앱으로 열지 않았다, 또는 열 수 없는 경로(D-216). */
+"openRefused" | 
+/**  지운 파일이다(D-216). */
+"openMissing" | 
+/**  이 파일을 열 앱을 찾지 못했다(D-216). */
+"openFailed" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
 "rewrotePublished" | 
 /**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */

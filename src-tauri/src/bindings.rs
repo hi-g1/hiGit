@@ -36,6 +36,9 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::app_shell_menu_status,
             commands::app_shell_menu_sync,
             commands::app_shell_menu_set,
+            commands::file_reveal,
+            commands::file_open,
+            commands::project_reveal,
             commands::project_allow_owner,
             commands::recent_list,
             commands::recent_remove,
@@ -93,6 +96,10 @@ pub fn builder() -> Builder<tauri::Wry> {
         .constant("OP_PROGRESS_EVENT", OP_PROGRESS_EVENT)
         .constant("OPEN_FOLDER_EVENT", OPEN_FOLDER_EVENT)
         .constant("REMOTE_ACTIONS", higit_core::REMOTE_ACTIONS)
+        .constant(
+            "OPEN_BLOCKED_EXTENSIONS",
+            higit_core::OPEN_BLOCKED_EXTENSIONS,
+        )
 }
 
 /// 저장소 파일이 바뀌었을 때(페이로드: `RepoChanged`).

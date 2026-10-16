@@ -21,6 +21,37 @@ pub fn same_path(a: &Path, b: &Path) -> bool {
     }
 }
 
+/// 경로 구성요소 하나를 그대로 파일 이름으로 써도 되는지(D-216). Windows는 장치 이름(`CON`, `nul.txt`, `COM1` 등),
+/// 대체 데이터 스트림·드라이브의 `:`, 끝의 점·공백을 거절한다. 다른 OS는 NUL만 거절한다.
+pub fn is_plain_component(name: &str) -> bool {
+    if name.is_empty() || name.contains('\0') {
+        return false;
+    }
+    if cfg!(windows) {
+        if name.contains(':') || name.ends_with(['.', ' ']) {
+            return false;
+        }
+        let stem = name
+            .split('.')
+            .next()
+            .unwrap_or(name)
+            .trim_end()
+            .to_ascii_uppercase();
+        let device = matches!(
+            stem.as_str(),
+            "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$"
+        ) || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.chars().count() == 4
+            && stem[3..]
+                .chars()
+                .all(|c| c.is_ascii_digit() || "¹²³".contains(c)));
+        if device {
+            return false;
+        }
+    }
+    true
+}
+
 /// git 설정 값으로 쓸 경로 글자. Windows는 `C:/Users/…`처럼 `/`로 쓴다(safe.directory 등).
 pub fn git_path_string(path: &Path) -> String {
     let text = path.to_string_lossy().into_owned();
@@ -34,6 +65,34 @@ pub fn git_path_string(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plain_components() {
+        assert!(is_plain_component("a.txt"));
+        assert!(is_plain_component("한글 파일.md"));
+        assert!(!is_plain_component(""));
+        assert!(!is_plain_component("a\0b"));
+        if cfg!(windows) {
+            for bad in [
+                "CON",
+                "con.txt",
+                "Nul",
+                "COM1",
+                "lpt9.log",
+                "a.txt:stream",
+                "C:",
+                "끝점.",
+                "끝공백 ",
+            ] {
+                assert!(!is_plain_component(bad), "{bad}");
+            }
+            assert!(is_plain_component("console.txt"));
+            assert!(is_plain_component("COM10"));
+        } else {
+            assert!(is_plain_component("CON"));
+            assert!(is_plain_component("a:b"));
+        }
+    }
 
     #[test]
     fn keeps_korean_and_spaces() {

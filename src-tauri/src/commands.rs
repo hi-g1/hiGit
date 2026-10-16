@@ -241,6 +241,72 @@ pub async fn project_trust(
     .await
 }
 
+/// OS가 열지 못한 것(열 앱이 없음 등, D-216).
+fn open_failed(e: impl std::fmt::Display) -> ErrorView {
+    ErrorView::from(&higit_core::CoreError::OpenFailed(e.to_string()))
+}
+
+/// 열린 저장소 안의 파일을 파일 관리자에서 고른 채 연다(D-216). 경로는 core가 검사하고 화면에 돌려주지 않는다.
+#[tauri::command]
+#[specta::specta]
+pub async fn file_reveal(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder: String,
+    path: String,
+) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let target = blocking(state, move |core| {
+        core.open_target(
+            &PathBuf::from(folder),
+            &path,
+            higit_core::open_target::Purpose::Reveal,
+        )
+    })
+    .await?;
+    app.opener()
+        .reveal_item_in_dir(&target)
+        .map_err(open_failed)
+}
+
+/// 열린 저장소 안의 파일을 OS 기본 앱으로 연다(D-216). 실행될 수 있는 파일은 core가 거절한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn file_open(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder: String,
+    path: String,
+) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let target = blocking(state, move |core| {
+        core.open_target(
+            &PathBuf::from(folder),
+            &path,
+            higit_core::open_target::Purpose::Open,
+        )
+    })
+    .await?;
+    app.opener()
+        .open_path(target.to_string_lossy(), None::<&str>)
+        .map_err(open_failed)
+}
+
+/// 열린 저장소의 폴더를 파일 관리자로 연다("폴더 위치 열기", D-216).
+#[tauri::command]
+#[specta::specta]
+pub async fn project_reveal(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder: String,
+) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let root = blocking(state, move |core| core.project_root(&PathBuf::from(folder))).await?;
+    app.opener()
+        .open_path(root.to_string_lossy(), None::<&str>)
+        .map_err(open_failed)
+}
+
 /// 폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름이고 core가 검사한다.
 #[tauri::command]
 #[specta::specta]

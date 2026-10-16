@@ -22,6 +22,7 @@ pub mod launch;
 mod locks;
 pub mod log;
 mod marker;
+pub mod open_target;
 mod operation;
 #[cfg(test)]
 mod operation_tests;
@@ -49,6 +50,7 @@ pub use bootstrap::{APP_ID, Core, MIN_GIT_VERSION, REMOTE_ACTIONS, init};
 pub use error::{CoreError, GithubFailure, Result};
 pub use executor::{Executor, PreviewToken};
 pub use github::git_credential_main;
+pub use open_target::OPEN_BLOCKED_EXTENSIONS;
 pub use query::{MAX_LOG_PAGE, Queries};
 pub use registry::Registry;
 pub use state::RepoState;

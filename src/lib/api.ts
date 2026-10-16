@@ -184,6 +184,10 @@ export const api = {
   openProject: (path: string, how: OpenHow) => call(commands.projectOpen(path, how)),
   /** 신뢰 확인에서 고른 결과로 연다(D-039). useOpenProject만 부른다. */
   trustProject: (path: string, choice: TrustChoice) => call(commands.projectTrust(path, choice)),
+  /** 열린 저장소 안의 파일을 폴더에서 보기·기본 앱으로 열기, 프로젝트 폴더 열기(D-216). 경로는 저장소 기준. */
+  fileReveal: (repo: string, path: string) => call(commands.fileReveal(repo, path)),
+  fileOpen: (repo: string, path: string) => call(commands.fileOpen(repo, path)),
+  projectReveal: (repo: string) => call(commands.projectReveal(repo)),
   /** 폴더 오른쪽 클릭 메뉴(D-214). `label`은 화면 언어의 항목 이름. */
   shellMenuStatus: (label: string) => call(commands.appShellMenuStatus(label)),
   shellMenuSync: (label: string) => call(commands.appShellMenuSync(label)),

@@ -386,6 +386,25 @@ impl Core {
         self.settings.set(patch).into()
     }
 
+    /// 열린 저장소 안의 파일을 OS에 넘기기 전에 검사한다(D-216). 돌려준 경로는 app만 쓰고 화면에 보내지 않는다.
+    pub fn open_target(
+        &self,
+        folder: &Path,
+        rel: &str,
+        purpose: crate::open_target::Purpose,
+    ) -> Result<PathBuf> {
+        let root = self.project_root(folder)?;
+        crate::open_target::resolve(&root, rel, purpose)
+    }
+
+    /// 열린 저장소의 최상위 폴더("폴더 위치 열기").
+    pub fn project_root(&self, folder: &Path) -> Result<PathBuf> {
+        check_path_len(folder)?;
+        let root = platform::normalize_repo_path(folder).map_err(CoreError::FolderNotFound)?;
+        self.opened.require(&root)?;
+        Ok(root)
+    }
+
     /// 폴더 오른쪽 클릭 메뉴의 지금 상태(D-214). `label`은 화면 언어의 항목 이름.
     pub fn shell_menu_status(&self, label: &str) -> Result<crate::view::ShellMenuView> {
         crate::shell_menu::check_label(label)?;

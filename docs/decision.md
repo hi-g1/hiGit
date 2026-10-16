@@ -1730,7 +1730,7 @@
 ## D-216 파일 열기 규칙 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-17
-- 결정: core `open_target(folder, path, purpose)`가 열린 저장소의 상대 경로만 받아 정규화하고, 저장소 밖·`.git` 안·경로 구성요소 중 링크·없는 파일을 거절한다(D-037). `reveal`(폴더에서 보기)은 있는 파일·폴더면 된다. `open`(기본 앱으로 열기)은 일반 파일이고 다음이 아닐 때만: 확장자 차단표 `OPEN_BLOCKED_EXTENSIONS`(대소문자 무시, 마지막 확장자, Windows "위험한 첨부 파일 형식"과 실행 스크립트·설치 패키지), 앞 바이트 `\x7fELF`·`MZ`·`#!`, 실행 권한 비트(`platform::is_executable`), Windows 장치 이름·대체 데이터 스트림(`:`)이 든 경로. 차단표는 바인딩 상수로 화면에 내려 메뉴 항목을 미리 끄고(까닭 "실행할 수 있는 파일은 열지 않아요") core가 실행 때 다시 본다. OS가 여는 일은 app이 opener 플러그인(`reveal_item_in_dir`, `open_path`)으로 하고 웹뷰에는 opener 권한을 주지 않는다. 폴더 위치 열기는 저장소 루트를 `open_path`. 실패하면 `OpenFailed`. 로그에는 결과 코드만.
+- 결정: core `open_target(folder, path, purpose)`가 열린 저장소의 상대 경로만 받아 정규화하고, 저장소 밖·`.git` 안·경로 구성요소 중 링크·없는 파일을 거절한다(D-037). `reveal`(폴더에서 보기)은 있는 파일·폴더면 된다. `open`(기본 앱으로 열기)은 일반 파일이고 다음이 아닐 때만: 확장자 차단표 `OPEN_BLOCKED_EXTENSIONS`(대소문자 무시, 마지막 확장자, Windows "위험한 첨부 파일 형식"과 실행 스크립트·설치 패키지), 앞 바이트 `\x7fELF`·`MZ`·`#!`, 실행 권한 비트(`platform::is_executable`), Windows 장치 이름·대체 데이터 스트림(`:`)이 든 경로. 차단표는 바인딩 상수로 화면에 내려 메뉴 항목을 미리 끄고(까닭 "실행할 수 있는 파일은 열지 않아요") core가 실행 때 다시 본다. OS가 여는 일은 app이 opener 플러그인(`reveal_item_in_dir`, `open_path`)으로 하고 웹뷰에는 opener 권한을 주지 않는다. 폴더 위치 열기는 저장소 루트를 `open_path`. 없는 파일은 `OpenMissing`, 거절은 `OpenRefused`, OS가 못 열면 `OpenFailed`. 드라이브 문자(`C:`)로 시작하는 경로는 어느 OS에서든 절대 경로로 거절한다. "폴더에서 보기" 해결 버튼은 공용 `ERROR_FIX`가 아니라 파일을 아는 그 자리(고친 파일 줄)가 붙인다.
 - 이유: D-161의 "실행 파일 거절·경로 검증". 기본 앱 열기는 실행 파일·스크립트를 그대로 실행할 수 있다(계획 014 C8).
 - 대안: 확인 창을 띄우고 열기, 허용 목록, platform이 `xdg-open`·`explorer.exe`를 직접 부르기.
 - 영향: D-037, D-161.

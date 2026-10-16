@@ -102,6 +102,18 @@ pub enum CoreError {
     #[error("파일 변경을 감시할 수 없습니다")]
     WatchUnavailable(String),
 
+    /// 기본 앱으로 열거나 폴더에서 보일 수 없는 경로다(실행될 수 있는 파일, 저장소 밖, 링크 등, D-216).
+    #[error("이 파일은 열지 않습니다: {0}")]
+    OpenRefused(&'static str),
+
+    /// 열려던 파일이 없다(지웠다, D-216).
+    #[error("파일이 없습니다")]
+    OpenMissing,
+
+    /// OS가 파일이나 폴더를 열지 못했다(열 앱이 없음 등, D-216). 내용은 OS 오류.
+    #[error("파일을 열지 못했습니다")]
+    OpenFailed(String),
+
     /// 폴더 오른쪽 클릭 메뉴를 만들거나 지우지 못했다(D-214). 내용은 io 오류 종류.
     #[error("오른쪽 클릭 메뉴를 바꾸지 못했습니다")]
     ShellMenu(String),
@@ -279,6 +291,7 @@ impl CoreError {
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
             CoreError::ShellMenu(detail) => Some(detail.clone()),
+            CoreError::OpenFailed(detail) => Some(detail.clone()),
             CoreError::ParkBlocked(detail) => Some(detail.clone()),
             CoreError::CarryBlocked(detail) if !detail.is_empty() => Some(detail.clone()),
             CoreError::Github { detail, .. } => detail.clone(),
