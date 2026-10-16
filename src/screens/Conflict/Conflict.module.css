@@ -24,8 +24,8 @@
 
 .dotOurs,
 .dotTheirs {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
 }
 
@@ -58,7 +58,7 @@
 .body {
   display: grid;
   flex: 1;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 13.75rem 1fr;
   min-height: 0;
 }
 

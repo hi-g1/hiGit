@@ -1,7 +1,7 @@
 /* 이때 파일 보기(계획 008 E25): 왼쪽 파일 목록, 오른쪽 비교. 좁으면 위아래로 접힌다. */
 .files {
-  width: min(960px, calc(100vw - 2 * var(--space-4)));
-  height: min(640px, calc(100vh - 2 * var(--space-6)));
+  width: min(60rem, calc(100vw - 2 * var(--space-4)));
+  height: min(40rem, calc(100vh - 2 * var(--space-6)));
 }
 
 .meta {
@@ -13,7 +13,7 @@
 .body {
   display: grid;
   flex: 1;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 16.25rem 1fr;
   gap: var(--space-3);
   min-height: 0;
 }
@@ -80,6 +80,6 @@
 @media (width <= 900px) {
   .body {
     grid-template-columns: 1fr;
-    grid-template-rows: 160px 1fr;
+    grid-template-rows: 10rem 1fr;
   }
 }

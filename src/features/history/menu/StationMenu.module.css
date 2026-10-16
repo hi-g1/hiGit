@@ -1,14 +1,14 @@
 /* 역 메뉴(r-log.png): 떠 있는 판, 항목 줄 */
 .anchor {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 0.0625rem;
+  height: 0.0625rem;
   pointer-events: none;
 }
 
 .content {
   z-index: 100;
-  min-width: 220px;
+  min-width: 13.75rem;
   padding: var(--space-1) 0;
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-panel);

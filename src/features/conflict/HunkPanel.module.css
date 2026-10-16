@@ -48,8 +48,8 @@
 .dotOurs,
 .dotTheirs {
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
 }
 
@@ -67,7 +67,7 @@
   overflow-x: auto;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-code);
   line-height: var(--line-height);
   white-space: pre;
 }
@@ -102,7 +102,7 @@
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-code);
   line-height: var(--line-height);
   resize: vertical;
 }

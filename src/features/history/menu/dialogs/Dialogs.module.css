@@ -52,7 +52,7 @@
 }
 
 .message {
-  min-height: 160px;
+  min-height: 10rem;
   resize: vertical;
   font-family: var(--font-body);
   line-height: var(--line-height);

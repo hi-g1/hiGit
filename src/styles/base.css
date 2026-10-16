@@ -73,7 +73,7 @@ select {
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-duration: 0ms;
-    --motion-shift: 0px;
+    --motion-shift: 0rem;
   }
 
   *,

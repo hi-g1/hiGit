@@ -17,7 +17,7 @@
 }
 
 .body {
-  min-height: 160px;
+  min-height: 10rem;
   padding: var(--space-2) var(--space-3);
   border: var(--border-width) solid var(--border-strong);
   border-radius: var(--radius-control);
@@ -55,7 +55,7 @@
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-code);
 }
 
 .muted {

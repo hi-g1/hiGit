@@ -4,7 +4,10 @@
     "color-no-hex": true,
     "color-named": "never",
     "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color", "color-mix"],
-    "selector-class-pattern": null
+    "selector-class-pattern": null,
+    "declaration-property-unit-disallowed-list": {
+      "/^(font-size|line-height|width|height|min-width|min-height|max-width|max-height|padding.*|margin.*|gap|row-gap|column-gap|top|right|bottom|left|inset.*|grid-template-.*|grid-auto-.*|flex-basis|border-radius|letter-spacing|transform)$/": ["px"]
+    }
   },
   "overrides": [
     {

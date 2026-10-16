@@ -35,7 +35,7 @@
 
 .content {
   z-index: 100;
-  min-width: 200px;
+  min-width: 12.5rem;
   padding: var(--space-1);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-panel);

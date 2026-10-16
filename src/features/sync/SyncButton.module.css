@@ -59,8 +59,8 @@
 
 /* 원격 확인 실패: 색만으로 알리지 않게 툴팁과 이름을 함께 둔다(design.md "상태 표시") */
 .failed {
-  width: 6px;
-  height: 6px;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: 50%;
   background: var(--modified);
 }

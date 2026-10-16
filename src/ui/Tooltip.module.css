@@ -1,6 +1,6 @@
 .content {
   z-index: 100;
-  max-width: 320px;
+  max-width: 20rem;
   padding: var(--space-2) var(--space-3);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-control);

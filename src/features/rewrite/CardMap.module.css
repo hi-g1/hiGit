@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  max-width: 560px;
+  max-width: 35rem;
   margin: 0;
   padding: 0 0 0 var(--space-6);
   list-style: none;
@@ -25,7 +25,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-height: 72px;
+  min-height: 4.5rem;
   padding: var(--space-3) var(--space-4);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-panel);
@@ -110,7 +110,7 @@
 }
 
 .editor {
-  min-height: 96px;
+  min-height: 6rem;
   padding: var(--space-2);
   border: var(--border-width) solid var(--border-strong);
   border-radius: var(--radius-control);
@@ -125,7 +125,7 @@
   margin-left: calc(-1 * var(--space-2));
   color: var(--text-muted);
   font-size: var(--font-size-sm);
-  letter-spacing: -2px;
+  letter-spacing: -0.125rem;
   cursor: grab;
 
   /* 끄는 동안 글자 선택·터치 스크롤로 번지지 않게 */
@@ -144,8 +144,8 @@
 
 .live {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 0.0625rem;
+  height: 0.0625rem;
   overflow: hidden;
   clip-path: inset(50%);
 }

@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0 var(--space-4);
   border-bottom: var(--border-width) solid var(--border);
   background: var(--bg);
@@ -27,15 +27,15 @@
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
 }
 
 /* 프로젝트 메뉴와 브랜치 사이 세로 선 */
 .divider {
   width: var(--border-width);
-  height: 20px;
+  height: 1.25rem;
   background: var(--border);
 }
 

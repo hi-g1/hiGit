@@ -73,8 +73,8 @@
 
 .dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 0.375rem;
+  height: 0.375rem;
   margin-right: var(--space-1);
   border-radius: 50%;
   vertical-align: middle;
@@ -83,7 +83,7 @@
 .author,
 .date {
   flex: none;
-  width: 90px;
+  width: 5.625rem;
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--font-size-sm);

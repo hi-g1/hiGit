@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  min-height: 56px;
+  min-height: 3.5rem;
   padding: 0 var(--space-4);
   border-bottom: var(--border-width) solid var(--border);
 }

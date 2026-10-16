@@ -10,7 +10,7 @@
 .name,
 .description {
   width: 100%;
-  padding: 2px 0;
+  padding: 0.125rem 0;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -27,7 +27,7 @@
 }
 
 .description {
-  min-height: calc(var(--font-size-md) * var(--line-height) + 4px);
+  min-height: calc(var(--font-size-md) * var(--line-height) + 0.25rem);
   font-size: var(--font-size-md);
   line-height: var(--line-height);
   resize: none;

@@ -2,8 +2,8 @@
   display: inline-grid;
   flex: none;
   place-content: center;
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   margin: 0;
   border: var(--border-width) solid var(--border-strong);
   border-radius: var(--space-1);
@@ -13,12 +13,12 @@
 }
 
 .box::before {
-  width: 8px;
-  height: 4px;
+  width: 0.5rem;
+  height: 0.25rem;
   border-bottom: 2px solid var(--primary-text);
   border-left: 2px solid var(--primary-text);
   content: "";
-  transform: translateY(-1px) rotate(-45deg);
+  transform: translateY(-0.0625rem) rotate(-45deg);
   visibility: hidden;
 }
 

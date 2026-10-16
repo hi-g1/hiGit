@@ -12,7 +12,7 @@
   flex: none;
   align-items: center;
   gap: var(--space-4);
-  height: 56px;
+  height: 3.5rem;
   padding: 0 var(--space-8) 0 var(--space-8);
   border-bottom: var(--border-width) solid var(--border);
 }
@@ -75,7 +75,7 @@
 }
 
 .zoomButton {
-  width: 24px;
+  width: 1.5rem;
   color: var(--text);
   font-size: var(--font-size-md);
   text-align: center;
@@ -87,7 +87,7 @@
 }
 
 .zoomName {
-  min-width: 64px;
+  min-width: 4rem;
   color: var(--text);
   font-size: var(--font-size-sm);
   text-align: center;
@@ -104,8 +104,8 @@
 /* 단계 이름과 행 수는 스크린 리더에만 읽힌다 */
 .status {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 0.0625rem;
+  height: 0.0625rem;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;

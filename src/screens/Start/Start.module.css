@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0 var(--space-4);
   border-bottom: var(--border-width) solid var(--border);
   background: var(--bg);
@@ -185,7 +185,7 @@
 
 .rowName {
   flex: none;
-  width: 200px;
+  width: 12.5rem;
   overflow: hidden;
   font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
@@ -194,8 +194,8 @@
 
 .rowMap {
   flex: none;
-  width: 240px;
-  height: 28px;
+  width: 15rem;
+  height: 1.75rem;
 }
 
 .rowStatus {
