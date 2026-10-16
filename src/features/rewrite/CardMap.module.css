@@ -121,6 +121,27 @@
   resize: vertical;
 }
 
+.grip {
+  margin-left: calc(-1 * var(--space-2));
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: -2px;
+  cursor: grab;
+
+  /* 끄는 동안 글자 선택·터치 스크롤로 번지지 않게 */
+  touch-action: none;
+  user-select: none;
+}
+
+.dragging {
+  opacity: 0.6;
+}
+
+/* 놓을 자리: 카드 위 2px 선 */
+.dropTarget {
+  box-shadow: 0 calc(-1 * var(--selected-bar)) 0 0 var(--accent);
+}
+
 .live {
   position: absolute;
   width: 1px;

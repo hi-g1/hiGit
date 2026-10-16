@@ -1,4 +1,4 @@
-import { forwardRef, useState, type KeyboardEvent } from "react";
+import { forwardRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { matches } from "../../lib/shortcuts";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
@@ -26,6 +26,16 @@ type Props = {
   onAction: (action: CardAction) => void;
   onMessage: (text: string) => void;
   onCloseEdit: () => void;
+  /** 끌기 손잡이의 포인터 처리. */
+  grip: {
+    onPointerDown: (e: PointerEvent<HTMLElement>) => void;
+    onPointerMove: (e: PointerEvent<HTMLElement>) => void;
+    onPointerUp: () => void;
+    onPointerCancel: () => void;
+  };
+  dragging: boolean;
+  /** 끄는 카드를 놓을 자리. */
+  dropTarget: boolean;
 };
 
 /** 카드 안 메시지 글상자. 쓰는 동안의 글은 여기 두고(비워도 처음 글로 돌아가지 않게) 바뀔 때마다 알린다. */
@@ -64,7 +74,14 @@ export const Card = forwardRef<HTMLLIElement, Props>(function Card(props, ref) {
   const statusText = status === null ? null : m.cardStatus[status];
   const head = groupSize > 0;
   const name = card.newMessage?.split("\n")[0] ?? card.summary;
-  const cls = [styles.card, active ? styles.active : "", card.joinBelow ? styles.joined : "", card.state === "drop" ? styles.dropped : ""].join(" ");
+  const cls = [
+    styles.card,
+    active ? styles.active : "",
+    card.joinBelow ? styles.joined : "",
+    card.state === "drop" ? styles.dropped : "",
+    props.dragging ? styles.dragging : "",
+    props.dropTarget ? styles.dropTarget : "",
+  ].join(" ");
   const button = (action: CardAction, label: string, enabled: boolean) => (
     <button type="button" className={styles.button} tabIndex={active ? 0 : -1} disabled={readOnly || !enabled} onClick={() => props.onAction(action)}>
       {label}
@@ -82,6 +99,11 @@ export const Card = forwardRef<HTMLLIElement, Props>(function Card(props, ref) {
       onKeyDown={props.onKeyDown}
     >
       <div className={styles.top}>
+        {!readOnly && (
+          <span className={styles.grip} aria-hidden="true" data-testid="card-grip" {...props.grip}>
+            ⋮⋮
+          </span>
+        )}
         <span className={styles.oid}>{card.shortOid}</span>
         <bdi className={styles.name}>{name}</bdi>
         {head && groupSize > 1 && <span className={styles.group}>{m.cardGroup(groupSize)}</span>}

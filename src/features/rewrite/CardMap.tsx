@@ -3,6 +3,7 @@ import { cardKey } from "../../lib/cardKeys";
 import { useMessages } from "../../messages";
 import { Card, type CardAction } from "./Card";
 import { canJoin, groups, joinWithBelow, move, setMessage, split, status, toggleDrop, type Card as CardModel } from "./model";
+import { useDrag } from "./useDrag";
 import styles from "./CardMap.module.css";
 
 type Props = {
@@ -25,17 +26,37 @@ export function CardMap({ cards, original, onChange, readOnly }: Props) {
   const focusWanted = useRef(false);
   const at = Math.min(active, Math.max(0, cards.length - 1));
   const gs = groups(cards);
+  const focusCard = (index: number) => {
+    focusWanted.current = true;
+    setActive(Math.max(0, Math.min(cards.length - 1, index)));
+  };
+
+  const groupAt = (i: number) => gs.findIndex(([a, b]) => i >= a && i <= b);
+  // 끌어 놓으면 끈 카드의 묶음을 놓은 자리의 묶음 자리로 옮긴다(묶음째, 한 칸씩).
+  const { drag, handlers } = useDrag(
+    cards.length,
+    (i) => refs.current[i]?.getBoundingClientRect() ?? null,
+    (from, to) => {
+      const card = cards[from];
+      if (!card) return;
+      let next = [...cards];
+      const steps = groupAt(to) - groupAt(from);
+      for (let k = 0; k < Math.abs(steps); k++) {
+        next = move(next, next.findIndex((c) => c.oid === card.oid), steps < 0 ? -1 : 1);
+      }
+      onChange(next);
+      const where = next.findIndex((c) => c.oid === card.oid);
+      setAnnounce(m.cardMovedTo(card.summary, where + 1));
+      focusCard(where);
+    },
+    readOnly,
+  );
 
   useEffect(() => {
     if (!focusWanted.current) return;
     focusWanted.current = false;
     refs.current[at]?.focus();
   }, [at, cards]);
-
-  const focusCard = (index: number) => {
-    focusWanted.current = true;
-    setActive(Math.max(0, Math.min(cards.length - 1, index)));
-  };
 
   const act = (index: number, action: CardAction) => {
     if (readOnly) return;
@@ -112,6 +133,9 @@ export function CardMap({ cards, original, onChange, readOnly }: Props) {
                 setEditing(null);
                 focusCard(i);
               }}
+              grip={handlers(i)}
+              dragging={drag?.from === i}
+              dropTarget={drag !== null && drag.to === i && drag.from !== i}
             />
           );
         })}

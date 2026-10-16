@@ -144,4 +144,54 @@ describe("기록 정리 화면", () => {
     await userEvent.click(screen.getByRole("button", { name: ko.backToLog }));
     expect(useRepoStore.getState().view).toBe("history");
   });
+
+  describe("끌기", () => {
+    /** 카드마다 위치를 준다: i번째 카드는 y = i*100부터 80px. */
+    function layout() {
+      cardsOf().forEach((card, i) => {
+        card.getBoundingClientRect = () =>
+          ({ top: i * 100, bottom: i * 100 + 80, height: 80, left: 0, right: 500, width: 500, x: 0, y: i * 100, toJSON: () => ({}) }) as DOMRect;
+      });
+    }
+
+    it("손잡이를 끌어 놓으면 순서가 바뀐다(묶음째)", async () => {
+      vi.mocked(api.rewritePlan).mockResolvedValue(plan());
+      show();
+      await screen.findByText("셋");
+      layout();
+      const grip = within(cardsOf()[0]!).getByTestId("card-grip");
+      fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientY: 10 });
+      fireEvent.pointerMove(grip, { pointerId: 1, clientY: 250 });
+      expect(cardsOf()[2]!.className).toMatch(/dropTarget/);
+      fireEvent.pointerUp(grip, { pointerId: 1, clientY: 250 });
+      expect(names()).toEqual(["둘", "하나", "셋"]);
+      expect(screen.getByText(ko.cardMovedTo("셋", 3))).toBeInTheDocument();
+    });
+
+    it("취소하거나 끄는 중 Esc면 그대로이고 화면도 그대로", async () => {
+      vi.mocked(api.rewritePlan).mockResolvedValue(plan());
+      show();
+      await screen.findByText("셋");
+      layout();
+      let grip = within(cardsOf()[0]!).getByTestId("card-grip");
+      fireEvent.pointerDown(grip, { button: 0, pointerId: 1, clientY: 10 });
+      fireEvent.pointerMove(grip, { pointerId: 1, clientY: 150 });
+      fireEvent.pointerCancel(grip, { pointerId: 1 });
+      expect(names()).toEqual(["셋", "둘", "하나"]);
+      grip = within(cardsOf()[0]!).getByTestId("card-grip");
+      fireEvent.pointerDown(grip, { button: 0, pointerId: 2, clientY: 10 });
+      fireEvent.pointerMove(grip, { pointerId: 2, clientY: 150 });
+      fireEvent.keyDown(window, { key: "Escape" });
+      fireEvent.pointerUp(grip, { pointerId: 2, clientY: 150 });
+      expect(names()).toEqual(["셋", "둘", "하나"]);
+      expect(useRepoStore.getState().view).toBe("rewrite");
+    });
+
+    it("막혔으면 손잡이가 없다", async () => {
+      vi.mocked(api.rewritePlan).mockResolvedValue(plan({ blocked: "hasMerge" }));
+      show();
+      await screen.findByText("셋");
+      expect(screen.queryByTestId("card-grip")).not.toBeInTheDocument();
+    });
+  });
 });
