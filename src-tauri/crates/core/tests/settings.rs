@@ -124,3 +124,15 @@ fn unknown_tip_bits_are_dropped() {
     let text = std::fs::read_to_string(dir.path().join("settings.json")).unwrap();
     assert!(text.contains(r#""tips_seen":15"#), "{text}");
 }
+
+/// 되돌리기 키를 저장하지 못하면 화면에 알린다(D-210). 시험용 Core는 앱 데이터 폴더가 없어 임시 키다.
+#[test]
+fn a_temporary_undo_key_is_reported() {
+    use higit_core::view::UndoKeyState;
+    let core = Core::with_backend(Arc::new(FakeGit::new()) as Arc<dyn GitBackend>).unwrap();
+    let status = core.app_status();
+    assert_eq!(status.undo_key, UndoKeyState::Temporary);
+    assert!(status.undo_key_detail.is_some());
+    let json = serde_json::to_value(&status).unwrap();
+    assert_eq!(json["undoKey"], "temporary");
+}

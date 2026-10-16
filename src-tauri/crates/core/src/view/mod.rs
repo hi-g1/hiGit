@@ -109,6 +109,19 @@ pub struct AppStatus {
     pub git_package_version: Option<String>,
     /// 찾은 git 실행 파일의 경로(설정 "고급", D-160). 시험용 Core는 빈 글자.
     pub git_path: String,
+    /// 되돌리기 서명 키를 이 컴퓨터에 저장했는지(D-210). `temporary`면 화면이 알린다.
+    pub undo_key: UndoKeyState,
+    /// 저장하지 못했으면 "자세히 보기"에 보일 앱 데이터 폴더(홈은 가림).
+    pub undo_key_detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum UndoKeyState {
+    /// 다음 실행에도 같은 키.
+    Saved,
+    /// 이번 실행에서만 쓰는 키. 다시 켜면 이전 작업은 Ctrl+Z로 되돌리지 못한다.
+    Temporary,
 }
 
 /// Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다.

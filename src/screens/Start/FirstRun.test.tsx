@@ -43,7 +43,7 @@ function renderStart() {
 const title = "버전에 남길 이름부터 정해요";
 
 beforeEach(() => {
-  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.43.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.43.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
   vi.mocked(api.recentProjects).mockResolvedValue([]);
   vi.mocked(api.identity).mockResolvedValue(empty);
   vi.mocked(api.githubStatus).mockResolvedValue(github());

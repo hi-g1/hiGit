@@ -44,7 +44,7 @@ const emptyStatus: StatusView = {
 const emptyLog: LogPage = logPage();
 
 beforeEach(() => {
-  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
   vi.mocked(api.listActions).mockResolvedValue([
     { id: "init", glossaryId: "init", risk: "safe", undo: "nothing", needsInput: false },
   ]);
@@ -79,7 +79,7 @@ async function openFolder() {
 
 describe("홈에서 폴더 열기", () => {
   it("첫 렌더 뒤 숨겨 둔 창을 보이게 한 번 알린다(D-190)", async () => {
-    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.43.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.43.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
     render(<App />);
     await vi.waitFor(() => expect(api.appReady).toHaveBeenCalledTimes(1));
   });

@@ -52,15 +52,20 @@ impl JournalKey {
         }
     }
 
-    /// `dir/journal.key`를 읽고, 없거나 깨졌으면 새로 만들어 쓴다.
+    /// `dir/journal.key`를 읽는다. 파일이 없을 때만 새로 만들어 쓴다. 파일이 있는데 읽지 못하거나 길이가
+    /// 틀리면 덮어쓰지 않고 이번 실행에서만 쓰는 키로 간다(모든 저장소의 Ctrl+Z가 사라지지 않게, D-210).
     pub fn load_or_create(dir: &Path) -> Self {
         let path = dir.join(FILE_NAME);
-        if let Ok(bytes) = std::fs::read(&path)
-            && let Ok(key) = <[u8; KEY_LEN]>::try_from(bytes.as_slice())
-        {
-            return Self {
-                bytes: key,
-                persistent: true,
+        if std::fs::symlink_metadata(&path).is_ok() {
+            return match std::fs::read(&path)
+                .ok()
+                .and_then(|bytes| <[u8; KEY_LEN]>::try_from(bytes.as_slice()).ok())
+            {
+                Some(key) => Self {
+                    bytes: key,
+                    persistent: true,
+                },
+                None => Self::ephemeral(),
             };
         }
         let mut key = Self::ephemeral();
@@ -134,5 +139,35 @@ mod tests {
         // 쓸 수 없는 곳이면 이번 실행에서만 쓰는 키.
         let missing = dir.path().join("없는 폴더").join("더 깊이");
         assert!(!JournalKey::load_or_create(&missing).is_persistent());
+    }
+
+    #[test]
+    fn a_broken_key_file_is_kept_and_a_temporary_key_used() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE_NAME);
+        std::fs::write(&path, b"short").unwrap();
+        let key = JournalKey::load_or_create(dir.path());
+        assert!(!key.is_persistent());
+        assert_eq!(std::fs::read(&path).unwrap(), b"short", "덮어쓰지 않는다");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_key_file_is_not_overwritten() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let good = JournalKey::load_or_create(dir.path());
+        let path = dir.path().join(FILE_NAME);
+        let before = std::fs::read(&path).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // 루트로 돌면 권한과 상관없이 읽히므로 확인할 것이 없다.
+        if std::fs::read(&path).is_ok() {
+            return;
+        }
+        let key = JournalKey::load_or_create(dir.path());
+        assert!(!key.is_persistent());
+        assert!(!key.verify("x", &good.sign("x")));
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 }

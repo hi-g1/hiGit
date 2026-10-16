@@ -372,6 +372,10 @@ export type AppStatus = {
 	gitPackageVersion: string | null,
 	/**  찾은 git 실행 파일의 경로(설정 "고급", D-160). 시험용 Core는 빈 글자. */
 	gitPath: string,
+	/**  되돌리기 서명 키를 이 컴퓨터에 저장했는지(D-210). `temporary`면 화면이 알린다. */
+	undoKey: UndoKeyState,
+	/**  저장하지 못했으면 "자세히 보기"에 보일 앱 데이터 폴더(홈은 가림). */
+	undoKeyDetail: string | null,
 };
 
 export type BranchCreateInput = {
@@ -1740,6 +1744,12 @@ export type UndoHint =
 "none" | 
 /**  다음 Ctrl+Z가 되돌리는 새 버전을 만든다(올린 버전, D-073). */
 "revertCommit";
+
+export type UndoKeyState = 
+/**  다음 실행에도 같은 키. */
+"saved" | 
+/**  이번 실행에서만 쓰는 키. 다시 켜면 이전 작업은 Ctrl+Z로 되돌리지 못한다. */
+"temporary";
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
 export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "restoreTree" | "deleteCreated" | "inverse" | "irreversible" | "barrier";

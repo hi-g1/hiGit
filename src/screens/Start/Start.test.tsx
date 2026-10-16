@@ -59,7 +59,7 @@ function renderStart() {
 }
 
 beforeEach(() => {
-  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+  vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
   vi.mocked(api.removeRecent).mockResolvedValue(null);
 });
 afterEach(() => {
@@ -206,7 +206,7 @@ describe("시작 화면", () => {
 
   it("Git이 보안 수정 기준보다 낮으면 업데이트 안내와 내려받기", async () => {
     vi.mocked(api.recentProjects).mockResolvedValue([]);
-    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.40.0", gitSecurity: "outdated", gitPackageVersion: null, gitPath: "/usr/bin/git" });
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.40.0", gitSecurity: "outdated", gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
     vi.mocked(api.openGitDownload).mockResolvedValue(null);
     renderStart();
     await userEvent.click(await screen.findByRole("button", { name: "내려받기" }));
@@ -215,7 +215,7 @@ describe("시작 화면", () => {
 
   it.each(["ok", "distroManaged"] as const)("%s이면 안내가 없다", async (gitSecurity) => {
     vi.mocked(api.recentProjects).mockResolvedValue([]);
-    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.34.1", gitSecurity, gitPackageVersion: null, gitPath: "/usr/bin/git" });
+    vi.mocked(api.appStatus).mockResolvedValue({ gitVersion: "2.34.1", gitSecurity, gitPackageVersion: null, gitPath: "/usr/bin/git", undoKey: "saved", undoKeyDetail: null });
     renderStart();
     await screen.findByText("폴더 열기", { exact: false });
     expect(screen.queryByRole("button", { name: "내려받기" })).toBeNull();

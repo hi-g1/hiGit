@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { UndoKeyNotice } from "../../features/undo/UndoKeyNotice";
 import { HomeTips } from "../../features/tips/HomeTips";
 import { Palette } from "../../features/palette/Palette";
 import { PendingNotice } from "../../features/pending/PendingNotice";
@@ -90,6 +91,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
           </Button>
         </div>
       )}
+      <UndoKeyNotice />
       <StuckNotice repo={repo.path} />
       {/* 합치는 중이면 충돌 해결 화면이 대신 알린다(D-082). */}
       {!merging && <PendingNotice repo={repo.path} otherConflicts={conflict?.otherOperation ?? false} />}

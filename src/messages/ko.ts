@@ -203,6 +203,7 @@ export const ko = {
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
   shortcutsTitle: "단축키",
   tipOk: "알겠어요",
+  undoKeyTemporary: "되돌리기 기록을 이 컴퓨터에 저장하지 못해요. 앱을 다시 켜면 이전 작업은 Ctrl+Z로 되돌릴 수 없어요.",
   imageCompare: {
     modes: "이미지 보기",
     sideBySide: "나란히",

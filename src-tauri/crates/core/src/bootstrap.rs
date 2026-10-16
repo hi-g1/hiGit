@@ -29,6 +29,8 @@ pub struct Core {
     git_build: platform::GitBuild,
     /// 찾은 git 실행 파일(설정 "고급"에 보인다, D-160). 로그·오류에는 쓰지 않는다.
     git_path: String,
+    /// 앱 데이터 폴더(키를 저장하지 못했을 때 "자세히 보기"에 보인다). 시험용 Core는 없음.
+    data_dir: Option<std::path::PathBuf>,
     executor: Executor,
     queries: Queries,
     /// 지금 작업 폴더를 쓰는 작업이 실행 중인 저장소. 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
@@ -201,10 +203,11 @@ pub fn init() -> Result<Core> {
     if let Some(dir) = &data_dir {
         core.logger = crate::log::Logger::open(dir);
     }
-    // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063).
+    // journal 서명 키는 앱 데이터에 둔다. 폴더를 못 쓰면 이번 실행에서만 쓰는 키(D-063, D-210).
     if let Some(dir) = &data_dir {
         core.set_key(crate::undo::JournalKey::load_or_create(dir));
     }
+    core.data_dir = data_dir.clone();
     Ok(core)
 }
 
@@ -315,6 +318,7 @@ impl Core {
             git_version,
             git_build: platform::GitBuild::Unknown,
             git_path: String::new(),
+            data_dir: None,
             busy: Mutex::new(HashSet::new()),
             net_busy: Mutex::new(HashSet::new()),
             bg_fetch: Mutex::new(HashSet::new()),
@@ -564,11 +568,22 @@ impl Core {
             platform::GitBuild::DistroPackage { version } => Some(version.clone()),
             _ => None,
         };
+        let saved = self.executor.journal_key().is_persistent();
+        let home = platform::home_dir().map(|h| h.to_string_lossy().into_owned());
         AppStatus {
             git_version: self.git_version.to_string(),
             git_security: crate::git_security::judge(self.git_version, package.is_some()).into(),
             git_package_version: package,
             git_path: self.git_path.clone(),
+            undo_key: if saved {
+                crate::view::UndoKeyState::Saved
+            } else {
+                crate::view::UndoKeyState::Temporary
+            },
+            undo_key_detail: (!saved).then(|| match &self.data_dir {
+                Some(dir) => crate::redact::redact(&dir.to_string_lossy(), home.as_deref()),
+                None => "app data folder unavailable".into(),
+            }),
         }
     }
 

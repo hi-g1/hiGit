@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { UndoKeyNotice } from "../../features/undo/UndoKeyNotice";
 import { Palette } from "../../features/palette/Palette";
 import { useToastStore } from "../../ui/toastStore";
 import { useEffect, useState } from "react";
@@ -116,6 +117,7 @@ export function Start() {
             </button>
           </p>
         )}
+        <UndoKeyNotice />
         {startNotice && (
           <p className={styles.notice} role="status">
             {startNotice.kind === "lastMissing" ? m.lastMissing(startNotice.name) : m.lastNotRepo(startNotice.name)}

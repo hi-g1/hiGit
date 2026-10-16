@@ -178,6 +178,7 @@ export const en: Messages = {
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
   shortcutsTitle: "Shortcuts",
   tipOk: "Got it",
+  undoKeyTemporary: "Can't save undo history on this computer. After a restart, Ctrl+Z can't undo earlier work.",
   imageCompare: {
     modes: "Image view",
     sideBySide: "Side by side",

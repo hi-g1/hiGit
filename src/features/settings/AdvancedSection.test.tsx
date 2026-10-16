@@ -6,7 +6,7 @@ const setSettings = vi.fn();
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
-    appStatus: vi.fn(async () => ({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "C:\\Program Files\\Git\\cmd\\git.exe" })),
+    appStatus: vi.fn(async () => ({ gitVersion: "2.45.0", gitSecurity: "ok", gitPackageVersion: null, gitPath: "C:\\Program Files\\Git\\cmd\\git.exe", undoKey: "saved", undoKeyDetail: null })),
     openLogFolder: vi.fn(async () => null),
     settings: vi.fn(async () => ({ ...DEFAULTS })),
     setSettings: (p: object) => setSettings(p),
