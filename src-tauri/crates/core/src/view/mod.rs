@@ -690,6 +690,16 @@ pub enum ErrorCode {
     WouldOverwrite,
     NotFastForward,
     PushRejected,
+    /// 덮어쓰며 올리기·원격 브랜치 지우기 사이에 원격이 바뀌었다(기대 값이 다름, D-128).
+    RemoteMoved,
+    /// 서버가 받기를 거절했다(보호 브랜치·hook).
+    RemoteRefused,
+    /// 원격에 같은 이름이 다른 버전으로 있다(태그 올리기).
+    RemoteRefExists,
+    /// 지우려는 원격 브랜치가 없다.
+    RemoteRefMissing,
+    /// 원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔).
+    RemoteNameTaken,
     NoUpstream,
     SshHostUnverified,
     SshAuthFailed,
@@ -729,6 +739,10 @@ impl From<git::FailureKind> for ErrorCode {
             F::WouldOverwrite => ErrorCode::WouldOverwrite,
             F::NotFastForward => ErrorCode::NotFastForward,
             F::PushRejected => ErrorCode::PushRejected,
+            F::LeaseStale => ErrorCode::RemoteMoved,
+            F::RemoteRefused => ErrorCode::RemoteRefused,
+            F::RemoteRefExists => ErrorCode::RemoteRefExists,
+            F::RemoteRefMissing => ErrorCode::RemoteRefMissing,
             F::NoUpstream => ErrorCode::NoUpstream,
             F::SshHostUnverified => ErrorCode::SshHostUnverified,
             F::SshAuthFailed => ErrorCode::SshAuthFailed,

@@ -500,7 +500,17 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
 "notPushed" | 
 /**  검토 요청의 head와 대상이 같거나 head가 기본 브랜치다. */
-"prSameBranch" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
+"prSameBranch" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | 
+/**  덮어쓰며 올리기·원격 브랜치 지우기 사이에 원격이 바뀌었다(기대 값이 다름, D-128). */
+"remoteMoved" | 
+/**  서버가 받기를 거절했다(보호 브랜치·hook). */
+"remoteRefused" | 
+/**  원격에 같은 이름이 다른 버전으로 있다(태그 올리기). */
+"remoteRefExists" | 
+/**  지우려는 원격 브랜치가 없다. */
+"remoteRefMissing" | 
+/**  원격에 만들려는 브랜치 이름이 이미 있다(원격 브랜치 이름 바꾸기, core가 나눔). */
+"remoteNameTaken" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
 "cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */

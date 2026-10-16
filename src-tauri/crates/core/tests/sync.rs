@@ -317,3 +317,21 @@ fn a_sync_that_stopped_does_not_block_undoing_the_save() {
     core.undo(s.mine.path()).unwrap();
     assert_eq!(git(s.mine.path(), &["rev-parse", "HEAD"]), before);
 }
+
+/// 서버가 거절하면(보호 브랜치·hook) 다시 시도하지 않고 `RemoteRefused`로 멈춘다. 원격이 앞섰을 때만
+/// 한 번 더 받고 올린다(계획 010 R11). hook 실행 비트가 필요해 Unix에서만.
+#[cfg(unix)]
+#[test]
+fn server_refusal_is_not_retried() {
+    use std::os::unix::fs::PermissionsExt;
+    let s = setup();
+    let hook = s._remote.path().join("hooks").join("pre-receive");
+    std::fs::write(&hook, "#!/bin/sh\necho run >> hook-runs\nexit 1\n").unwrap();
+    std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    commit_file(s.mine.path(), "c.txt", "내 것\n");
+    let core = core(s.mine.path());
+    let err = sync(&core, s.mine.path()).unwrap_err();
+    assert_eq!(ErrorView::from(&err).code, ErrorCode::RemoteRefused);
+    let runs = std::fs::read_to_string(s._remote.path().join("hook-runs")).unwrap();
+    assert_eq!(runs.lines().count(), 1, "{runs}");
+}

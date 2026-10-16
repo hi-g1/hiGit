@@ -21,6 +21,14 @@ pub enum FailureKind {
     WouldOverwrite,
     /// 내 저장과 원격 저장이 갈라져 fast-forward로 받을 수 없다.
     NotFastForward,
+    /// 덮어쓰며 올리기·원격 브랜치 지우기의 기대 값(lease)이 원격과 달랐다. 그사이 누가 올렸다(D-128).
+    LeaseStale,
+    /// 서버가 받기를 거절했다(보호 브랜치, hook, 지금 브랜치 지우기 등).
+    RemoteRefused,
+    /// 원격에 같은 이름의 태그·브랜치가 다른 버전으로 이미 있다.
+    RemoteRefExists,
+    /// 지우려는 원격 ref가 없다.
+    RemoteRefMissing,
     /// 원격이 앞서 있어 올리기가 거부됐다.
     PushRejected,
     /// 연결된 원격 갈래가 없다.
@@ -132,6 +140,25 @@ const RULES: &[(FailureKind, &[&str])] = &[
             "Connection refused",
             "Connection timed out",
             "unable to access",
+        ],
+    ),
+    // 아래 넷은 "[rejected]"·"Updates were rejected"와 함께 오므로 일반 올리기 거절보다 먼저 본다.
+    (FailureKind::LeaseStale, &["(stale info)"]),
+    (
+        FailureKind::RemoteRefExists,
+        &["(already exists)", "already exists in the remote"],
+    ),
+    (
+        FailureKind::RemoteRefMissing,
+        &["remote ref does not exist"],
+    ),
+    (
+        FailureKind::RemoteRefused,
+        &[
+            "[remote rejected]",
+            "protected branch",
+            "GH006",
+            "refusing to delete the current branch",
         ],
     ),
     (
@@ -284,6 +311,30 @@ mod tests {
             (
                 "fatal: destination path 'x' already exists and is not an empty directory.\n",
                 FailureKind::TargetExists,
+            ),
+            (
+                " ! [rejected]        기능 -> 기능 (stale info)\nerror: failed to push some refs to '/r'\n",
+                FailureKind::LeaseStale,
+            ),
+            (
+                " ! [rejected]        v1 -> v1 (already exists)\nerror: failed to push some refs to '/r'\nhint: Updates were rejected because the tag already exists in the remote.\n",
+                FailureKind::RemoteRefExists,
+            ),
+            (
+                "error: unable to delete '기능': remote ref does not exist\nerror: failed to push some refs to '/r'\n",
+                FailureKind::RemoteRefMissing,
+            ),
+            (
+                " ! [remote rejected] main -> main (pre-receive hook declined)\nerror: failed to push some refs to '/r'\n",
+                FailureKind::RemoteRefused,
+            ),
+            (
+                "remote: error: GH006: Protected branch update failed for refs/heads/main.\n ! [remote rejected] main -> main (protected branch hook declined)\n",
+                FailureKind::RemoteRefused,
+            ),
+            (
+                " ! [remote rejected] main (refusing to delete the current branch: refs/heads/main)\n",
+                FailureKind::RemoteRefused,
             ),
             ("fatal: something new\n", FailureKind::Other),
         ];

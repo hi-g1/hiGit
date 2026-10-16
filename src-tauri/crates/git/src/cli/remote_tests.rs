@@ -181,6 +181,30 @@ fn push_upstream_and_rejection() {
     assert_eq!(err.kind(), FailureKind::PushRejected, "{}", err.detail());
 }
 
+/// 서버 hook이 거절하면(보호 브랜치 흉내) 일반 올리기 거절과 따로 `RemoteRefused`다(계획 010 R11).
+/// hook 실행 비트가 필요해 Unix에서만 시험한다.
+#[cfg(unix)]
+#[test]
+fn server_hook_refusal_is_remote_refused() {
+    use std::os::unix::fs::PermissionsExt;
+    let s = setup();
+    let hook = s._remote.path().join("hooks").join("pre-receive");
+    std::fs::write(&hook, "#!/bin/sh\necho '보호된 브랜치' >&2\nexit 1\n").unwrap();
+    std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    commit(s.mine.path(), "c.txt", "내 것\n");
+    let err = backend()
+        .run(
+            &RepoPath::new(s.mine.path()),
+            &GitOp::Push {
+                target: None,
+                set_upstream: false,
+                auth: AuthMode::UserDefault,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err.kind(), FailureKind::RemoteRefused, "{}", err.detail());
+}
+
 #[test]
 fn unreachable_remote_is_classified() {
     let repo = testutil::init_repo();
