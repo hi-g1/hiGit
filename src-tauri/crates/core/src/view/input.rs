@@ -22,6 +22,8 @@ pub enum ActionInput {
     /// 검토 요청을 닫는다·다시 연다(D-180).
     PrClose(PrNumberInput),
     PrReopen(PrNumberInput),
+    /// 대상 GitHub 저장소를 내 계정에 포크하고 지금 브랜치를 그리로 올린다(D-181). 입력 없음.
+    Fork,
     /// 전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다.
     IdentitySet(IdentityInput),
     Stage(PathsInput),
@@ -96,6 +98,7 @@ impl ActionInput {
             ActionInput::PrMerge(_) => "pr-merge",
             ActionInput::PrClose(_) => "pr-close",
             ActionInput::PrReopen(_) => "pr-reopen",
+            ActionInput::Fork => "fork",
             ActionInput::IdentitySet(_) => "identity-set",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",

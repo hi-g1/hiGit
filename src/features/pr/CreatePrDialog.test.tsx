@@ -30,6 +30,7 @@ const draft = (over: Partial<PrDraftView> = {}): PrDraftView => ({
   suggestionTitle: "로그인 화면 추가",
   ahead: 2,
   unpushed: 0,
+  viaFork: false,
   ...over,
 });
 const noPrs: PrListView = { items: [], hasMore: false };

@@ -212,11 +212,12 @@ impl HostingProvider for GitHub {
             query.state.as_str()
         );
         if let Some(branch) = &query.head_branch {
-            if !pr::valid_branch(branch) {
+            let owner = query.head_owner.as_deref().unwrap_or(&repo.owner);
+            if !pr::valid_branch(branch) || !valid_owner(owner) {
                 return Err(invalid_input("branch name"));
             }
             path.push_str("&head=");
-            path.push_str(&encode(&format!("{}:{branch}", repo.owner)));
+            path.push_str(&encode(&format!("{owner}:{branch}")));
         }
         let res = self.api_get(token, &path)?;
         Ok(PrPage {
@@ -681,6 +682,7 @@ mod tests {
         PrQuery {
             state: PrStateFilter::Open,
             head_branch: head.map(str::to_owned),
+            head_owner: None,
             page: 2,
             per_page: 500,
         }
@@ -709,6 +711,12 @@ mod tests {
             "https://api.github.com/repos/octo/hello/pulls?state=open&per_page=50&page=2&sort=updated&direction=desc&head=octo%3Afeature%2Fa%26b%3Dc"
         );
         assert!(reqs[0].bearer.is_some());
+        // 포크에서 낸 것은 그 소유자로 찾는다.
+        fake.push(response(200, &[], "[]"));
+        let mut from_fork = query(Some("feature"));
+        from_fork.head_owner = Some("mona".into());
+        gh.list_prs(&token(), &octo(), &from_fork).unwrap();
+        assert!(fake.requests()[1].url.ends_with("&head=mona%3Afeature"));
     }
 
     #[test]

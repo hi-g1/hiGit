@@ -72,7 +72,7 @@ struct Running {
 }
 
 /// 원격 작업. 언제든 취소할 수 있고 진행 알림이 오래 없으면 "응답 없음"이다. 화면도 이 목록을 바인딩으로 받는다.
-pub const REMOTE_ACTIONS: [&str; 9] = [
+pub const REMOTE_ACTIONS: [&str; 10] = [
     "fetch",
     "pull",
     "push",
@@ -82,6 +82,7 @@ pub const REMOTE_ACTIONS: [&str; 9] = [
     "remote-branch-delete",
     "remote-branch-rename",
     "tag-push",
+    "fork",
 ];
 
 /// 복제 대상 경로의 최대 글자 수(Windows 260자 한도 안에서 저장소 안 파일 자리를 남긴다).
@@ -746,8 +747,8 @@ impl Core {
             | "tag-push" => Locks::Network,
             // 이름 바꾸기는 upstream을 다시 잇느라 `.git/config`도 쓴다(계획 010 R8).
             "remote-branch-rename" => Locks::Both,
-            // 저장소를 만든 뒤 `origin`을 더해 `.git/config`를 쓴다(D-132).
-            "publish" => Locks::Both,
+            // 저장소를 만든 뒤 `origin`을 더해 `.git/config`를 쓴다(D-132). 포크도 원격 `fork`를 더한다.
+            "publish" | "fork" => Locks::Both,
             // 잠금 정리는 앱의 다른 작업이 하나도 없을 때만(D-081).
             "pull" | "sync" | "clear-lock" => Locks::Both,
             _ => Locks::Worktree,

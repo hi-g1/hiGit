@@ -854,6 +854,11 @@ impl GitBackend for CliBackend {
             .store(false, std::sync::atomic::Ordering::SeqCst);
     }
 
+    fn cancel_requested(&self, repo: &RepoPath) -> bool {
+        self.cancel_flag(repo, CancelScope::User)
+            .load(std::sync::atomic::Ordering::SeqCst)
+    }
+
     fn set_observer(&self, observer: Option<crate::ProgressObserver>) {
         *self
             .observer

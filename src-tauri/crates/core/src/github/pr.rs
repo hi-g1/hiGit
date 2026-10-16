@@ -11,6 +11,9 @@ use crate::view::{
     ChecksView, MergeableView, PrDetailView, PrRowView, PrStateFilterView, PrStateView,
 };
 
+/// 포크해서 요청하기의 원격 이름(D-181). 사용자 글자가 원격 이름이 되지 않게 상수다.
+pub(crate) const FORK_REMOTE: &str = "fork";
+
 /// 지금 브랜치의 검토 요청 대상.
 pub(crate) struct PrTarget {
     /// 원격 이름.
@@ -26,6 +29,35 @@ pub(crate) struct PrTarget {
     pub default_branch: Option<String>,
     /// 그 원격의 원격 브랜치 이름들(접두사 뺀 것, `HEAD` 제외).
     pub remote_branches: Vec<String>,
+    /// 포크 경로(D-181): upstream이 `fork`이고 `origin`이 다른 GitHub 저장소. 그러면 `remote`·`repo`는
+    /// `origin`이고 head는 포크(`fork_repo`)의 브랜치다.
+    pub via_fork: bool,
+    pub fork_repo: Option<hosting::RemoteRepo>,
+}
+
+impl PrTarget {
+    /// 검토 요청 head의 소유자. 포크 경로면 포크의 소유자, 아니면 `None`(같은 저장소).
+    pub fn head_owner(&self) -> Option<&str> {
+        self.fork_repo.as_ref().map(|r| r.owner.as_str())
+    }
+}
+
+/// 원격 하나의 올리기 주소가 모두 같은 github.com 저장소면 그 저장소.
+fn github_push_repo(
+    git: &dyn GitBackend,
+    root: &RepoPath,
+    remote: &str,
+) -> Result<Option<hosting::RemoteRepo>> {
+    let urls = git.remote_urls(root, remote)?;
+    let mut found: Option<hosting::RemoteRepo> = None;
+    for url in &urls.push {
+        match (hosting::GitHub::detect(url), &found) {
+            (Some(repo), None) => found = Some(repo),
+            (Some(repo), Some(prev)) if repo_eq(&repo, prev) => {}
+            _ => return Ok(None),
+        }
+    }
+    Ok(found)
 }
 
 /// 대상 원격을 정한다. 원격이 없거나 고를 수 없으면 `None`.
@@ -52,24 +84,28 @@ pub(crate) fn pr_target(git: &dyn GitBackend, root: &RepoPath) -> Result<Option<
         },
     };
     crate::actions::names::validate_ref_like(&remote)?;
-    let urls = git.remote_urls(root, &remote)?;
     // 올리기 주소가 모두 같은 github.com 저장소일 때만.
-    let mut found: Option<hosting::RemoteRepo> = None;
-    let mut same = !urls.push.is_empty();
-    for url in &urls.push {
-        match (hosting::GitHub::detect(url), &found) {
-            (Some(repo), None) => found = Some(repo),
-            (Some(repo), Some(prev)) if repo_eq(&repo, prev) => {}
-            _ => same = false,
-        }
-    }
-    let repo = found.filter(|_| same);
+    let repo = github_push_repo(git, root, &remote)?;
     let prefix = format!("{remote}/");
     let head = upstream
         .as_deref()
         .filter(|_| upstream_remote.is_some())
         .and_then(|u| u.strip_prefix(&prefix))
         .map(str::to_owned);
+    let tracking = head.as_ref().map(|h| format!("{prefix}{h}"));
+    // 포크 경로: upstream이 `fork`이고 `origin`이 그와 다른 GitHub 저장소면 기준은 `origin`이다.
+    let fork_route = if remote == FORK_REMOTE && remotes.iter().any(|r| r.name == "origin") {
+        match (&repo, github_push_repo(git, root, "origin")?) {
+            (Some(fork), Some(origin)) if !repo_eq(fork, &origin) => Some((fork.clone(), origin)),
+            _ => None,
+        }
+    } else {
+        None
+    };
+    let (remote, repo, fork_repo) = match fork_route {
+        Some((fork, origin)) => ("origin".to_owned(), Some(origin), Some(fork)),
+        None => (remote, repo, None),
+    };
     let default_branch = crate::query::default_branch(git, root, &branches, &remotes)?;
     let remote_branches = branches
         .iter()
@@ -84,10 +120,12 @@ pub(crate) fn pr_target(git: &dyn GitBackend, root: &RepoPath) -> Result<Option<
         remote,
         repo,
         branch: current.map(|b| b.name.clone()),
-        tracking: head.as_ref().map(|h| format!("{prefix}{h}")),
+        tracking,
         head,
         default_branch,
         remote_branches,
+        via_fork: fork_repo.is_some(),
+        fork_repo,
     }))
 }
 
@@ -105,8 +143,12 @@ pub(crate) fn state_filter(state: PrStateFilterView) -> hosting::PrStateFilter {
     }
 }
 
-/// `current_head`: 이 저장소의 지금 브랜치가 올라가 있는 원격 브랜치 이름.
-pub(crate) fn row(pr: &hosting::PullRequest, current_head: Option<&str>) -> PrRowView {
+/// `current_head`: 지금 브랜치가 올라가 있는 원격 브랜치 이름. `current_owner`: 포크 경로면 포크 소유자.
+pub(crate) fn row(
+    pr: &hosting::PullRequest,
+    current_head: Option<&str>,
+    current_owner: Option<&str>,
+) -> PrRowView {
     PrRowView {
         number: u32::try_from(pr.number).unwrap_or(u32::MAX),
         title: pr.title.clone(),
@@ -121,15 +163,22 @@ pub(crate) fn row(pr: &hosting::PullRequest, current_head: Option<&str>) -> PrRo
         base: pr.base_branch.clone(),
         author: pr.author.clone(),
         updated_at: pr.updated_at,
-        is_current_branch: pr.head_owner.is_none()
-            && !pr.head_deleted
+        is_current_branch: match (pr.head_owner.as_deref(), current_owner) {
+            (None, None) => true,
+            (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+            _ => false,
+        } && !pr.head_deleted
             && current_head.is_some_and(|h| h == pr.head_branch),
     }
 }
 
-pub(crate) fn detail(detail: &hosting::PrDetail, current_head: Option<&str>) -> PrDetailView {
+pub(crate) fn detail(
+    detail: &hosting::PrDetail,
+    current_head: Option<&str>,
+    current_owner: Option<&str>,
+) -> PrDetailView {
     PrDetailView {
-        row: row(&detail.pr, current_head),
+        row: row(&detail.pr, current_head, current_owner),
         mergeable: match detail.mergeable {
             hosting::Mergeable::Clean => MergeableView::Clean,
             hosting::Mergeable::Conflicts => MergeableView::Conflicts,

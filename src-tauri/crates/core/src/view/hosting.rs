@@ -26,6 +26,8 @@ pub struct HostingContextView {
     /// 기본 브랜치.
     pub base: Option<String>,
     pub is_default_branch: bool,
+    /// 포크 경로(D-181): 지금 브랜치는 내 포크에 올라가고 검토 요청은 `repo`(origin)로 간다.
+    pub via_fork: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -189,4 +191,6 @@ pub struct PrDraftView {
     pub ahead: u32,
     /// 아직 올리지 않은 버전 수(upstream이 없으면 앞선 버전 전부).
     pub unpushed: u32,
+    /// 포크 경로(D-181).
+    pub via_fork: bool,
 }

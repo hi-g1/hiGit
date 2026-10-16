@@ -370,6 +370,7 @@ fn registered_actions_match_spec_risk() {
             ("pr-merge", "pr-merge", Risk::Normal),
             ("pr-close", "pr-close", Risk::Normal),
             ("pr-reopen", "pr", Risk::Safe),
+            ("fork", "fork", Risk::Normal),
             ("identity-set", "identity", Risk::Normal),
             ("force-push", "force-push", Risk::Danger),
             ("remote-branch-delete", "remote-branch-delete", Risk::Danger),

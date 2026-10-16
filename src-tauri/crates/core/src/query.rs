@@ -94,6 +94,7 @@ impl Queries {
             branch,
             head,
             base,
+            via_fork: target.as_ref().is_some_and(|t| t.via_fork),
         })
     }
 
@@ -127,6 +128,7 @@ impl Queries {
         let query = hosting::PrQuery {
             state: crate::github::pr::state_filter(request.state),
             head_branch: request.branch.clone(),
+            head_owner: target.head_owner().map(str::to_owned),
             page: request.page.max(1),
             per_page: PR_PAGE,
         };
@@ -137,7 +139,7 @@ impl Queries {
             items: page
                 .items
                 .iter()
-                .map(|pr| crate::github::pr::row(pr, target.head.as_deref()))
+                .map(|pr| crate::github::pr::row(pr, target.head.as_deref(), target.head_owner()))
                 .collect(),
             has_more: page.has_more,
         })
@@ -153,7 +155,11 @@ impl Queries {
         let detail = self
             .github
             .call(|provider, token| provider.pr_detail(token, &github, u64::from(number)))?;
-        Ok(crate::github::pr::detail(&detail, target.head.as_deref()))
+        Ok(crate::github::pr::detail(
+            &detail,
+            target.head.as_deref(),
+            target.head_owner(),
+        ))
     }
 
     /// 검토 요청 화면의 저장소 정보(D-177): 올릴 권한, 허용된 합치기 방법.
@@ -268,6 +274,7 @@ impl Queries {
                 only_summary.as_deref(),
             ),
             branch,
+            via_fork: target.via_fork,
             head: target.head,
             base,
             base_options: options,

@@ -16,6 +16,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
       head: "feature",
       base: "main",
       isDefaultBranch: false,
+      viaFork: false,
     })),
     prList: vi.fn(),
     prDetail: vi.fn(),

@@ -741,3 +741,192 @@ fn pr_close_and_reopen_send_state_only() {
     assert_eq!(code(&err), ErrorCode::InvalidInput);
     assert_eq!(f.fake.requests().len(), 3);
 }
+
+/// origin은 octo/hello, fork는 mona/hello이고 지금 브랜치 feature가 fork/feature에 올라가 있다(D-181).
+fn fork_route_repo() -> tempfile::TempDir {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let p = dir.path();
+    git(
+        p,
+        &["remote", "add", "fork", "https://github.com/mona/hello.git"],
+    );
+    git(p, &["switch", "-q", "-c", "feature"]);
+    commit(p, "b.txt", "기능");
+    git(p, &["update-ref", "refs/remotes/fork/feature", "HEAD"]);
+    git(p, &["config", "branch.feature.remote", "fork"]);
+    git(p, &["config", "branch.feature.merge", "refs/heads/feature"]);
+    dir
+}
+
+#[test]
+fn fork_route_targets_origin_with_owner_prefixed_head() {
+    let dir = fork_route_repo();
+    let f = core(dir.path(), true);
+    let ctx = f.core.queries().hosting_context(dir.path()).unwrap();
+    assert!(ctx.via_fork);
+    assert_eq!(ctx.repo.as_deref(), Some("octo/hello"));
+    assert_eq!(ctx.head.as_deref(), Some("feature"));
+    let draft = f.core.queries().pr_draft(dir.path()).unwrap();
+    assert!(draft.via_fork && draft.unpushed == 0 && draft.base == "main");
+    // 포크의 원래 저장소가 origin이면 head를 "mona:feature"로 보낸다.
+    f.fake.push_json(
+        200,
+        r#"{"fork":true,"permissions":{"push":true},"parent":{"name":"hello","owner":{"login":"octo"}}}"#,
+    );
+    f.fake.push_json(201, &pull_json(9, "feature", "mona"));
+    f.core
+        .execute(dir.path(), &create("기능 추가", "main"), None)
+        .unwrap();
+    let reqs = f.fake.requests();
+    assert_eq!(reqs[0].url, "https://api.github.com/repos/mona/hello");
+    assert_eq!(reqs[1].url, "https://api.github.com/repos/octo/hello/pulls");
+    let sent: serde_json::Value = serde_json::from_slice(reqs[1].body.as_ref().unwrap()).unwrap();
+    assert_eq!(sent["head"], "mona:feature");
+    // 원래 저장소가 다르면 보내지 않는다.
+    f.fake.push_json(
+        200,
+        r#"{"fork":true,"parent":{"name":"other","owner":{"login":"octo"}}}"#,
+    );
+    let err = f
+        .core
+        .execute(dir.path(), &create("기능 추가", "main"), None)
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::ForkParentMismatch);
+    assert_eq!(f.fake.requests().len(), 3);
+    // 목록의 지금 브랜치 찾기도 포크 소유자로.
+    f.fake.push_json(200, "[]");
+    f.core
+        .queries()
+        .pr_list(
+            dir.path(),
+            &PrListRequest {
+                state: PrStateFilterView::All,
+                branch: Some("feature".into()),
+                page: 1,
+            },
+        )
+        .unwrap();
+    assert!(f.fake.requests()[3].url.ends_with("&head=mona%3Afeature"));
+}
+
+struct ForkFixture {
+    core: Core,
+    fake: Arc<FakeTransport>,
+    dir: tempfile::TempDir,
+    bare: tempfile::TempDir,
+}
+
+/// origin이 octo/hello인 저장소에 feature 브랜치. 포크 주소는 insteadOf로 로컬 bare 저장소에 닿는다.
+fn fork_fixture() -> ForkFixture {
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let p = dir.path();
+    git(p, &["switch", "-q", "-c", "feature"]);
+    commit(p, "b.txt", "기능");
+    let bare = tempfile::tempdir().unwrap();
+    git(bare.path(), &["init", "-q", "--bare"]);
+    let local = bare.path().to_string_lossy().into_owned();
+    git(
+        p,
+        &[
+            "config",
+            &format!("url.{local}.insteadOf"),
+            "https://github.com/Mona/hello.git",
+        ],
+    );
+    let backend = git::CliBackend::new("git", Arc::new(|_| {})).allow_local_remotes_for_tests();
+    let fake = Arc::new(FakeTransport::new());
+    let config = hosting::GitHubConfig::new(Some("Ov23liTESTCLIENT01"));
+    let provider = hosting::GitHub::new(fake.clone(), config.clone());
+    let github = GitHubService::new(
+        Arc::new(provider),
+        &config,
+        platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+        None,
+    )
+    .without_fork_wait_for_tests();
+    github.connect_for_tests("mona", TOKEN, true);
+    let core = Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>)
+        .unwrap()
+        .with_github_for_tests(github);
+    core.open_project(p, OpenHow::Picked).unwrap();
+    ForkFixture {
+        core,
+        fake,
+        dir,
+        bare,
+    }
+}
+
+fn fork(f: &ForkFixture) -> Result<higit_core::view::ActionResult, higit_core::CoreError> {
+    f.core
+        .execute(f.dir.path(), &higit_core::view::ActionInput::Fork, None)
+}
+
+const FORK_JSON: &str =
+    r#"{"name":"hello","owner":{"login":"Mona"},"clone_url":"https://evil.example/x.git"}"#;
+
+#[test]
+fn fork_creates_waits_links_and_pushes() {
+    let f = fork_fixture();
+    f.fake.push_json(202, FORK_JSON);
+    f.fake.push_json(404, "{}");
+    f.fake.push_json(200, "{}");
+    let result = fork(&f).unwrap();
+    assert_eq!(
+        result,
+        higit_core::view::ActionResult::Forked {
+            owner: "Mona".into(),
+            name: "hello".into()
+        }
+    );
+    let p = f.dir.path();
+    // 주소는 서버가 준 clone_url이 아니라 검사한 소유자·이름으로 만든다.
+    assert_eq!(
+        git(p, &["config", "--get", "remote.fork.url"]).trim(),
+        "https://github.com/Mona/hello.git"
+    );
+    assert_eq!(
+        git(p, &["config", "--get", "branch.feature.remote"]).trim(),
+        "fork"
+    );
+    let pushed = git(f.bare.path(), &["rev-parse", "refs/heads/feature"]);
+    assert_eq!(pushed.trim(), git(p, &["rev-parse", "HEAD"]).trim());
+    let urls: Vec<String> = f.fake.requests().iter().map(|r| r.url.clone()).collect();
+    assert_eq!(
+        urls,
+        vec![
+            "https://api.github.com/repos/octo/hello/forks".to_string(),
+            "https://api.github.com/repos/Mona/hello".to_string(),
+            "https://api.github.com/repos/Mona/hello".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn fork_refusals_leave_no_remote() {
+    // 준비가 끝나지 않음.
+    let f = fork_fixture();
+    f.fake.push_json(202, FORK_JSON);
+    for _ in 0..15 {
+        f.fake.push_json(404, "{}");
+    }
+    assert_eq!(code(&fork(&f).unwrap_err()), ErrorCode::ForkNotReady);
+    // 내 계정이 아닌 포크.
+    f.fake
+        .push_json(202, r#"{"name":"hello","owner":{"login":"someone"}}"#);
+    assert_eq!(code(&fork(&f).unwrap_err()), ErrorCode::GithubBadResponse);
+    let remotes = git(f.dir.path(), &["remote"]);
+    assert!(!remotes.lines().any(|r| r == "fork"), "{remotes}");
+    // 원격 fork가 다른 주소를 가리킴.
+    git(
+        f.dir.path(),
+        &["remote", "add", "fork", "https://github.com/evil/hello.git"],
+    );
+    f.fake.push_json(202, FORK_JSON);
+    f.fake.push_json(200, "{}");
+    assert_eq!(code(&fork(&f).unwrap_err()), ErrorCode::ForkRemoteTaken);
+    assert!(
+        git(f.bare.path(), &["for-each-ref"]).trim().is_empty(),
+        "올리지 않는다"
+    );
+}

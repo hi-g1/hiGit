@@ -37,6 +37,8 @@ pub struct GitHubService {
     keychain: platform::Keychain,
     store: StatusStore,
     clock: Clock,
+    /// 포크 준비를 다시 묻기 전 기다리는 시간(D-181). 시험은 0.
+    fork_poll: Duration,
     state: Mutex<State>,
 }
 
@@ -105,6 +107,7 @@ impl GitHubService {
             keychain,
             store: data_dir.map_or_else(StatusStore::in_memory, StatusStore::open),
             clock: Arc::new(Instant::now),
+            fork_poll: Duration::from_secs(2),
             state: Mutex::new(State::default()),
         }
     }
@@ -146,6 +149,20 @@ impl GitHubService {
         state.generation += 1;
         state.remembered = remembered;
         state.session_login = (!remembered).then(|| login.to_owned());
+    }
+
+    /// **테스트 전용.** 포크 준비를 기다리지 않는다.
+    #[doc(hidden)]
+    pub fn without_fork_wait_for_tests(mut self) -> Self {
+        self.fork_poll = Duration::ZERO;
+        self
+    }
+
+    /// 포크 준비를 다시 묻기 전 한 번 기다린다.
+    pub(crate) fn wait_for_fork(&self) {
+        if !self.fork_poll.is_zero() {
+            std::thread::sleep(self.fork_poll);
+        }
     }
 
     /// **테스트 전용.** 시각을 정한다.

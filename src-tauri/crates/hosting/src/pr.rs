@@ -39,8 +39,10 @@ impl PrStateFilter {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrQuery {
     pub state: PrStateFilter,
-    /// 이 저장소의 이 브랜치에서 낸 것만.
+    /// 이 브랜치에서 낸 것만.
     pub head_branch: Option<String>,
+    /// `head_branch`의 소유자(포크에서 낸 것, D-181). 없으면 이 저장소의 소유자.
+    pub head_owner: Option<String>,
     /// 1부터.
     pub page: u32,
     /// 1~50.

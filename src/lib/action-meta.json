@@ -216,6 +216,12 @@
     "undo": "nothing"
   },
   {
+    "id": "fork",
+    "glossaryId": "fork",
+    "risk": "normal",
+    "undo": "nothing"
+  },
+  {
     "id": "identity-set",
     "glossaryId": "identity",
     "risk": "normal",

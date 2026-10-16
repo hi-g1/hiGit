@@ -56,6 +56,7 @@ const context = (provider: "github" | null) => ({
   head: "feature",
   base: "main",
   isDefaultBranch: false,
+  viaFork: false,
 });
 
 const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false, email: false };

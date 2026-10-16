@@ -182,6 +182,11 @@ pub trait GitBackend: Send + Sync {
 
     fn clear_cancel(&self, repo: &RepoPath);
 
+    /// 사람이 취소를 눌렀는지(git 밖에서 기다리는 작업이 묻는다, 포크 준비 등). 가짜 구현은 거짓.
+    fn cancel_requested(&self, _repo: &RepoPath) -> bool {
+        false
+    }
+
     /// 오래 걸리는 작업의 진행 알림을 받는다(1초마다 저장소, 경과, 마지막 출력 뒤 시간).
     fn set_observer(&self, observer: Option<crate::ProgressObserver>);
 

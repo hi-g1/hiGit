@@ -233,7 +233,11 @@ impl Net<'_> {
         Ok(())
     }
 
-    fn push(&self, (remote, branch): (String, String), set_upstream: bool) -> Result<OpOutput> {
+    pub(crate) fn push(
+        &self,
+        (remote, branch): (String, String),
+        set_upstream: bool,
+    ) -> Result<OpOutput> {
         let auth = self
             .github
             .auth_for(self.git, self.repo, &remote, false, self.use_helper);

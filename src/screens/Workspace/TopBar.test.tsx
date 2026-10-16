@@ -17,6 +17,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
       head: "main",
       base: "main",
       isDefaultBranch: true,
+      viaFork: false,
     })),
   },
 }));

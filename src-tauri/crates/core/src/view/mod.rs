@@ -562,6 +562,10 @@ pub enum ActionResult {
     PrReopened {
         number: u32,
     },
+    Forked {
+        owner: String,
+        name: String,
+    },
     ParkedRecovered {
         count: u32,
     },
@@ -658,6 +662,7 @@ impl From<Outcome> for ActionResult {
             Outcome::PrMerged { number } => ActionResult::PrMerged { number },
             Outcome::PrClosed { number } => ActionResult::PrClosed { number },
             Outcome::PrReopened { number } => ActionResult::PrReopened { number },
+            Outcome::Forked { owner, name } => ActionResult::Forked { owner, name },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
             Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },
@@ -732,6 +737,9 @@ pub enum ErrorCode {
     PrNotMergeable,
     PrHeadChanged,
     PrNotOpen,
+    ForkNotReady,
+    ForkRemoteTaken,
+    ForkParentMismatch,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -941,6 +949,9 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::PrNotMergeable => ErrorCode::PrNotMergeable,
         G::PrHeadChanged => ErrorCode::PrHeadChanged,
         G::PrNotOpen => ErrorCode::PrNotOpen,
+        G::ForkNotReady => ErrorCode::ForkNotReady,
+        G::ForkRemoteTaken => ErrorCode::ForkRemoteTaken,
+        G::ForkParentMismatch => ErrorCode::ForkParentMismatch,
     }
 }
 

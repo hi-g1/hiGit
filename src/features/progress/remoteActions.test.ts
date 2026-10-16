@@ -7,6 +7,7 @@ describe("원격 작업 목록", () => {
       "clone",
       "fetch",
       "force-push",
+      "fork",
       "pull",
       "push",
       "remote-branch-delete",

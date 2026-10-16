@@ -91,11 +91,24 @@ impl Action for PrCreateAction {
         if ahead == 0 {
             return Err(github(GithubFailure::PrNoDifference));
         }
+        // 포크 경로면 포크의 원래 저장소가 기준 저장소인지 보내기 전에 확인한다(D-181).
+        if let Some(fork) = &target.fork_repo {
+            let info = ctx
+                .github
+                .call(|provider, token| provider.repo_info(token, fork))?;
+            let parent_ok = info.parent.as_ref().is_some_and(|p| {
+                p.owner.eq_ignore_ascii_case(&github_repo.owner)
+                    && p.name.eq_ignore_ascii_case(&github_repo.name)
+            });
+            if !parent_ok {
+                return Err(github(GithubFailure::ForkParentMismatch));
+            }
+        }
         let new = hosting::NewPr {
             title: title.to_owned(),
             body: i.body.clone(),
             head,
-            head_owner: None,
+            head_owner: target.head_owner().map(str::to_owned),
             base: i.base.clone(),
             draft: i.draft,
         };
