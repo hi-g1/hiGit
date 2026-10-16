@@ -17,6 +17,11 @@ pub enum ActionInput {
     PrCreate(PrCreateInput),
     /// 검토 요청에 댓글을 단다(D-178).
     PrComment(PrCommentInput),
+    /// 검토 요청을 합친다(D-179, 확인 필요).
+    PrMerge(PrMergeInput),
+    /// 검토 요청을 닫는다·다시 연다(D-180).
+    PrClose(PrNumberInput),
+    PrReopen(PrNumberInput),
     /// 전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다.
     IdentitySet(IdentityInput),
     Stage(PathsInput),
@@ -88,6 +93,9 @@ impl ActionInput {
             ActionInput::Clone(_) => "clone",
             ActionInput::PrCreate(_) => "pr-create",
             ActionInput::PrComment(_) => "pr-comment",
+            ActionInput::PrMerge(_) => "pr-merge",
+            ActionInput::PrClose(_) => "pr-close",
+            ActionInput::PrReopen(_) => "pr-reopen",
             ActionInput::IdentitySet(_) => "identity-set",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
@@ -256,6 +264,22 @@ pub struct PrCreateInput {
 pub struct PrCommentInput {
     pub number: u32,
     pub body: String,
+}
+
+/// 검토 요청 합치기(D-179). `expect_head`는 화면이 보여 준 head 버전(16진수 40·64자).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrMergeInput {
+    pub number: u32,
+    pub method: crate::view::MergeMethodView,
+    pub expect_head: String,
+}
+
+/// 검토 요청 번호 하나(닫기·다시 열기).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PrNumberInput {
+    pub number: u32,
 }
 
 /// 전역 이름·이메일(D-125). core가 앞뒤 공백을 빼고 다시 검사한다.

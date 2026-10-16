@@ -192,6 +192,17 @@ pub enum Outcome {
     PrCommented {
         number: u32,
     },
+    /// 검토 요청을 합쳤다(D-179).
+    PrMerged {
+        number: u32,
+    },
+    /// 검토 요청을 닫았다·다시 열었다(D-180).
+    PrClosed {
+        number: u32,
+    },
+    PrReopened {
+        number: u32,
+    },
     /// 전역 이름·이메일을 저장했다(값은 담지 않는다, D-125).
     IdentitySaved,
     /// 덮어쓰며 올렸다. 원격에서 사라진 버전 수(D-128).
@@ -251,6 +262,9 @@ impl Outcome {
             | Outcome::ParkedRecovered { .. }
             | Outcome::PrCreated { .. }
             | Outcome::PrCommented { .. }
+            | Outcome::PrMerged { .. }
+            | Outcome::PrClosed { .. }
+            | Outcome::PrReopened { .. }
             // 원격만 바뀐다. 경계를 남기면 앞선 되돌리기가 까닭 없이 막힌다(D-130).
             | Outcome::RemoteBranchDeleted { .. }
             | Outcome::RemoteBranchRenamed { .. }

@@ -584,3 +584,160 @@ fn pr_comment_refuses_before_sending_and_drops_on_401() {
     assert!(!format!("{err:?}").contains(TOKEN));
     assert!(!f.core.github_status().connected);
 }
+
+fn merge(
+    number: u32,
+    method: higit_core::view::MergeMethodView,
+    head: &str,
+) -> higit_core::view::ActionInput {
+    higit_core::view::ActionInput::PrMerge(higit_core::view::PrMergeInput {
+        number,
+        method,
+        expect_head: head.into(),
+    })
+}
+
+fn confirmed(
+    f: &Fixture,
+    dir: &Path,
+    input: &higit_core::view::ActionInput,
+) -> Result<higit_core::view::ActionResult, higit_core::CoreError> {
+    let token = f.core.preview(dir, input).unwrap().token;
+    f.core.execute(dir, input, Some(token))
+}
+
+const BOTH: &str =
+    r#"{"permissions":{"push":true},"allow_merge_commit":true,"allow_squash_merge":true}"#;
+
+#[test]
+fn pr_merge_needs_confirmation_and_sends_the_seen_head() {
+    use higit_core::view::{ActionResult, MergeMethodView as M};
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let head = "ab".repeat(20);
+    let input = merge(5, M::Squash, &head);
+    // 확인 없이 실행하면 아무것도 보내지 않는다.
+    let err = f.core.execute(dir.path(), &input, None).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PreviewRequired);
+    assert!(f.fake.requests().is_empty());
+    // 다른 입력의 토큰은 쓸 수 없다.
+    let token = f
+        .core
+        .preview(dir.path(), &merge(5, M::Merge, &head))
+        .unwrap()
+        .token;
+    let err = f.core.execute(dir.path(), &input, Some(token)).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PreviewMismatch);
+    f.fake.push_json(200, BOTH);
+    f.fake
+        .push_json(200, r#"{"sha":"x","merged":true,"message":"merged"}"#);
+    assert_eq!(
+        confirmed(&f, dir.path(), &input).unwrap(),
+        ActionResult::PrMerged { number: 5 }
+    );
+    let reqs = f.fake.requests();
+    assert_eq!(reqs.len(), 2);
+    assert_eq!(reqs[1].method, hosting::Method::Put);
+    assert_eq!(
+        reqs[1].url,
+        "https://api.github.com/repos/octo/hello/pulls/5/merge"
+    );
+    let body: serde_json::Value = serde_json::from_slice(reqs[1].body.as_ref().unwrap()).unwrap();
+    assert_eq!(body["sha"], head.as_str());
+    assert_eq!(body["merge_method"], "squash");
+}
+
+#[test]
+fn pr_merge_refusals() {
+    use higit_core::view::MergeMethodView as M;
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    let head = "c".repeat(40);
+    // 저장소가 허용하지 않은 방법은 합치기 요청을 보내지 않는다.
+    f.fake.push_json(
+        200,
+        r#"{"permissions":{"push":true},"allow_merge_commit":true,"allow_squash_merge":false}"#,
+    );
+    let err = confirmed(&f, dir.path(), &merge(5, M::Squash, &head)).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PrNotMergeable);
+    assert_eq!(f.fake.requests().len(), 1);
+    for (status, body, want) in [
+        (
+            405,
+            r#"{"message":"Pull Request is not mergeable"}"#,
+            ErrorCode::PrNotMergeable,
+        ),
+        (
+            409,
+            r#"{"message":"Head branch was modified."}"#,
+            ErrorCode::PrHeadChanged,
+        ),
+        (
+            200,
+            r#"{"merged":false,"message":"nope"}"#,
+            ErrorCode::PrNotMergeable,
+        ),
+    ] {
+        f.fake.push_json(200, BOTH);
+        f.fake.push_json(status, body);
+        let err = confirmed(&f, dir.path(), &merge(5, M::Merge, &head)).unwrap_err();
+        assert_eq!(code(&err), want, "{status}");
+    }
+    // 입력 검사는 보내기 전에.
+    let sent = f.fake.requests().len();
+    for input in [
+        merge(0, M::Merge, &head),
+        merge(5, M::Merge, "abc"),
+        merge(5, M::Merge, &"g".repeat(40)),
+    ] {
+        let err = confirmed(&f, dir.path(), &input).unwrap_err();
+        assert_eq!(code(&err), ErrorCode::InvalidInput);
+    }
+    assert_eq!(f.fake.requests().len(), sent);
+}
+
+#[test]
+fn pr_close_and_reopen_send_state_only() {
+    use higit_core::view::{ActionInput, ActionResult, PrNumberInput};
+    let dir = repo(Some("https://github.com/octo/hello.git"));
+    let f = core(dir.path(), true);
+    f.fake.push_json(200, r#"{"number":5,"state":"closed"}"#);
+    f.fake.push_json(200, r#"{"number":5,"state":"open"}"#);
+    f.fake.push_json(422, r#"{"message":"Validation Failed","errors":[{"message":"state cannot be changed. The head branch was deleted."}]}"#);
+    let close = ActionInput::PrClose(PrNumberInput { number: 5 });
+    let reopen = ActionInput::PrReopen(PrNumberInput { number: 5 });
+    assert_eq!(
+        f.core.execute(dir.path(), &close, None).unwrap(),
+        ActionResult::PrClosed { number: 5 }
+    );
+    assert_eq!(
+        f.core.execute(dir.path(), &reopen, None).unwrap(),
+        ActionResult::PrReopened { number: 5 }
+    );
+    let err = f.core.execute(dir.path(), &reopen, None).unwrap_err();
+    assert_eq!(code(&err), ErrorCode::PrNotOpen);
+    let reqs = f.fake.requests();
+    assert!(reqs.iter().all(|r| r.method == hosting::Method::Patch));
+    assert_eq!(
+        reqs[0].url,
+        "https://api.github.com/repos/octo/hello/pulls/5"
+    );
+    assert_eq!(
+        String::from_utf8(reqs[0].body.clone().unwrap()).unwrap(),
+        r#"{"state":"closed"}"#
+    );
+    assert_eq!(
+        String::from_utf8(reqs[1].body.clone().unwrap()).unwrap(),
+        r#"{"state":"open"}"#
+    );
+    let err = f
+        .core
+        .execute(
+            dir.path(),
+            &ActionInput::PrClose(PrNumberInput { number: 0 }),
+            None,
+        )
+        .unwrap_err();
+    assert_eq!(code(&err), ErrorCode::InvalidInput);
+    assert_eq!(f.fake.requests().len(), 3);
+}

@@ -46,9 +46,10 @@ pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
     CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
     HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCommentInput,
-    PrCreateInput, PublishInput, RemoteBranchInput, RemoteBranchRenameInput, RestoreInput,
-    RewriteInput, RewriteKindInput, RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput,
-    TagInput, TagPushInput, TakeOutInput, TakeOutSource, Visibility,
+    PrCreateInput, PrMergeInput, PrNumberInput, PublishInput, RemoteBranchInput,
+    RemoteBranchRenameInput, RestoreInput, RewriteInput, RewriteKindInput, RewriteStepInput,
+    SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput, TakeOutSource,
+    Visibility,
 };
 pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
@@ -552,6 +553,15 @@ pub enum ActionResult {
     PrCommented {
         number: u32,
     },
+    PrMerged {
+        number: u32,
+    },
+    PrClosed {
+        number: u32,
+    },
+    PrReopened {
+        number: u32,
+    },
     ParkedRecovered {
         count: u32,
     },
@@ -645,6 +655,9 @@ impl From<Outcome> for ActionResult {
             Outcome::LocksCleared { count } => ActionResult::LocksCleared { count },
             Outcome::PrCreated { number } => ActionResult::PrCreated { number },
             Outcome::PrCommented { number } => ActionResult::PrCommented { number },
+            Outcome::PrMerged { number } => ActionResult::PrMerged { number },
+            Outcome::PrClosed { number } => ActionResult::PrClosed { number },
+            Outcome::PrReopened { number } => ActionResult::PrReopened { number },
             Outcome::ParkedRecovered { count } => ActionResult::ParkedRecovered { count },
             Outcome::IdentitySaved => ActionResult::IdentitySaved,
             Outcome::ForcePushed { dropped } => ActionResult::ForcePushed { dropped },
@@ -716,6 +729,9 @@ pub enum ErrorCode {
     GithubRepoExists,
     /// GitHub가 저장소 만들기 입력을 받지 않았다(그 밖의 422, 계획 010 R10).
     GithubRepoInvalid,
+    PrNotMergeable,
+    PrHeadChanged,
+    PrNotOpen,
     HasChanges,
     TagExists,
     BranchProtected,
@@ -922,6 +938,9 @@ fn github_code(kind: crate::GithubFailure) -> ErrorCode {
         G::PrSameBranch => ErrorCode::PrSameBranch,
         G::RepoExists => ErrorCode::GithubRepoExists,
         G::RepoInvalid => ErrorCode::GithubRepoInvalid,
+        G::PrNotMergeable => ErrorCode::PrNotMergeable,
+        G::PrHeadChanged => ErrorCode::PrHeadChanged,
+        G::PrNotOpen => ErrorCode::PrNotOpen,
     }
 }
 

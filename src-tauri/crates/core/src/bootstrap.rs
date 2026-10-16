@@ -738,6 +738,9 @@ impl Core {
             | "push"
             | "pr-create"
             | "pr-comment"
+            | "pr-merge"
+            | "pr-close"
+            | "pr-reopen"
             | "force-push"
             | "remote-branch-delete"
             | "tag-push" => Locks::Network,

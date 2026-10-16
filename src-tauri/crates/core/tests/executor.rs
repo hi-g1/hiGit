@@ -366,6 +366,10 @@ fn registered_actions_match_spec_risk() {
             ("branch-rename", "branch-rename", Risk::Normal),
             ("clone", "clone", Risk::Safe),
             ("pr-create", "pr", Risk::Safe),
+            ("pr-comment", "comment", Risk::Safe),
+            ("pr-merge", "pr-merge", Risk::Normal),
+            ("pr-close", "pr-close", Risk::Normal),
+            ("pr-reopen", "pr", Risk::Safe),
             ("identity-set", "identity", Risk::Normal),
             ("force-push", "force-push", Risk::Danger),
             ("remote-branch-delete", "remote-branch-delete", Risk::Danger),
@@ -376,7 +380,7 @@ fn registered_actions_match_spec_risk() {
     );
 }
 
-/// 되돌릴 수 없어 실행 전 확인을 받는 액션(D-043, 계획 010 H9·H11).
+/// 되돌릴 수 없어 실행 전 확인을 받는 액션(D-043, 계획 010 H9·H11, 계획 013 W10).
 #[test]
 fn irreversible_actions_are_the_confirmed_few() {
     let mut registry = Registry::new();
@@ -393,6 +397,7 @@ fn irreversible_actions_are_the_confirmed_few() {
             "clear-lock",
             "discard",
             "force-push",
+            "pr-merge",
             "remote-branch-delete",
             "remote-branch-rename"
         ]

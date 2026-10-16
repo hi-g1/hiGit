@@ -233,6 +233,12 @@ pub enum GithubFailure {
     RepoExists,
     /// 저장소 만들기 입력을 GitHub가 받지 않았다(그 밖의 422).
     RepoInvalid,
+    /// 지금은 합칠 수 없다(405, 허용되지 않은 방법, D-179).
+    PrNotMergeable,
+    /// 화면이 본 뒤 새 버전이 올라왔다(409, D-179).
+    PrHeadChanged,
+    /// 열린(닫기)·닫힌(다시 열기) 검토 요청이 아니거나 다시 열 수 없다(422, D-180).
+    PrNotOpen,
 }
 
 impl CoreError {

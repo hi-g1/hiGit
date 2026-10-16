@@ -198,6 +198,24 @@
     "undo": "nothing"
   },
   {
+    "id": "pr-merge",
+    "glossaryId": "pr-merge",
+    "risk": "normal",
+    "undo": "irreversible"
+  },
+  {
+    "id": "pr-close",
+    "glossaryId": "pr-close",
+    "risk": "normal",
+    "undo": "nothing"
+  },
+  {
+    "id": "pr-reopen",
+    "glossaryId": "pr",
+    "risk": "safe",
+    "undo": "nothing"
+  },
+  {
     "id": "identity-set",
     "glossaryId": "identity",
     "risk": "normal",

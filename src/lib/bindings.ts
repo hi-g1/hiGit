@@ -128,6 +128,10 @@ export type ActionInput_Deserialize =
 { id: "pr-create"; input: PrCreateInput } | 
 /**  검토 요청에 댓글을 단다(D-178). */
 { id: "pr-comment"; input: PrCommentInput } | 
+/**  검토 요청을 합친다(D-179, 확인 필요). */
+{ id: "pr-merge"; input: PrMergeInput } | 
+/**  검토 요청을 닫는다·다시 연다(D-180). */
+{ id: "pr-close"; input: PrNumberInput } | { id: "pr-reopen"; input: PrNumberInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -190,6 +194,10 @@ export type ActionInput_Serialize =
 { id: "pr-create"; input: PrCreateInput } | 
 /**  검토 요청에 댓글을 단다(D-178). */
 { id: "pr-comment"; input: PrCommentInput } | 
+/**  검토 요청을 합친다(D-179, 확인 필요). */
+{ id: "pr-merge"; input: PrMergeInput } | 
+/**  검토 요청을 닫는다·다시 연다(D-180). */
+{ id: "pr-close"; input: PrNumberInput } | { id: "pr-reopen"; input: PrNumberInput } | 
 /**  전역 이름·이메일을 저장한다(D-125). 저장소가 필요 없다. */
 { id: "identity-set"; input: IdentityInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
@@ -277,7 +285,7 @@ mergeStarted: boolean } | { kind: "ignored"; count: number } |
 /**  기록 정리의 충돌 하나를 마쳤고 다음 버전에서 다시 겹쳤다. 화면은 다음 충돌을 연다. */
 { kind: "conflictContinued"; paths: string[] } | 
 /**  합치기를 그만뒀다. */
-{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "prCommented"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
+{ kind: "conflictAborted" } | { kind: "stashed" } | { kind: "tookOut" } | { kind: "parkedResolved" } | { kind: "discarded"; count: number } | { kind: "restored" } | { kind: "locksCleared"; count: number } | { kind: "prCreated"; number: number } | { kind: "prCommented"; number: number } | { kind: "prMerged"; number: number } | { kind: "prClosed"; number: number } | { kind: "prReopened"; number: number } | { kind: "parkedRecovered"; count: number } | { kind: "identitySaved" } | { kind: "forcePushed"; dropped: number } | { kind: "remoteBranchDeleted"; remote: string; branch: string } | { kind: "remoteBranchRenamed"; remote: string; from: string; to: string } | { kind: "tagPushed"; name: string } | { kind: "published"; owner: string; name: string };
 
 export type AmendInput = {
 	/**  화면이 본 지금 위치의 해시. 그사이 바뀌었으면 거절한다. */
@@ -638,7 +646,7 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  GitHub에 같은 이름의 저장소가 있다. */
 "githubRepoExists" | 
 /**  GitHub가 저장소 만들기 입력을 받지 않았다(그 밖의 422, 계획 010 R10). */
-"githubRepoInvalid" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
+"githubRepoInvalid" | "prNotMergeable" | "prHeadChanged" | "prNotOpen" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | 
 /**  지금 브랜치가 올리는 원격이 github.com이 아니다. */
 "notGithubRemote" | 
 /**  아직 올리지 않은 버전이 있거나 올린 적이 없다(검토 요청 전에 올린다). */
@@ -1080,6 +1088,18 @@ export type PrListRequest = {
 export type PrListView = {
 	items: PrRowView[],
 	hasMore: boolean,
+};
+
+/**  검토 요청 합치기(D-179). `expect_head`는 화면이 보여 준 head 버전(16진수 40·64자). */
+export type PrMergeInput = {
+	number: number,
+	method: MergeMethodView,
+	expectHead: string,
+};
+
+/**  검토 요청 번호 하나(닫기·다시 열기). */
+export type PrNumberInput = {
+	number: number,
 };
 
 /**  검토 요청 화면이 단추를 정하는 저장소 정보(D-177). */
