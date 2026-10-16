@@ -5,12 +5,11 @@ import { api, type ChangedFile } from "../../lib/api";
 import { useStashes } from "../../lib/queries";
 import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
-import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
-import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./CompareFooter.module.css";
+import { useDiscardFlow } from "./useDiscardFlow";
 
 type Props = {
   repo: string;
@@ -31,12 +30,10 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
   const showError = useToastStore((s) => s.showError);
-  const setView = useRepoStore((s) => s.setView);
   const stashes = useStashes(repo).data?.items ?? [];
-  const [confirm, setConfirm] = useState<{ token: string } | null>(null);
+  const discardFlow = useDiscardFlow(repo);
   const [pending, setPending] = useState(false);
   const [now] = useState(() => Date.now());
-  const paths = file.origPath ? [file.path, file.origPath] : [file.path];
 
   const refresh = () => {
     for (const key of ["status", "diff", "stashes", "recovery", "homeMap"]) {
@@ -64,32 +61,6 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
       await api.executeAction(repo, { id: "take-out", input: { source: { kind: "stash", oid } } });
       show(m.tookOutToast);
     } catch (e) {
-      fail(e);
-    } finally {
-      setPending(false);
-      refresh();
-    }
-  };
-
-  const askDiscard = async () => {
-    try {
-      const preview = await api.previewAction(repo, { id: "discard", input: { paths } });
-      setConfirm({ token: preview.token });
-    } catch (e) {
-      fail(e);
-    }
-  };
-
-  const discard = async () => {
-    if (!confirm) return;
-    setPending(true);
-    try {
-      await api.executeAction(repo, { id: "discard", input: { paths } }, confirm.token);
-      setConfirm(null);
-      // 되돌리기가 아니라 작업 내역에서 꺼낸다(백업이 거기 있다).
-      show(m.discarded, { label: m.openActivity, onClick: () => setView("activity") });
-    } catch (e) {
-      setConfirm(null);
       fail(e);
     } finally {
       setPending(false);
@@ -131,19 +102,10 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
         </Popover.Root>
       )}
       <span className={styles.spacer} />
-      <button type="button" className={styles.discard} disabled={pending} onClick={() => void askDiscard()}>
+      <button type="button" className={styles.discard} disabled={pending || discardFlow.pending} onClick={() => discardFlow.ask(file)}>
         <Term id="discard" focusable={false} />
       </button>
-      <ConfirmDialog
-        open={confirm !== null}
-        title={m.discardTitle(file.path.split("/").pop() ?? file.path)}
-        subtitle={paths.join(" · ")}
-        dangerLabel={m.discardConfirm}
-        closeLabel={m.close}
-        pending={pending}
-        onConfirm={() => void discard()}
-        onClose={() => setConfirm(null)}
-      />
+      {discardFlow.dialog}
     </div>
   );
 }

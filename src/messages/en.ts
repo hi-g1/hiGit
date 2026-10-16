@@ -360,6 +360,9 @@ export const en: Messages = {
     close: "Close",
   },
   paneWidth: "Pane width",
+  fileMenu: "File menu",
+  copyPath: "Copy path",
+  thisFile: "This file:",
   earlierVersions: (n: number) => `${n} earlier`,
   identity: { title: "Name and email", name: "Name", email: "Email", save: "Save", saved: "Saved" },
   settings: {

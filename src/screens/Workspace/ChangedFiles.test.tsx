@@ -1,14 +1,17 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
-  api: { executeAction: vi.fn() },
+  api: { executeAction: vi.fn(), previewAction: vi.fn() },
 }));
+vi.mock("../../lib/copy", () => ({ copyText: vi.fn(async () => true) }));
 
 import { AppProviders, createQueryClient } from "../../App";
 import { ApiError, api, type ChangedFile } from "../../lib/api";
+import { copyText } from "../../lib/copy";
+import { useToastStore } from "../../ui/toastStore";
 import { useRepoStore } from "../../state/repoStore";
 import { ChangedFiles } from "./ChangedFiles";
 
@@ -74,6 +77,29 @@ describe("ChangedFiles", () => {
     renderList([file("a", false), file("b", false)]);
     await user.click(screen.getByRole("checkbox", { name: /고친 파일 2개$/ }));
     expect(api.executeAction).toHaveBeenLastCalledWith("/repo", { id: "stage", input: { paths: ["a", "b"] } });
+  });
+
+  it("오른쪽 클릭 메뉴: 경로 복사와 이 파일 고친 것 버리기(R13)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.previewAction).mockResolvedValue({ token: "t1" });
+    renderList([file("docs/한글.md", false), file("b.md", false)]);
+    fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "경로 복사" }));
+    expect(copyText).toHaveBeenCalledWith("docs/한글.md");
+    await waitFor(() => expect(useToastStore.getState().toast?.text).toBe("복사했어요"));
+    fireEvent.contextMenu(screen.getByRole("button", { name: /한글\.md/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "이 파일 고친 것 버리기" }));
+    expect(api.previewAction).toHaveBeenCalledWith("/repo", { id: "discard", input: { paths: ["docs/한글.md"] } });
+    // 되돌릴 수 없어 확인을 거친다(D-043).
+    expect(await screen.findByRole("dialog")).toHaveTextContent("한글.md");
+    expect(api.executeAction).not.toHaveBeenCalled();
+  });
+
+  it("메뉴 키·Shift+F10으로도 연다", async () => {
+    renderList([file("a.txt", false)]);
+    const row = screen.getByRole("button", { name: /a\.txt/ });
+    fireEvent.keyDown(row, { key: "F10", shiftKey: true });
+    expect(await screen.findByRole("menuitem", { name: "경로 복사" })).toBeInTheDocument();
   });
 
   it("체크하면 이번 버전에 넣고, 해제하면 뺀다", async () => {

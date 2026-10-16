@@ -392,6 +392,9 @@ export const ko = {
   },
   // 설정과 GitHub 연결(D-109, D-116)
   paneWidth: "칸 폭",
+  fileMenu: "파일 메뉴",
+  copyPath: "경로 복사",
+  thisFile: "이 파일",
   earlierVersions: (n: number) => `이전 ${n}개`,
   identity: { title: "이름과 이메일", name: "이름", email: "이메일", save: "저장", saved: "저장했어요" },
   settings: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isExtendClick, listKey } from "./listKeys";
+import { isExtendClick, isMenuKey, listKey } from "./listKeys";
 
 const k = (key: string, mods: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean; isComposing: boolean }> = {}) => ({
   key,
@@ -44,5 +44,15 @@ describe("목록 조작 키", () => {
     expect(isExtendClick(k("", { shiftKey: true }))).toBe(true);
     expect(isExtendClick(k("", { shiftKey: true, ctrlKey: true }))).toBe(false);
     expect(isExtendClick(k(""))).toBe(false);
+  });
+});
+
+describe("줄 메뉴 키", () => {
+  it("메뉴 키와 Shift+F10, 조합 중·수정키는 아님", () => {
+    expect(isMenuKey(k("ContextMenu"))).toBe(true);
+    expect(isMenuKey(k("F10", { shiftKey: true }))).toBe(true);
+    expect(isMenuKey(k("F10"))).toBe(false);
+    expect(isMenuKey(k("ContextMenu", { isComposing: true }))).toBe(false);
+    expect(isMenuKey(k("F10", { shiftKey: true, ctrlKey: true }))).toBe(false);
   });
 });

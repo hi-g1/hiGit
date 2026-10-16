@@ -44,3 +44,9 @@ export function listKey(e: KeyLike): ListMove | null {
 export function isExtendClick(e: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }): boolean {
   return e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
 }
+
+/** 줄의 오른쪽 클릭 메뉴를 여는 키(메뉴 키, Shift+F10). 한글 조합 중이거나 다른 수정키가 있으면 아니다. */
+export function isMenuKey(e: KeyLike): boolean {
+  if (e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return false;
+  return e.key === "ContextMenu" || (e.shiftKey && e.key === "F10");
+}

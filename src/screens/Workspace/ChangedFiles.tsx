@@ -1,5 +1,8 @@
+import { useState, type MouseEvent } from "react";
+import { useDiscardFlow } from "../../features/stash/useDiscardFlow";
 import { useStageMutation } from "../../features/stage/useStageMutation";
 import type { ChangedFile } from "../../lib/api";
+import { isMenuKey } from "../../lib/listKeys";
 import { splitPath } from "../../lib/path";
 import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
@@ -9,6 +12,7 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import rowStyles from "../../ui/ListRow.module.css";
 import { TermTooltip, useTermLabel } from "../../ui/Term";
 import styles from "./ChangedFiles.module.css";
+import { FileRowMenu } from "./FileRowMenu";
 
 /** 이름 바꿈을 빼려면 원래 경로도 함께 되돌려야 한다. */
 function pathsOf(file: ChangedFile): string[] {
@@ -26,6 +30,13 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
   const selected = useRepoStore((s) => s.selectedPath);
   const select = useRepoStore((s) => s.selectPath);
   const stage = useStageMutation(folder);
+  const discard = useDiscardFlow(folder);
+  const [menu, setMenu] = useState<{ file: ChangedFile; x: number; y: number } | null>(null);
+  /** 메뉴는 목록 안 좌표에 붙는다(누른 자리, 키로 열면 줄의 왼쪽 아래). */
+  const openMenu = (file: ChangedFile, list: HTMLElement, at: { clientX: number; clientY: number }) => {
+    const box = list.getBoundingClientRect();
+    setMenu({ file, x: at.clientX - box.left, y: at.clientY - box.top + list.scrollTop });
+  };
 
   const included = files.filter((f) => f.staged).length;
   // 넣은 파일이 없으면 버전 저장이 모두 넣고 저장하므로 모두 켠 모양으로 보인다(D-142, D-157). index는 그대로.
@@ -62,6 +73,16 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
   return (
     // 버전을 저장하면 포커스가 여기로 온다(다음 Ctrl+Z가 글자 되돌리기로 가지 않게).
     <div id="changed-files" tabIndex={-1} className={styles.list} onKeyDown={onKeyDown}>
+      <FileRowMenu
+        file={menu?.file ?? null}
+        anchor={{ x: menu?.x ?? 0, y: menu?.y ?? 0 }}
+        onClose={() => setMenu(null)}
+        onDiscard={(file) => {
+          setMenu(null);
+          discard.ask(file);
+        }}
+      />
+      {discard.dialog}
       <div className={`${rowStyles.row} ${styles.head}`}>
         <TermTooltip id={all ? "unstage" : "stage"}>
           <Checkbox
@@ -87,6 +108,12 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
             <li
               key={`${file.origPath ?? ""}→${file.path}`}
               className={`${rowStyles.row} ${styles.two} ${isSelected ? styles.selected : ""}`}
+              onContextMenu={(e: MouseEvent<HTMLLIElement>) => {
+                // 웹뷰의 기본 메뉴 대신 파일 메뉴(경로 복사·고친 것 버리기).
+                e.preventDefault();
+                const list = e.currentTarget.closest<HTMLElement>("#changed-files");
+                if (list) openMenu(file, list, e);
+              }}
             >
               <TermTooltip id={file.staged || virtualAll ? "unstage" : "stage"}>
                 <Checkbox
@@ -100,7 +127,15 @@ export function ChangedFiles({ folder, files }: { folder: string; files: Changed
                 type="button"
                 className={styles.pick}
                 aria-pressed={isSelected}
+                aria-haspopup="menu"
                 onClick={() => select(file.path)}
+                onKeyDown={(e) => {
+                  if (!isMenuKey({ ...e, isComposing: e.nativeEvent.isComposing })) return;
+                  e.preventDefault();
+                  const list = e.currentTarget.closest<HTMLElement>("#changed-files");
+                  const row = e.currentTarget.getBoundingClientRect();
+                  if (list) openMenu(file, list, { clientX: row.left, clientY: row.bottom });
+                }}
               >
                 {/* 위 파일 이름, 아래 폴더(--text-muted), 오른쪽 상태 글자(D-143, r-home.png) */}
                 <span className={styles.names} title={file.path}>

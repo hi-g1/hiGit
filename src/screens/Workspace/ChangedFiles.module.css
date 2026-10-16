@@ -79,6 +79,10 @@
   background: var(--surface-hover);
 }
 
+.list {
+  position: relative;
+}
+
 .list:focus {
   outline: none;
 }
