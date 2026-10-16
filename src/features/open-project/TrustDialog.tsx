@@ -1,7 +1,7 @@
-import * as Dialog from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
+import { DialogFrame } from "../../ui/DialogFrame";
 import { ErrorNotice } from "../../ui/ErrorNotice";
 import styles from "./TrustDialog.module.css";
 import { useOpenProject } from "./useOpenProject";
@@ -31,57 +31,45 @@ export function TrustDialog() {
     }
   };
 
+  if (!pending) return null;
   return (
-    <Dialog.Root
-      open={pending !== null}
-      onOpenChange={(open) => {
-        if (!open) clear();
-      }}
-    >
-      <Dialog.Portal>
-        <Dialog.Overlay className={styles.overlay} />
-        <Dialog.Content className={styles.dialog}>
-          <Dialog.Title className={styles.title}>
-            {pending?.kind === "owner" ? m.ownerTitle : m.trustTitle}
-          </Dialog.Title>
-          <Dialog.Description className={styles.folder}>{pending?.folder}</Dialog.Description>
-          {pending?.kind === "config" && (
-            <ul className={styles.keys}>
-              {pending.keys.map((k) => (
-                <li key={k}>{k}</li>
-              ))}
-            </ul>
-          )}
-          {error !== null && error !== undefined && <ErrorNotice error={error} />}
-          <div className={styles.actions}>
-            {pending?.kind === "owner" ? (
-              <>
-                <Button variant="secondary" onClick={clear}>
-                  {m.close}
-                </Button>
-                <Button variant="primary" onClick={() => void choose("owner")}>
-                  {m.ownerAllow}
-                </Button>
-              </>
+    <DialogFrame title={pending.kind === "owner" ? m.ownerTitle : m.trustTitle} onClose={clear} size="wide">
+      <p className={styles.folder}>{pending.folder}</p>
+      {pending.kind === "config" && (
+        <ul className={styles.keys}>
+          {pending.keys.map((k) => (
+            <li key={k}>{k}</li>
+          ))}
+        </ul>
+      )}
+      {error !== null && error !== undefined && <ErrorNotice error={error} />}
+      <div className={styles.actions}>
+        {pending.kind === "owner" ? (
+          <>
+            <Button variant="secondary" onClick={clear}>
+              {m.close}
+            </Button>
+            <Button variant="primary" onClick={() => void choose("owner")}>
+              {m.ownerAllow}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => void choose("trust")}>
+              {m.trustOpen}
+            </Button>
+            {pending.canDisable === false ? (
+              <Button variant="primary" onClick={clear}>
+                {m.close}
+              </Button>
             ) : (
-              <>
-                <Button variant="secondary" onClick={() => void choose("trust")}>
-                  {m.trustOpen}
-                </Button>
-                {pending?.canDisable === false ? (
-                  <Button variant="primary" onClick={clear}>
-                    {m.close}
-                  </Button>
-                ) : (
-                  <Button variant="primary" onClick={() => void choose("disable")}>
-                    {m.trustDisable}
-                  </Button>
-                )}
-              </>
+              <Button variant="primary" onClick={() => void choose("disable")}>
+                {m.trustDisable}
+              </Button>
             )}
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          </>
+        )}
+      </div>
+    </DialogFrame>
   );
 }

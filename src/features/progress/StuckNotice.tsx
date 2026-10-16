@@ -1,8 +1,8 @@
-import * as Dialog from "@radix-ui/react-dialog";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ApiError, api } from "../../lib/api";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
+import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./StuckNotice.module.css";
 import { REMOTE_ACTIONS, STUCK_LOCAL_SECS, useProgress } from "./useProgress";
@@ -16,7 +16,6 @@ export function StuckNotice({ repo }: { repo: string }) {
   const show = useToastStore((s) => s.show);
   const progress = useProgress(repo);
   const [confirm, setConfirm] = useState(false);
-  const closeRef = useRef<HTMLButtonElement>(null);
   const stuck =
     progress !== null && !REMOTE_ACTIONS.has(progress.action) && progress.elapsedSecs >= STUCK_LOCAL_SECS;
   if (!stuck && !confirm) return null;
@@ -40,30 +39,16 @@ export function StuckNotice({ repo }: { repo: string }) {
           </Button>
         </div>
       )}
-      <Dialog.Root open={confirm} onOpenChange={setConfirm}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.overlay} />
-          <Dialog.Content
-            className={styles.dialog}
-            // Enter가 강제로 멈추기가 되지 않게 안전한 쪽에 포커스를 둔다(D-043).
-            onOpenAutoFocus={(e) => {
-              e.preventDefault();
-              closeRef.current?.focus();
-            }}
-          >
-            <Dialog.Title className={styles.title}>{m.forceStopTitle}</Dialog.Title>
-            <Dialog.Description className={styles.detail}>{m.forceStopDetail}</Dialog.Description>
-            <div className={styles.actions}>
-              <Button variant="danger" onClick={() => void stop()}>
-                {m.forceStop}
-              </Button>
-              <Button ref={closeRef} variant="primary" onClick={() => setConfirm(false)}>
-                {m.close}
-              </Button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={confirm}
+        title={m.forceStopTitle}
+        dangerLabel={m.forceStop}
+        closeLabel={m.close}
+        onConfirm={() => void stop()}
+        onClose={() => setConfirm(false)}
+      >
+        <p className={styles.detail}>{m.forceStopDetail}</p>
+      </ConfirmDialog>
     </>
   );
 }

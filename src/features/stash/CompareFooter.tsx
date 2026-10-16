@@ -1,13 +1,13 @@
-import * as Dialog from "@radix-ui/react-dialog";
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ApiError, api, type ChangedFile } from "../../lib/api";
 import { useStashes } from "../../lib/queries";
 import { Time } from "../../ui/Time";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
+import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { Term } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./CompareFooter.module.css";
@@ -35,7 +35,6 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
   const [confirm, setConfirm] = useState<{ token: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [now] = useState(() => Date.now());
-  const closeRef = useRef<HTMLButtonElement>(null);
   const paths = file.origPath ? [file.path, file.origPath] : [file.path];
 
   const refresh = () => {
@@ -134,30 +133,16 @@ export function CompareFooter({ repo, file, hasChanges, onDone }: Props) {
       <button type="button" className={styles.discard} disabled={pending} onClick={() => void askDiscard()}>
         <Term id="discard" focusable={false} />
       </button>
-      <Dialog.Root open={confirm !== null} onOpenChange={(open) => !open && setConfirm(null)}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.overlay} />
-          <Dialog.Content
-            className={styles.dialog}
-            // 되돌릴 수 없어 Enter가 버리기가 되지 않게 안전한 쪽에 포커스를 둔다(D-043).
-            onOpenAutoFocus={(e) => {
-              e.preventDefault();
-              closeRef.current?.focus();
-            }}
-          >
-            <Dialog.Title className={styles.title}>{m.discardTitle(file.path.split("/").pop() ?? file.path)}</Dialog.Title>
-            <Dialog.Description className={styles.path}>{paths.join(" · ")}</Dialog.Description>
-            <div className={styles.actions}>
-              <Button variant="danger" disabled={pending} onClick={() => void discard()}>
-                {m.discardConfirm}
-              </Button>
-              <Button ref={closeRef} variant="primary" onClick={() => setConfirm(null)}>
-                {m.close}
-              </Button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={confirm !== null}
+        title={m.discardTitle(file.path.split("/").pop() ?? file.path)}
+        subtitle={paths.join(" · ")}
+        dangerLabel={m.discardConfirm}
+        closeLabel={m.close}
+        pending={pending}
+        onConfirm={() => void discard()}
+        onClose={() => setConfirm(null)}
+      />
     </div>
   );
 }

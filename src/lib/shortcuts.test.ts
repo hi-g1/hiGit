@@ -73,6 +73,23 @@ describe("단축키 표", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it("모달 대화상자가 열려 있으면 단축키가 쉰다", () => {
+    const handler = vi.fn();
+    const { unmount } = renderHook(() => useShortcut("history", handler));
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    document.body.appendChild(dialog);
+    const e = key("KeyH", { ctrlKey: true, cancelable: true });
+    window.dispatchEvent(e);
+    expect(handler).not.toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(false);
+    dialog.remove();
+    window.dispatchEvent(key("KeyH", { ctrlKey: true, cancelable: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
   it("되돌리기는 입력칸 포커스에서 글자 되돌리기에 맡긴다", () => {
     const handler = vi.fn();
     const { unmount } = renderHook(() => useShortcut("undo", handler));

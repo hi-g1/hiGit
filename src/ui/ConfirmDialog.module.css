@@ -1,0 +1,14 @@
+/* 확인 대화상자(design.md "확인 대화상자"): 대상은 코드 글꼴 보조 글자, 오른쪽 아래 위험 버튼과 "닫기" */
+.target {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
