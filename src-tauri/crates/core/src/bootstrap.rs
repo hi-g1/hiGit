@@ -371,9 +371,14 @@ impl Core {
         self.github.status()
     }
 
+    /// 내 GitHub 저장소 목록 한 쪽(D-133). 저장소를 받지 않는 앱 수준 조회.
+    pub fn github_repos(&self, page: u32) -> Result<crate::view::GitHubRepoListView> {
+        self.github.repos(page)
+    }
+
     /// GitHub 로그인(device flow)을 시작한다.
-    pub fn github_connect_start(&self) -> Result<crate::view::LoginChallengeView> {
-        let result = self.github.connect_start();
+    pub fn github_connect_start(&self, workflow: bool) -> Result<crate::view::LoginChallengeView> {
+        let result = self.github.connect_start(workflow);
         self.logger.action("github", "connect-start", &result);
         result
     }

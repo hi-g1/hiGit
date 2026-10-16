@@ -27,7 +27,7 @@ export const commands = {
 	/**  설정의 GitHub 구역 상태. 키체인을 건드리지 않는다. */
 	githubStatus: () => __TAURI_INVOKE<GitHubStatusView>("github_status"),
 	/**  GitHub 로그인(device flow)을 시작한다. */
-	githubConnectStart: () => __TAURI_INVOKE<LoginChallengeView>("github_connect_start"),
+	githubConnectStart: (workflow: boolean) => __TAURI_INVOKE<LoginChallengeView>("github_connect_start", { workflow }),
 	/**  승인됐는지 묻는다. 간격 안이면 core가 네트워크 없이 답한다. */
 	githubConnectPoll: () => __TAURI_INVOKE<LoginPollView>("github_connect_poll"),
 	githubConnectCancel: () => __TAURI_INVOKE<null>("github_connect_cancel"),
@@ -63,6 +63,8 @@ export const commands = {
 	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
 	/**  GitHub에 올리기 대화상자의 처음 값(D-132). 네트워크 없이 읽기만 한다. */
 	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
+	/**  내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다. */
+	queryGithubRepos: (page: number) => __TAURI_INVOKE<GitHubRepoListView>("query_github_repos", { page }),
 	/**  버전 상세(D-105). 메시지·작성자·바뀐 파일 500개까지. */
 	queryCommitDetail: (repo: string, oid: string) => __TAURI_INVOKE<CommitDetailView>("query_commit_detail", { repo, oid }),
 	queryDiff: (repo: string, request: DiffRequest) => __TAURI_INVOKE<FileDiffView>("query_diff", { repo, request }),
@@ -709,6 +711,20 @@ export type ForcePushPlanView = {
 	rewrotePublished: boolean,
 };
 
+/**  내 GitHub 저장소 목록 한 쪽(복제 대화상자, D-133). 이름·공개 여부·날짜뿐이다. */
+export type GitHubRepoListView = {
+	items: GitHubRepoRowView[],
+	hasMore: boolean,
+};
+
+export type GitHubRepoRowView = {
+	owner: string,
+	name: string,
+	private: boolean,
+	/**  마지막으로 올린 시각(unix 초). */
+	pushedAt: number | null,
+};
+
 /**  설정의 GitHub 구역이 그리는 상태. 키체인을 건드리지 않고 만든다. */
 export type GitHubStatusView = {
 	/**  client id가 있어 연결할 수 있다. 아니면 "준비 안 됨". */
@@ -717,6 +733,8 @@ export type GitHubStatusView = {
 	login: string | null,
 	/**  키체인에 저장한 연결. 연결됐는데 거짓이면 "이번 실행에만 저장됨". */
 	remembered: boolean,
+	/**  워크플로 권한을 받은 연결(D-135). */
+	workflow: boolean,
 };
 
 /**  Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다. */
@@ -957,6 +975,10 @@ export type PrDetailView = {
 	mergeable: MergeableView,
 	/**  시험 결과를 볼 수 없으면 `None`. */
 	checks: ChecksView | null,
+	/**  리뷰 요약(사람마다 마지막 승인·변경 요청). 볼 수 없거나 100개를 넘으면 `None`(D-134). */
+	reviews: ReviewsView | null,
+	/**  댓글 수(대화 + 코드). */
+	comments: number,
 };
 
 /**  새 검토 요청 대화상자의 기본값. 로컬 정보만으로 만든다. */
@@ -1168,6 +1190,11 @@ export type RestoreInput = {
 
 /**  되살리는 방법. `Version`은 "이 시점으로 되돌리기", `Changes`는 "꺼내기". */
 export type RestoreKind = "none" | "version" | "changes";
+
+export type ReviewsView = {
+	approved: number,
+	changesRequested: number,
+};
 
 /**  기록 정리를 할 수 없는 까닭. 실행할 때 core가 같은 검사를 다시 한다. */
 export type RewriteBlocked = 

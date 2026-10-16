@@ -13,6 +13,27 @@ pub struct GitHubStatusView {
     pub login: Option<String>,
     /// 키체인에 저장한 연결. 연결됐는데 거짓이면 "이번 실행에만 저장됨".
     pub remembered: bool,
+    /// 워크플로 권한을 받은 연결(D-135).
+    pub workflow: bool,
+}
+
+/// 내 GitHub 저장소 목록 한 쪽(복제 대화상자, D-133). 이름·공개 여부·날짜뿐이다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubRepoListView {
+    pub items: Vec<GitHubRepoRowView>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubRepoRowView {
+    pub owner: String,
+    pub name: String,
+    pub private: bool,
+    /// 마지막으로 올린 시각(unix 초).
+    #[specta(type = Option<u32>)]
+    pub pushed_at: Option<i64>,
 }
 
 /// 로그인 시작: 사람이 브라우저에 넣을 코드.

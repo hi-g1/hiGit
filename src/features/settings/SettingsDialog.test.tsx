@@ -23,8 +23,8 @@ import { remaining } from "./ConnectPanel";
 import { SettingsDialog } from "./SettingsDialog";
 import { useSettingsStore } from "./settingsStore";
 
-const notConnected: GitHubStatusView = { configured: true, connected: false, login: null, remembered: false };
-const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true };
+const notConnected: GitHubStatusView = { configured: true, connected: false, login: null, remembered: false, workflow: false };
+const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false };
 
 function show() {
   act(() => useSettingsStore.getState().openSettings());
@@ -141,7 +141,7 @@ describe("SettingsDialog", () => {
   });
 
   it("이번 실행에만 저장된 연결", async () => {
-    status.mockResolvedValue({ ...connected, remembered: false });
+    status.mockResolvedValue({ ...connected, remembered: false, workflow: false });
     show();
     expect(await screen.findByText("이번 실행에만 저장됨")).toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe("SettingsDialog", () => {
 
   it("상태 타입에는 토큰 칸이 없다", () => {
     type Fields = keyof GitHubStatusView;
-    const exact: [Fields] extends ["configured" | "connected" | "login" | "remembered"] ? true : false = true;
+    const exact: [Fields] extends ["configured" | "connected" | "login" | "remembered" | "workflow"] ? true : false = true;
     expect(exact).toBe(true);
   });
 });

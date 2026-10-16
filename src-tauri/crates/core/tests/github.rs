@@ -78,6 +78,6 @@ fn default_core_is_not_configured() {
     let status = core.github_status();
     assert!(!status.configured);
     assert!(!status.connected);
-    let err = core.github_connect_start().unwrap_err();
+    let err = core.github_connect_start(false).unwrap_err();
     assert_eq!(ErrorView::from(&err).code, ErrorCode::GithubNotConfigured);
 }

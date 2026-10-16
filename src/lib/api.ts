@@ -146,7 +146,9 @@ export const api = {
   /** OS 글자 크기·배율·다크(D-147). Git이 없어도 된다. */
   displayHints: () => call(commands.appDisplayHints()),
   githubStatus: () => call(commands.githubStatus()),
-  githubConnectStart: () => call(commands.githubConnectStart()),
+  /** `workflow`면 워크플로 권한도 요청한다(D-135). */
+  githubConnectStart: (workflow = false) => call(commands.githubConnectStart(workflow)),
+  githubRepos: (page: number) => call(commands.queryGithubRepos(page)),
   /** 간격 안이면 core가 네트워크 없이 기다리라고 답한다. */
   githubConnectPoll: () => call(commands.githubConnectPoll()),
   githubConnectCancel: () => call(commands.githubConnectCancel()),

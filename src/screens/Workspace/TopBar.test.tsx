@@ -7,7 +7,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
     branches: vi.fn(async () => ({ local: [], remote: [], defaultBranch: "main", orphanParked: [], remotes: [] })),
-    githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false })),
+    githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false, workflow: false })),
     hostingContext: vi.fn(async () => ({
       provider: "github",
       repo: "octo/hello",

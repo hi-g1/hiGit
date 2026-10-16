@@ -39,6 +39,7 @@
     "allow-query-force-push-plan",
     "allow-query-remote-branch-plan",
     "allow-query-publish-draft",
+    "allow-query-github-repos",
     "allow-query-commit-detail",
     "allow-query-diff",
     "allow-query-branches",

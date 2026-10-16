@@ -30,14 +30,15 @@ pub use conflict::{
 pub use diff::{DiffLineView, DiffRequest, FileDiffView, HunkView, LineKindView};
 pub use force_push::{DroppedVersion, ForcePushBlock, ForcePushPlanView};
 pub use github::{
-    CloneDefaultsView, GitHubStatusView, HostingPage, LoginChallengeView, LoginPollView,
+    CloneDefaultsView, GitHubRepoListView, GitHubRepoRowView, GitHubStatusView, HostingPage,
+    LoginChallengeView, LoginPollView,
 };
 pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
 };
 pub use hosting::{
     ChecksView, HostingContextView, HostingProviderView, MergeableView, PrDetailView, PrDraftView,
-    PrListRequest, PrListView, PrRowView, PrStateFilterView, PrStateView,
+    PrListRequest, PrListView, PrRowView, PrStateFilterView, PrStateView, ReviewsView,
 };
 pub use identity::IdentityView;
 pub use input::{

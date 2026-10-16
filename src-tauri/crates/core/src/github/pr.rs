@@ -143,6 +143,11 @@ pub(crate) fn detail(detail: &hosting::PrDetail, current_head: Option<&str>) -> 
             pending: c.pending,
             partial: c.partial,
         }),
+        reviews: detail.reviews.map(|r| crate::view::ReviewsView {
+            approved: r.approved,
+            changes_requested: r.changes_requested,
+        }),
+        comments: detail.comments,
     }
 }
 

@@ -17,14 +17,18 @@ pub(crate) struct StatusFile {
     pub v: u32,
     pub login: String,
     pub id: u64,
+    /// 받은 권한에 `workflow`가 있다(D-135). 옛 파일에는 없어 거짓으로 읽고, 거짓이면 쓰지 않는다(`v`는 1 그대로).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub workflow: bool,
 }
 
 impl StatusFile {
-    pub(crate) fn new(login: &str, id: u64) -> Self {
+    pub(crate) fn new(login: &str, id: u64, workflow: bool) -> Self {
         Self {
             v: VERSION,
             login: login.to_owned(),
             id,
+            workflow,
         }
     }
 }
@@ -107,8 +111,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = StatusStore::open(dir.path());
         assert_eq!(store.read(), None);
-        store.write(&StatusFile::new("octocat", 1)).unwrap();
-        assert_eq!(store.read(), Some(StatusFile::new("octocat", 1)));
+        store.write(&StatusFile::new("octocat", 1, false)).unwrap();
+        assert_eq!(store.read(), Some(StatusFile::new("octocat", 1, false)));
         let text = std::fs::read_to_string(dir.path().join(FILE)).unwrap();
         assert_eq!(text, r#"{"v":1,"login":"octocat","id":1}"#);
 
@@ -132,7 +136,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().unwrap();
         let store = StatusStore::open(dir.path());
-        store.write(&StatusFile::new("octocat", 1)).unwrap();
+        store.write(&StatusFile::new("octocat", 1, false)).unwrap();
         let mode = std::fs::metadata(dir.path().join(FILE))
             .unwrap()
             .permissions()

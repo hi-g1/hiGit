@@ -107,6 +107,17 @@ pub struct PrDetailView {
     pub mergeable: MergeableView,
     /// 시험 결과를 볼 수 없으면 `None`.
     pub checks: Option<ChecksView>,
+    /// 리뷰 요약(사람마다 마지막 승인·변경 요청). 볼 수 없거나 100개를 넘으면 `None`(D-134).
+    pub reviews: Option<ReviewsView>,
+    /// 댓글 수(대화 + 코드).
+    pub comments: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewsView {
+    pub approved: u32,
+    pub changes_requested: u32,
 }
 
 /// 새 검토 요청 대화상자의 기본값. 로컬 정보만으로 만든다.

@@ -31,7 +31,7 @@ import { useRepoStore } from "../../state/repoStore";
 import { PullRequests } from "./PullRequests";
 
 const REPO = "/home/me/hello";
-const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true };
+const connected: GitHubStatusView = { configured: true, connected: true, login: "octocat", remembered: true, workflow: false };
 
 const row = (number: number, over: Partial<PrRowView> = {}): PrRowView => ({
   number,
@@ -130,6 +130,8 @@ describe("PullRequests", () => {
       row: row(number),
       mergeable: number === 7 ? "conflicts" : "behind",
       checks: number === 7 ? { success: 3, failed: 1, pending: 2, partial: false } : null,
+      reviews: null,
+      comments: 0,
     }));
     show();
     fireEvent.click((await screen.findAllByRole("option"))[0]!);

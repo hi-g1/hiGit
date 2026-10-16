@@ -8,12 +8,12 @@ use higit_core::view::{
     ActionInput, ActionMetaView, ActionResult, AppSettingsPatch, AppSettingsView, AppStatus,
     BranchListView, BranchNameCheck, CloneDefaultsView, CommitDetailView, CommitStatView,
     ConflictFileView, ConflictStateView, DiffRequest, DisplayHintsView, ErrorCode, ErrorView,
-    FileDiffView, ForcePushPlanView, GitHubStatusView, HomeMapView, HostingContextView,
-    HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView, LoginPollView, MergeHintView,
-    OpenHow, PendingWorkView, PrDetailView, PrDraftView, PrListRequest, PrListView, PreviewView,
-    ProjectOpenResult, ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView,
-    RemoteBranchPlanView, RewritePlanView, SecretCheckRequest, SecretCheckView, StashListView,
-    StatusView, TrustChoice, UndoResult,
+    FileDiffView, ForcePushPlanView, GitHubRepoListView, GitHubStatusView, HomeMapView,
+    HostingContextView, HostingPage, IdentityView, LogPage, LogQuery, LoginChallengeView,
+    LoginPollView, MergeHintView, OpenHow, PendingWorkView, PrDetailView, PrDraftView,
+    PrListRequest, PrListView, PreviewView, ProjectOpenResult, ProjectSummaryView,
+    PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView, RewritePlanView,
+    SecretCheckRequest, SecretCheckView, StashListView, StatusView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -133,8 +133,21 @@ pub async fn github_status(state: State<'_, AppState>) -> CmdResult<GitHubStatus
 /// GitHub 로그인(device flow)을 시작한다.
 #[tauri::command]
 #[specta::specta]
-pub async fn github_connect_start(state: State<'_, AppState>) -> CmdResult<LoginChallengeView> {
-    blocking(state, |core| core.github_connect_start()).await
+pub async fn github_connect_start(
+    state: State<'_, AppState>,
+    workflow: bool,
+) -> CmdResult<LoginChallengeView> {
+    blocking(state, move |core| core.github_connect_start(workflow)).await
+}
+
+/// 내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_github_repos(
+    state: State<'_, AppState>,
+    page: u32,
+) -> CmdResult<GitHubRepoListView> {
+    blocking(state, move |core| core.github_repos(page)).await
 }
 
 /// 승인됐는지 묻는다. 간격 안이면 core가 네트워크 없이 답한다.

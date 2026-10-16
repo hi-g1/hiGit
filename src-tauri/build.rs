@@ -34,6 +34,7 @@ const COMMANDS: &[&str] = &[
     "query_force_push_plan",
     "query_remote_branch_plan",
     "query_publish_draft",
+    "query_github_repos",
     "query_commit_detail",
     "query_diff",
     "query_branches",

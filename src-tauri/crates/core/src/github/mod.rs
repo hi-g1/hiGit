@@ -53,6 +53,8 @@ struct State {
     remembered: bool,
     /// 키체인을 못 써 이번 실행에만 둔 연결의 로그인 이름.
     session_login: Option<String>,
+    /// 이번 실행에만 둔 연결이 `workflow` 권한을 받았다.
+    session_workflow: bool,
 }
 
 struct PendingLogin {
@@ -117,7 +119,7 @@ impl GitHubService {
         let token = SecretString::from(token.to_owned());
         if remembered {
             let _ = self.keychain.set(KEYCHAIN_ACCOUNT, &token);
-            let _ = self.store.write(&StatusFile::new(login, 1));
+            let _ = self.store.write(&StatusFile::new(login, 1, false));
         }
         let mut state = self.state();
         state.token = Some(token);
@@ -145,16 +147,17 @@ impl GitHubService {
     pub fn status(&self) -> GitHubStatusView {
         let file = self.store.read();
         let state = self.state();
-        let (connected, login, remembered) = match (&state.session_login, file) {
-            (Some(login), _) => (true, Some(login.clone()), false),
-            (None, Some(file)) => (true, Some(file.login), true),
-            (None, None) => (false, None, false),
+        let (connected, login, remembered, workflow) = match (&state.session_login, file) {
+            (Some(login), _) => (true, Some(login.clone()), false, state.session_workflow),
+            (None, Some(file)) => (true, Some(file.login), true, file.workflow),
+            (None, None) => (false, None, false, false),
         };
         GitHubStatusView {
             configured: self.configured,
             connected,
             login,
             remembered,
+            workflow,
         }
     }
 
@@ -175,8 +178,9 @@ impl GitHubService {
             .then(|| format!("{}+{login}@users.noreply.github.com", file.id))
     }
 
-    /// 로그인을 시작한다. 진행 중이던 로그인은 버린다.
-    pub fn connect_start(&self) -> Result<LoginChallengeView> {
+    /// 로그인을 시작한다. 진행 중이던 로그인은 버린다. `workflow`면 워크플로 권한도 요청한다(D-135).
+    /// 이미 연결돼 있어도 시작할 수 있고, 승인되면 새 토큰이 이전 것을 바꾼다.
+    pub fn connect_start(&self, workflow: bool) -> Result<LoginChallengeView> {
         if !self.configured {
             return Err(failure(GithubFailure::NotConfigured));
         }
@@ -188,7 +192,11 @@ impl GitHubService {
         };
         let challenge = self
             .provider
-            .begin_login(hosting::LoginScope::Repo)
+            .begin_login(if workflow {
+                hosting::LoginScope::RepoWorkflow
+            } else {
+                hosting::LoginScope::Repo
+            })
             .map_err(|e| from_hosting(&e, &[]))?;
         let now = self.now();
         let interval = Duration::from_secs(challenge.interval_secs);
@@ -262,7 +270,9 @@ impl GitHubService {
                 self.finish_poll(seq, |login| *login = None);
                 Ok(LoginPollView::Denied)
             }
-            LoginPoll::Granted { token, .. } => self.complete_login(seq, token, &device_code),
+            LoginPoll::Granted { token, workflow } => {
+                self.complete_login(seq, token, &device_code, workflow)
+            }
         }
     }
 
@@ -296,6 +306,7 @@ impl GitHubService {
         seq: u64,
         token: SecretString,
         device_code: &str,
+        workflow: bool,
     ) -> Result<LoginPollView> {
         let user = match self.provider.current_user(&token) {
             Ok(user) => user,
@@ -316,7 +327,10 @@ impl GitHubService {
         }
         // 키체인 → 상태 파일 순서. 둘 다 돼야 껐다 켜도 이어지는 연결이다.
         let remembered = match self.keychain.set(KEYCHAIN_ACCOUNT, &token) {
-            Ok(()) => match self.store.write(&StatusFile::new(&user.login, user.id)) {
+            Ok(()) => match self
+                .store
+                .write(&StatusFile::new(&user.login, user.id, workflow))
+            {
                 Ok(()) => true,
                 Err(_) => {
                     let _ = self.keychain.delete(KEYCHAIN_ACCOUNT);
@@ -335,6 +349,7 @@ impl GitHubService {
         state.generation += 1;
         state.remembered = remembered;
         state.session_login = (!remembered).then(|| user.login.clone());
+        state.session_workflow = !remembered && workflow;
         Ok(LoginPollView::Connected { login: user.login })
     }
 
@@ -489,6 +504,27 @@ impl GitHubService {
     }
 
     /// 검토 요청 하나의 페이지. 소유자·이름은 `parse_remote`가 검사한 값이고 번호는 1 이상.
+    /// 토큰 주인이 볼 수 있는 저장소 한 쪽(D-133). 쪽은 1~20, 50개씩. 소유자·이름은 다시 검사한다.
+    pub fn repos(&self, page: u32) -> Result<crate::view::GitHubRepoListView> {
+        let page = page.clamp(1, 20);
+        let list =
+            self.call(|provider, token| provider.list_repos(token, page, hosting::REPO_PAGE_MAX))?;
+        Ok(crate::view::GitHubRepoListView {
+            items: list
+                .items
+                .into_iter()
+                .filter(|r| hosting::valid_owner(&r.owner) && hosting::valid_name(&r.name))
+                .map(|r| crate::view::GitHubRepoRowView {
+                    owner: r.owner,
+                    name: r.name,
+                    private: r.private,
+                    pushed_at: r.pushed_at,
+                })
+                .collect(),
+            has_more: list.has_more,
+        })
+    }
+
     /// 저장소 페이지. 소유자·이름은 검사한 값만.
     pub fn repository_url(&self, repo: &hosting::RemoteRepo) -> Result<String> {
         if !hosting::valid_owner(&repo.owner) || !hosting::valid_name(&repo.name) {
@@ -603,7 +639,7 @@ mod tests {
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, &granted());
         f.fake.push_json(200, USER);
-        f.service.connect_start().unwrap();
+        f.service.connect_start(false).unwrap();
         f.advance(5);
         assert_eq!(
             f.service.connect_poll().unwrap(),
@@ -614,10 +650,76 @@ mod tests {
     }
 
     #[test]
+    fn workflow_scope_is_asked_and_remembered() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = fixture(
+            platform::Keychain::in_memory(KEYCHAIN_SERVICE),
+            Some(dir.path()),
+        );
+        connect(&f);
+        assert!(!f.service.status().workflow);
+        // 연결된 채로 워크플로 권한을 더 받아 다시 연결한다(새 토큰이 이전 것을 바꾼다).
+        f.fake.push_json(200, &device_json(5));
+        f.fake.push_json(
+            200,
+            r#"{"access_token":"gho_NEWSECRET0123456789","token_type":"bearer","scope":"repo,workflow"}"#,
+        );
+        f.fake.push_json(200, USER);
+        f.service.connect_start(true).unwrap();
+        f.advance(5);
+        f.service.connect_poll().unwrap();
+        let reqs = f.fake.requests();
+        let body = String::from_utf8(reqs[3].body.clone().unwrap()).unwrap();
+        assert!(body.ends_with("scope=repo%20workflow"), "{body}");
+        assert!(f.service.status().workflow);
+        assert_eq!(f.service.store.read().map(|s| s.workflow), Some(true));
+        // 옛 상태 파일(workflow 칸 없음)도 읽고 거짓으로 본다.
+        std::fs::write(
+            dir.path().join("github.json"),
+            r#"{"v":1,"login":"octocat","id":1}"#,
+        )
+        .unwrap();
+        assert_eq!(f.service.store.read().map(|s| s.workflow), Some(false));
+    }
+
+    #[test]
+    fn repo_list_rechecks_names_and_needs_a_connection() {
+        let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
+        assert!(matches!(
+            f.service.repos(1),
+            Err(CoreError::Github {
+                kind: GithubFailure::NotConnected,
+                ..
+            })
+        ));
+        connect(&f);
+        f.fake.push_json(
+            200,
+            r#"[{"name":"a","owner":{"login":"octocat"},"private":true,"pushed_at":"2026-10-02T00:00:00Z"},
+                {"name":"..","owner":{"login":"octocat"},"private":false,"pushed_at":null}]"#,
+        );
+        let list = f.service.repos(99).unwrap();
+        assert_eq!(list.items.len(), 1);
+        assert!(list.items[0].private && list.items[0].pushed_at.is_some());
+        assert!(
+            f.fake
+                .requests()
+                .last()
+                .unwrap()
+                .url
+                .ends_with("per_page=50&page=20")
+        );
+        // 401이면 연결을 지운다.
+        f.fake.push_json(401, "{}");
+        assert!(f.service.repos(1).is_err());
+        assert!(!f.service.status().connected);
+    }
+
+    #[test]
     fn unconfigured_cannot_start() {
         let service = GitHubService::unconfigured();
         assert!(!service.status().configured);
-        let err = service.connect_start().unwrap_err();
+        let err = service.connect_start(false).unwrap_err();
         assert!(matches!(
             err,
             CoreError::Github {
@@ -640,7 +742,7 @@ mod tests {
         f.fake.push_json(200, &granted());
         f.fake.push_json(200, USER);
 
-        let challenge = f.service.connect_start().unwrap();
+        let challenge = f.service.connect_start(false).unwrap();
         assert_eq!(challenge.user_code, "WDJB-MJHT");
         assert_eq!(challenge.interval_secs, 5);
         // 간격 안의 폴링은 네트워크를 쓰지 않는다.
@@ -701,7 +803,7 @@ mod tests {
     fn expiry_is_checked_without_network() {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
-        f.service.connect_start().unwrap();
+        f.service.connect_start(false).unwrap();
         f.advance(901);
         assert_eq!(f.service.connect_poll().unwrap(), LoginPollView::Expired);
         assert_eq!(f.requests(), 1);
@@ -712,7 +814,7 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(503, "unavailable");
-        f.service.connect_start().unwrap();
+        f.service.connect_start(false).unwrap();
         f.advance(5);
         assert!(f.service.connect_poll().is_err());
         assert_eq!(f.requests(), 2);
@@ -729,7 +831,7 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, r#"{"error":"access_denied"}"#);
-        f.service.connect_start().unwrap();
+        f.service.connect_start(false).unwrap();
         f.advance(5);
         assert_eq!(f.service.connect_poll().unwrap(), LoginPollView::Denied);
         assert!(f.service.connect_poll().is_err());
@@ -741,8 +843,8 @@ mod tests {
         let f = fixture(platform::Keychain::in_memory(KEYCHAIN_SERVICE), None);
         f.fake.push_json(200, &device_json(5));
         f.fake.push_json(200, &device_json(7));
-        f.service.connect_start().unwrap();
-        let second = f.service.connect_start().unwrap();
+        f.service.connect_start(false).unwrap();
+        let second = f.service.connect_start(false).unwrap();
         assert_eq!(second.interval_secs, 7);
         f.advance(5);
         // 첫 번째의 간격(5초)이 아니라 두 번째(7초)를 따른다.
