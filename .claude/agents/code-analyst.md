@@ -81,6 +81,11 @@ effort: high
 - [ ] `auth_for` 호출이 모두 `use_helper`(설정 `gitHelper`)를 넘긴다(`rg "auth_for\(" src-tauri/crates/core/src`). `confirm_branch`는 core에서 바이트 비교한다(`guard::confirm_name`)
 - [ ] 반복 4c 새 명령 5개(`query_github_email_check`, `query_pr_repo`, `query_pr_comments`, `query_branch_protection`)와 `github_connect_start(add)`가 네 곳에 있다
 - [ ] 반복 4 새 명령 11개(`app_open_hosting_page`, `github_*` 5개, `query_clone_defaults`, `query_hosting_context`, `query_pr_list`, `query_pr_detail`, `query_pr_draft`)가 네 곳에 있고 `async` + `blocking()`이다. `rg "invoke|fetch\(" src --glob '!src/lib/**' --glob '!**/*.test.*'`가 비어 있다
+- [ ] 반복 5: 보내는 곳·작업 폴더·연결을 바꾸는 새 설정 키는 `trust::redirect_key`에 있다(D-212). 네트워크를 쓰는 git 호출은 모두 `run_network_input`(저장소 정책 `network_off`)을 지난다. `discover`의 `--work-tree` 고정을 건너뛰는 git 실행이 없다
+- [ ] 화면에 `localStorage`·`sessionStorage`가 없다(`src/lib/legacyStorage.ts`만, ESLint, D-211). Escape·Enter 비교는 `src/lib/keys.ts`로(D-137)
+- [ ] 파일을 OS에 넘기는 것은 core `open_target`·`project_root`를 거친다(D-216). 화면은 저장소 기준 경로만 보내고 결과 경로를 받지 않는다. 묶음 자원 열기는 core 상수 이름만(`app_open_licenses`·`app_open_guide`)
+- [ ] 우클릭 메뉴·단일 인스턴스·창 상태의 OS 코드는 platform이나 app에만 있고, 새 플러그인(`single-instance`, `window-state`)은 웹뷰 권한(capabilities)이 없다. 단일 인스턴스 콜백은 core를 부르지 않고 열기는 `project_open`으로(D-213)
+- [ ] 반복 5 새 명령(`conflict_draft_save`, `project_reask_trust`, `app_take_launch_folder`, `app_shell_menu_status`·`_sync`·`_set`, `file_reveal`, `file_open`, `project_reveal`, `app_open_licenses`, `app_open_guide`)이 네 곳에 있다. 새 의존성이면 `THIRD_PARTY_LICENSES.txt`가 최신이다(`node scripts/notices.mjs --check`)
 
 ## 보고 형식
 ```
