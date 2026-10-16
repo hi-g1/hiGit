@@ -152,6 +152,11 @@
   font-size: var(--font-size-sm);
 }
 
+/* 줄 바꿈을 끄면 표가 칸보다 넓어 오른쪽 끝이 보이지 않는다. 함수 이름을 단추 옆에 둔다. */
+.table:not(.wrapOn) .section {
+  float: none;
+}
+
 .eof {
   margin-left: var(--space-2);
   color: var(--text-muted);
