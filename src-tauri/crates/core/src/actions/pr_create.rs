@@ -95,6 +95,7 @@ impl Action for PrCreateAction {
             title: title.to_owned(),
             body: i.body.clone(),
             head,
+            head_owner: None,
             base: i.base.clone(),
             draft: i.draft,
         };

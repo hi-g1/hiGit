@@ -106,7 +106,12 @@ pub struct PrDetail {
     pub reviews: Option<ReviewsSummary>,
     /// 댓글 수(대화 댓글 + 코드 댓글).
     pub comments: u32,
-    pub(crate) head_sha: String,
+    /// 대화 댓글 수(댓글 쪽 계산에 쓴다, D-178).
+    pub issue_comments: u32,
+    /// 코드 줄 댓글 수.
+    pub review_comments: u32,
+    /// head 버전(16진수 40·64자를 확인한 것). 합치기의 `sha`(D-179).
+    pub head_sha: String,
 }
 
 /// 사람마다 마지막 리뷰 상태로 센 승인·변경 요청 수(D-134). 취소된 리뷰(`DISMISSED`)는 빼고
@@ -127,6 +132,8 @@ pub struct NewPr {
     pub body: String,
     /// 올라가 있는 원격 브랜치 이름.
     pub head: String,
+    /// 포크에서 내면 그 소유자(`head`가 `<소유자>:<브랜치>`로 나간다, D-181).
+    pub head_owner: Option<String>,
     pub base: String,
     pub draft: bool,
 }
@@ -240,8 +247,9 @@ pub(crate) fn parse_one(body: &[u8], base_owner: &str) -> Result<PullRequest, Ho
 pub(crate) fn parse_detail(body: &[u8], base_owner: &str) -> Result<PrDetail, HostingError> {
     let item: PullJson =
         serde_json::from_slice(body).map_err(|_| bad("pull request is not JSON"))?;
-    let comments =
-        u32::try_from(item.comments.saturating_add(item.review_comments)).unwrap_or(u32::MAX);
+    let issue_comments = u32::try_from(item.comments).unwrap_or(u32::MAX);
+    let review_comments = u32::try_from(item.review_comments).unwrap_or(u32::MAX);
+    let comments = issue_comments.saturating_add(review_comments);
     let (pr, sha, mergeable_state) = convert(item, base_owner)?;
     let head_sha = sha
         .filter(|sha| valid_sha(sha))
@@ -259,6 +267,8 @@ pub(crate) fn parse_detail(body: &[u8], base_owner: &str) -> Result<PrDetail, Ho
         checks: None,
         reviews: None,
         comments,
+        issue_comments,
+        review_comments,
         head_sha,
     })
 }
@@ -350,17 +360,28 @@ pub(crate) fn check_new_pr(pr: &NewPr) -> Result<(), HostingError> {
     if pr.body.len() > PR_BODY_MAX_BYTES {
         return Err(invalid("body too long"));
     }
-    if !valid_branch(&pr.head) || !valid_branch(&pr.base) {
+    if !valid_branch(&pr.head) || !valid_branch(&pr.base) || pr.head.contains(':') {
         return Err(invalid("branch name"));
+    }
+    if pr
+        .head_owner
+        .as_deref()
+        .is_some_and(|owner| !crate::remote::valid_owner(owner))
+    {
+        return Err(invalid("head owner"));
     }
     Ok(())
 }
 
 pub(crate) fn new_pr_json(pr: &NewPr) -> Result<Vec<u8>, HostingError> {
+    let head = match &pr.head_owner {
+        Some(owner) => format!("{owner}:{}", pr.head),
+        None => pr.head.clone(),
+    };
     serde_json::to_vec(&NewPrJson {
         title: pr.title.trim(),
         body: &pr.body,
-        head: &pr.head,
+        head: &head,
         base: &pr.base,
         draft: pr.draft,
     })
@@ -374,7 +395,7 @@ pub(crate) fn valid_branch(name: &str) -> bool {
 }
 
 /// 40자(SHA-1)나 64자(SHA-256) 16진수.
-fn valid_sha(sha: &str) -> bool {
+pub(crate) fn valid_sha(sha: &str) -> bool {
     (sha.len() == 40 || sha.len() == 64) && sha.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
@@ -626,6 +647,7 @@ mod tests {
             title: "제목 \"quoted\" \\ back".into(),
             body: "line1\nline2 \u{1F600}".into(),
             head: "feature/x".into(),
+            head_owner: None,
             base: "main".into(),
             draft: true,
         };
@@ -642,6 +664,14 @@ mod tests {
             "{raw}"
         );
         assert!(raw.contains(r#"line1\nline2"#), "{raw}");
+        let from_fork = NewPr {
+            head_owner: Some("mona".into()),
+            ..ok.clone()
+        };
+        check_new_pr(&from_fork).unwrap();
+        let json: serde_json::Value =
+            serde_json::from_slice(&new_pr_json(&from_fork).unwrap()).unwrap();
+        assert_eq!(json["head"], "mona:feature/x");
 
         let bad = [
             NewPr {
@@ -670,6 +700,15 @@ mod tests {
             },
             NewPr {
                 base: "a".repeat(256),
+                ..ok.clone()
+            },
+            // 소유자는 head_owner로만 붙는다.
+            NewPr {
+                head: "mona:feature".into(),
+                ..ok.clone()
+            },
+            NewPr {
+                head_owner: Some("-mona".into()),
                 ..ok.clone()
             },
         ];

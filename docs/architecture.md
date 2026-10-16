@@ -349,7 +349,14 @@ pub trait HostingProvider: Send + Sync {          // 블로킹. core가 작업 �
     fn list_repos(&self, token: &SecretString, page: u32, per_page: u32) -> Result<RepoPage, HostingError>; // 50개씩(D-133)
     fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError>; // 올릴 권한·합치기 방법·포크의 원래 저장소(D-177)
     fn branch_protected(&self, token: &SecretString, repo: &RemoteRepo, branch: &str) -> Result<Option<bool>, HostingError>; // 403·404는 None(D-183)
+    fn list_comments(&self, token, repo, number, page, per_page) -> Result<Vec<Comment>, HostingError>; // 대화 댓글, 본문 앞 4000자(D-178)
+    fn create_comment(&self, token, repo, number, body: &str) -> Result<u64, HostingError>;        // 1바이트~64KB, NUL 없음
+    fn merge_pr(&self, token, repo, number, request: &MergeRequest) -> Result<MergeResult, HostingError>; // PUT, sha 필수, 405 NotAllowed·409 Conflict(D-179)
+    fn set_pr_state(&self, token, repo, number, open: bool) -> Result<(), HostingError>;           // PATCH state(D-180)
+    fn create_fork(&self, token, repo) -> Result<RemoteRepo, HostingError>;                         // 202, 소유자·이름만 검사(D-181)
+    fn repo_exists(&self, token, repo) -> Result<bool, HostingError>;                               // 포크 준비 확인, 404면 false
 }
+// NewPr.head_owner가 있으면 head를 "<소유자>:<브랜치>"로 보낸다(포크 경로). head 이름 자체에는 ':'를 받지 않는다.
 // pr_detail은 리뷰 요약(사람마다 마지막 승인·변경 요청, 100개 넘거나 볼 수 없으면 None)과 댓글 수를 함께 읽는다(D-134).
 // LoginPoll::Granted { token, workflow }: 받은 권한에 workflow가 들었는지만 본다.
 

@@ -12,6 +12,7 @@ mod github;
 mod http;
 mod login;
 mod pr;
+mod pr_write;
 mod remote;
 mod repo;
 #[doc(hidden)]
@@ -27,6 +28,10 @@ pub use pr::{
     BRANCH_MAX_BYTES, ChecksSummary, Mergeable, NewPr, PR_BODY_MAX_BYTES, PR_PAGE_MAX,
     PR_TITLE_MAX_BYTES, PrDetail, PrPage, PrQuery, PrState, PrStateFilter, PullRequest,
     ReviewsSummary,
+};
+pub use pr_write::{
+    COMMENT_MAX_BYTES, COMMENT_SHOWN_MAX_CHARS, COMMENTS_PAGE, Comment, MergeMethod, MergeRequest,
+    MergeResult,
 };
 pub use remote::{GITHUB_HOST, RemoteRepo, parse_remote, valid_name, valid_owner};
 pub use repo::{
@@ -81,6 +86,47 @@ pub trait HostingProvider: Send + Sync {
     ) -> Result<RepoPage, HostingError>;
     /// 저장소 정보: 토큰 주인의 올릴 권한, 허용된 합치기 방법, 포크면 원래 저장소(D-177).
     fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError>;
+    /// 검토 요청의 대화 댓글 한 쪽(오래된 것부터, D-178).
+    fn list_comments(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Result<Vec<Comment>, HostingError>;
+    /// 댓글을 단다. 본문이 규칙에 맞지 않으면 보내지 않는다. 만든 댓글 id.
+    fn create_comment(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        body: &str,
+    ) -> Result<u64, HostingError>;
+    /// 검토 요청을 합친다. 서버 head가 `sha`와 다르면 `Conflict`, 합칠 수 없으면 `NotAllowed`(D-179).
+    fn merge_pr(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        request: &MergeRequest,
+    ) -> Result<MergeResult, HostingError>;
+    /// 검토 요청을 닫거나(`open` 거짓) 다시 연다(D-180).
+    fn set_pr_state(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        open: bool,
+    ) -> Result<(), HostingError>;
+    /// 토큰 주인의 계정에 포크를 만든다(이미 있으면 그것, D-181). 소유자·이름을 검사한 값.
+    fn create_fork(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+    ) -> Result<RemoteRepo, HostingError>;
+    /// 저장소를 읽을 수 있는지(포크 준비 확인). 404면 거짓.
+    fn repo_exists(&self, token: &SecretString, repo: &RemoteRepo) -> Result<bool, HostingError>;
     /// 브랜치를 서버가 보호하는지(D-183 ④). 볼 수 없거나 없으면 `None`.
     fn branch_protected(
         &self,

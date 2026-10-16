@@ -13,6 +13,7 @@ use crate::login::{self, HostUser, LoginChallenge, LoginPoll, LoginScope};
 use crate::pr::{
     self, CHECK_RUNS_PAGE, NewPr, PR_PAGE_MAX, PrDetail, PrPage, PrQuery, PullRequest,
 };
+use crate::pr_write::{self, Comment, MergeRequest, MergeResult};
 use crate::remote::{RemoteRepo, parse_remote, valid_name, valid_owner};
 use crate::repo::{self, CreatedRepo, NewRepo, REPO_PAGE_MAX, RepoInfo, RepoPage};
 
@@ -296,6 +297,94 @@ impl HostingProvider for GitHub {
         let body = repo::new_repo_json(new)?;
         let res = self.api_write(Method::Post, token, "/user/repos", Some(body))?;
         repo::parse_created(&res.body)
+    }
+
+    fn list_comments(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        page: u32,
+        per_page: u32,
+    ) -> Result<Vec<Comment>, HostingError> {
+        pr_write::check_number(number)?;
+        let per_page = per_page.clamp(1, PR_PAGE_MAX);
+        let page = page.max(1);
+        let path = format!(
+            "{}/issues/{number}/comments?per_page={per_page}&page={page}",
+            repo_path(repo)?
+        );
+        let res = self.api_get(token, &path)?;
+        pr_write::parse_comments(&res.body)
+    }
+
+    fn create_comment(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        body: &str,
+    ) -> Result<u64, HostingError> {
+        pr_write::check_number(number)?;
+        pr_write::check_comment(body)?;
+        let path = format!("{}/issues/{number}/comments", repo_path(repo)?);
+        let res = self.api_write(
+            Method::Post,
+            token,
+            &path,
+            Some(pr_write::comment_json(body)?),
+        )?;
+        pr_write::parse_created_id(&res.body)
+    }
+
+    fn merge_pr(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        request: &MergeRequest,
+    ) -> Result<MergeResult, HostingError> {
+        pr_write::check_number(number)?;
+        let json = pr_write::merge_json(request)?;
+        let path = format!("{}/pulls/{number}/merge", repo_path(repo)?);
+        let res = self.api_write(Method::Put, token, &path, Some(json))?;
+        pr_write::parse_merged(&res.body)
+    }
+
+    fn set_pr_state(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+        number: u64,
+        open: bool,
+    ) -> Result<(), HostingError> {
+        pr_write::check_number(number)?;
+        let path = format!("{}/pulls/{number}", repo_path(repo)?);
+        self.api_write(
+            Method::Patch,
+            token,
+            &path,
+            Some(pr_write::state_json(open)),
+        )?;
+        Ok(())
+    }
+
+    fn create_fork(
+        &self,
+        token: &SecretString,
+        repo: &RemoteRepo,
+    ) -> Result<RemoteRepo, HostingError> {
+        let path = format!("{}/forks", repo_path(repo)?);
+        let res = self.api_write(Method::Post, token, &path, None)?;
+        pr_write::parse_fork(&res.body)
+    }
+
+    fn repo_exists(&self, token: &SecretString, repo: &RemoteRepo) -> Result<bool, HostingError> {
+        match self.api_get(token, &repo_path(repo)?) {
+            Ok(_) => Ok(true),
+            Err(err) if err.kind() == HostingErrorKind::NotFound => Ok(false),
+            Err(err) => Err(err),
+        }
     }
 
     fn repo_info(&self, token: &SecretString, repo: &RemoteRepo) -> Result<RepoInfo, HostingError> {
@@ -948,6 +1037,118 @@ mod tests {
     }
 
     #[test]
+    fn pull_request_writes_and_fork() {
+        let fake = Arc::new(FakeTransport::new());
+        fake.push_json(
+            200,
+            r#"[{"id":1,"user":{"login":"mona"},"created_at":"2026-10-01T00:00:00Z","body":"hi"}]"#,
+        );
+        fake.push_json(201, r#"{"id":77,"body":"고마워요"}"#);
+        fake.push_json(
+            200,
+            r#"{"sha":"x","merged":true,"message":"Pull Request successfully merged"}"#,
+        );
+        fake.push_json(405, r#"{"message":"Pull Request is not mergeable"}"#);
+        fake.push_json(
+            409,
+            r#"{"message":"Head branch was modified. Review and try the merge again."}"#,
+        );
+        fake.push_json(200, r#"{"number":3,"state":"closed"}"#);
+        fake.push_json(
+            422,
+            r#"{"message":"Validation Failed","errors":[{"message":"state cannot be changed"}]}"#,
+        );
+        fake.push_json(
+            202,
+            r#"{"name":"hello","owner":{"login":"mona"},"clone_url":"https://evil"}"#,
+        );
+        fake.push_json(200, "{}");
+        fake.push_json(404, "{}");
+        let gh = github(&fake);
+        let sha = "b".repeat(40);
+        let merge = MergeRequest {
+            method: crate::MergeMethod::Merge,
+            sha: sha.clone(),
+        };
+        assert_eq!(
+            gh.list_comments(&token(), &octo(), 3, 2, 20).unwrap().len(),
+            1
+        );
+        assert_eq!(
+            gh.create_comment(&token(), &octo(), 3, " 고마워요 \u{1F600} ")
+                .unwrap(),
+            77
+        );
+        assert!(gh.merge_pr(&token(), &octo(), 3, &merge).unwrap().merged);
+        assert_eq!(
+            gh.merge_pr(&token(), &octo(), 3, &merge)
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::NotAllowed
+        );
+        assert_eq!(
+            gh.merge_pr(&token(), &octo(), 3, &merge)
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::Conflict
+        );
+        gh.set_pr_state(&token(), &octo(), 3, false).unwrap();
+        assert!(matches!(
+            gh.set_pr_state(&token(), &octo(), 3, true)
+                .unwrap_err()
+                .kind(),
+            HostingErrorKind::Validation(_)
+        ));
+        let fork = gh.create_fork(&token(), &octo()).unwrap();
+        assert_eq!((fork.owner.as_str(), fork.name.as_str()), ("mona", "hello"));
+        assert!(gh.repo_exists(&token(), &fork).unwrap());
+        assert!(!gh.repo_exists(&token(), &fork).unwrap());
+        // 보내기 전에 막히는 것: 빈 댓글, 번호 0, 짧은 해시.
+        assert!(gh.create_comment(&token(), &octo(), 3, "  ").is_err());
+        assert!(gh.set_pr_state(&token(), &octo(), 0, false).is_err());
+        let short = MergeRequest {
+            method: crate::MergeMethod::Squash,
+            sha: "abc".into(),
+        };
+        assert!(gh.merge_pr(&token(), &octo(), 3, &short).is_err());
+
+        let reqs = fake.requests();
+        assert_eq!(reqs.len(), 10);
+        let base = "https://api.github.com/repos/octo/hello";
+        let seen: Vec<(Method, String)> = reqs.iter().map(|r| (r.method, r.url.clone())).collect();
+        assert_eq!(
+            seen[0],
+            (
+                Method::Get,
+                format!("{base}/issues/3/comments?per_page=20&page=2")
+            )
+        );
+        assert_eq!(seen[1], (Method::Post, format!("{base}/issues/3/comments")));
+        assert_eq!(seen[2], (Method::Put, format!("{base}/pulls/3/merge")));
+        assert_eq!(seen[5], (Method::Patch, format!("{base}/pulls/3")));
+        assert_eq!(seen[7], (Method::Post, format!("{base}/forks")));
+        assert_eq!(
+            seen[8],
+            (
+                Method::Get,
+                "https://api.github.com/repos/mona/hello".to_string()
+            )
+        );
+        assert_eq!(body(&reqs[1]), "{\"body\":\"고마워요 \u{1F600}\"}");
+        let merge_body: serde_json::Value =
+            serde_json::from_slice(reqs[2].body.as_ref().unwrap()).unwrap();
+        assert_eq!(merge_body["merge_method"], "merge");
+        assert_eq!(merge_body["sha"], sha.as_str());
+        assert_eq!(body(&reqs[5]), r#"{"state":"closed"}"#);
+        assert_eq!(body(&reqs[6]), r#"{"state":"open"}"#);
+        assert!(reqs[7].body.is_none());
+        assert!(
+            reqs.iter()
+                .all(|r| !r.url.contains(TOKEN) && !body(r).contains(TOKEN))
+        );
+    }
+
+    #[test]
     fn writes_send_json_once() {
         let fake = Arc::new(FakeTransport::new());
         fake.push_json(200, "{}");
@@ -1001,6 +1202,7 @@ mod tests {
             title: "로그인 \"추가\"".into(),
             body: "본문\n둘째 줄".into(),
             head: "feature/login".into(),
+            head_owner: None,
             base: "main".into(),
             draft: false,
         };
