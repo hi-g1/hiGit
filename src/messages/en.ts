@@ -435,6 +435,12 @@ export const en: Messages = {
     open: "Open",
   },
   tagPush: { push: "Upload", done: "Tag uploaded" },
+  remoteTag: {
+    deleteOnRemote: "Delete on remote",
+    delete: "Delete",
+    body: `Deletes the ${t("tag").toLowerCase()} on the ${t("remote").toLowerCase()}. The ${t("tag").toLowerCase()} on your computer stays, so you can upload it again.`,
+    done: "Remote tag deleted",
+  },
   forcePush: {
     ahead: (n: number) => `${n} version${n === 1 ? "" : "s"} going up`,
     dropped: (n: number) => `${n} version${n === 1 ? "" : "s"} disappearing`,

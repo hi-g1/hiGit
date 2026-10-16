@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { ErrorCode } from "../../../../lib/api";
+import { useBranches } from "../../../../lib/queries";
+import { RemoteTagDeleteDialog } from "../../../remote-tag/RemoteTagDeleteDialog";
 import { useMessages } from "../../../../messages";
 import { Button } from "../../../../ui/Button";
 import { Term } from "../../../../ui/Term";
@@ -17,6 +19,8 @@ export function TagDialog({ info, ctx, onClose }: Props) {
   const [name, setName] = useState("");
   const [error, setError] = useState<ErrorCode | null>(null);
   const [busy, setBusy] = useState(false);
+  const [remoteDelete, setRemoteDelete] = useState<string | null>(null);
+  const hasRemote = (useBranches(ctx.repo).data?.remotes.length ?? 0) > 0;
 
   const act = async (run: () => Promise<unknown>) => {
     setBusy(true);
@@ -99,6 +103,11 @@ export function TagDialog({ info, ctx, onClose }: Props) {
                 <Button variant="text" disabled={busy} onClick={() => void remove(tag)}>
                   {m.deleteTag}
                 </Button>
+                {hasRemote && (
+                  <Button variant="text" disabled={busy} onClick={() => setRemoteDelete(tag)}>
+                    {m.remoteTag.deleteOnRemote}
+                  </Button>
+                )}
               </span>
             </li>
           ))}
@@ -112,6 +121,18 @@ export function TagDialog({ info, ctx, onClose }: Props) {
           {m.create}
         </Button>
       </div>
+      {remoteDelete !== null && (
+        <RemoteTagDeleteDialog
+          repo={ctx.repo}
+          name={remoteDelete}
+          oid={info.oid}
+          onClose={() => setRemoteDelete(null)}
+          onDone={() => {
+            setRemoteDelete(null);
+            ctx.toast(m.remoteTag.done);
+          }}
+        />
+      )}
     </DialogFrame>
   );
 }

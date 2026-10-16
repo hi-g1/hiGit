@@ -143,7 +143,7 @@ mod remote_tag_delete {
     fn input(dir: &Path, name: &str) -> ActionInput {
         ActionInput::RemoteTagDelete(RemoteTagInput {
             name: name.into(),
-            expect: git(dir, &["rev-parse", &format!("refs/tags/{name}")]),
+            expect: git(dir, &["rev-parse", &format!("refs/tags/{name}^{{commit}}")]),
         })
     }
 

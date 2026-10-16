@@ -1291,7 +1291,7 @@ export type RemoteBranchRenameInput = {
 	expectTip: string,
 };
 
-/**  원격 태그 지우기(D-182). `expect`는 확인 창이 본 로컬 태그 값(가벼운 태그는 버전, 주석 태그는 태그 객체). */
+/**  원격 태그 지우기(D-182). `expect`는 확인 창이 본 버전(태그가 가리키는 커밋). lease 값은 core가 로컬 태그에서 읽는다. */
 export type RemoteTagInput = {
 	name: string,
 	expect: string,

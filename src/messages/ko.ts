@@ -473,6 +473,13 @@ export const ko = {
   },
   // 태그 올리기(D-131)
   tagPush: { push: "올리기", done: "태그를 올렸어요" },
+  // 원격 태그 지우기(D-182)
+  remoteTag: {
+    deleteOnRemote: "원격에서 지우기",
+    delete: "지우기",
+    body: `${t("remote")}의 ${josa(t("tag"), "을/를")} 지워요. 내 컴퓨터의 ${josa(t("tag"), "은/는")} 그대로라 다시 올릴 수 있어요.`,
+    done: `원격 ${josa(t("tag"), "을/를")} 지웠어요`,
+  },
   // 덮어쓰며 올리기(D-128, D-129)
   forcePush: {
     ahead: (n: number) => `올라가는 버전 ${n}개`,

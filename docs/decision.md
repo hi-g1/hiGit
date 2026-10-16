@@ -1447,7 +1447,7 @@
 ## D-182 원격 태그 지우기 (자동 결정)
 - 상태: 확정
 - 날짜: 2026-10-16
-- 결정: 새 용어 `remote-tag-delete` "원격 태그 지우기"(danger). 액션 `remote-tag-delete`(`Danger`/`Irreversible`, 항상 확인, `moves_head` 거짓, 원격 잠금, `REMOTE_ACTIONS`, journal 없음). 대상은 로컬에 있는 태그만: 입력 `{ name, expect }`이고 core가 `check_tag_name`과 `refs/tags/<이름>`의 값이 `expect`인지 확인한 뒤 `GitOp::PushDeleteTag`(`--force-with-lease=refs/tags/<이름>:<expect>`, refspec `:refs/tags/<이름>`). lease가 어긋나면 `ls_remote`로 한 번 더 보고 없으면 `RemoteRefMissing`("원격에 이 태그가 없어요"), 다른 값이면 `RemoteTagDiffers`. 원격은 `pick_remote`. 로컬 태그는 건드리지 않는다. 진입점은 태그 대화상자 줄의 "원격에서 지우기".
+- 결정: 새 용어 `remote-tag-delete` "원격 태그 지우기"(danger). 액션 `remote-tag-delete`(`Danger`/`Irreversible`, 항상 확인, `moves_head` 거짓, 원격 잠금, `REMOTE_ACTIONS`, journal 없음). 대상은 로컬에 있는 태그만: 입력 `{ name, expect }`이고 `expect`는 확인 창이 본 버전(태그가 가리키는 커밋)이다. core가 `check_tag_name`과 태그가 지금도 그 버전을 가리키는지 확인한 뒤 로컬 태그 ref 값 그대로(가벼운 태그는 버전, 주석 태그는 태그 객체)를 lease로 `GitOp::PushDeleteTag`(`--force-with-lease=refs/tags/<이름>:<값>`, refspec `:refs/tags/<이름>`). 덧붙임(2026-10-16, 구현): 화면은 주석 태그의 태그 객체 값을 모르므로 `expect`를 커밋으로 바꿨다. lease가 어긋나면 `ls_remote`로 한 번 더 보고 없으면 `RemoteRefMissing`("원격에 이 태그가 없어요"), 다른 값이면 `RemoteTagDiffers`. 원격은 `pick_remote`. 로컬 태그는 건드리지 않는다. 진입점은 태그 대화상자 줄의 "원격에서 지우기".
 - 이유: 원격에서 지운 태그는 다른 사람의 저장소·GitHub 릴리스에서 이미 쓰고 있을 수 있어 되돌릴 수 없다(D-130과 같은 판단). lease 값을 로컬 태그로 두면 "내가 아는 그 태그일 때만"이 서버에서 보장된다.
 - 대안: `--delete`(lease 없음), 원격 태그 목록 화면.
 - 영향: D-035, D-043, D-104, D-130, D-131.
