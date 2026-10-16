@@ -194,6 +194,14 @@ export const ko = {
   synced: (sent: number, received: number) => `${t("sync")}했어요 · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `겹친 파일 ${n}개`,
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
+  syncPlan: (ahead: number, behind: number) =>
+    ahead === 0 && behind === 0
+      ? "주고받을 버전 없음"
+      : [ahead > 0 ? `${ahead}개 ${t("push")}` : null, behind > 0 ? `${behind}개 ${t("pull")}` : null]
+          .filter(Boolean)
+          .join(" · "),
+  syncFirstPush: `이 ${josa(t("branch"), "을/를")} 처음 ${t("push")}`,
+  lastChecked: (when: string) => `${t("fetch")} · ${when}`,
   /** 동기화 버튼 이름 뒤에 붙는다(D-080). 첫 진행 알림 전에는 초가 없다. */
   syncRunning: (secs: number | null) => (secs === null ? "중" : `중 · ${secs}초`),
   cancel: "취소",

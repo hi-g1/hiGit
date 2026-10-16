@@ -1,13 +1,14 @@
 import { ProgressCount } from "../progress/ProgressCount";
-import { useEffect, useState } from "react";
 import { api, type BranchView } from "../../lib/api";
-import { formatTime } from "../../lib/time";
+import { formatExact, formatTime } from "../../lib/time";
 import { useShortcut } from "../../lib/useShortcut";
 import { useMessages } from "../../messages";
-import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
-import { Term } from "../../ui/Term";
+import { useTermLabel } from "../../ui/Term";
+import { useUiStore } from "../../state/uiStore";
+import { Tooltip } from "../../ui/Tooltip";
 import { useToastStore } from "../../ui/toastStore";
+import { useNow } from "./FetchNotice";
 import { CANCEL_AFTER_SECS, NO_RESPONSE_SECS, REMOTE_ACTIONS, useProgress } from "../progress/useProgress";
 import styles from "./SyncButton.module.css";
 import { useSyncStore } from "./syncStore";
@@ -27,12 +28,14 @@ type Props = {
  * 겹치면 합치기를 시작해 충돌 해결 화면으로 넘긴다(D-069). 시작하지 못했을 때만 버튼 옆에
  * "겹친 파일 N개"를 남긴다(D-048).
  * 도는 동안 "동기화 중 · N초", 3초 뒤 "취소", 30초 동안 출력이 없으면 "응답 없음 · N초"(D-080).
+ * 툴팁은 할 일("2개 올리기 · 1개 가져오기"), 옆에 마지막 확인 시각(D-197). 원격 확인 실패는 알림 줄(`FetchNotice`).
  */
 export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Props) {
   const m = useMessages();
+  const label = useTermLabel("sync");
   const locale = useUiStore((s) => s.locale);
   const showError = useToastStore((s) => s.showError);
-  const { overlap, fetchFailedAt } = useSyncStore();
+  const { overlap, lastCheckedAt } = useSyncStore();
   const sync = useSync(repo);
   useShortcut("sync", sync.run, shortcut);
   const now = useNow(30_000);
@@ -57,15 +60,16 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
           {m.overlapFiles(overlap.length)}
         </span>
       )}
-      <button
-        type="button"
-        className={`${styles.button} ${primary ? styles.primary : ""}`}
-        disabled={sync.running}
-        aria-busy={sync.running}
-        aria-keyshortcuts="Control+Shift+S"
-        onClick={sync.run}
-      >
-        <Term id="sync" focusable={false} />
+      <Tooltip content={branch.upstream ? m.syncPlan(ahead, behind) : m.syncFirstPush}>
+        <button
+          type="button"
+          className={`${styles.button} ${primary ? styles.primary : ""}`}
+          disabled={sync.running}
+          aria-busy={sync.running}
+          aria-keyshortcuts="Control+Shift+S"
+          onClick={sync.run}
+        >
+          {label}
         {sync.running ? (
           <span className={styles.count}>
             <ProgressCount tick={progress} fallback={m.syncRunning(progress?.elapsedSecs ?? null)} />
@@ -76,7 +80,13 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
             {behind > 0 && <span className={styles.count}>↓{behind}</span>}
           </>
         )}
-      </button>
+        </button>
+      </Tooltip>
+      {lastCheckedAt !== null && !sync.running && (
+        <span className={styles.checked} title={formatExact(Math.floor(lastCheckedAt / 1000), locale)}>
+          {m.lastChecked(formatTime(Math.floor(lastCheckedAt / 1000), now, locale))}
+        </span>
+      )}
       {progress && progress.idleSecs >= NO_RESPONSE_SECS && (
         <span className={styles.noResponse}>{m.noResponse(progress.idleSecs)}</span>
       )}
@@ -85,24 +95,6 @@ export function SyncButton({ repo, branch, changedFiles, shortcut = true }: Prop
           {m.cancel}
         </Button>
       )}
-      {fetchFailedAt !== null && (
-        <span
-          className={styles.failed}
-          role="img"
-          aria-label={m.fetchFailed(formatTime(Math.floor(fetchFailedAt / 1000), now, locale))}
-          title={m.fetchFailed(formatTime(Math.floor(fetchFailedAt / 1000), now, locale))}
-        />
-      )}
     </span>
   );
-}
-
-/** 몇 초마다 바뀌는 지금 시각(그리는 중에 Date.now()를 부르지 않게). */
-function useNow(everyMs: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), everyMs);
-    return () => window.clearInterval(timer);
-  }, [everyMs]);
-  return now;
 }

@@ -35,7 +35,7 @@ function show(b = branch(), changedFiles = 0) {
 afterEach(() => {
   vi.clearAllMocks();
   act(() => {
-    useSyncStore.setState({ overlap: [], error: null, fetchFailedAt: null, paused: false });
+    useSyncStore.setState({ overlap: [], error: null, fetchFailedAt: null, lastCheckedAt: null, paused: false });
     useToastStore.setState({ toasts: [], toast: null });
     useProgressStore.getState().clear("/repo");
   });
@@ -47,6 +47,22 @@ const tick = (elapsedSecs: number, idleSecs = 0, action = "sync", count: Partial
   );
 
 describe("동기화 버튼", () => {
+  it("툴팁은 할 일, 옆에 마지막 확인 시각, 실패 점은 없다(D-197)", async () => {
+    act(() => useSyncStore.setState({ lastCheckedAt: Date.now() - 3 * 60_000, fetchFailedAt: Date.now() }));
+    show();
+    const button = screen.getByRole("button", { name: /동기화/ });
+    act(() => button.focus());
+    expect((await screen.findAllByText("2개 올리기 · 1개 가져오기")).length).toBeGreaterThan(0);
+    expect(screen.getByText(/^원격 확인 · /)).toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("upstream이 없으면 처음 올리기를 말한다", async () => {
+    show(branch({ upstream: null }));
+    act(() => screen.getByRole("button", { name: /동기화/ }).focus());
+    expect((await screen.findAllByText("이 브랜치를 처음 올리기")).length).toBeGreaterThan(0);
+  });
+
   it("보낼·받을 수를 붙이고, 고친 파일이 없으면 주 버튼", () => {
     show();
     const button = screen.getByRole("button", { name: /동기화/ });

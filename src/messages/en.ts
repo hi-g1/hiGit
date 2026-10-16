@@ -170,6 +170,14 @@ export const en: Messages = {
   synced: (sent: number, received: number) => `Synced · ↑${sent} ↓${received}`,
   overlapFiles: (n: number) => `${n} overlapping files`,
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
+  syncPlan: (ahead: number, behind: number) =>
+    ahead === 0 && behind === 0
+      ? "Nothing to send or receive"
+      : [ahead > 0 ? `${t("push")} ${ahead}` : null, behind > 0 ? `${t("pull")} ${behind}` : null]
+          .filter(Boolean)
+          .join(" · "),
+  syncFirstPush: `${t("push")} this ${t("branch").toLowerCase()} for the first time`,
+  lastChecked: (when: string) => `${t("fetch")} · ${when}`,
   syncRunning: (secs: number | null) => (secs === null ? "…" : `· ${secs}s`),
   cancel: "Cancel",
   noResponse: (secs: number) => `No response · ${secs}s`,

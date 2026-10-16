@@ -19,7 +19,7 @@ const AUTH_FAILURES: ErrorCode[] = [
 
 /**
  * 저절로 하는 원격 확인(D-045, D-055). 열 때 한 번, 창이 보이는 동안 5분마다, 창으로 돌아왔을 때
- * 1분이 지났으면. 질문 창 없이(백그라운드 모드) 하고, 실패는 동기화 버튼 옆 작은 점으로만 알린다.
+ * 1분이 지났으면. 질문 창 없이(백그라운드 모드) 하고, 실패는 상단 바 아래 알림 줄로 알린다(D-197).
  * 인증 실패 뒤에는 사용자가 동기화를 누를 때까지 멈춘다.
  */
 export function useAutoFetch(repo: string, enabled: boolean) {
@@ -36,14 +36,21 @@ export function useAutoFetch(repo: string, enabled: boolean) {
       last.current = Date.now();
       try {
         await api.executeAction(repo, { id: "fetch", input: { background: true } });
-        set({ fetchFailedAt: null });
+        set({ fetchFailedAt: null, fetchFailedCode: null, lastCheckedAt: Date.now() });
         for (const key of [["status", repo], ["branches", repo]]) {
           void queryClient.invalidateQueries({ queryKey: key });
         }
       } catch (e) {
         const code = e instanceof ApiError ? e.code : "internal";
         // 다른 작업 중이면 조용히 건너뛴다.
-        if (code !== "busy") set({ fetchFailedAt: Date.now(), paused: AUTH_FAILURES.includes(code) });
+        if (code !== "busy") {
+          set({
+            fetchFailedAt: Date.now(),
+            fetchFailedCode: code,
+            fetchNoticeDismissed: false,
+            paused: AUTH_FAILURES.includes(code),
+          });
+        }
       } finally {
         running.current = false;
       }

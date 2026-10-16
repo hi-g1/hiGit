@@ -52,10 +52,9 @@
   font-size: var(--font-size-sm);
 }
 
-/* 원격 확인 실패: 색만으로 알리지 않게 툴팁과 이름을 함께 둔다(design.md "상태 표시") */
-.failed {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 50%;
-  background: var(--modified);
+/* 마지막 원격 확인 시각(D-197) */
+.checked {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }

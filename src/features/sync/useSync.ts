@@ -27,7 +27,12 @@ export function useSync(repo: string): { run: () => void; runAnyway: () => void;
     onSuccess: (result) => {
       if (result.kind !== "synced") return;
       // 겹쳐서 합치기를 시작했으면 충돌 해결 화면이 이어받는다(D-069). 겹친 글자는 남기지 않는다.
-      set({ overlap: result.mergeStarted ? [] : result.overlap, fetchFailedAt: null });
+      set({
+        overlap: result.mergeStarted ? [] : result.overlap,
+        fetchFailedAt: null,
+        fetchFailedCode: null,
+        lastCheckedAt: Date.now(),
+      });
       if (result.overlap.length === 0) show(m.synced(result.sent, result.received));
     },
     onError: (e) => {

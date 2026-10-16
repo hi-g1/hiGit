@@ -6,6 +6,7 @@ import { StuckNotice } from "../../features/progress/StuckNotice";
 import { useProgressEvents } from "../../features/progress/useProgress";
 import { CompareFooter } from "../../features/stash/CompareFooter";
 import { SyncButton } from "../../features/sync/SyncButton";
+import { FetchNotice } from "../../features/sync/FetchNotice";
 import { SyncNotice } from "../../features/sync/SyncNotice";
 import { useAutoFetch } from "../../features/sync/useAutoFetch";
 import { useUndo } from "../../features/undo/useUndo";
@@ -89,6 +90,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       <StuckNotice repo={repo.path} />
       {/* 합치는 중이면 충돌 해결 화면이 대신 알린다(D-082). */}
       {!merging && <PendingNotice repo={repo.path} otherConflicts={conflict?.otherOperation ?? false} />}
+      {!merging && <FetchNotice />}
       <SyncNotice repo={repo.path} />
       {!merging && <RewriteNotice repo={repo.path} />}
       {merging && conflict ? (

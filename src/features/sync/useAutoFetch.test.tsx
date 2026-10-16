@@ -20,7 +20,7 @@ beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
 afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
-  act(() => useSyncStore.setState({ fetchFailedAt: null, paused: false }));
+  act(() => useSyncStore.setState({ fetchFailedAt: null, fetchFailedCode: null, lastCheckedAt: null, paused: false }));
 });
 
 const fetchCalls = () =>
@@ -32,6 +32,8 @@ describe("저절로 하는 원격 확인", () => {
     renderHook(() => useAutoFetch("/repo", true), { wrapper });
     await vi.waitFor(() => expect(fetchCalls()).toBe(1));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "fetch", input: { background: true } });
+    // 성공하면 마지막 확인 시각을 남긴다(메모리만).
+    await vi.waitFor(() => expect(useSyncStore.getState().lastCheckedAt).not.toBeNull());
 
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
@@ -58,6 +60,8 @@ describe("저절로 하는 원격 확인", () => {
     renderHook(() => useAutoFetch("/repo", true), { wrapper });
     await vi.waitFor(() => expect(useSyncStore.getState().paused).toBe(true));
     expect(useSyncStore.getState().fetchFailedAt).not.toBeNull();
+    // 알림 줄이 해결 버튼을 고를 코드도 남긴다(D-197).
+    expect(useSyncStore.getState().fetchFailedCode).toBe("httpAuthFailed");
     await act(async () => {
       vi.advanceTimersByTime(FETCH_INTERVAL_MS);
     });
