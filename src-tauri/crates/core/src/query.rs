@@ -1096,14 +1096,17 @@ impl Queries {
 
     /// 기록 정리 카드 지도의 처음 모습(D-100, D-106). 고른 버전이 정리할 수 있는 구간이 아니면
     /// `blocked`로 까닭을 알린다. 실행할 때 core가 같은 검사를 다시 한다. 읽기만 한다.
-    pub fn rewrite_plan(
+    /// `allow_published_rewrite`는 앱 설정(D-127)이고 `Core::rewrite_plan`이 넣는다.
+    pub(crate) fn rewrite_plan(
         &self,
         repo: &Path,
         oids: Vec<String>,
+        allow_published_rewrite: bool,
     ) -> Result<crate::view::RewritePlanView> {
         use crate::view::{RewriteCardView, RewritePlanView};
         let root = self.opened_repo(repo)?;
-        let check = crate::guard::rewrite_chain(self.git.as_ref(), &root, &oids)?;
+        let rule = crate::guard::published_rule(self.git.as_ref(), &root, allow_published_rewrite)?;
+        let check = crate::guard::rewrite_chain(self.git.as_ref(), &root, &oids, rule)?;
         let Some(chain) = check.chain else {
             return Ok(RewritePlanView {
                 cards: Vec::new(),

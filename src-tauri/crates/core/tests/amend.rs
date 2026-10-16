@@ -278,3 +278,30 @@ fn undo_brings_the_old_version_back_and_redo_checks_publishing() {
     core.redo(dir).unwrap();
     assert_eq!(git(dir, &["rev-parse", "HEAD"]), new);
 }
+
+#[test]
+fn setting_allows_fixing_a_published_version_off_the_default_branch() {
+    let repo = repo();
+    let dir = repo.path();
+    commit(dir, "a.txt", "a\n", "처음");
+    git(dir, &["switch", "-q", "-c", "기능"]);
+    let head = commit(dir, "b.txt", "b\n", "올린 버전");
+    git(
+        dir,
+        &["remote", "add", "origin", "https://example.com/r.git"],
+    );
+    git(dir, &["update-ref", "refs/remotes/origin/기능", &head]);
+    git(dir, &["branch", "--set-upstream-to=origin/기능"]);
+    let core = core(dir);
+    assert_eq!(
+        code(&amend(&core, dir, Some("새 이름")).unwrap_err()),
+        ErrorCode::PublishedHistory
+    );
+    core.set_settings(&higit_core::view::AppSettingsPatch {
+        allow_published_rewrite: Some(true),
+        ..Default::default()
+    });
+    amend(&core, dir, Some("새 이름")).unwrap();
+    assert_eq!(git(dir, &["log", "-1", "--format=%s"]), "새 이름");
+    assert_ne!(git(dir, &["rev-parse", "HEAD"]), head);
+}

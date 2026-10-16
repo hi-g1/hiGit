@@ -169,6 +169,7 @@ pub(crate) fn redo(
     git: &dyn GitBackend,
     repo: &RepoPath,
     journal: &Journal,
+    allow_published_rewrite: bool,
 ) -> Result<UndoOutcome> {
     refuse_during_operation(git, repo)?;
     let (_, mut undone) = stacks(journal.read());
@@ -181,7 +182,8 @@ pub(crate) fn redo(
     if REWRITES_HISTORY.contains(&entry.action.as_str())
         && let (Some(before), Some(after)) = (entry.before.head_oid(), entry.after.head_oid())
     {
-        crate::guard::refuse_published(git, repo, &before, &after)?;
+        let rule = crate::guard::published_rule(git, repo, allow_published_rewrite)?;
+        crate::guard::refuse_published(git, repo, &before, &after, rule)?;
     }
     match entry.kind {
         UndoKind::RestoreRef if entry.before.head == entry.after.head => {}
@@ -691,7 +693,7 @@ mod tests {
             ],
         );
         assert_eq!(backups, second);
-        redo(&backend, &repo, &journal).unwrap();
+        redo(&backend, &repo, &journal, false).unwrap();
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
         assert_eq!(
             std::fs::read_to_string(dir.join("b.txt")).unwrap(),
@@ -741,7 +743,7 @@ mod tests {
         undo(&backend, &repo, &journal).unwrap();
         assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), first);
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), second, "HEAD는 그대로");
-        redo(&backend, &repo, &journal).unwrap();
+        redo(&backend, &repo, &journal, false).unwrap();
         assert_eq!(git(dir, &["rev-parse", "refs/heads/기능"]), second);
     }
 
@@ -769,11 +771,11 @@ mod tests {
             .unwrap();
         // upstream이 아닌 원격 추적 브랜치여도 올린 것이다.
         git(dir, &["update-ref", "refs/remotes/origin/다른", &second]);
-        let err = redo(&backend, &repo, &journal).unwrap_err();
+        let err = redo(&backend, &repo, &journal, false).unwrap_err();
         assert!(matches!(err, CoreError::PublishedHistory), "{err:?}");
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), second);
         git(dir, &["update-ref", "-d", "refs/remotes/origin/다른"]);
-        redo(&backend, &repo, &journal).unwrap();
+        redo(&backend, &repo, &journal, false).unwrap();
         assert_eq!(git(dir, &["rev-parse", "HEAD"]), first);
     }
 

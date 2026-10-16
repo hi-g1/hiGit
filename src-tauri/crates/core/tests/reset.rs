@@ -5,7 +5,9 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use higit_core::view::{ActionInput, ActionResult, ErrorCode, ErrorView, OidInput, OpenHow};
+use higit_core::view::{
+    ActionInput, ActionResult, AppSettingsPatch, ErrorCode, ErrorView, OidInput, OpenHow,
+};
 use higit_core::{Core, GitBackend};
 
 fn git(dir: &Path, args: &[&str]) -> String {
@@ -190,4 +192,85 @@ fn a_merged_range_can_be_dropped() {
         code(&reset(&core, dir, &one).unwrap_err()),
         ErrorCode::PublishedHistory
     );
+}
+
+/// 설정 "올린 버전도 바꾸기"를 켠다(D-127).
+fn allow_rewrite(core: &Core) {
+    core.set_settings(&AppSettingsPatch {
+        allow_published_rewrite: Some(true),
+        ..Default::default()
+    });
+}
+
+/// 지금 브랜치의 upstream을 `origin/<브랜치>`로 잇고 `upto`까지 올린 것으로 둔다(원격 없이 추적 ref만).
+fn publish(dir: &Path, branch: &str, upto: &str) {
+    git(
+        dir,
+        &["remote", "add", "origin", "https://example.com/r.git"],
+    );
+    git(
+        dir,
+        &["update-ref", &format!("refs/remotes/origin/{branch}"), upto],
+    );
+    git(
+        dir,
+        &["branch", &format!("--set-upstream-to=origin/{branch}")],
+    );
+}
+
+#[test]
+fn setting_allows_dropping_published_versions_off_the_default_branch() {
+    let repo = repo();
+    let dir = repo.path();
+    let one = commit(dir, "a.txt", "a\n", "처음");
+    git(dir, &["switch", "-q", "-c", "기능"]);
+    commit(dir, "b.txt", "b\n", "둘");
+    let three = commit(dir, "c.txt", "c\n", "셋");
+    publish(dir, "기능", &three);
+    let core = core(dir);
+    assert_eq!(
+        code(&reset(&core, dir, &one).unwrap_err()),
+        ErrorCode::PublishedHistory
+    );
+    allow_rewrite(&core);
+    assert_eq!(
+        reset(&core, dir, &one).unwrap(),
+        ActionResult::Reset { dropped: 2 }
+    );
+    // 올림 검사만 건너뛰고 실행기의 백업 ref는 그대로 남는다.
+    let backups = git(
+        dir,
+        &[
+            "for-each-ref",
+            "--format=%(objectname)",
+            "refs/higit/backup/",
+        ],
+    );
+    assert!(backups.lines().any(|l| l == three), "{backups}");
+    // 다시 하기도 같은 규칙을 따른다.
+    core.undo(dir).unwrap();
+    core.redo(dir).unwrap();
+    assert_eq!(git(dir, &["rev-parse", "HEAD"]), one);
+}
+
+#[test]
+fn default_branch_stays_protected_with_the_setting_on() {
+    let repo = repo();
+    let dir = repo.path();
+    let [_, two, three, four] = four(dir);
+    git(dir, &["update-ref", "refs/remotes/origin/main", &three]);
+    let core = core(dir);
+    allow_rewrite(&core);
+    assert_eq!(
+        code(&reset(&core, dir, &two).unwrap_err()),
+        ErrorCode::PublishedHistory
+    );
+    // init.defaultBranch로 정한 이름도 기본 브랜치로 본다.
+    git(dir, &["switch", "-q", "-c", "개발"]);
+    git(dir, &["config", "init.defaultBranch", "개발"]);
+    assert_eq!(
+        code(&reset(&core, dir, &two).unwrap_err()),
+        ErrorCode::PublishedHistory
+    );
+    assert_eq!(git(dir, &["rev-parse", "HEAD"]), four);
 }

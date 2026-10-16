@@ -69,7 +69,8 @@ impl Action for AmendAction {
         if Oid::parse(&input.expect_head).as_ref() != Some(&head) {
             return Err(CoreError::InvalidInput("지금 버전이 바뀌었어요"));
         }
-        if guard::is_published(git, repo, &head)? {
+        let rule = guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
+        if rule == guard::PublishedRule::Refuse && guard::is_published(git, repo, &head)? {
             return Err(CoreError::PublishedHistory);
         }
         super::refuse_conflicts(git, repo)?;

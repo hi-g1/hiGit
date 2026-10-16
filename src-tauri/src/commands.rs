@@ -394,7 +394,7 @@ pub async fn query_rewrite_plan(
     oids: Vec<String>,
 ) -> CmdResult<RewritePlanView> {
     blocking(state, move |core| {
-        core.queries().rewrite_plan(&PathBuf::from(repo), oids)
+        core.rewrite_plan(&PathBuf::from(repo), oids)
     })
     .await
 }

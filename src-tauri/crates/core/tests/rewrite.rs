@@ -302,3 +302,46 @@ fn hook_refusing_the_new_message_aborts() {
     assert!(!dir.join(".git/higit/operation.json").exists());
     assert_eq!(git(dir, &["symbolic-ref", "HEAD"]), "refs/heads/main");
 }
+
+#[test]
+fn setting_allows_published_versions_but_not_changed_files() {
+    let (repo, o) = five();
+    let dir = repo.path();
+    let keys = tempfile::tempdir().unwrap();
+    git(dir, &["switch", "-q", "-c", "기능"]);
+    git(
+        dir,
+        &["remote", "add", "origin", "https://example.com/r.git"],
+    );
+    git(dir, &["update-ref", "refs/remotes/origin/기능", &o[4]]);
+    git(dir, &["branch", "--set-upstream-to=origin/기능"]);
+    let core = core(dir, keys.path());
+    let steps = || {
+        vec![
+            step(&o[3], Pick, None),
+            step(&o[4], Pick, Some("다섯 고침")),
+        ]
+    };
+    assert_eq!(
+        code(&rewrite(&core, dir, steps()).unwrap_err()),
+        ErrorCode::PublishedHistory
+    );
+    core.set_settings(&higit_core::view::AppSettingsPatch {
+        allow_published_rewrite: Some(true),
+        ..Default::default()
+    });
+    // 켜도 고친 파일은 막는다.
+    std::fs::write(dir.join("1.txt"), "고침").unwrap();
+    assert_eq!(
+        code(&rewrite(&core, dir, steps()).unwrap_err()),
+        ErrorCode::HasChanges
+    );
+    git(dir, &["checkout", "--", "1.txt"]);
+    rewrite(&core, dir, steps()).unwrap();
+    assert_eq!(subjects(dir).last().map(String::as_str), Some("다섯 고침"));
+    // 카드 지도 조회도 같은 규칙.
+    let plan = core
+        .rewrite_plan(dir, vec![o[1].clone(), o[2].clone()])
+        .unwrap();
+    assert_eq!(plan.blocked, None);
+}

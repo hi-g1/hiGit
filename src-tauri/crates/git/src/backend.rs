@@ -82,6 +82,10 @@ pub trait GitBackend: Send + Sync {
     /// 원격의 기본 브랜치 이름(`refs/remotes/<원격>/HEAD`가 가리키는 것). 없으면 `None`.
     fn remote_head(&self, repo: &RepoPath, remote: &str) -> Result<Option<String>>;
 
+    /// `init.defaultBranch` 설정 값(저장소·전역·시스템 중 git이 고른 것). 원격 기본 브랜치로 보고 지키는
+    /// 이름에 더한다(값이 저장소에서 와도 막는 쪽으로만 쓰인다). 없으면 `None`.
+    fn init_default_branch(&self, repo: &RepoPath) -> Result<Option<String>>;
+
     /// 원격에 지금 있는 ref 하나의 버전(`ls-remote`, 네트워크). `refname`은 `refs/heads/main` 같은 전체 이름이고
     /// 정확히 같은 줄만 본다. 없으면 `None`.
     fn ls_remote(

@@ -53,8 +53,7 @@ fn core(dir: &Path) -> Core {
 }
 
 fn plan(core: &Core, dir: &Path, oids: &[&String]) -> higit_core::view::RewritePlanView {
-    core.queries()
-        .rewrite_plan(dir, oids.iter().map(|o| o.to_string()).collect())
+    core.rewrite_plan(dir, oids.iter().map(|o| o.to_string()).collect())
         .unwrap()
 }
 

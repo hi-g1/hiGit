@@ -313,6 +313,16 @@ impl Core {
         })
     }
 
+    /// 기록 정리 카드 지도의 처음 모습(D-106). 올림 검사는 앱 설정을 따른다(D-127).
+    pub fn rewrite_plan(
+        &self,
+        repo: &Path,
+        oids: Vec<String>,
+    ) -> Result<crate::view::RewritePlanView> {
+        let allow = self.settings.get().allow_published_rewrite;
+        self.queries.rewrite_plan(repo, oids, allow)
+    }
+
     /// 앱 설정(D-127).
     pub fn settings(&self) -> crate::view::AppSettingsView {
         self.settings.get().into()

@@ -60,7 +60,8 @@ impl Action for ResetAction {
         if head == oid {
             return Err(CoreError::InvalidInput("지금 버전과 같아요"));
         }
-        guard::refuse_published(git, repo, &head, &oid)?;
+        let rule = guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
+        guard::refuse_published(git, repo, &head, &oid, rule)?;
         let (_, dropped) = git.count_between(repo, oid.as_str(), head.as_str())?;
         git.run(repo, &GitOp::ResetKeep { oid })?;
         Ok(Outcome::Reset { dropped })

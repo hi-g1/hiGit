@@ -93,6 +93,19 @@ fn upstream_ahead_behind_gone_and_remote_branches() {
 }
 
 #[test]
+fn init_default_branch_reads_the_setting() {
+    let repo = testutil::init_repo();
+    let path = RepoPath::new(repo.path());
+    let backend = local_backend();
+    assert_eq!(backend.init_default_branch(&path).unwrap(), None);
+    testutil::git(repo.path(), &["config", "init.defaultBranch", "기본"]);
+    assert_eq!(
+        backend.init_default_branch(&path).unwrap().as_deref(),
+        Some("기본")
+    );
+}
+
+#[test]
 fn remote_head_reads_symbolic_ref() {
     let remote = tempfile::tempdir().unwrap();
     testutil::git(remote.path(), &["init", "-q", "--bare", "-b", "main"]);

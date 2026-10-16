@@ -69,14 +69,87 @@ pub(crate) fn in_activity(git: &dyn GitBackend, repo: &RepoPath, oid: &Oid) -> R
     Ok(false)
 }
 
+/// 올린 버전의 기록을 바꿔도 되는지(D-127, D-129). 호출부가 설정과 지금 브랜치로 정한다(`published_rule`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PublishedRule {
+    /// 올린 버전이 기록에서 바뀌거나 빠지면 거절한다(D-097, 기본).
+    Refuse,
+    /// 설정 "올린 버전도 바꾸기"가 켜졌고 지금 브랜치와 그 upstream이 기본 브랜치가 아니다.
+    /// 올림 판정만 건너뛰고 합치는 중·고친 파일·표식·`expect_head`·백업 ref·journal은 그대로다.
+    Allow,
+}
+
+/// 원격 기본 브랜치로 보고 지키는 이름인지(계획 010 검토 "바뀐 결정" ②③). `main`·`master`,
+/// `init.defaultBranch` 값, `remote`가 있으면 로컬에 기록된 그 원격의 HEAD. 네트워크는 쓰지 않는다.
+pub(crate) fn protected_branch(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    remote: Option<&str>,
+    branch: &str,
+) -> Result<bool> {
+    if branch == "main" || branch == "master" {
+        return Ok(true);
+    }
+    if git.init_default_branch(repo)?.as_deref() == Some(branch) {
+        return Ok(true);
+    }
+    if let Some(remote) = remote
+        && git.remote_head(repo, remote)?.as_deref() == Some(branch)
+    {
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+/// 설정(`allow`)과 지금 브랜치로 규칙을 정한다. 설정이 꺼졌거나, 특정 버전을 보는 중이거나, 지금 브랜치나
+/// 그 upstream이 기본 브랜치면 `Refuse`(D-127: 기본 브랜치는 켜져 있어도 완화하지 않는다).
+pub(crate) fn published_rule(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    allow: bool,
+) -> Result<PublishedRule> {
+    use PublishedRule::{Allow, Refuse};
+    if !allow {
+        return Ok(Refuse);
+    }
+    let Some(branch) = git.current_branch(repo)? else {
+        return Ok(Refuse);
+    };
+    if protected_branch(git, repo, None, &branch)? {
+        return Ok(Refuse);
+    }
+    if let Some(tracking) = git.status(repo)?.branch.upstream {
+        // upstream(`origin/기능`)의 원격 이름. 원격 이름에 `/`가 들 수 있어 가장 긴 것을 고른다.
+        let remote = git
+            .remotes(repo)?
+            .into_iter()
+            .map(|r| r.name)
+            .filter(|name| tracking.starts_with(&format!("{name}/")))
+            .max_by_key(String::len);
+        // 원격을 못 가리면 막는 쪽으로.
+        let Some(remote) = remote else {
+            return Ok(Refuse);
+        };
+        let remote_branch = &tracking[remote.len() + 1..];
+        if protected_branch(git, repo, Some(&remote), remote_branch)? {
+            return Ok(Refuse);
+        }
+    }
+    Ok(Allow)
+}
+
 /// `base`에서 `tip`으로 가며 기록에서 바뀌거나 빠지는 버전(`tip`에만 있고 `base`에는 없는 것)이
-/// 하나라도 원격 추적 브랜치에 닿으면 거절한다. 판정하지 못해도 거절한다(D-097).
+/// 하나라도 원격 추적 브랜치에 닿으면 거절한다. 판정하지 못해도 거절한다(D-097). `Allow`면 보지 않는다.
 pub(crate) fn refuse_published(
     git: &dyn GitBackend,
     repo: &RepoPath,
     tip: &Oid,
     base: &Oid,
+    rule: PublishedRule,
 ) -> Result<()> {
+    if rule == PublishedRule::Allow {
+        return Ok(());
+    }
     let (_, total) = git.count_between(repo, base.as_str(), tip.as_str())?;
     if total == 0 {
         return Ok(());
@@ -158,11 +231,12 @@ pub(crate) struct RewriteCheck {
 /// 고른 버전이 기록 정리할 수 있는 구간인지(D-100, D-106). 조회는 막힌 까닭을 화면에 알리고
 /// 액션은 같은 검사를 실행 때 다시 해 오류로 낸다. 지금 브랜치의 첫 부모 선을 지금 위치부터
 /// 따라가 고른 버전이 그 선 위의 연속 구간이고, 구간부터 지금 위치까지 합친 버전·첫 버전이 없고,
-/// 바뀔 버전이 하나도 올라가지 않았고, 고친 파일과 진행 중인 작업이 없어야 한다.
+/// 바뀔 버전이 하나도 올라가지 않았고(`rule`이 `Allow`면 보지 않음), 고친 파일과 진행 중인 작업이 없어야 한다.
 pub(crate) fn rewrite_chain(
     git: &dyn GitBackend,
     repo: &RepoPath,
     oids: &[String],
+    rule: PublishedRule,
 ) -> Result<RewriteCheck> {
     use crate::view::RewriteBlocked as B;
     let blocked = |b: B| {
@@ -245,7 +319,7 @@ pub(crate) fn rewrite_chain(
         check.blocked = Some(B::IncludesFirstVersion);
         return Ok(check);
     };
-    match refuse_published(git, repo, &head, &base) {
+    match refuse_published(git, repo, &head, &base, rule) {
         Err(CoreError::PublishedHistory) => check.blocked = Some(B::Published),
         other => other?,
     }
@@ -307,26 +381,83 @@ mod tests {
         let dir = tmp.path();
         let (g, repo) = (backend(), RepoPath::new(dir));
         // 원격이 없으면 모두 안 올림.
-        refuse_published(&g, &repo, &c, &a).unwrap();
+        refuse_published(&g, &repo, &c, &a, PublishedRule::Refuse).unwrap();
         assert!(!is_published(&g, &repo, &c).unwrap());
         // 원격이 base에 있으면 그 위는 안 올림.
         git(dir, &["update-ref", "refs/remotes/origin/main", a.as_str()]);
-        refuse_published(&g, &repo, &c, &a).unwrap();
+        refuse_published(&g, &repo, &c, &a, PublishedRule::Refuse).unwrap();
         // 원격이 구간 안에 있으면 거절. 다른 이름의 원격 브랜치도 같다.
         git(dir, &["update-ref", "-d", "refs/remotes/origin/main"]);
         git(dir, &["update-ref", "refs/remotes/up/기능", b.as_str()]);
         assert!(matches!(
-            refuse_published(&g, &repo, &c, &a),
+            refuse_published(&g, &repo, &c, &a, PublishedRule::Refuse),
             Err(CoreError::PublishedHistory)
         ));
         assert!(is_published(&g, &repo, &b).unwrap());
         assert!(is_published(&g, &repo, &a).unwrap());
         assert!(!is_published(&g, &repo, &c).unwrap());
         // 빠지는 버전이 없으면(앞으로 옮김) 통과.
-        refuse_published(&g, &repo, &a, &c).unwrap();
+        refuse_published(&g, &repo, &a, &c, PublishedRule::Refuse).unwrap();
         // 첫 버전(부모 없음)도 판정한다.
         git(dir, &["update-ref", "-d", "refs/remotes/up/기능"]);
         assert!(!is_published(&g, &repo, &a).unwrap());
+    }
+
+    #[test]
+    fn published_rule_follows_the_setting_and_protects_default_branches() {
+        use PublishedRule::{Allow, Refuse};
+        let (tmp, [a, ..]) = line_of_three();
+        let dir = tmp.path();
+        let (g, repo) = (backend(), RepoPath::new(dir));
+        let rule = || published_rule(&g, &repo, true).unwrap();
+        // 꺼져 있으면 언제나 거절.
+        assert_eq!(published_rule(&g, &repo, false).unwrap(), Refuse);
+        // main은 켜도 거절.
+        assert_eq!(rule(), Refuse);
+        // upstream 없는 기능 브랜치는 허용.
+        git(dir, &["switch", "-q", "-c", "기능"]);
+        assert_eq!(rule(), Allow);
+        // upstream이 기능이면 허용, 그 원격의 HEAD가 기능이면 기본 브랜치로 보고 거절.
+        git(
+            dir,
+            &["remote", "add", "origin", "https://example.com/r.git"],
+        );
+        git(dir, &["update-ref", "refs/remotes/origin/기능", a.as_str()]);
+        git(dir, &["branch", "--set-upstream-to=origin/기능"]);
+        assert_eq!(rule(), Allow);
+        git(
+            dir,
+            &[
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/기능",
+            ],
+        );
+        assert_eq!(rule(), Refuse);
+        git(dir, &["symbolic-ref", "-d", "refs/remotes/origin/HEAD"]);
+        // upstream이 main이면 로컬 이름이 달라도 거절.
+        git(dir, &["update-ref", "refs/remotes/origin/main", a.as_str()]);
+        git(dir, &["branch", "--set-upstream-to=origin/main"]);
+        assert_eq!(rule(), Refuse);
+        // 특정 버전을 보는 중이면 거절.
+        git(dir, &["switch", "-q", "--detach", a.as_str()]);
+        assert_eq!(rule(), Refuse);
+    }
+
+    #[test]
+    fn allow_skips_only_the_published_check() {
+        let (tmp, [a, b, c]) = line_of_three();
+        let dir = tmp.path();
+        let (g, repo) = (backend(), RepoPath::new(dir));
+        git(dir, &["update-ref", "refs/remotes/origin/main", b.as_str()]);
+        assert!(refuse_published(&g, &repo, &c, &a, PublishedRule::Refuse).is_err());
+        refuse_published(&g, &repo, &c, &a, PublishedRule::Allow).unwrap();
+        let oids = [b.to_string(), c.to_string()];
+        let check = rewrite_chain(&g, &repo, &oids, PublishedRule::Allow).unwrap();
+        assert_eq!(check.blocked, None);
+        std::fs::write(dir.join("a.txt"), "고침").unwrap();
+        let check = rewrite_chain(&g, &repo, &oids, PublishedRule::Allow).unwrap();
+        assert_eq!(check.blocked, Some(crate::view::RewriteBlocked::HasChanges));
     }
 
     #[test]

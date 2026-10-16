@@ -547,6 +547,22 @@ impl GitBackend for CliBackend {
         }
     }
 
+    fn init_default_branch(&self, repo: &RepoPath) -> Result<Option<String>> {
+        match self.runner.run(
+            Some(repo.as_path()),
+            &["config", "--includes", "--get", "init.defaultBranch"],
+        ) {
+            Ok(out) => {
+                let text = out.stdout_lossy();
+                let value = text.trim();
+                Ok((!value.is_empty()).then(|| value.to_string()))
+            }
+            // 설정이 없으면 종료 코드 1.
+            Err(GitError::Failed { code: Some(1), .. }) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
     fn ls_remote(
         &self,
         repo: &RepoPath,

@@ -36,6 +36,8 @@ pub struct FakeGit {
     pub server_refs: Mutex<Vec<(String, String, git::Oid)>>,
     /// `ls_remote_head`가 돌려줄 서버 기본 브랜치: (원격, 브랜치).
     pub server_heads: Mutex<Vec<(String, String)>>,
+    /// `init_default_branch`가 돌려줄 값.
+    pub init_default: Mutex<Option<String>>,
     pub merge_check: Mutex<MergeCheck>,
     pub parked_paths: Mutex<Vec<String>>,
     pub local_config: Mutex<Vec<(String, String)>>,
@@ -82,6 +84,7 @@ impl FakeGit {
             remote_heads: Mutex::new(Vec::new()),
             server_refs: Mutex::new(Vec::new()),
             server_heads: Mutex::new(Vec::new()),
+            init_default: Mutex::new(None),
             merge_check: Mutex::new(MergeCheck::Clean),
             parked_paths: Mutex::new(Vec::new()),
             local_config: Mutex::new(Vec::new()),
@@ -266,6 +269,10 @@ impl GitBackend for FakeGit {
             .filter(|r| r.name.starts_with(prefix))
             .cloned()
             .collect())
+    }
+
+    fn init_default_branch(&self, _repo: &RepoPath) -> git::Result<Option<String>> {
+        Ok(self.init_default.lock().unwrap().clone())
     }
 
     fn ls_remote(

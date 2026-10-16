@@ -115,7 +115,8 @@ impl Action for RewriteAction {
         let repo = repo_of(ctx)?;
         let git = ctx.git;
         let oids: Vec<String> = input.steps.iter().map(|s| s.oid.clone()).collect();
-        let check = guard::rewrite_chain(git, repo, &oids)?;
+        let rule = guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
+        let check = guard::rewrite_chain(git, repo, &oids, rule)?;
         if let Some(b) = check.blocked {
             return Err(blocked_error(b));
         }

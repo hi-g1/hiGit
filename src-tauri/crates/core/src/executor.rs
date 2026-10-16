@@ -98,7 +98,12 @@ impl Executor {
     pub fn redo(&self, ctx: &ExecCtx<'_>) -> Result<crate::undo::UndoOutcome> {
         let repo = ctx.state.repo.as_ref().ok_or(CoreError::NotARepo)?;
         let journal = Journal::at(&ctx.git.git_dir(repo)?, self.journal_key.clone());
-        crate::undo::run::redo(ctx.git, repo, &journal)
+        crate::undo::run::redo(
+            ctx.git,
+            repo,
+            &journal,
+            ctx.settings.allow_published_rewrite,
+        )
     }
 
     pub fn registry(&self) -> &Registry {
@@ -342,6 +347,9 @@ mod tests {
             unreachable!()
         }
         fn remote_head(&self, _: &RepoPath, _: &str) -> git::Result<Option<String>> {
+            unreachable!()
+        }
+        fn init_default_branch(&self, _: &RepoPath) -> git::Result<Option<String>> {
             unreachable!()
         }
         fn ls_remote(
