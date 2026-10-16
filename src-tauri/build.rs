@@ -18,6 +18,7 @@ const COMMANDS: &[&str] = &[
     "github_disconnect",
     "project_open",
     "project_trust",
+    "project_reask_trust",
     "project_allow_owner",
     "recent_list",
     "recent_remove",

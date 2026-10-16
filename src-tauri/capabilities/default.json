@@ -23,6 +23,7 @@
     "allow-github-disconnect",
     "allow-project-open",
     "allow-project-trust",
+    "allow-project-reask-trust",
     "allow-project-allow-owner",
     "allow-recent-list",
     "allow-recent-remove",

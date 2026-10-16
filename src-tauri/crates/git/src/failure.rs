@@ -67,6 +67,8 @@ pub enum FailureKind {
     UnparkConflict,
     /// 허용하지 않은 전송 방식(`ext::`, `file://`, 로컬 경로 원격, D-035).
     ProtocolNotAllowed,
+    /// 올리는 곳을 바꾸는 설정을 끄고 연 저장소라 원격 작업을 하지 않았다(D-212). git이 내지 않고 이 크레이트가 낸다.
+    RemoteSettingsOff,
     /// GitHub가 100MB 넘는 파일이 든 버전의 올리기를 막았다(GH001, D-194). 그 버전에서 빼야 풀린다.
     FileTooLarge,
     /// 다른 프로그램이 파일을 쓰고 있어 바꾸지 못했다(D-194). "Permission denied"는 권한 문제라 넣지 않는다.

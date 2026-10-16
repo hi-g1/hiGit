@@ -5,7 +5,15 @@ import type { ErrorCode } from "../../lib/api";
  * 없다. `none`은 공용 버튼이 없다는 뜻이고, 그 자리의 화면이 맥락을 아는 버튼(잠금 정리·원격 확인·다시 해 보기·
  * 작업 내역)을 직접 붙일 수 있다.
  */
-export type FixKind = "none" | "connect" | "reconnect" | "setIdentity" | "addWorkflow" | "branchSettings" | "openHistory";
+export type FixKind =
+  | "none"
+  | "connect"
+  | "reconnect"
+  | "setIdentity"
+  | "addWorkflow"
+  | "branchSettings"
+  | "openHistory"
+  | "retrust";
 
 export const ERROR_FIX: Record<ErrorCode, FixKind> = {
   gitMissing: "none",
@@ -104,6 +112,7 @@ export const ERROR_FIX: Record<ErrorCode, FixKind> = {
   gitOutdated: "none",
   remoteUnreachable: "none",
   protocolNotAllowed: "none",
+  remoteSettingsOff: "retrust",
   unparkConflict: "none",
   timedOut: "none",
   mergeConflict: "none",

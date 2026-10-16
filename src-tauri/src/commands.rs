@@ -241,6 +241,16 @@ pub async fn project_trust(
     .await
 }
 
+/// 끄고 연 저장소의 신뢰 확인을 다시 띄운다("믿고 다시 열기", D-212). 열린 저장소만.
+#[tauri::command]
+#[specta::specta]
+pub async fn project_reask_trust(
+    state: State<'_, AppState>,
+    path: String,
+) -> CmdResult<ProjectOpenResult> {
+    blocking(state, move |core| core.reask_trust(&PathBuf::from(path))).await
+}
+
 /// 주인이 다른 폴더를 믿기로 하고 연다(D-039).
 #[tauri::command]
 #[specta::specta]

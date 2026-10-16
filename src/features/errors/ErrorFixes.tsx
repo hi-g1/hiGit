@@ -7,6 +7,7 @@ import type { ErrorActions } from "../../ui/errorActions";
 import { RemoteRefusedFix } from "../github/RemoteRefusedFix";
 import { WorkflowFix } from "../github/WorkflowFix";
 import { IdentityFix } from "../identity/IdentityFix";
+import { useOpenProject } from "../open-project/useOpenProject";
 import { useSettingsStore } from "../settings/settingsStore";
 import { ERROR_FIX, type FixKind } from "./fixes";
 
@@ -32,6 +33,19 @@ function HistoryFix() {
   );
 }
 
+/** 끄고 연 저장소의 신뢰 확인을 다시 띄운다(D-212). */
+function RetrustFix() {
+  const m = useMessages();
+  const repo = useRepoStore((s) => s.repo?.path ?? null);
+  const project = useOpenProject();
+  if (repo === null) return null;
+  return (
+    <Button variant="secondary" onClick={() => void project.reask(repo).catch(() => undefined)}>
+      {m.fix.retrust}
+    </Button>
+  );
+}
+
 /** 해결 버튼 종류 → 버튼. `none`은 버튼이 없다. */
 const RENDER: Record<Exclude<FixKind, "none">, ReactNode> = {
   connect: <ConnectFix again={false} />,
@@ -40,6 +54,7 @@ const RENDER: Record<Exclude<FixKind, "none">, ReactNode> = {
   addWorkflow: <WorkflowFix />,
   branchSettings: <RemoteRefusedFix />,
   openHistory: <HistoryFix />,
+  retrust: <RetrustFix />,
 };
 
 /** 앱 맨 위가 `ErrorActionsContext`에 넣는 오류 코드별 공용 해결 버튼(D-194). `ERROR_FIX` 표에서 만든다. */

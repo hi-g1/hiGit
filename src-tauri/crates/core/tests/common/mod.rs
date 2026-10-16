@@ -491,11 +491,17 @@ impl GitBackend for FakeGit {
         self.git_running.load(Ordering::SeqCst)
     }
 
-    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
-        self.calls
-            .lock()
-            .unwrap()
-            .push(format!("overrides {} {pairs:?}", repo.as_path().display()));
+    fn set_repo_policy(&self, repo: &RepoPath, policy: git::RepoPolicy) {
+        self.calls.lock().unwrap().push(format!(
+            "overrides {} {:?}{}",
+            repo.as_path().display(),
+            policy.overrides,
+            if policy.network_off {
+                " network-off"
+            } else {
+                ""
+            }
+        ));
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> git::Result<OpOutput> {

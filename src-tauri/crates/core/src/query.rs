@@ -893,7 +893,7 @@ impl Queries {
         match self.trust.check(self.git.as_ref(), &root)? {
             TrustState::Clean | TrustState::Decided(TrustDecision::Trust, _) => {}
             TrustState::Decided(TrustDecision::Disable, found) => {
-                self.git.set_repo_overrides(&root, found.overrides);
+                self.git.set_repo_policy(&root, found.disabled_policy());
             }
             TrustState::Unknown(_) => return Err(CoreError::NeedsTrust),
         }

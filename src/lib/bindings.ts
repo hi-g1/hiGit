@@ -41,6 +41,8 @@ export const commands = {
 	projectOpen: (path: string, how: OpenHow) => __TAURI_INVOKE<ProjectOpenResult>("project_open", { path, how }),
 	/**  신뢰 확인에서 고른 결과로 연다(D-039). */
 	projectTrust: (path: string, choice: TrustChoice) => __TAURI_INVOKE<ProjectOpenResult>("project_trust", { path, choice }),
+	/**  끄고 연 저장소의 신뢰 확인을 다시 띄운다("믿고 다시 열기", D-212). 열린 저장소만. */
+	projectReaskTrust: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_reask_trust", { path }),
 	/**  주인이 다른 폴더를 믿기로 하고 연다(D-039). */
 	projectAllowOwner: (path: string) => __TAURI_INVOKE<ProjectOpenResult>("project_allow_owner", { path }),
 	recentList: () => __TAURI_INVOKE<RecentProject[]>("recent_list"),
@@ -747,7 +749,9 @@ export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARep
 /**  다른 프로그램이 파일을 쓰고 있다(D-194). */
 "fileInUse" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
-"cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
+"cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "identityInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | 
+/**  올리는 곳을 바꾸는 설정을 끄고 연 저장소라 원격 작업을 하지 않았다(D-212). */
+"remoteSettingsOff" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
 "indexLocked" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */
@@ -1297,10 +1301,11 @@ export type ProjectOpenResult = { kind: "opened"; repo: RepoInfo } |
 /**  폴더 주인이 다른 사용자라 git이 다루지 않는다. 사용자가 고르면 이 폴더만 믿는다(D-039). */
 { kind: "notOwned"; folder: string } | 
 /**
- *  실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.
- *  `can_disable`이 거짓이면 덮어써서 끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
+ *  실행되는 설정이나 올리는 곳을 바꾸는 설정이 있어 믿을지 물어야 한다(D-039, D-212). `keys`는 설정
+ *  이름과 `hooks/이름`, `redirects`는 올리는 곳·연결을 바꾸는 설정. `can_disable`이 거짓이면 덮어써서
+ *  끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
  */
-{ kind: "needsTrust"; folder: string; keys: string[]; canDisable: boolean };
+{ kind: "needsTrust"; folder: string; keys: string[]; redirects: TrustRedirect[]; canDisable: boolean };
 
 /**  시작 화면의 프로젝트 상태 요약(D-031). 문장은 화면(messages)이 만든다. */
 export type ProjectSummaryView = {
@@ -1746,6 +1751,12 @@ export type TrustChoice =
 "trust" | 
 /**  끄고 열기 */
 "disable";
+
+/**  올리는 곳·연결을 바꾸는 설정 하나(D-212). 주소는 호스트만, 경로는 가린 것. 값을 보이지 않는 키는 `target`이 없다. */
+export type TrustRedirect = {
+	key: string,
+	target: string | null,
+};
 
 /**  앱 작업 줄에 Ctrl+Z가 닿는지(D-204). */
 export type UndoHint = 

@@ -16,6 +16,23 @@
   list-style: none;
 }
 
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.target {
+  color: var(--text-muted);
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

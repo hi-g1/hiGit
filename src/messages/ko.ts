@@ -188,6 +188,8 @@ export const ko = {
   branchDeleted: (name: string) => `${name} ${josa(t("branch"), "을/를")} 지웠어요`,
   branchRenamed: (name: string) => `${josa(name, "으로/로")} 이름을 바꿨어요`,
   trustTitle: "이 프로젝트에는 열 때 실행되는 설정이 있어요.",
+  trustRedirectTitle: "이 프로젝트에는 올리는 곳이나 연결을 바꾸는 설정이 있어요.",
+  trustRedirectHeading: "올리는 곳이나 연결을 바꾸는 설정",
   trustOpen: "믿고 열기",
   trustDisable: "끄고 열기",
   trustNeeded: "확인 필요",
@@ -460,6 +462,7 @@ export const ko = {
   // 오류의 공용 해결 버튼 이름(D-194). 문구 속 행동 이름과 같다
   fix: {
     openHistory: t("log"),
+    retrust: "믿고 다시 열기",
   },
   notARepo: "이 폴더는 아직 Git으로 관리하지 않는 폴더예요.",
   noChanges: "마지막 버전 이후 바뀐 파일이 없어요.",
@@ -792,6 +795,7 @@ export const ko = {
     cloneNameInvalid: "폴더 이름으로 쓸 수 없는 글자가 있어요.",
     gitOutdated: "Git이 보안 수정 전 버전이에요. Git을 업데이트하거나 알고 계속해 주세요.",
     remoteUnreachable: `${t("remote")}에 연결하지 못했어요. 주소와 인터넷 연결을 확인해 주세요.`,
+    remoteSettingsOff: `이 프로젝트는 올리는 곳을 바꾸는 설정을 끄고 열었어요. 믿고 다시 열면 ${josa(t("sync"), "을/를")} 할 수 있어요.`,
     protocolNotAllowed: "이 주소 방식은 쓸 수 없어요. https나 ssh 주소를 써 주세요.",
     unparkConflict: "두고 간 파일이 지금 버전과 겹쳐서 꺼내지 않았어요.",
     timedOut: `${josa(t("remote"), "이/가")} 응답하지 않아 그만뒀어요.`,

@@ -75,8 +75,17 @@ fn core(dir: &Path, connected: bool) -> Fixture {
     let core = Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>)
         .unwrap()
         .with_github_for_tests(github);
-    core.open_project(dir, OpenHow::Picked).unwrap();
+    open_trusted(&core, dir);
     Fixture { core, fake }
+}
+
+/// 올리는 곳을 바꾸는 설정(`pushurl`, `insteadOf`)을 쓰는 시험은 신뢰 확인에서 "믿고 열기"를 고른다(D-212).
+fn open_trusted(core: &Core, dir: &Path) {
+    let r = core.open_project(dir, OpenHow::Picked).unwrap();
+    if matches!(r, higit_core::view::ProjectOpenResult::NeedsTrust { .. }) {
+        core.trust_project(dir, higit_core::trust::TrustDecision::Trust)
+            .unwrap();
+    }
 }
 
 fn code(err: &higit_core::CoreError) -> ErrorCode {
@@ -848,7 +857,7 @@ fn fork_fixture() -> ForkFixture {
     let core = Core::with_backend(Arc::new(backend) as Arc<dyn GitBackend>)
         .unwrap()
         .with_github_for_tests(github);
-    core.open_project(p, OpenHow::Picked).unwrap();
+    open_trusted(&core, p);
     ForkFixture {
         core,
         fake,

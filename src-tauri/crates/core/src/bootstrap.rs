@@ -627,19 +627,16 @@ impl Core {
         let repo_path = RepoPath::new(&repo);
         match self.trust.check(self.git.as_ref(), &repo_path)? {
             TrustState::Clean | TrustState::Decided(TrustDecision::Trust, _) => {
-                self.git.set_repo_overrides(&repo_path, Vec::new());
+                self.git
+                    .set_repo_policy(&repo_path, git::RepoPolicy::default());
             }
             TrustState::Decided(TrustDecision::Disable, found) if found.can_disable => {
-                self.git.set_repo_overrides(&repo_path, found.overrides);
+                self.git
+                    .set_repo_policy(&repo_path, found.disabled_policy());
             }
             // 끌 수 없는 키가 생겼으면 "끄고 열기" 결정이 있어도 다시 묻는다.
             TrustState::Decided(TrustDecision::Disable, found) | TrustState::Unknown(found) => {
-                self.remember_ask(&repo, Ask::Trust);
-                return Ok(ProjectOpenResult::NeedsTrust {
-                    folder: repo.to_string_lossy().into_owned(),
-                    keys: found.keys,
-                    can_disable: found.can_disable,
-                });
+                return Ok(self.ask_trust(&repo, found));
             }
         }
         self.opened.insert(&repo);
@@ -662,6 +659,29 @@ impl Core {
         Ok(ProjectOpenResult::Opened {
             repo: RepoInfo::from_path(&repo),
         })
+    }
+
+    fn ask_trust(&self, repo: &Path, found: crate::trust::Executing) -> ProjectOpenResult {
+        self.remember_ask(repo, Ask::Trust);
+        ProjectOpenResult::NeedsTrust {
+            folder: repo.to_string_lossy().into_owned(),
+            keys: found.keys,
+            redirects: found.redirects,
+            can_disable: found.can_disable,
+        }
+    }
+
+    /// 끄고 연 저장소를 다시 묻는다("믿고 다시 열기", D-212). 고르기 전에는 지금 결정과 정책이 그대로다.
+    pub fn reask_trust(&self, path: &Path) -> Result<ProjectOpenResult> {
+        check_path_len(path)?;
+        let repo = platform::normalize_repo_path(path).map_err(CoreError::FolderNotFound)?;
+        self.opened.require(&repo)?;
+        match self.trust.check(self.git.as_ref(), &RepoPath::new(&repo))? {
+            TrustState::Clean => self.open_project(&repo, OpenHow::Picked),
+            TrustState::Decided(_, found) | TrustState::Unknown(found) => {
+                Ok(self.ask_trust(&repo, found))
+            }
+        }
     }
 
     /// 신뢰 확인에서 고른 결과를 기록하고 연다(D-039). "끄고 열기"면 실행되는 설정을 끈다.

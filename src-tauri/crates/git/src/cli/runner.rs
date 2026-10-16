@@ -84,10 +84,26 @@ pub(crate) struct Runner {
     configure: ConfigureCommand,
     allowed_protocols: &'static str,
     pub(crate) process: ProcessControl,
-    /// 저장소 폴더별로 모든 호출에 붙이는 `-c 키=값`(믿지 않기로 한 저장소의 실행 설정 끄기, D-039).
-    overrides: std::sync::Mutex<std::collections::HashMap<PathBuf, Vec<String>>>,
+    /// 저장소 폴더별 정책(D-039, D-212). 키는 `fs::canonicalize`한 경로라 표기가 달라도(Windows의 `/`·`\\`,
+    /// 대소문자) 같은 폴더면 맞는다.
+    policies: std::sync::Mutex<std::collections::HashMap<PathBuf, Policy>>,
     /// 지금 도는, 앱이 띄운 git의 pid. 잠금 판정에서 앱 것을 뺀다(D-081).
     live: std::sync::Mutex<std::collections::HashSet<u32>>,
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Policy {
+    /// 모든 호출에 붙이는 `-c 키=값`(믿지 않기로 한 저장소의 실행 설정 끄기, D-039).
+    overrides: Vec<String>,
+    /// 원격 작업을 거절한다(올리는 곳을 바꾸는 설정을 끄고 열었다, D-212).
+    network_off: bool,
+    /// 저장소 설정의 `core.worktree`가 다른 폴더를 가리킨다. 이 폴더를 `--work-tree`로 준다(D-212).
+    /// `-c core.worktree`는 저장소 설정을 이기지 못한다(git이 저장소 설정 파일에서 따로 읽는다).
+    pin_work_tree: bool,
+}
+
+fn policy_key(dir: &Path) -> PathBuf {
+    std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf())
 }
 
 /// 앱이 띄운 git 하나가 도는 동안 pid를 `live`에 둔다. 끝나면(오류여도) 뺀다.
@@ -141,7 +157,7 @@ impl Runner {
             configure,
             allowed_protocols: ALLOWED_PROTOCOLS,
             process: ProcessControl::default(),
-            overrides: std::sync::Mutex::new(std::collections::HashMap::new()),
+            policies: std::sync::Mutex::new(std::collections::HashMap::new()),
             live: std::sync::Mutex::default(),
         }
     }
@@ -172,17 +188,48 @@ impl Runner {
         child.wait_with_output()
     }
 
-    /// `repo` 폴더에서 도는 모든 호출에 `-c 키=값`을 붙인다. 빈 목록이면 지운다.
-    pub fn set_overrides(&self, repo: &Path, pairs: Vec<String>) {
+    fn update_policy(&self, repo: &Path, change: impl FnOnce(&mut Policy)) {
         let mut map = self
-            .overrides
+            .policies
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        if pairs.is_empty() {
-            map.remove(repo);
-        } else {
-            map.insert(repo.to_path_buf(), pairs);
+        let key = policy_key(repo);
+        let entry = map.entry(key.clone()).or_default();
+        change(entry);
+        if *entry == Policy::default() {
+            map.remove(&key);
         }
+    }
+
+    /// `repo` 폴더에서 도는 모든 호출에 `-c 키=값`을 붙이고, `network_off`면 원격 작업을 거절한다.
+    /// 작업 폴더 고정(`pin_work_tree`)은 그대로 둔다.
+    pub fn set_policy(&self, repo: &Path, overrides: Vec<String>, network_off: bool) {
+        self.update_policy(repo, |p| {
+            p.overrides = overrides;
+            p.network_off = network_off;
+        });
+    }
+
+    /// `repo` 폴더에서 도는 모든 호출에 `--work-tree=<repo>`를 붙인다(D-212). 풀지 않는다.
+    pub fn pin_work_tree(&self, repo: &Path) {
+        self.update_policy(repo, |p| p.pin_work_tree = true);
+    }
+
+    /// `repo`의 원격 작업을 막았는지.
+    pub fn network_off(&self, repo: &Path) -> bool {
+        self.with_policy(repo, |p| p.network_off).unwrap_or(false)
+    }
+
+    /// 정책이 하나도 없으면 경로를 canonicalize하지 않는다(대부분의 사용자).
+    fn with_policy<T>(&self, dir: &Path, read: impl FnOnce(&Policy) -> T) -> Option<T> {
+        let map = self
+            .policies
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if map.is_empty() {
+            return None;
+        }
+        map.get(&policy_key(dir)).map(read)
     }
 
     /// 테스트 전용: 로컬 경로 원격(`file`)을 허용한다.
@@ -586,14 +633,16 @@ impl Runner {
             // 한글 파일명을 따옴표·8진수 이스케이프 없이 받는다.
             .args(["-c", "core.quotepath=off", "-c", "color.ui=never"]);
         if let Some(dir) = cwd
-            && let Some(pairs) = self
-                .overrides
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .get(dir)
+            && let Some((pairs, pin)) =
+                self.with_policy(dir, |p| (p.overrides.clone(), p.pin_work_tree))
         {
             for pair in pairs {
                 cmd.arg("-c").arg(pair);
+            }
+            if pin {
+                let mut arg = std::ffi::OsString::from("--work-tree=");
+                arg.push(dir.as_os_str());
+                cmd.arg(arg);
             }
         }
         cmd.args(args);

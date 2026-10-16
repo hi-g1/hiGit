@@ -593,7 +593,10 @@ impl GitHubService {
             return AuthMode::UserDefault;
         }
         match git.local_config(repo) {
-            Ok(config) if !config.iter().any(|(key, _)| redirects_transport(key)) => {}
+            Ok(config)
+                if !config
+                    .iter()
+                    .any(|(key, _)| crate::trust::redirect_key(key)) => {}
             _ => return AuthMode::UserDefault,
         }
         let ready = if background {
@@ -666,11 +669,6 @@ pub(crate) fn github_https_only(urls: &[String]) -> bool {
         && urls
             .iter()
             .all(|url| url.starts_with("https://") && hosting::GitHub::detect(url).is_some())
-}
-
-/// 받은 저장소가 연결을 돌리거나 TLS 검증을 끌 수 있는 설정 키(소문자, D-111).
-fn redirects_transport(key: &str) -> bool {
-    key.starts_with("http.") || (key.starts_with("remote.") && key.ends_with(".proxy"))
 }
 
 fn pending_view(interval: Duration) -> LoginPollView {

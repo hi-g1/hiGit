@@ -470,7 +470,7 @@ mod tests {
         fn other_git_running(&self) -> bool {
             unreachable!()
         }
-        fn set_repo_overrides(&self, _: &RepoPath, _: Vec<String>) {
+        fn set_repo_policy(&self, _: &RepoPath, _: git::RepoPolicy) {
             unreachable!()
         }
         fn run(&self, _: &RepoPath, _: &GitOp) -> git::Result<OpOutput> {

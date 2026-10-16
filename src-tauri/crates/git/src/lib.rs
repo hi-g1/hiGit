@@ -14,7 +14,7 @@ mod types;
 #[cfg(test)]
 mod testutil;
 
-pub use backend::GitBackend;
+pub use backend::{GitBackend, RepoPolicy};
 
 /// 진행 알림을 받는 함수(저장소, 경과, 마지막 출력 뒤 시간, Git이 준 마지막 개수).
 pub type ProgressObserver = std::sync::Arc<

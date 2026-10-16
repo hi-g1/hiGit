@@ -42,8 +42,8 @@ export function useAutoFetch(repo: string, enabled: boolean) {
         }
       } catch (e) {
         const code = e instanceof ApiError ? e.code : "internal";
-        // 다른 작업 중이면 조용히 건너뛴다.
-        if (code !== "busy") {
+        // 다른 작업 중이거나 올리는 곳 설정을 끄고 연 프로젝트(D-212)면 조용히 건너뛴다.
+        if (code !== "busy" && code !== "remoteSettingsOff") {
           set({
             fetchFailedAt: Date.now(),
             fetchFailedCode: code,

@@ -7,13 +7,26 @@ use crate::{
     RemoteUrls, RepoPath, Result, StashEntry, Status, TagRef,
 };
 
+/// 저장소 하나에 붙이는 정책(D-039, D-212).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RepoPolicy {
+    /// 이 저장소에서 도는 모든 git 호출에 붙이는 `-c 키=값`(실행되는 설정 끄기).
+    pub overrides: Vec<String>,
+    /// 원격 작업(네트워크를 쓰는 모든 호출)을 [`crate::FailureKind::RemoteSettingsOff`]로 거절한다
+    /// (올리는 곳을 바꾸는 설정을 끄고 열었다).
+    pub network_off: bool,
+}
+
 /// 모든 Git 작업의 입구(D-003). 목표 설계는 docs/architecture.md에 있고,
 /// 여기에는 지금 반복에서 구현한 메서드만 둔다.
 pub trait GitBackend: Send + Sync {
     /// 설치된 git의 버전.
     fn version(&self) -> Result<GitVersion>;
 
-    /// `path`가 속한 저장소의 최상위 폴더. 저장소가 아니면 `None`.
+    /// `path`가 속한 저장소의 최상위 폴더. 저장소가 아니면 `None`. 저장소 설정의 `core.worktree`가 다른
+    /// 폴더를 가리키면(작업 폴더의 `.git`이 그 git 폴더를 가리키지 않으면) git 폴더 `.git`의 부모를 돌려주고
+    /// 그 폴더의 모든 호출에 `--work-tree`를 붙인다. git 폴더 이름이 `.git`이 아니어서 부모를 믿을 수 없으면
+    /// `NotARepository`로 거절한다(D-212).
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>>;
 
     /// 마지막 저장 이후 바뀐 파일과 현재 갈래 정보.
@@ -215,8 +228,9 @@ pub trait GitBackend: Send + Sync {
     /// 사용자 기본으로 돈다.
     fn set_helper_program(&self, path: Option<PathBuf>);
 
-    /// 이 저장소에서 도는 모든 git 호출에 `-c 키=값`을 붙인다(D-039 "끄고 열기"). 빈 목록이면 지운다.
-    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>);
+    /// 이 저장소의 정책을 바꾼다(D-039·D-212 "끄고 열기"). 기본값이면 지운다. `discover`가 정한 작업 폴더
+    /// 고정은 이것으로 풀리지 않는다.
+    fn set_repo_policy(&self, repo: &RepoPath, policy: RepoPolicy);
 
     /// 상태를 바꾸는 작업은 모두 여기로 온다. [`GitOp::Init`]에서 `repo`는 대상 폴더다.
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput>;

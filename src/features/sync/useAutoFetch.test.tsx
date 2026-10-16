@@ -55,6 +55,15 @@ describe("저절로 하는 원격 확인", () => {
     expect(fetchCalls()).toBe(0);
   });
 
+  it("올리는 곳 설정을 끄고 연 프로젝트면 실패 줄 없이 건너뛴다(D-212)", async () => {
+    vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "remoteSettingsOff", detail: null }));
+    renderHook(() => useAutoFetch("/repo", true), { wrapper });
+    await vi.waitFor(() => expect(fetchCalls()).toBe(1));
+    await act(async () => undefined);
+    expect(useSyncStore.getState().fetchFailedAt).toBeNull();
+    expect(useSyncStore.getState().paused).toBe(false);
+  });
+
   it("인증 실패면 실패 표시를 남기고 멈춘다", async () => {
     vi.mocked(api.executeAction).mockRejectedValue(new ApiError({ code: "httpAuthFailed", detail: null }));
     renderHook(() => useAutoFetch("/repo", true), { wrapper });

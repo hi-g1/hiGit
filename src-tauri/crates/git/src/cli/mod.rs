@@ -31,6 +31,7 @@ mod network_tests;
 #[cfg(test)]
 mod operation_tests;
 mod park;
+mod worktree;
 pub use park::safe_relative;
 #[cfg(test)]
 mod park_tests;
@@ -249,17 +250,43 @@ impl GitBackend for CliBackend {
     }
 
     fn discover(&self, path: &Path) -> Result<Option<RepoPath>> {
-        match self
-            .runner
-            .run(Some(path), &["rev-parse", "--show-toplevel"])
-        {
-            Ok(out) => {
-                let top = out.stdout_utf8()?;
-                Ok(Some(RepoPath::new(top.trim_end_matches(['\n', '\r']))))
-            }
+        let out = match self.runner.run(
+            Some(path),
+            &[
+                "rev-parse",
+                "--absolute-git-dir",
+                "--git-common-dir",
+                "--show-toplevel",
+            ],
+        ) {
+            Ok(out) => out,
             // 그 밖의 실패(예: safe.directory 소유자 검사)는 저장소가 아닌 것으로 숨기지 않는다.
-            Err(e) if e.kind() == FailureKind::NotARepository => Ok(None),
-            Err(e) => Err(e),
+            Err(e) if e.kind() == FailureKind::NotARepository => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let text = out.stdout_utf8()?;
+        let mut lines = text.lines();
+        let (Some(git_dir), Some(common), Some(top)) = (lines.next(), lines.next(), lines.next())
+        else {
+            return Err(GitError::Parse(text));
+        };
+        let git_dir = Path::new(git_dir);
+        // `--git-common-dir`은 부른 폴더 기준 상대 경로일 수 있다.
+        let common = path.join(common);
+        let top = Path::new(top);
+        if worktree::points_to(top, git_dir) {
+            return Ok(Some(RepoPath::new(top)));
+        }
+        // 작업 폴더가 git 폴더를 가리키지 않는다: 저장소 설정의 `core.worktree`가 다른 폴더를 가리킨다.
+        match worktree::owner_of(git_dir, &common) {
+            Some(owner) => {
+                self.runner.pin_work_tree(&owner);
+                Ok(Some(RepoPath::new(owner)))
+            }
+            None => Err(GitError::Refused {
+                kind: FailureKind::NotARepository,
+                detail: "core.worktree points outside a .git folder".into(),
+            }),
         }
     }
 
@@ -897,8 +924,9 @@ impl GitBackend for CliBackend {
             .unwrap_or_else(std::sync::PoisonError::into_inner) = path;
     }
 
-    fn set_repo_overrides(&self, repo: &RepoPath, pairs: Vec<String>) {
-        self.runner.set_overrides(repo.as_path(), pairs);
+    fn set_repo_policy(&self, repo: &RepoPath, policy: crate::RepoPolicy) {
+        self.runner
+            .set_policy(repo.as_path(), policy.overrides, policy.network_off);
     }
 
     fn run(&self, repo: &RepoPath, op: &GitOp) -> Result<OpOutput> {
@@ -1598,7 +1626,13 @@ mod tests {
         assert!(config.contains(&("filter.lfs.clean".into(), "lfs clean %f".into())));
 
         // 덮어쓰기가 이 저장소의 호출에만 붙는다.
-        backend.set_repo_overrides(&path, vec!["core.fsmonitor=false".into()]);
+        backend.set_repo_policy(
+            &path,
+            crate::RepoPolicy {
+                overrides: vec!["core.fsmonitor=false".into()],
+                network_off: false,
+            },
+        );
         let out = backend
             .runner
             .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])
@@ -1611,7 +1645,7 @@ mod tests {
                 .unwrap()
                 .contains(&("core.fsmonitor".into(), "false".into()))
         );
-        backend.set_repo_overrides(&path, Vec::new());
+        backend.set_repo_policy(&path, crate::RepoPolicy::default());
         let out = backend
             .runner
             .run(Some(repo.path()), &["config", "--get", "core.fsmonitor"])

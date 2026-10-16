@@ -70,6 +70,13 @@ impl CliBackend {
         auth: AuthMode,
         stdin: Option<&[u8]>,
     ) -> Result<GitOutput> {
+        // 원격 작업은 모두 여기를 지난다. 올리는 곳을 바꾸는 설정을 끄고 연 저장소는 한 곳에서 막는다(D-212).
+        if self.runner.network_off(repo.as_path()) {
+            return Err(crate::GitError::Refused {
+                kind: crate::FailureKind::RemoteSettingsOff,
+                detail: "remote settings were disabled for this repository".into(),
+            });
+        }
         let dir = Some(repo.as_path());
         let helper = self.helper_for(auth);
         let mut full: Vec<&str> = Vec::new();

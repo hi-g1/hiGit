@@ -31,6 +31,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::github_disconnect,
             commands::project_open,
             commands::project_trust,
+            commands::project_reask_trust,
             commands::project_allow_owner,
             commands::recent_list,
             commands::recent_remove,

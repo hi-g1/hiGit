@@ -859,6 +859,8 @@ pub enum ErrorCode {
     GitOutdated,
     RemoteUnreachable,
     ProtocolNotAllowed,
+    /// 올리는 곳을 바꾸는 설정을 끄고 연 저장소라 원격 작업을 하지 않았다(D-212).
+    RemoteSettingsOff,
     UnparkConflict,
     TimedOut,
     MergeConflict,
@@ -902,6 +904,7 @@ impl From<git::FailureKind> for ErrorCode {
             F::NotARepository => ErrorCode::NotARepo,
             F::DubiousOwnership => ErrorCode::DubiousOwnership,
             F::ProtocolNotAllowed => ErrorCode::ProtocolNotAllowed,
+            F::RemoteSettingsOff => ErrorCode::RemoteSettingsOff,
             F::UnparkConflict => ErrorCode::UnparkConflict,
             F::TimedOut => ErrorCode::TimedOut,
             F::Cancelled => ErrorCode::Cancelled,
@@ -1072,14 +1075,23 @@ pub enum ProjectOpenResult {
     NotOwned {
         folder: String,
     },
-    /// 실행되는 설정이 있어 믿을지 물어야 한다(D-039). `keys`는 설정 이름과 `hooks/이름`.
-    /// `can_disable`이 거짓이면 덮어써서 끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
+    /// 실행되는 설정이나 올리는 곳을 바꾸는 설정이 있어 믿을지 물어야 한다(D-039, D-212). `keys`는 설정
+    /// 이름과 `hooks/이름`, `redirects`는 올리는 곳·연결을 바꾸는 설정. `can_disable`이 거짓이면 덮어써서
+    /// 끌 수 없는 키가 있어 "끄고 열기"를 보이지 않는다.
     #[serde(rename_all = "camelCase")]
     NeedsTrust {
         folder: String,
         keys: Vec<String>,
+        redirects: Vec<TrustRedirect>,
         can_disable: bool,
     },
+}
+
+/// 올리는 곳·연결을 바꾸는 설정 하나(D-212). 주소는 호스트만, 경로는 가린 것. 값을 보이지 않는 키는 `target`이 없다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct TrustRedirect {
+    pub key: String,
+    pub target: Option<String>,
 }
 
 /// 신뢰 확인에서 고른 것(D-039).

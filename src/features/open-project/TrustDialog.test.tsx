@@ -75,6 +75,49 @@ describe("신뢰 확인", () => {
     expect(useTrustStore.getState().pending).toBeNull();
   });
 
+  it("올리는 곳을 바꾸는 설정은 따로 보이고 주소는 호스트만 보인다(D-212)", async () => {
+    render(
+      <AppProviders client={createQueryClient()}>
+        <TrustDialog />
+      </AppProviders>,
+    );
+    act(() =>
+      useTrustStore.getState().ask({
+        kind: "config",
+        folder: "/받은/프로젝트",
+        keys: ["core.fsmonitor"],
+        redirects: [
+          { key: "remote.origin.pushurl", target: "evil.example" },
+          { key: "http.sslverify", target: null },
+        ],
+        canDisable: true,
+      }),
+    );
+    expect(screen.getByText("core.fsmonitor")).toBeInTheDocument();
+    const group = screen.getByRole("region", { name: "올리는 곳이나 연결을 바꾸는 설정" });
+    expect(group).toHaveTextContent("remote.origin.pushurl → evil.example");
+    expect(group).toHaveTextContent("http.sslverify");
+    expect(screen.getByRole("button", { name: "끄고 열기" })).toBeInTheDocument();
+  });
+
+  it("올리는 곳 설정만 있으면 제목이 그것을 말한다", () => {
+    render(
+      <AppProviders client={createQueryClient()}>
+        <TrustDialog />
+      </AppProviders>,
+    );
+    act(() =>
+      useTrustStore.getState().ask({
+        kind: "config",
+        folder: "/받은/프로젝트",
+        keys: [],
+        redirects: [{ key: "url.insteadof", target: "evil.example" }],
+        canDisable: true,
+      }),
+    );
+    expect(screen.getByText("이 프로젝트에는 올리는 곳이나 연결을 바꾸는 설정이 있어요.")).toBeInTheDocument();
+  });
+
   it("Esc로 닫으면 열지 않는다", async () => {
     show();
     await userEvent.keyboard("{Escape}");
