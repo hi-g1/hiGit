@@ -113,7 +113,7 @@ impl Action for ConflictAction {
         let Some(context) = crate::conflict::context(git, repo, ctx.key)? else {
             return Err(CoreError::InvalidInput("합치는 중이 아니에요"));
         };
-        let conflicts = conflict_paths(git.index_entries(repo)?);
+        let conflicts = conflict_paths(git.index_entries(repo)?, context.flipped());
         match (self.meta.id, input, context) {
             ("conflict-abort", ActionInput::ConflictAbort, Context::Merge) => {
                 back_up_conflicts(git, repo, &conflicts)?;

@@ -18,6 +18,9 @@ mod history;
 mod locks;
 pub mod log;
 mod marker;
+mod operation;
+#[cfg(test)]
+mod operation_tests;
 pub(crate) mod parked;
 mod query;
 pub mod recent;

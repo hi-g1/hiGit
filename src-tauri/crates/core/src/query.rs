@@ -66,17 +66,25 @@ impl Queries {
 
     /// 충돌 해결 화면의 상태(D-069). 합치는 중이 아니면 `active: false`.
     pub fn conflict_state(&self, repo: &Path) -> Result<ConflictStateView> {
+        use crate::conflict::Context;
+        use crate::operation::OpKind;
         const MAX_FILES: usize = 200;
         let root = self.opened_repo(repo)?;
-        let merge_head = self.git.resolve_ref(&root, "MERGE_HEAD")?;
-        let entries = self.git.index_entries(&root)?;
-        let conflicts = crate::conflict::conflict_paths(entries);
-        let other = crate::conflict::other_operation(&self.git.git_dir(&root)?).is_some();
         let context = crate::conflict::context(self.git.as_ref(), &root, &self.key)?;
+        let flip = context.as_ref().is_some_and(Context::flipped);
+        let entries = self.git.index_entries(&root)?;
+        let conflicts = crate::conflict::conflict_paths(entries, flip);
+        let other =
+            crate::conflict::foreign_operation(self.git.as_ref(), &root, &self.key)?.is_some();
         let mut view = ConflictStateView {
             active: context.is_some(),
-            context: match context {
-                Some(crate::conflict::Context::Unpark(_)) => ConflictContext::Unpark,
+            context: match &context {
+                Some(Context::Unpark(_)) => ConflictContext::Unpark,
+                Some(Context::Operation(op)) => match op.kind {
+                    OpKind::CherryPick => ConflictContext::CherryPick,
+                    OpKind::Revert => ConflictContext::Revert,
+                    OpKind::Rebase => ConflictContext::Rebase,
+                },
                 _ => ConflictContext::Merge,
             },
             ours: None,
@@ -86,16 +94,18 @@ impl Queries {
             clean_files: 0,
             other_operation: context.is_none() && (other || !conflicts.is_empty()),
         };
-        let theirs_rev = match (&context, merge_head) {
-            (Some(crate::conflict::Context::Unpark(m)), _) => match git::Oid::parse(&m.oid) {
-                Some(oid) => oid,
-                None => return Ok(view),
-            },
-            (Some(crate::conflict::Context::Merge), Some(head)) => head,
-            _ => return Ok(view),
+        let Some(context) = context else {
+            return Ok(view);
         };
-        let merge_head = theirs_rev;
         let branches = self.git.branches(&root)?;
+        // 그 버전을 가리키는 로컬 브랜치, 없으면 원격 브랜치 이름. 없으면 짧은 해시를 쓴다.
+        let name_of = |oid: &git::Oid| {
+            branches
+                .iter()
+                .filter(|b| b.oid == oid.as_str() && !b.is_head)
+                .min_by_key(|b| b.kind != git::BranchKind::Local)
+                .map(|b| b.name.clone())
+        };
         let side = |rev: &str, label: Option<String>| -> Result<Option<ConflictSide>> {
             let commit = self
                 .git
@@ -117,14 +127,33 @@ impl Queries {
                 short_oid: c.short_oid,
             }))
         };
+        // 다른 쪽 버전: 합치기는 MERGE_HEAD, 꺼내기는 맡긴 항목, 복사·되돌리기는 고른 버전.
+        let other_rev = |name: &str| self.git.resolve_ref(&root, name);
         let current = self.git.current_branch(&root)?;
-        let theirs_name = branches
-            .iter()
-            .filter(|b| b.oid == merge_head.as_str() && !b.is_head)
-            .min_by_key(|b| b.kind != git::BranchKind::Local)
-            .map(|b| b.name.clone());
-        view.ours = side("HEAD", current)?;
-        view.theirs = side(merge_head.as_str(), theirs_name)?;
+        match &context {
+            Context::Operation(op) if op.kind == OpKind::Rebase => {
+                // 내 쪽 = 옮기는 버전, 합칠 쪽 = 정리된 기록(지금 HEAD, 이름표는 정리하는 브랜치).
+                if let Some(moving) = other_rev("REBASE_HEAD")? {
+                    view.ours = side(moving.as_str(), None)?;
+                }
+                view.theirs = side("HEAD", Some(op.branch.clone()))?;
+            }
+            _ => {
+                let theirs = match &context {
+                    Context::Merge => other_rev("MERGE_HEAD")?,
+                    Context::Unpark(m) => git::Oid::parse(&m.oid),
+                    Context::Operation(op) if op.kind == OpKind::CherryPick => {
+                        other_rev("CHERRY_PICK_HEAD")?
+                    }
+                    Context::Operation(_) => other_rev("REVERT_HEAD")?,
+                };
+                let Some(theirs) = theirs else {
+                    return Ok(view);
+                };
+                view.ours = side("HEAD", current)?;
+                view.theirs = side(theirs.as_str(), name_of(&theirs))?;
+            }
+        }
         view.more_files = u32::try_from(conflicts.len().saturating_sub(MAX_FILES)).unwrap_or(0);
         for c in conflicts.iter().take(MAX_FILES) {
             let file = crate::conflict::read_file(self.git.as_ref(), &root, c)?;
@@ -155,7 +184,11 @@ impl Queries {
     pub fn conflict_file(&self, repo: &Path, path: &str) -> Result<ConflictFileView> {
         let root = self.opened_repo(repo)?;
         paths::validate_one(path)?;
-        let conflicts = crate::conflict::conflict_paths(self.git.index_entries(&root)?);
+        let context = crate::conflict::context(self.git.as_ref(), &root, &self.key)?;
+        let flip = context
+            .as_ref()
+            .is_some_and(crate::conflict::Context::flipped);
+        let conflicts = crate::conflict::conflict_paths(self.git.index_entries(&root)?, flip);
         let c = conflicts
             .iter()
             .find(|c| c.path == path)

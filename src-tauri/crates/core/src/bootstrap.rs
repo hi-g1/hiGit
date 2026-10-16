@@ -166,6 +166,12 @@ pub fn init() -> Result<Core> {
 }
 
 impl Core {
+    /// 테스트가 앱이 쓴 것과 같은 표식을 만들 때 쓴다.
+    #[cfg(test)]
+    pub(crate) fn key_for_tests(&self) -> &crate::undo::JournalKey {
+        self.executor.journal_key()
+    }
+
     /// journal·표식 서명 키를 정한다. 실행기와 조회에 같이 준다.
     fn set_key(&mut self, key: crate::undo::JournalKey) {
         self.executor.set_journal_key(key.clone());
@@ -546,13 +552,17 @@ impl Core {
         let state = self.state_of(folder)?;
         let repo = state.repo.ok_or(CoreError::NotARepo)?;
         let git_dir = self.git.git_dir(&repo)?;
-        let other_operation = crate::conflict::other_operation(&git_dir);
+        // 앱의 작업이 돌면 멈춘 작업이 앱 것인지 아직 모른다(표식과 git 상태가 바뀌는 중).
         if self.repo_busy(repo.as_path()) {
-            return Ok(crate::view::PendingWorkView {
-                other_operation,
-                ..Default::default()
-            });
+            return Ok(crate::view::PendingWorkView::default());
         }
+        // 멈춘 작업이 없는데 남은 표식은 여기서만 지운다(조회는 지우지 않는다, D-102).
+        crate::operation::tidy(self.git.as_ref(), &repo)?;
+        let other_operation = crate::conflict::foreign_operation(
+            self.git.as_ref(),
+            &repo,
+            self.executor.journal_key(),
+        )?;
         let common_dir = self.git.common_dir(&repo)?;
         let stale_locks = crate::locks::stale(&git_dir, &common_dir, SystemTime::now(), || {
             self.git.other_git_running()
@@ -566,6 +576,18 @@ impl Core {
             leftover_parked: u32::try_from(leftover).unwrap_or(u32::MAX),
             other_operation,
         })
+    }
+
+    /// 충돌 해결 화면의 상태(D-069). 앱의 작업이 이 저장소에서 돌면 맥락이 바뀌는 중이라 `Busy`로
+    /// 답한다(화면은 받은 상태를 그대로 둔다, 계획 008 E9).
+    pub fn conflict_state(&self, folder: &Path) -> Result<crate::view::ConflictStateView> {
+        let state = self.state_of(folder)?;
+        if let Some(repo) = &state.repo
+            && self.repo_busy(repo.as_path())
+        {
+            return Err(CoreError::Busy);
+        }
+        self.queries.conflict_state(folder)
     }
 
     /// 앱의 작업이 이 저장소의 작업 폴더나 원격을 쓰는 중인지.

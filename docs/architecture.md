@@ -222,7 +222,7 @@ impl Queries {
     pub fn project_summary(&self, repo: &Path) -> Result<view::ProjectSummaryView>; // 시작 화면
     pub fn secret_check(&self, repo: &Path, r: &view::SecretCheckRequest) -> Result<view::SecretCheckView>; // 반복 2. 경로·규칙·줄 번호만(D-077)
     pub fn merge_hint(&self, repo: &Path) -> Result<view::MergeHintView>;      // 반복 2. 방향 하나(D-048, D-071)
-    pub fn conflict_state(&self, repo: &Path) -> Result<view::ConflictStateView>; // 반복 2. 맥락 Merge·Unpark, 충돌 파일 200개까지
+    pub fn conflict_state(&self, repo: &Path) -> Result<view::ConflictStateView>; // 반복 2. 맥락 Merge·Unpark(반복 3: CherryPick·Revert·Rebase), 충돌 파일 200개까지. 명령은 `Core::conflict_state`를 거쳐 앱 작업이 돌면 `Busy`(화면은 받은 상태를 둔다)
     pub fn conflict_file(&self, repo: &Path, path: &str) -> Result<view::ConflictFileView>; // 반복 2. 구간(text) 또는 파일 단위(whole)
     pub fn stashes(&self, repo: &Path) -> Result<view::StashListView>;        // 반복 2. 맡겨 두기가 잠깐 만든 항목은 뺌
 }
@@ -302,6 +302,7 @@ journal 줄 형식(한 줄에 JSON 하나, 덧붙이기만 한다):
 - `clear-lock`(`lock`/Caution/`Irreversible`, 잠금 둘 다): 확인 토큰을 받은 뒤 다시 조사해 같은 조건일 때만 지운다. 지우기 직전에 링크가 아니고 이름이 `.lock`으로 끝나며 실제 위치가 git 폴더 안인지 본다(`locks::remove`). HEAD를 바꾸지 않아 실행기 백업과 journal 줄이 없다. `IndexLocked` 오류의 "정리하기"도 같은 액션이다.
 - 남은 맡긴 항목(`parked::leftovers`): stash 목록에서 메시지가 `higit parked <브랜치>`이고 브랜치 이름과 든 파일 경로 검사를 통과한 항목. `recover-parked`(`park`/Safe/`Nothing`)가 맡긴 ref로 옮기고(이미 있으면 그 ref를 `parked-leftover-<브랜치>` 백업으로) 목록에서 뺀다.
 - 다른 도구의 작업(`conflict::other_operation`): `rebase-merge`·`rebase-apply`·`CHERRY_PICK_HEAD`·`REVERT_HEAD`. 앱이 끝내지 않고 안내만 한다.
+- 앱이 시작한 복사·되돌리기·기록 정리(`core::operation`, D-101): 시작 전에 `OpMarker { kind, branch, head_before, base, oids, started_at }`를 표식으로 쓴다. `verify_state`가 맞을 때만 앱 작업으로 본다: 복사·되돌리기는 같은 브랜치에서 `CHERRY_PICK_HEAD`·`REVERT_HEAD`가 `oids[0]`, 기록 정리는 `rebase-merge/`의 `head-name`·`orig-head`·`onto`가 표식의 브랜치·`head_before`·`base`. 맞으면 충돌 맥락 `Operation`이고 `pending_work`·`conflict_state`의 "다른 도구의 작업"에서 뺀다(`conflict::foreign_operation`). 기록 정리는 git의 stage 2(정리된 기록)·3(옮기는 버전)을 바꿔 담아(`conflict_paths(entries, flip)`) 화면의 "내 쪽"이 옮기는 버전이다. 이름표: 복사·되돌리기는 내 쪽 = 지금 브랜치, 합칠 쪽 = 고른 버전, 기록 정리는 내 쪽 = `REBASE_HEAD`, 합칠 쪽 = 지금 HEAD(이름표는 브랜치). 멈춘 작업 없이 남은 표식은 `pending_work`가 앱 작업이 돌지 않을 때만 지운다(`operation::tidy`).
 - 앱이 시작한 작업의 표식(`core::marker`, D-102): `<git 폴더>/higit/<이름>.json`(`unpark`, `operation`) = `{ v, dir: git 폴더 실제 경로, body: 내용 JSON 글자, sig }`. 서명은 journal 키로 `higit-marker`·`v`·이름·`dir`·`body`에 건다. 서명이 없거나 틀리거나 `dir`이 지금 실제 경로와 다르면 없는 것으로 본다(저장소 폴더를 옮기면 진행 중 표식은 "다른 도구의 작업"으로 떨어진다). `higit` 폴더나 표식이 링크면 쓰지도 읽지도 않고, 256KB를 넘으면 읽지 않는다. 키는 `ExecCtx.key`(액션)와 `Queries`(조회)가 같은 것을 받는다. 앱 데이터 폴더를 못 써 키가 이번 실행만의 것이면(`JournalKey::is_persistent`가 거짓) 멈출 수 있는 작업은 충돌 때 바로 그만둔다(계획 008 E11~).
 
 #### 로그 파일 (D-078)

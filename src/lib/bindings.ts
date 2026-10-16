@@ -219,7 +219,13 @@ export type ConflictContext =
 /**  합치기(`MERGE_HEAD`). */
 "merge" | 
 /**  꺼내다 겹친 맡긴 파일(D-083). 합칠 쪽은 "맡겨 둔 파일"이다. */
-"unpark";
+"unpark" | 
+/**  앱이 시작한 이 버전만 복사하기(D-101). 합칠 쪽은 복사하는 버전. */
+"cherryPick" | 
+/**  앱이 시작한 되돌리기. 합칠 쪽은 되돌리는 버전. */
+"revert" | 
+/**  앱이 시작한 기록 정리. 내 쪽은 옮기는 버전, 합칠 쪽은 정리된 기록. */
+"rebase";
 
 /**  `Text`는 곳마다 고르고, `Whole`은 파일 단위로 한쪽을 고른다. */
 export type ConflictFileKind = "text" | "whole";

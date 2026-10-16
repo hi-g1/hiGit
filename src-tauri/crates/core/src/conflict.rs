@@ -17,6 +17,16 @@ pub(crate) enum Context {
     Merge,
     /// 앱이 시작한 맡긴 파일 꺼내기(D-083). 표식과 맡긴 ref가 서로 맞을 때만.
     Unpark(crate::parked::UnparkMarker),
+    /// 앱이 시작한 복사·되돌리기·기록 정리(D-101). 표식과 git 상태가 서로 맞을 때만.
+    Operation(crate::operation::OpMarker),
+}
+
+impl Context {
+    /// 기록 정리는 git의 두 쪽 뜻이 화면과 반대다: stage 2(`ours`)가 정리된 기록(지금 HEAD),
+    /// stage 3(`theirs`)이 옮기는 버전이다. 화면의 "내 쪽"은 옮기는 내 버전이다.
+    pub(crate) fn flipped(&self) -> bool {
+        matches!(self, Context::Operation(op) if op.kind == crate::operation::OpKind::Rebase)
+    }
 }
 
 /// 다른 도구가 시작한 리베이스·cherry-pick·revert. 앱이 끝내지 않는다.
@@ -33,8 +43,22 @@ pub(crate) fn other_operation(git_dir: &std::path::Path) -> Option<crate::view::
     .map(|(_, op)| op)
 }
 
-/// 앱이 다룰 수 있는 충돌 맥락. 합치는 중이면 `Merge`, 앱이 시작한 꺼내기가 충돌을 남겼으면
-/// `Unpark`, 아니면 `None`(다른 도구의 작업이거나 충돌 없음).
+/// 다른 도구의 작업 중 앱이 시작해 표식과 맞는 것은 뺀다.
+pub(crate) fn foreign_operation(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    key: &crate::undo::JournalKey,
+) -> Result<Option<crate::view::OtherOperation>> {
+    let found = other_operation(&git.git_dir(repo)?);
+    if found.is_some() && crate::operation::current(git, repo, key)?.is_some() {
+        return Ok(None);
+    }
+    Ok(found)
+}
+
+/// 앱이 다룰 수 있는 충돌 맥락. 합치는 중이면 `Merge`, 앱이 시작한 복사·되돌리기·기록 정리가
+/// 멈췄으면 `Operation`, 앱이 시작한 꺼내기가 충돌을 남겼으면 `Unpark`, 아니면 `None`(다른 도구의
+/// 작업이거나 충돌 없음).
 pub(crate) fn context(
     git: &dyn GitBackend,
     repo: &RepoPath,
@@ -42,6 +66,9 @@ pub(crate) fn context(
 ) -> Result<Option<Context>> {
     if git.resolve_ref(repo, "MERGE_HEAD")?.is_some() {
         return Ok(Some(Context::Merge));
+    }
+    if let Some(op) = crate::operation::current(git, repo, key)? {
+        return Ok(Some(Context::Operation(op)));
     }
     let Some(marker) = crate::parked::read_marker(&git.git_dir(repo)?, key) else {
         return Ok(None);
@@ -62,8 +89,9 @@ pub(crate) struct ConflictPath {
     pub theirs: Option<IndexEntry>,
 }
 
-/// index의 충돌 항목을 경로별로 묶는다. 순서는 index 순서(경로 순).
-pub(crate) fn conflict_paths(entries: Vec<IndexEntry>) -> Vec<ConflictPath> {
+/// index의 충돌 항목을 경로별로 묶는다. 순서는 index 순서(경로 순). `flip`이면 stage 2·3을
+/// 바꿔 담아 `ours`가 늘 화면의 "내 쪽"이다(`Context::flipped`).
+pub(crate) fn conflict_paths(entries: Vec<IndexEntry>, flip: bool) -> Vec<ConflictPath> {
     let mut found: Vec<ConflictPath> = Vec::new();
     for e in entries.into_iter().filter(|e| e.stage > 0) {
         let at = match found.iter().position(|c| c.path == e.path) {
@@ -78,9 +106,9 @@ pub(crate) fn conflict_paths(entries: Vec<IndexEntry>) -> Vec<ConflictPath> {
                 found.len() - 1
             }
         };
-        match e.stage {
-            1 => found[at].base = Some(e),
-            2 => found[at].ours = Some(e),
+        match (e.stage, flip) {
+            (1, _) => found[at].base = Some(e),
+            (2, false) | (3, true) => found[at].ours = Some(e),
             _ => found[at].theirs = Some(e),
         }
     }

@@ -300,10 +300,7 @@ pub async fn query_conflict_state(
     state: State<'_, AppState>,
     repo: String,
 ) -> CmdResult<ConflictStateView> {
-    blocking(state, move |core| {
-        core.queries().conflict_state(&PathBuf::from(repo))
-    })
-    .await
+    blocking(state, move |core| core.conflict_state(&PathBuf::from(repo))).await
 }
 
 /// 충돌 파일 하나의 고를 곳(D-086).
