@@ -117,6 +117,11 @@ fn read_only_global_fails_to_write() {
     std::fs::write(&global, "").unwrap();
     // git은 잠금 파일을 폴더에 만들므로 폴더를 읽기 전용으로 한다.
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
+    // root(CI의 기본 git 컨테이너)는 읽기 전용 폴더에도 쓸 수 있어 이 경우를 만들 수 없다.
+    if std::fs::write(dir.path().join("probe"), "").is_ok() {
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+        return;
+    }
     let result = backend(&global, None).run_global(&set("이름", "a@example.com"));
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
     assert!(result.is_err());
