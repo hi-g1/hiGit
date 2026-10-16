@@ -1,4 +1,4 @@
-//! 화면용 TS 바인딩과 액션 메타를 만든다: `cargo run -p app --bin gen-bindings`
+//! 화면용 TS 바인딩과 액션 메타를 만든다: `cargo run -p app --example gen-bindings`
 
 #![forbid(unsafe_code)]
 

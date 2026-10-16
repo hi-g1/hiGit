@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
-# 바이너리가 둘(higit, gen-bindings)이라 tauri dev가 띄울 것을 정한다.
+# tauri dev가 띄울 바이너리.
 default-run = "higit"
 
 [lib]
@@ -16,10 +16,11 @@ name = "app_lib"
 name = "higit"
 path = "src/main.rs"
 
-# 화면용 TS 바인딩과 액션 메타 생성: cargo run -p app --bin gen-bindings
-[[bin]]
+# 화면용 TS 바인딩과 액션 메타 생성: cargo run -p app --example gen-bindings
+# 바이너리가 아니라 예제라 설치 파일에 들어가지 않는다(Tauri는 모든 [[bin]]을 묶는다). cargo test·clippy는 컴파일한다.
+[[example]]
 name = "gen-bindings"
-path = "src/bin/gen-bindings.rs"
+path = "examples/gen-bindings.rs"
 
 [lints]
 workspace = true

@@ -111,8 +111,7 @@ pub const OP_PROGRESS_EVENT: &str = "op-progress";
 /// 이미 켜진 앱에 두 번째 실행이 폴더를 넘겼을 때(페이로드 없음, D-213). 화면은 `app_take_launch_folder`로 가져간다.
 pub const OPEN_FOLDER_EVENT: &str = "open-folder";
 
-const HEADER: &str =
-    "// 이 파일은 생성물입니다. 고치지 말고 `cargo run -p app --bin gen-bindings`로 다시 만드세요.";
+const HEADER: &str = "// 이 파일은 생성물입니다. 고치지 말고 `cargo run -p app --example gen-bindings`로 다시 만드세요.";
 
 /// `src/lib/bindings.ts`와 `src/lib/action-meta.json`을 쓴다. `frontend_lib`은 `src/lib` 폴더.
 pub fn export_all(frontend_lib: &Path) -> Result<(), Box<dyn std::error::Error>> {

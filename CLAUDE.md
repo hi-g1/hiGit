@@ -37,7 +37,7 @@ Git을 모르는 사람도 쉽게 쓰는 데스크톱 Git 앱. Tauri 2(Rust) + R
 - Rust 린트: `cargo clippy --workspace --all-targets -- -D warnings` (src-tauri에서)
 - Rust 형식: `cargo fmt --all --check` (src-tauri에서)
 - 의존성 검사: `cargo deny check` (src-tauri에서, 설정 `deny.toml`). CI `cargo-deny` 작업이 매번 돈다. 설치는 `cargo install cargo-deny --locked`.
-- 타입 바인딩 생성: `cargo run -p app --bin gen-bindings` (src-tauri에서). `src/lib/bindings.ts`, `src/lib/action-meta.json`을 다시 만든다. `core::view`나 Tauri 명령을 바꾸면 실행하고 결과를 함께 커밋한다(CI가 최신인지 확인).
+- 타입 바인딩 생성: `cargo run -p app --example gen-bindings` (src-tauri에서). `src/lib/bindings.ts`, `src/lib/action-meta.json`을 다시 만든다. `core::view`나 Tauri 명령을 바꾸면 실행하고 결과를 함께 커밋한다(CI가 최신인지 확인).
 - 빌드 확인: `pnpm tauri build --no-bundle`
 - 커밋 전 검사: `pnpm check:fast`(프론트·Rust 빠른 검사 전부), `pnpm check:full`(전체 테스트·바인딩 최신까지). hook이 자동으로 돌린다(D-022).
 - CI: `.github/workflows/ci.yml`(ubuntu-22.04, windows-latest). 결과는 `gh run list`.

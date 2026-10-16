@@ -73,7 +73,7 @@ if (mode === "fast") {
   run("Rust 테스트", "cargo", ["test", "-q", "--workspace"], "src-tauri");
   // 다시 생성해도 파일이 바뀌지 않아야 최신이다. git 상태(스테이지 여부)와 상관없이 내용으로 비교한다.
   const before = GENERATED.map(read);
-  run("바인딩 생성", "cargo", ["run", "-q", "-p", "app", "--bin", "gen-bindings"], "src-tauri");
+  run("바인딩 생성", "cargo", ["run", "-q", "-p", "app", "--example", "gen-bindings"], "src-tauri");
   const stale = GENERATED.filter((path, i) => read(path) !== before[i]);
   if (stale.length > 0) {
     console.error(`\n✖ 검사 실패: 바인딩이 최신이 아니었습니다. 다시 생성했으니 함께 커밋해 주세요: ${stale.join(", ")}`);

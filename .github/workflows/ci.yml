@@ -135,7 +135,7 @@ jobs:
       - name: 바인딩이 최신인지
         working-directory: src-tauri
         run: |
-          cargo run -p app --bin gen-bindings
+          cargo run -p app --example gen-bindings
           git diff --exit-code -- ../src/lib
 
       - name: 프론트 빌드

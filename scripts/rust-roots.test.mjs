@@ -10,8 +10,12 @@ const TAURI = fileURLToPath(new URL("../src-tauri/", import.meta.url));
 
 function roots() {
   const found = ["src/lib.rs", "src/main.rs"];
-  for (const name of readdirSync(join(TAURI, "src/bin"))) {
-    if (name.endsWith(".rs")) found.push(`src/bin/${name}`);
+  // 실행 파일(src/bin)과 예제(examples, gen-bindings)도 crate 루트다.
+  for (const dir of ["src/bin", "examples"]) {
+    if (!existsSync(join(TAURI, dir))) continue;
+    for (const name of readdirSync(join(TAURI, dir))) {
+      if (name.endsWith(".rs")) found.push(`${dir}/${name}`);
+    }
   }
   for (const crate of readdirSync(join(TAURI, "crates"))) {
     const lib = `crates/${crate}/src/lib.rs`;

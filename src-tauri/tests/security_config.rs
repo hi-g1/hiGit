@@ -169,3 +169,60 @@ fn window_minimum_size_matches_the_fit_rule() {
     assert_eq!(window["minHeight"], 560);
     assert!(read("src/window_fit.rs").contains("MIN_LOGICAL: (u32, u32) = (800, 560)"));
 }
+
+#[test]
+fn installers_are_user_nsis_deb_and_appimage() {
+    // D-220: Windows는 관리자 확인 없는 사용자 단위 NSIS(한국어·English), Linux는 deb·AppImage.
+    let conf = json("tauri.conf.json");
+    let bundle = &conf["bundle"];
+    assert_eq!(
+        bundle["targets"],
+        serde_json::json!(["nsis", "deb", "appimage"])
+    );
+    let nsis = &bundle["windows"]["nsis"];
+    assert_eq!(nsis["installMode"], "currentUser");
+    assert_eq!(nsis["languages"], serde_json::json!(["Korean", "English"]));
+    assert_eq!(
+        bundle["linux"]["deb"]["depends"],
+        serde_json::json!(["git"])
+    );
+    // 서명 설정은 아직 없다(D-221, 자리만).
+    assert!(bundle["windows"].get("certificateThumbprint").is_none());
+    assert!(bundle["windows"].get("signCommand").is_none());
+    // 라이선스 원문을 함께 넣는다.
+    let resources = bundle["resources"].as_object().unwrap();
+    for name in [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
+        "licenses/Pretendard-OFL.txt",
+        "licenses/JetBrainsMono-OFL.txt",
+        "licenses/D2Coding-OFL.txt",
+    ] {
+        assert!(resources.values().any(|v| v == name), "{name}");
+    }
+}
+
+#[test]
+fn desktop_entry_does_not_claim_folders() {
+    // 폴더 열기는 오른쪽 클릭 메뉴로만 한다. `.desktop`이 폴더 형식을 맡으면 파일 앱의 기본 앱이 바뀐다.
+    let desktop = read("../packaging/linux/higit.desktop");
+    assert!(!desktop.contains("MimeType"), "{desktop}");
+    assert!(desktop.contains("Categories=Development;RevisionControl;"));
+}
+
+#[test]
+fn uninstaller_removes_only_the_shell_menu_keys() {
+    let hooks = read("../packaging/windows/installer-hooks.nsh");
+    let deletes: Vec<&str> = hooks
+        .lines()
+        .map(str::trim)
+        .filter(|l| l.starts_with("Delete") || l.starts_with("Write") || l.starts_with("Exec"))
+        .collect();
+    assert_eq!(
+        deletes,
+        [
+            r#"DeleteRegKey HKCU "Software\Classes\Directory\shell\higit""#,
+            r#"DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\higit""#,
+        ]
+    );
+}

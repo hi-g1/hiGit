@@ -45,7 +45,7 @@
 └─ src-tauri/               app 크레이트 겸 워크스페이스 루트(D-018)
    ├─ Cargo.toml             [package] app + [workspace] members = ["crates/*"]
    ├─ tauri.conf.json, build.rs, capabilities/, icons/
-   ├─ src/                   app: main.rs, lib.rs, commands.rs, bindings.rs(D-019), bin/gen-bindings.rs
+   ├─ src/                   app: main.rs, lib.rs, commands.rs, bindings.rs(D-019), ../examples/gen-bindings.rs(예제라 설치 파일에 안 들어감)
    └─ crates/
       ├─ core/              패키지 이름 higit-core(D-012). src/github/(연결 서비스·helper·검토 요청 대상)
       ├─ git/
