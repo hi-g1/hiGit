@@ -60,7 +60,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   act(() => {
     useHistoryStore.setState({ selectedId: null, anchorId: null, rangeIds: [], zoom: "all", scope: "all", expanded: new Set() });
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
     useRepoStore.setState({ view: "history" });
   });
 });

@@ -73,8 +73,16 @@ export function useUndo(repo: string) {
 
   /** 바로 한 일의 결과를 알리고 "되돌리기"를 붙인다. */
   const notifyDone = useCallback(
-    (text: string) => show(text, { label: m.undo, kbd: SHORTCUTS.undo.label, onClick: () => void undo() }),
-    [show, m, undo],
+    (text: string) =>
+      show(text, {
+        label: m.undo,
+        kbd: SHORTCUTS.undo.label,
+        onClick: () => void undo(),
+        // 새 되돌리기 토스트가 오면 이 단추는 작업 내역으로 바뀐다(D-192).
+        kind: "undo",
+        stale: { label: m.openActivity, onClick: () => setView("activity") },
+      }),
+    [show, m, undo, setView],
   );
 
   return { undo, redo, notifyDone };

@@ -100,8 +100,10 @@ select {
   user-select: none;
 }
 
-/* 얇은 스크롤바: WebView2는 표준 속성, WebKitGTK는 ::-webkit-scrollbar */
+/* 얇은 스크롤바: WebView2는 표준 속성, WebKitGTK는 ::-webkit-scrollbar.
+   토스트가 포커스 줄을 가리지 않게 스크롤 칸 아래쪽에 토스트 높이만큼 여유(WCAG 2.4.11, D-192) */
 * {
+  scroll-padding-bottom: var(--toast-clearance, 0);
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }

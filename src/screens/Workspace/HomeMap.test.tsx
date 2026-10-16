@@ -110,7 +110,8 @@ describe("홈 노선도 폭", () => {
       homeMap.mockResolvedValue(view({ twoLines: true, current: "기능", mainSince: 1, mainLast: c(9) }));
       show();
       await screen.findAllByRole("img", { name: "버전 1" });
-      expect(observed).toHaveLength(1);
+      // 토스트 칸(ol)도 높이를 잰다(D-192). 노선도 칸만 센다.
+      expect(observed.filter((el) => el.tagName !== "OL")).toHaveLength(1);
       // 좁으면 지금 줄만(기본 브랜치 줄 없음).
       expect(document.querySelector("svg")?.getAttribute("width")).toBe("320");
     } finally {

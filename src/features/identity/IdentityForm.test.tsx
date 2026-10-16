@@ -22,7 +22,7 @@ function show() {
 
 afterEach(() => {
   vi.clearAllMocks();
-  useToastStore.setState({ toast: null });
+  useToastStore.setState({ toasts: [], toast: null });
 });
 
 describe("이름과 이메일(D-125)", () => {

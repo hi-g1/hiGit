@@ -34,7 +34,7 @@ function show(h: MergeHintView, onDone = vi.fn()) {
 
 afterEach(() => {
   vi.clearAllMocks();
-  useToastStore.setState({ toast: null });
+  useToastStore.setState({ toasts: [], toast: null });
 });
 
 describe("합치기 제안", () => {

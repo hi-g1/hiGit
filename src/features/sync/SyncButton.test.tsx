@@ -35,7 +35,7 @@ afterEach(() => {
   vi.clearAllMocks();
   act(() => {
     useSyncStore.setState({ overlap: [], error: null, fetchFailedAt: null, paused: false });
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
     useProgressStore.getState().clear("/repo");
   });
 });

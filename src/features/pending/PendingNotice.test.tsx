@@ -35,7 +35,7 @@ afterEach(() => {
   vi.clearAllMocks();
   act(() => {
     usePendingStore.setState({ dismissed: new Set() });
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
     useSyncStore.setState({ error: null });
   });
 });

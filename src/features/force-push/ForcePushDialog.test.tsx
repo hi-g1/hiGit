@@ -56,7 +56,7 @@ afterEach(() => {
   vi.clearAllMocks();
   act(() => {
     useForcePushStore.setState({ open: false });
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
   });
 });
 

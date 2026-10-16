@@ -30,7 +30,7 @@ function show({ hasChanges = true, onDone = vi.fn() } = {}) {
 afterEach(() => {
   vi.clearAllMocks();
   act(() => {
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
     useRepoStore.setState({ view: "home" });
   });
 });

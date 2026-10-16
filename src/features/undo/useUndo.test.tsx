@@ -27,7 +27,7 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
   act(() => {
-    useToastStore.setState({ toast: null });
+    useToastStore.setState({ toasts: [], toast: null });
     useUndoStore.setState({ restoredMessage: null });
   });
 });
