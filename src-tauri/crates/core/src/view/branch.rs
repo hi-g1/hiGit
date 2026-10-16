@@ -57,3 +57,30 @@ pub enum NameProblem {
     /// 같은 이름(대소문자 무시)의 로컬 브랜치가 있다.
     Exists,
 }
+
+/// 브랜치 바꾸기 대화상자의 값(D-195). 읽기만 하고, 실행할 때 core가 다시 본다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SwitchPlanView {
+    /// 두고 가거나 가져갈 고친 파일 수. 버전이 없거나 특정 버전을 보는 중이면 묻지 않으므로 0.
+    pub dirty_files: u32,
+    /// 새 브랜치로 옮길 수 있다.
+    pub can_carry: bool,
+    /// 옮길 수 없는 까닭.
+    pub reason: Option<CarryBlock>,
+    /// 겹치는 파일(5개까지).
+    pub blocked: Vec<String>,
+    /// 겹치는 파일 전체 수.
+    pub blocked_total: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum CarryBlock {
+    /// 도착할 브랜치가 같은 파일을 다르게 바꿨다.
+    Overlap,
+    /// 도착할 브랜치에 두고 간 파일이 있다.
+    ParkedThere,
+    /// 파일이 너무 많거나 커서 미리 계산하지 않았다(500개·50MB).
+    TooBig,
+}

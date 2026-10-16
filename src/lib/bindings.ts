@@ -66,6 +66,8 @@ export const commands = {
 	queryForcePushPlan: (repo: string) => __TAURI_INVOKE<ForcePushPlanView>("query_force_push_plan", { repo }),
 	/**  원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 읽기만 한다. */
 	queryRemoteBranchPlan: (repo: string, remote: string, branch: string) => __TAURI_INVOKE<RemoteBranchPlanView>("query_remote_branch_plan", { repo, remote, branch }),
+	/**  브랜치 바꾸기 대화상자의 값(D-195). 고친 파일 수와 새 브랜치로 옮길 수 있는지. 네트워크 없이 읽기만 한다. */
+	querySwitchPlan: (repo: string, branch: string, remote: string | null) => __TAURI_INVOKE<SwitchPlanView>("query_switch_plan", { repo, branch, remote }),
 	/**  GitHub에 올리기 대화상자의 처음 값(D-132). */
 	queryPublishDraft: (repo: string) => __TAURI_INVOKE<PublishDraftView>("query_publish_draft", { repo }),
 	/**  내 GitHub 저장소 목록 한 쪽(D-133). 인자는 쪽 번호뿐이다. */
@@ -166,7 +168,7 @@ export type ActionInput_Deserialize =
 /**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
 ({ id: "clear-lock" }) & { input?: never } | 
 /**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
-({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Deserialize } | 
+({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput_Deserialize } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Deserialize } | 
 /**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
 { id: "amend"; input: AmendInput } | 
 /**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
@@ -236,7 +238,7 @@ export type ActionInput_Serialize =
 /**  버려진 잠금 파일을 지운다(확인 필요, D-081). */
 ({ id: "clear-lock" }) & { input?: never } | 
 /**  stash 목록에 남은 맡긴 항목을 맡긴 ref로 옮긴다(D-082). */
-({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Serialize } | 
+({ id: "recover-parked" }) & { input?: never } | { id: "switch"; input: SwitchInput_Serialize } | { id: "branch-create"; input: BranchCreateInput } | { id: "fetch"; input: FetchInput } | ({ id: "pull" }) & { input?: never } | ({ id: "push" }) & { input?: never } | { id: "sync"; input: SyncInput_Serialize } | 
 /**  지금 위치의 버전을 메시지·넣은 파일로 고친다(D-097). */
 { id: "amend"; input: AmendInput } | 
 /**  고른 버전(지금 위치의 조상)의 변경을 취소하는 새 버전을 만든다. */
@@ -286,7 +288,11 @@ export type ActionResult = { kind: "repoCreated"; repo: RepoInfo } | { kind: "st
 /**  복사·되돌리기·기록 정리가 멈췄다. 충돌 해결 화면으로 간다(충돌 0곳이면 hook 거부 등). */
 { kind: "operationConflicts"; context: ConflictContext; paths: string[] } | { kind: "switched"; branch: string; 
 /**  떠난 브랜치에 맡긴 파일이 있으면 그 브랜치 이름. */
-parkedOn: string | null; unparked: boolean; unparkBlocked: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
+parkedOn: string | null; unparked: boolean; unparkBlocked: boolean; 
+/**  두고 가거나 가져간 고친 파일 수(D-195). */
+files: number; 
+/**  고친 파일을 이 브랜치로 가져왔다. */
+carried: boolean } | { kind: "branchCreated"; name: string } | { kind: "fetched" } | { kind: "synced"; received: number; sent: number; merged: boolean; 
 /**  겹친 파일. 비어 있지 않으면 올리지 않았다. */
 overlap: string[]; 
 /**  겹쳐서 합치기를 시작했다. 화면은 충돌 해결 화면으로 간다(D-069). */
@@ -413,6 +419,14 @@ export type BranchView = {
 	ahead: number,
 	behind: number,
 };
+
+export type CarryBlock = 
+/**  도착할 브랜치가 같은 파일을 다르게 바꿨다. */
+"overlap" | 
+/**  도착할 브랜치에 두고 간 파일이 있다. */
+"parkedThere" | 
+/**  파일이 너무 많거나 커서 미리 계산하지 않았다(500개·50MB). */
+"tooBig";
 
 /**  화면에 보여줄 변경 종류 하나. */
 export type ChangeKind = "added" | "modified" | "deleted" | "renamed" | "typeChanged" | "conflicted" | "untracked";
@@ -603,6 +617,13 @@ export type DiffRequest = {
 	fullContext?: boolean,
 };
 
+/**  브랜치를 바꿀 때 고친 파일(D-165, D-195). */
+export type DirtyChoice = 
+/**  떠나는 브랜치에 두고 간다. 돌아오면 꺼낸다. */
+"park" | 
+/**  도착한 브랜치로 가져간다. 겹치면 바꾸지 않는다. */
+"carry";
+
 /**  화면 배율을 정하는 OS 값(D-147). 화면이 루트 글자 크기를 계산한다. */
 export type DisplayHintsView = {
 	/**  OS 기본 본문 글자 크기(px). Windows 14, Ubuntu 15. */
@@ -641,7 +662,7 @@ export type EmailCheckView = {
 	state: EmailCheckState,
 };
 
-export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
+export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "carryBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | 
 /**  올린 버전의 기록을 바꿔 원격과 갈라져 동기화가 멈췄다(D-129). */
 "rewrotePublished" | 
 /**  설정 "올린 버전도 바꾸기"가 꺼져 있다(D-127). */
@@ -1549,9 +1570,36 @@ export type StatusView = {
 };
 
 /**  브랜치 갈아타기. 원격에만 있는 브랜치면 `remote`에 원격 이름을 주고, 같은 이름의 로컬 브랜치를 만들어 연결한다. */
-export type SwitchInput = {
+export type SwitchInput = SwitchInput_Serialize | SwitchInput_Deserialize;
+
+/**  브랜치 갈아타기. 원격에만 있는 브랜치면 `remote`에 원격 이름을 주고, 같은 이름의 로컬 브랜치를 만들어 연결한다. */
+export type SwitchInput_Deserialize = {
 	branch: string,
 	remote: string | null,
+	/**  고친 파일을 어떻게 할지(D-195). 없으면 여기 두기(`Park`). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	dirty?: DirtyChoice | null,
+};
+
+/**  브랜치 갈아타기. 원격에만 있는 브랜치면 `remote`에 원격 이름을 주고, 같은 이름의 로컬 브랜치를 만들어 연결한다. */
+export type SwitchInput_Serialize = {
+	branch: string,
+	remote: string | null,
+	/**  고친 파일을 어떻게 할지(D-195). 없으면 여기 두기(`Park`). 없으면 직렬화하지 않아 옛 journal 서명과 같다. */
+	dirty?: DirtyChoice | null,
+};
+
+/**  브랜치 바꾸기 대화상자의 값(D-195). 읽기만 하고, 실행할 때 core가 다시 본다. */
+export type SwitchPlanView = {
+	/**  두고 가거나 가져갈 고친 파일 수. 버전이 없거나 특정 버전을 보는 중이면 묻지 않으므로 0. */
+	dirtyFiles: number,
+	/**  새 브랜치로 옮길 수 있다. */
+	canCarry: boolean,
+	/**  옮길 수 없는 까닭. */
+	reason: CarryBlock | null,
+	/**  겹치는 파일(5개까지). */
+	blocked: string[],
+	/**  겹치는 파일 전체 수. */
+	blockedTotal: number,
 };
 
 export type SyncInput = SyncInput_Serialize | SyncInput_Deserialize;

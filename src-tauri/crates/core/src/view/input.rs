@@ -242,6 +242,20 @@ pub struct CommitInput {
 pub struct SwitchInput {
     pub branch: String,
     pub remote: Option<String>,
+    /// 고친 파일을 어떻게 할지(D-195). 없으면 여기 두기(`Park`). 없으면 직렬화하지 않아 옛 journal 서명과 같다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[specta(optional)]
+    pub dirty: Option<DirtyChoice>,
+}
+
+/// 브랜치를 바꿀 때 고친 파일(D-165, D-195).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum DirtyChoice {
+    /// 떠나는 브랜치에 두고 간다. 돌아오면 꺼낸다.
+    Park,
+    /// 도착한 브랜치로 가져간다. 겹치면 바꾸지 않는다.
+    Carry,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]
@@ -575,6 +589,34 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn switch_written_before_the_dirty_choice_is_the_same_text() {
+        // 옛 journal 줄의 서명은 입력 글자에 걸려 있다. 선택이 없으면 새 칸을 쓰지 않는다(D-195).
+        let old = r#"{"id":"switch","input":{"branch":"main","remote":null}}"#;
+        let parsed: ActionInput = serde_json::from_str(old).unwrap();
+        assert_eq!(
+            parsed,
+            ActionInput::Switch(SwitchInput {
+                branch: "main".into(),
+                remote: None,
+                dirty: None,
+            })
+        );
+        assert_eq!(serde_json::to_string(&parsed).unwrap(), old);
+        assert_eq!(parsed.journal_copy(), parsed);
+        let carry = ActionInput::Switch(SwitchInput {
+            branch: "main".into(),
+            remote: None,
+            dirty: Some(DirtyChoice::Carry),
+        });
+        let json = serde_json::to_string(&carry).unwrap();
+        assert_eq!(
+            json,
+            r#"{"id":"switch","input":{"branch":"main","remote":null,"dirty":"carry"}}"#
+        );
+        assert_eq!(carry.journal_copy(), carry);
+    }
 
     #[test]
     fn sync_input_written_before_merge_anyway_is_the_same_text() {

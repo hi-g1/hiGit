@@ -358,6 +358,7 @@ mod unpark {
             &ActionInput::Switch(SwitchInput {
                 branch: "기능".into(),
                 remote: None,
+                dirty: None,
             }),
             None,
         )

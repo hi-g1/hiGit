@@ -27,6 +27,7 @@ export const queryKeys = {
   rewritePlan: (repo: string, oids: readonly string[]) => ["rewritePlan", repo, oids.join(",")] as const,
   forcePushPlan: (repo: string) => ["forcePushPlan", repo] as const,
   remoteBranchPlan: (repo: string, remote: string, branch: string) => ["remoteBranchPlan", repo, remote, branch] as const,
+  switchPlan: (repo: string, branch: string, remote: string | null) => ["switchPlan", repo, branch, remote] as const,
   branches: (repo: string) => ["branches", repo] as const,
   branchName: (repo: string, name: string) => ["branchName", repo, name] as const,
   homeMap: (repo: string) => ["homeMap", repo] as const,
@@ -385,6 +386,17 @@ export function useRemoteBranchPlan(repo: string, remote: string, branch: string
     queryKey: queryKeys.remoteBranchPlan(repo, remote, branch),
     queryFn: () => api.remoteBranchPlan(repo, remote, branch),
     enabled,
+  });
+}
+
+/** 브랜치 바꾸기 대화상자의 값(D-195). 대화상자가 열렸을 때만, 열 때마다 새로 읽는다. */
+export function useSwitchPlan(repo: string, branch: string, remote: string | null, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.switchPlan>>, ApiError>({
+    queryKey: queryKeys.switchPlan(repo, branch, remote),
+    queryFn: () => api.switchPlan(repo, branch, remote),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 

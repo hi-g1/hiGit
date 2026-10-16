@@ -1326,6 +1326,52 @@ impl Queries {
 
     /// 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 네트워크 없이 로컬 추적 ref로 계산한다.
     /// 원격은 목록에 있어야 하고 추적 ref는 목록에서 정확히 같은 이름만 찾는다(계획 010 R14).
+    /// 브랜치 바꾸기 대화상자의 값(D-195). ref·index·작업 폴더를 바꾸지 않는다(스냅샷 객체만 만든다).
+    pub fn switch_plan(
+        &self,
+        repo: &Path,
+        branch: &str,
+        remote: Option<&str>,
+    ) -> Result<crate::view::SwitchPlanView> {
+        use crate::actions::switch::{CarryCheck, carry_check};
+        let root = self.opened_repo(repo)?;
+        let git = self.git.as_ref();
+        crate::actions::names::validate_ref_like(branch)?;
+        if let Some(r) = remote {
+            crate::actions::names::validate_ref_like(r)?;
+        }
+        let mut view = crate::view::SwitchPlanView {
+            dirty_files: 0,
+            can_carry: true,
+            reason: None,
+            blocked: Vec::new(),
+            blocked_total: 0,
+        };
+        let entries = git.status(&root)?.entries;
+        // 버전이 없거나 특정 버전을 보는 중이면 갈아타기가 맡기지 않으므로 묻지 않는다.
+        let (Some(current), Some(head)) =
+            (git.current_branch(&root)?, git.resolve_ref(&root, "HEAD")?)
+        else {
+            return Ok(view);
+        };
+        if entries.is_empty() || (remote.is_none() && current == branch) {
+            return Ok(view);
+        }
+        view.dirty_files = u32::try_from(entries.len()).unwrap_or(u32::MAX);
+        if let CarryCheck::Blocked {
+            reason,
+            paths,
+            total,
+        } = carry_check(git, &root, branch, remote, &head, &entries)?
+        {
+            view.can_carry = false;
+            view.reason = Some(reason);
+            view.blocked = paths;
+            view.blocked_total = total;
+        }
+        Ok(view)
+    }
+
     pub fn remote_branch_plan(
         &self,
         repo: &Path,

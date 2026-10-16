@@ -208,6 +208,8 @@ export const api = {
   publishDraft: (repo: string) => call(commands.queryPublishDraft(repo)),
   remoteBranchPlan: (repo: string, remote: string, branch: string) =>
     call(commands.queryRemoteBranchPlan(repo, remote, branch)),
+  switchPlan: (repo: string, branch: string, remote: string | null) =>
+    call(commands.querySwitchPlan(repo, branch, remote)),
   branchProtection: (repo: string, remote: string, branch: string) =>
     call(commands.queryBranchProtection(repo, remote, branch)),
   commitDetail: (repo: string, oid: string) => call(commands.queryCommitDetail(repo, oid)),

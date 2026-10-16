@@ -14,7 +14,7 @@ use higit_core::view::{
     PrDraftView, PrListRequest, PrListView, PrRepoView, PreviewView, ProjectOpenResult,
     ProjectSummaryView, PublishDraftView, RecentProject, RecoveryView, RemoteBranchPlanView,
     RewritePlanView, ScopeAdd, SecretCheckRequest, SecretCheckView, StashListView, StatusView,
-    TrustChoice, UndoResult,
+    SwitchPlanView, TrustChoice, UndoResult,
 };
 use higit_core::{Core, WatchSignal};
 use tauri::{AppHandle, Emitter, State};
@@ -483,6 +483,22 @@ pub async fn query_publish_draft(
 ) -> CmdResult<PublishDraftView> {
     blocking(state, move |core| {
         core.queries().publish_draft(&PathBuf::from(repo))
+    })
+    .await
+}
+
+/// 브랜치 바꾸기 대화상자의 값(D-195). 고친 파일 수와 새 브랜치로 옮길 수 있는지. 네트워크 없이 읽기만 한다.
+#[tauri::command]
+#[specta::specta]
+pub async fn query_switch_plan(
+    state: State<'_, AppState>,
+    repo: String,
+    branch: String,
+    remote: Option<String>,
+) -> CmdResult<SwitchPlanView> {
+    blocking(state, move |core| {
+        core.queries()
+            .switch_plan(&PathBuf::from(repo), &branch, remote.as_deref())
     })
     .await
 }

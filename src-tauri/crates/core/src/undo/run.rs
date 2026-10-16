@@ -526,14 +526,17 @@ fn undo_switch(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
         .branch
         .clone()
         .ok_or(CoreError::NothingToUndo)?;
+    // 가져갔던 파일은 다시 가져온다. 그사이 겹치게 되었으면 되돌리지 않는다(D-195).
     switch_with_parking(
         git,
         repo,
         &SwitchInput {
             branch: back,
             remote: None,
+            dirty: input.dirty,
         },
-    )?;
+    )
+    .map_err(stale_if_blocked)?;
     // 원격 브랜치에서 새로 만든 로컬 브랜치는 지운다. 그 위에 맡긴 파일이 생겼으면 남긴다(D-054).
     if input.remote.is_some()
         && let Some(after) = entry.after.head_oid()
@@ -561,8 +564,18 @@ fn redo_switch(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<(
     let input = SwitchInput {
         branch: input.branch.clone(),
         remote: input.remote.clone().filter(|_| !local_exists),
+        dirty: input.dirty,
     };
-    switch_with_parking(git, repo, &input).map(|_| ())
+    switch_with_parking(git, repo, &input)
+        .map(|_| ())
+        .map_err(stale_if_blocked)
+}
+
+fn stale_if_blocked(e: CoreError) -> CoreError {
+    match e {
+        CoreError::CarryBlocked(_) => CoreError::UndoStale,
+        e => e,
+    }
 }
 
 /// 새 브랜치 되돌리기: 이전 브랜치로 돌아가고(고친 파일은 따라옴) 만든 브랜치를 지운다.

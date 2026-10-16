@@ -73,6 +73,11 @@ pub enum CoreError {
     #[error("맡긴 파일을 원래대로 꺼내지 못했습니다")]
     ParkBlocked(String),
 
+    /// 고친 파일이 도착할 브랜치와 겹쳐 가져가지 않았다(D-195). 갈아타지 않았고 작업 폴더는 그대로다.
+    /// 겹친 파일(5개까지, 줄마다 하나).
+    #[error("고친 파일이 겹쳐 가져가지 않았습니다")]
+    CarryBlocked(String),
+
     /// 같은 이름(대소문자 무시)의 브랜치가 있다.
     #[error("같은 이름의 브랜치가 있습니다")]
     BranchExists,
@@ -266,6 +271,7 @@ impl CoreError {
             CoreError::GitTooOld { found } => Some(format!("git version {found}")),
             CoreError::WatchUnavailable(reason) => Some(reason.clone()),
             CoreError::ParkBlocked(detail) => Some(detail.clone()),
+            CoreError::CarryBlocked(detail) if !detail.is_empty() => Some(detail.clone()),
             CoreError::Github { detail, .. } => detail.clone(),
             CoreError::RemoteRenamePartial(detail) => Some(detail.clone()),
             _ => None,

@@ -39,6 +39,7 @@
     "allow-query-rewrite-plan",
     "allow-query-force-push-plan",
     "allow-query-remote-branch-plan",
+    "allow-query-switch-plan",
     "allow-query-publish-draft",
     "allow-query-github-repos",
     "allow-query-github-email-check",

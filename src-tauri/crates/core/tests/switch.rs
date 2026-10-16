@@ -58,6 +58,7 @@ fn switch(core: &Core, dir: &Path, branch: &str) -> ActionResult {
         &ActionInput::Switch(SwitchInput {
             branch: branch.into(),
             remote: None,
+            dirty: None,
         }),
         None,
     )
@@ -173,6 +174,7 @@ fn failed_switch_restores_edits() {
             &ActionInput::Switch(SwitchInput {
                 branch: "없는-브랜치".into(),
                 remote: None,
+                dirty: None,
             }),
             None,
         )
@@ -203,6 +205,7 @@ fn failing_to_keep_the_parked_files_puts_them_back() {
             &ActionInput::Switch(SwitchInput {
                 branch: "other".into(),
                 remote: None,
+                dirty: None,
             }),
             None,
         )
@@ -241,6 +244,8 @@ fn arriving_with_edits_leaves_parked_files_without_an_error() {
             parked_on: None,
             unparked: false,
             unpark_blocked: true,
+            files: 0,
+            carried: false,
         }
     );
     assert!(parked_ref(dir, "main"), "맡긴 파일은 그대로 남는다");
@@ -260,6 +265,7 @@ fn switching_to_a_name_git_rejects_is_refused() {
             &ActionInput::Switch(SwitchInput {
                 branch: "a..b".into(),
                 remote: None,
+                dirty: None,
             }),
             None,
         )
@@ -357,6 +363,7 @@ fn no_switch_during_merge() {
             &ActionInput::Switch(SwitchInput {
                 branch: "other".into(),
                 remote: None,
+                dirty: None,
             }),
             None,
         )
@@ -380,6 +387,7 @@ fn remote_branch_switch_and_undo_removes_created_local() {
         &ActionInput::Switch(SwitchInput {
             branch: "원격기능".into(),
             remote: Some("origin".into()),
+            dirty: None,
         }),
         None,
     )

@@ -27,6 +27,7 @@ export const ERROR_FIX: Record<ErrorCode, FixKind> = {
   backupFailed: "none",
   operationInProgress: "none",
   parkBlocked: "none",
+  carryBlocked: "none",
   needsTrust: "none",
   noRemote: "none",
   watchUnavailable: "none",

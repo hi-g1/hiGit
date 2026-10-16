@@ -363,6 +363,7 @@ fn action_input_tags_match_registry() {
         ActionInput::Switch(higit_core::view::SwitchInput {
             branch: "main".into(),
             remote: None,
+            dirty: None,
         }),
         ActionInput::BranchCreate(higit_core::view::BranchCreateInput {
             name: "새것".into(),

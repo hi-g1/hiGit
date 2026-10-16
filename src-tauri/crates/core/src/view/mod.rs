@@ -22,7 +22,9 @@ mod secret;
 mod settings;
 mod stash;
 
-pub use branch::{BranchListView, BranchNameCheck, BranchRow, NameProblem};
+pub use branch::{
+    BranchListView, BranchNameCheck, BranchRow, CarryBlock, NameProblem, SwitchPlanView,
+};
 pub use conflict::{
     ConflictContext, ConflictFileKind, ConflictFileSummary, ConflictFileView, ConflictHunkView,
     ConflictSide, ConflictStateView, SideState,
@@ -44,9 +46,9 @@ pub use hosting::{
 pub use identity::IdentityView;
 pub use input::{
     ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
-    CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, ForcePushInput,
-    HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput, PrCommentInput,
-    PrCreateInput, PrMergeInput, PrNumberInput, PublishInput, RemoteBranchInput,
+    CommitInput, ConflictFinishInput, DirtyChoice, FetchInput, FileChoice, FileResolution,
+    ForcePushInput, HunkChoice, IdentityInput, MergeInput, MergeIntoInput, OidInput, PathsInput,
+    PrCommentInput, PrCreateInput, PrMergeInput, PrNumberInput, PublishInput, RemoteBranchInput,
     RemoteBranchRenameInput, RemoteTagInput, RestoreInput, RewriteInput, RewriteKindInput,
     RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TagPushInput, TakeOutInput,
     TakeOutSource, Visibility,
@@ -515,6 +517,10 @@ pub enum ActionResult {
         parked_on: Option<String>,
         unparked: bool,
         unpark_blocked: bool,
+        /// 두고 가거나 가져간 고친 파일 수(D-195).
+        files: u32,
+        /// 고친 파일을 이 브랜치로 가져왔다.
+        carried: bool,
     },
     BranchCreated {
         name: String,
@@ -646,6 +652,8 @@ impl From<Outcome> for ActionResult {
                 parked_on: r.parked.map(|(b, _)| b),
                 unparked: r.unparked,
                 unpark_blocked: r.unpark_blocked,
+                files: r.files,
+                carried: r.carried,
             },
             Outcome::BranchCreated { name } => ActionResult::BranchCreated { name },
             Outcome::Fetched => ActionResult::Fetched,
@@ -728,6 +736,7 @@ pub enum ErrorCode {
     BackupFailed,
     OperationInProgress,
     ParkBlocked,
+    CarryBlocked,
     NeedsTrust,
     NoRemote,
     WatchUnavailable,
@@ -909,6 +918,7 @@ impl From<&CoreError> for ErrorView {
             CoreError::NeedsTrust => ErrorCode::NeedsTrust,
             CoreError::NoRemote => ErrorCode::NoRemote,
             CoreError::ParkBlocked(_) => ErrorCode::ParkBlocked,
+            CoreError::CarryBlocked(_) => ErrorCode::CarryBlocked,
             CoreError::BranchExists => ErrorCode::BranchExists,
             CoreError::WatchUnavailable(_) => ErrorCode::WatchUnavailable,
             CoreError::PublishedHistory => ErrorCode::PublishedHistory,

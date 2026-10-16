@@ -567,6 +567,7 @@ export const en: Messages = {
     stagedChanges: `Some files are in this version. Remove them or use ${t("commit")} first.`,
     operationInProgress: `Finish or stop the ${t("merge").toLowerCase()} first.`,
     parkBlocked: "The parked files couldn't be brought back. They are still kept safely.",
+    carryBlocked: `Some files overlap, so the ${t("branch").toLowerCase()} wasn't switched. Your changes are untouched.`,
     needsTrust: "Decide whether to trust this project first.",
     dubiousOwnership: "This folder belongs to another user.",
     noRemote: `No ${t("remote").toLowerCase()} is connected.`,
