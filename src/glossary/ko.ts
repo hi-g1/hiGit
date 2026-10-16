@@ -141,6 +141,18 @@ export const ko: Glossary = {
     command: null,
     description: "내 브랜치를 합쳐 달라고 팀에 요청",
   },
+  "pr-draft": {
+    friendly: "초안",
+    gitName: "draft pull request",
+    command: null,
+    description: "아직 검토를 받을 준비가 안 된 검토 요청. 합칠 수 없어요.",
+  },
+  checks: {
+    friendly: "시험 결과",
+    gitName: "checks",
+    command: null,
+    description: "올린 버전에 자동으로 돌린 시험과 검사의 결과",
+  },
   clone: {
     friendly: "복제",
     gitName: "clone",

@@ -23,6 +23,8 @@ export const TERM_IDS = [
   "park",
   "discard",
   "pr",
+  "pr-draft",
+  "checks",
   "clone",
   "init",
   "amend",

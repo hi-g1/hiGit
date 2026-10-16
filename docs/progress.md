@@ -3,10 +3,10 @@
 이 파일만 읽고 이어서 할 수 있게 단계마다 갱신한다.
 
 ## 지금
-- 반복: 3 (계획 008, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: 반복 3 끝(점검 위반 고침까지). 반복 4 계획 작성 중(planner)
-- 마지막 커밋: (이 갱신과 같은 커밋) docs: record iteration 3 review fixes
-- 다음 할 일: 반복 4(GitHub) 계획 docs/plans/009-github.md → code-analyst 검토 → 결정(D-109~) 올리기 → 구현
+- 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
+- 단계: G1 끝 (결정 D-109~D-121, 용어 pr-draft·checks, 로드맵 반복 4b·5-0)
+- 마지막 커밋: (이 갱신과 같은 커밋) docs: add iteration 4 decisions and terms
+- 다음 할 일: G2 의존성(ureq·secrecy·keyring-core)과 두 OS CI·cargo deny 시험 → G3 platform 키체인 … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -166,9 +166,17 @@
 - `marker.rs` 링크 거절 테스트가 Unix에서만 돈다(Windows는 링크 만들기에 권한 필요)
 - 반복 4 이후로 넘김(D-097): 설정 화면 + 덮어쓰며 올리기 + 올린 기록 바꾸기, 원격 브랜치 지우기·이름 바꾸기, 태그 올리기
 
+## 반복 4 단계 (계획 009, 바뀐 순서)
+- [x] 계획 65ad359(planner + code-analyst 검토 반영)
+- [x] G1 결정·용어
+- [ ] G2 의존성 / G3 platform 키체인 / G4 hosting 주소·오류·전송 틀 / G5 device flow / G6 검토 요청 API / G7 ureq 전송
+- [ ] G8a 실패 종류 / G8b 취소 표시 분리 / G8c 원격 주소·인증 방식 / G9 복제(git)
+- [ ] G10a 연결 서비스 / G10b 연결 명령 / G11 helper / G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
+- [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
+
 ## 다음 반복
-- [ ] 반복 4: GitHub
-- [ ] 반복 5: OS 통합과 배포
+- [ ] 반복 4b: 설정과 GitHub 넓히기
+- [ ] 반복 5: OS 통합과 배포(5-0 배포 전 보안 묶음부터)
 
 ## 사람이 할 일
 ### 실제 컴퓨터에서 확인 (모아서 한 번에)
@@ -200,7 +208,8 @@
 - 반복 3 이름 대화상자: 태그·새 브랜치·브랜치 이름 바꾸기 입력의 한글 IME(조합 중 Enter 무시), 마지막 버전 고치기 글상자의 Ctrl+Enter, 대화상자가 열린 동안 Ctrl+Z·Ctrl+H·Ctrl+B가 뒤에서 돌지 않는지.
 
 ### 사람만 줄 수 있는 것
-- (아직 없음)
+- GitHub OAuth App 등록: GitHub 설정 → Developer settings → OAuth Apps → New OAuth App, 이름 `hiGit`(D-009 확인과 같이), Homepage는 저장소 주소, callback은 아무 주소(device flow는 쓰지 않음), **"Enable Device Flow" 체크**. client secret은 만들지 않는다. 나온 client id를 개발은 환경 변수 `HIGIT_GITHUB_CLIENT_ID`로, 릴리스 빌드는 CI 저장소 변수(비밀 아님)로 넣는다. 그 전에는 설정의 GitHub 연결이 "준비 안 됨"으로 보인다.
+- 실제 GitHub 계정으로 연결·비공개 저장소 동기화·검토 요청 만들기 확인(반복 4 끝에 손 확인 목록으로 더 적는다).
 
 ## 기록
 - 2026-10-16: R22 Windows CI 실패 한 번(테스트가 짧은 경로 `RUNNER~1`을 썼는데 core는 정규화한 경로로 기록 → 986daf0). 테스트는 열기 결과의 경로를 쓴다.

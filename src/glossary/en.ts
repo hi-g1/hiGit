@@ -140,6 +140,18 @@ export const en: Glossary = {
     command: null,
     description: "Ask your team to combine your branch",
   },
+  "pr-draft": {
+    friendly: "Draft",
+    gitName: "draft pull request",
+    command: null,
+    description: "A review request that isn't ready for review yet. It can't be combined.",
+  },
+  checks: {
+    friendly: "Checks",
+    gitName: "checks",
+    command: null,
+    description: "Results of the tests and checks run automatically on an uploaded version",
+  },
   clone: {
     friendly: "Clone",
     gitName: "clone",
