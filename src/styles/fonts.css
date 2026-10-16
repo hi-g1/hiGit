@@ -9,6 +9,21 @@
   src: url("pretendard/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2");
 }
 
+/*
+ * D2Coding: 코드 글꼴의 한글(D-173). 공식 배포 woff2(naver/d2codingfont `site/fonts`) 400 하나를 한글 범위에만 쓴다.
+ * 라틴은 JetBrains Mono(0.6em)이므로 한글 한 자(D2Coding 1em)가 라틴 두 자 폭이 되게 120%로 맞춘다.
+ * 라이선스 원문: src/assets/fonts/D2Coding-OFL.txt, THIRD_PARTY_NOTICES.md
+ */
+@font-face {
+  font-family: "D2Coding";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/D2Coding-Regular.woff2") format("woff2");
+  size-adjust: 120%;
+  unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
+}
+
 /* JetBrains Mono: latin 400 woff2 하나 */
 @font-face {
   font-family: "JetBrains Mono";

@@ -39,7 +39,7 @@
 
 ## 글꼴
 - 본문: **Pretendard** (한글·영문 균형, OFL 라이선스, npm 패키지로 앱에 포함, D-014). 대체: `system-ui`.
-- 코드·해시·파일 경로: **JetBrains Mono** (OFL, latin 부분만 포함, D-014). 한글은 Pretendard로 이어 받고, 그다음 대체는 `ui-monospace`.
+- 코드·해시·파일 경로: **JetBrains Mono** (OFL, latin 부분만 포함, D-014). 한글은 **D2Coding**(OFL, 공식 배포 woff2 400 하나, 한글 범위에만, 라틴 두 자 폭에 맞춰 `size-adjust: 120%`, 원문 라이선스는 글꼴 옆 `D2Coding-OFL.txt`와 THIRD_PARTY_NOTICES.md, D-173), 그다음 Pretendard, `ui-monospace`.
 - 크기(D-138, D-146): 14px(본문 `--font-size-md`, 코드 `--font-size-code`), 13px(보조 `--font-size-sm`), 17px(화면 제목·시작 화면 상태 문장 `--font-size-title`), 22px(시작 화면 처음 실행 제목, 홈의 버전 이름 칸 `--font-size-name`), 28px(시작 화면 프로젝트 이름 `--font-size-display`). 12px보다 작은 글자는 없다. 줄 간격 1.5.
 - 단위: 크기 토큰은 모두 rem이고 이 문서의 px 숫자는 화면 배율 1일 때의 디자인 값이다. 루트 글자 크기 = 16px × 배율이고 배율은 OS 기본 본문(Windows 14, Ubuntu 15)과 OS 글자 배율, 설정 "글자 크기"(작게·보통·크게·아주 크게, Ctrl+=·Ctrl+−·Ctrl+0)로 정한다. 선·테두리·그림자는 px 그대로.
 - 굵기는 400과 600 두 가지만. JetBrains Mono는 400만 포함한다(D-014).

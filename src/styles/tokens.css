@@ -39,7 +39,7 @@
   --font-body: "Pretendard", system-ui, sans-serif;
 
   /* 코드 글꼴은 latin만 포함하므로 한글은 Pretendard로 이어 받아 OS마다 같게 보이게 한다 */
-  --font-mono: "JetBrains Mono", "Pretendard", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", "D2Coding", "Pretendard", ui-monospace, monospace;
 
   /* 크기는 모두 rem(1rem = 16px × 화면 배율, D-146). 주석의 px는 배율 1일 때 값 */
   --font-size-sm: 0.8125rem; /* 13px 보조 */
