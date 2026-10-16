@@ -78,6 +78,7 @@ export function PullRequests({ repo }: { repo: string }) {
         </div>
         <span className={styles.spacer} />
         {context?.repo && <Truncate className={styles.repo}>{context.repo}</Truncate>}
+        {context?.viaFork && <span className={styles.muted}>{m.pr.viaFork}</span>}
         {connected && context?.branch && !context.isDefaultBranch && (
           <Button variant="primary" onClick={openPrDialog}>
             {m.pr.newPr}

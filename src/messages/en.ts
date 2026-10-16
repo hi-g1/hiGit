@@ -378,6 +378,10 @@ export const en: Messages = {
     draftNoMerge: "Drafts can't be combined",
     conflictsNoMerge: "Resolve the overlaps on GitHub first",
     rebaseOnly: "Please combine it on GitHub",
+    forkNeeded: `You can't upload to this repository. Make a ${t("fork").toLowerCase()} in your account and request from there.`,
+    forkAndPush: `Make a ${t("fork").toLowerCase()} and upload`,
+    forking: (secs: number) => `Preparing the ${t("fork").toLowerCase()} · ${secs}s`,
+    viaFork: `From your ${t("fork").toLowerCase()}`,
   },
   clone: {
     url: "Address",

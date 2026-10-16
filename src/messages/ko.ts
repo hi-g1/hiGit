@@ -410,6 +410,11 @@ export const ko = {
     draftNoMerge: "초안은 합칠 수 없어요",
     conflictsNoMerge: "겹치는 곳을 GitHub에서 풀어야 해요",
     rebaseOnly: "GitHub에서 합쳐 주세요",
+    // 포크해서 요청하기(D-181)
+    forkNeeded: `이 저장소에 올릴 권한이 없어요. 내 계정에 ${josa(t("fork"), "을/를")} 만들어 거기서 요청해요.`,
+    forkAndPush: `${t("fork")} 만들고 ${t("push")}`,
+    forking: (secs: number) => `${josa(t("fork"), "을/를")} 준비하는 중 · ${secs}초`,
+    viaFork: `${t("fork")}에서 요청`,
   },
   // 복제(D-115)
   clone: {

@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, toApiError } from "../../lib/api";
-import { queryKeys, usePrDraft, usePrForBranch } from "../../lib/queries";
+import { queryKeys, usePrDraft, usePrForBranch, usePrRepo } from "../../lib/queries";
 import { matches } from "../../lib/shortcuts";
 import { useMessages } from "../../messages";
 import { Button } from "../../ui/Button";
@@ -35,7 +35,10 @@ function CreatePrForm({ repo }: { repo: string }) {
   const [body, setBody] = useState("");
   const [base, setBase] = useState<string | null>(null);
   const [asDraft, setAsDraft] = useState(false);
-  const [running, setRunning] = useState<"push" | "create" | null>(null);
+  const [running, setRunning] = useState<"fork" | "push" | "create" | null>(null);
+  const repoInfo = usePrRepo(repo, data !== undefined).data;
+  // 올릴 권한이 없고 아직 포크 경로가 아니면 먼저 포크를 만든다(D-181).
+  const needsFork = data !== undefined && repoInfo?.canPush === false && !data.viaFork;
   const [error, setError] = useState<unknown>(null);
   const progress = useProgress(repo);
 
@@ -45,7 +48,25 @@ function CreatePrForm({ repo }: { repo: string }) {
   const nothing = data !== undefined && data.ahead === 0 && baseValue === data.base;
   const code = error === null ? null : toApiError(error).code;
   const blocked = existing !== null || code === "prAlreadyExists";
-  const ready = data !== undefined && titleValue.trim() !== "" && baseValue !== "" && !nothing && !blocked;
+  const ready =
+    data !== undefined && titleValue.trim() !== "" && baseValue !== "" && !nothing && !blocked && !needsFork;
+
+  const makeFork = async () => {
+    if (running) return;
+    setError(null);
+    setRunning("fork");
+    try {
+      await api.executeAction(repo, { id: "fork" });
+      // 이제 지금 브랜치는 포크에 올라가 있다. 대상·head를 다시 읽고 평소 "만들기"로 간다.
+      for (const key of [queryKeys.prDraft(repo), queryKeys.hostingContext(repo), queryKeys.branches(repo)]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    } catch (e) {
+      setError(e);
+    } finally {
+      setRunning(null);
+    }
+  };
 
   const submit = async () => {
     if (!ready || running || !data) return;
@@ -151,6 +172,14 @@ function CreatePrForm({ repo }: { repo: string }) {
           </p>
         </>
       )}
+      {needsFork && (
+        <div className={styles.row}>
+          <p className={styles.notice}>{m.pr.forkNeeded}</p>
+          <Button variant="primary" disabled={running !== null} onClick={() => void makeFork()}>
+            {m.pr.forkAndPush}
+          </Button>
+        </div>
+      )}
       {existing && (
         <div className={styles.row}>
           <p className={styles.notice}>{m.pr.exists(existing.number)}</p>
@@ -180,7 +209,12 @@ function CreatePrForm({ repo }: { repo: string }) {
             {m.pr.pushing(progress?.elapsedSecs ?? 0)}
           </span>
         )}
-        {running === "push" && (progress?.elapsedSecs ?? 0) >= CANCEL_AFTER_SECS && (
+        {running === "fork" && (
+          <span className={styles.progress} role="status">
+            {m.pr.forking(progress?.elapsedSecs ?? 0)}
+          </span>
+        )}
+        {(running === "push" || running === "fork") && (progress?.elapsedSecs ?? 0) >= CANCEL_AFTER_SECS && (
           <Button variant="text" onClick={() => void api.cancelAction(repo).catch(() => undefined)}>
             {m.pr.cancel}
           </Button>
