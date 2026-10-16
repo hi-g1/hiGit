@@ -46,6 +46,8 @@ export const queryKeys = {
   prDraft: (repo: string) => ["github", "prDraft", repo] as const,
   githubRepos: ["github", "repos"] as const,
   emailCheck: ["github", "emailCheck"] as const,
+  prRepo: (repo: string) => ["github", "prRepo", repo] as const,
+  prComments: (repo: string, number: number) => ["github", "prComments", repo, number] as const,
   cloneDefaults: ["cloneDefaults"] as const,
   settings: ["settings"] as const,
   displayHints: ["displayHints"] as const,
@@ -169,6 +171,26 @@ export function usePrDetail(repo: string, number: number | null) {
     queryKey: queryKeys.prDetail(repo, number ?? 0),
     queryFn: () => api.prDetail(repo, number ?? 0),
     enabled: number !== null,
+    staleTime: 60_000,
+  });
+}
+
+/** 검토 요청 화면의 저장소 정보(D-177). 화면이 열려 있을 때만, 5분 동안 새로 읽지 않는다. */
+export function usePrRepo(repo: string, enabled: boolean) {
+  return useQuery<Awaited<ReturnType<typeof api.prRepo>>, ApiError>({
+    queryKey: queryKeys.prRepo(repo),
+    queryFn: () => api.prRepo(repo),
+    staleTime: 5 * 60_000,
+    enabled,
+  });
+}
+
+/** 검토 요청의 최근 댓글(D-178). 상세가 열렸을 때만. `total`(상세의 대화 댓글 수)이 바뀌면 다시 읽는다. */
+export function usePrComments(repo: string, number: number, total: number | null) {
+  return useQuery<Awaited<ReturnType<typeof api.prComments>>, ApiError>({
+    queryKey: [...queryKeys.prComments(repo, number), total],
+    queryFn: () => api.prComments(repo, number, total ?? 0),
+    enabled: total !== null,
     staleTime: 60_000,
   });
 }

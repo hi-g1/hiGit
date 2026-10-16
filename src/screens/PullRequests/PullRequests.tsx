@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePrDialogStore } from "../../features/pr/prDialogStore";
+import { MergeDialog } from "../../features/pr/MergeDialog";
 import { PrRow } from "../../features/pr/PrRow";
 import { useSettingsStore } from "../../features/settings/settingsStore";
 import { toApiError, type PrStateFilterView } from "../../lib/api";
@@ -137,6 +138,7 @@ export function PullRequests({ repo }: { repo: string }) {
             ))}
           </ul>
         )}
+        <MergeDialog repo={repo} />
         {pages.hasNextPage && (
           <div className={styles.more}>
             <Button variant="text" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>

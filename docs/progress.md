@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: **4c**(계획 013, 결정 D-175~D-188). 4b(계획 010)와 다듬기(계획 011)는 2026-10-16 끝. 4b 끝 점검은 반복 5 끝 점검에 합친다(진행 방식).
-- 단계: 013-W10 pr-merge·close·reopen 끝(W5 c0a3244, W6 bbee94f, W7 3c8ad49, W8 8003eef, W9 0904fc7). 사용자 지시 반영: 계획 013·014(5fa36b2), MIT 라이선스(58663c5, D-174)
-- 마지막 커밋: (이 갱신과 같은 커밋) core: add pr-merge, pr-close and pr-reopen actions
-- 다음 할 일: 013-W11 상세 화면(댓글·합치기·닫기) → push → W12 fork …
+- 단계: 013-W11 검토 요청 상세 화면 끝(W6 bbee94f, W7 3c8ad49, W8 8003eef, W9 0904fc7, W10 6fe287b). 사용자 지시 반영: 계획 013·014(5fa36b2), MIT 라이선스(58663c5, D-174)
+- 마지막 커밋: (이 갱신과 같은 커밋) features: comment, merge and close in pull request detail
+- 다음 할 일: 013-W12 fork → W13 포크 화면 → W14 …
 
 ## 진행 방식 (사용자 지시, 2026-10-15, 2026-10-16 고침)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: … → 4b → **4c(계획 013)** → **UX 다듬기(계획 012)** → **반복 5(계획 014)** → **v0.1.0 시험판**(GitHub 릴리스 "pre-release", 설치 파일과 사용법 `hiGit-guide.html`).
@@ -264,7 +264,7 @@
 - [x] 013-W8 설정 화면(이 커밋. `openWorkflowConnect`는 `openScopeConnect(add)`로 바뀜, GH007 단추는 W5에서)
 - [x] 013-W9 저장소 정보·댓글·pr-comment(이 커밋. 댓글 조회는 화면이 상세의 `issueComments`를 `total`로 넘긴다: 요청을 하나 줄이고 상세와 함께 새로 읽힘. `PrRepoView.rebaseOnly`를 더함)
 - [x] 013-W10 pr-merge·close·reopen(이 커밋. W9에서 빠졌던 실행기 위험도 표의 `pr-comment` 줄도 여기서 더함)
-- [ ] 013-W11 상세 화면
+- [x] 013-W11 상세 화면(이 커밋)
 - [ ] 013-W12 fork / W13 포크 화면
 - [ ] 013-W14 remote-tag-delete / W15 태그 대화상자
 - [ ] 013-W16 기본 브랜치 이름 입력 / W17 화면
