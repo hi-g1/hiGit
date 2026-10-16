@@ -433,6 +433,10 @@ export const ko = {
     loadingRepos: "불러오는 중",
     noRepos: "저장소가 없어요",
     more: "더 보기",
+    searchRepos: "저장소 찾기",
+    searching: (n: number) => `${n}개 중 찾는 중`,
+    tooMany: "더 많아요. 이름을 더 쳐 주세요",
+    noMatch: "찾는 저장소가 없어요",
   },
   // 설정과 GitHub 연결(D-109, D-116)
   paneWidth: "칸 폭",
