@@ -1,0 +1,25 @@
+/* 칸 나눔선(D-164, design.md "배치"). 보이는 선은 1px, 잡는 영역은 양쪽 4px씩 */
+.splitter {
+  position: relative;
+  z-index: 2;
+  width: var(--border-width);
+  background: var(--border);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter::after {
+  position: absolute;
+  inset: 0 calc(-1 * var(--space-1));
+  content: "";
+}
+
+.splitter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.splitter:hover,
+:global(:root[data-resizing]) .splitter {
+  background: var(--border-strong);
+}

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useState, type CSSProperties, type KeyboardEvent } from "react";
 import { DiffView } from "../../../diff/DiffView";
 import type { ChangeKind } from "../../../../lib/api";
 import { listKey } from "../../../../lib/listKeys";
@@ -10,6 +10,8 @@ import { ErrorNotice } from "../../../../ui/ErrorNotice";
 import type { StationInfo } from "../info";
 import type { MenuCtx } from "../items";
 import { DialogFrame } from "../../../../ui/DialogFrame";
+import { usePaneWidth } from "../../../../lib/usePaneWidth";
+import { Splitter } from "../../../../ui/Splitter";
 import styles from "./FilesDialog.module.css";
 
 type Props = { info: StationInfo; ctx: MenuCtx; onClose: () => void };
@@ -29,8 +31,12 @@ const LETTER: Record<ChangeKind, string> = {
  * 이때 파일 보기(D-105): 그 버전에서 바뀐 파일(첫 부모와 비교)과 파일별 비교. 읽기만 한다. ↑↓로 파일을
  * 옮기고 Esc로 닫는다.
  */
+/** 왼쪽 목록 기본 폭(rem, D-164). */
+const PANE_REM = 16.25;
+
 export function FilesDialog({ info, ctx, onClose }: Props) {
   const m = useMessages();
+  const pane = usePaneWidth("filesPane", PANE_REM);
   const [now] = useState(() => Date.now());
   const detail = useCommitDetail(ctx.repo, info.oid);
   const files = detail.data?.files ?? [];
@@ -66,8 +72,8 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
         (files.length === 0 ? (
           <p className={styles.note}>{m.noFilesInVersion}</p>
         ) : (
-          <div className={styles.body}>
-            <div>
+          <div className={styles.body} style={{ "--pane-width": `${pane.rem}rem` } as CSSProperties}>
+            <div className={styles.side}>
               {info.isMerge && <p className={styles.note}>{m.comparedBeforeMerge}</p>}
               <ul
                 className={styles.list}
@@ -97,6 +103,7 @@ export function FilesDialog({ info, ctx, onClose }: Props) {
               </ul>
               {detail.data.moreFiles > 0 && <p className={styles.note}>{m.moreFilesInVersion(detail.data.moreFiles)}</p>}
             </div>
+            <Splitter label={m.paneWidth} {...pane.splitter} className={styles.splitter} />
             <div className={styles.diff}>
               {file && (
                 <DiffView

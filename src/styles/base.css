@@ -50,6 +50,12 @@ select {
   color: inherit;
 }
 
+/* 칸 나눔선을 끄는 동안(D-164): 글자 선택 없이 좌우 화살표 커서 */
+:root[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
 /* 얇은 스크롤바: WebView2는 표준 속성, WebKitGTK는 ::-webkit-scrollbar */
 * {
   scrollbar-width: thin;

@@ -389,6 +389,7 @@ export const ko = {
     close: "닫기",
   },
   // 설정과 GitHub 연결(D-109, D-116)
+  paneWidth: "칸 폭",
   settings: {
     title: "설정",
     general: "일반",

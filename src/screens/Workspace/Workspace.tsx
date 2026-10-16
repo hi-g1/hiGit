@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
 import { PendingNotice } from "../../features/pending/PendingNotice";
@@ -11,12 +11,14 @@ import { useAutoFetch } from "../../features/sync/useAutoFetch";
 import { useUndo } from "../../features/undo/useUndo";
 import type { RepoInfo, StatusView } from "../../lib/api";
 import { useBranches, useConflictState, useStatus } from "../../lib/queries";
+import { usePaneWidth } from "../../lib/usePaneWidth";
 import { useRepoWatch } from "../../lib/useRepoWatch";
 import { useMessages } from "../../messages";
 import { useRepoStore } from "../../state/repoStore";
 import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { ErrorNotice } from "../../ui/ErrorNotice";
+import { Splitter } from "../../ui/Splitter";
 import { Activity } from "../Activity/Activity";
 import { Conflict } from "../Conflict/Conflict";
 import { Rewrite } from "../Rewrite/Rewrite";
@@ -32,8 +34,12 @@ import styles from "./Workspace.module.css";
  * 작업 공간: 상단 바(D-045) + 홈 2단 또는 버전 기록 화면(D-058).
  * 홈 왼쪽: 버전 이름 칸(D-044)과 고친 파일 목록. 오른쪽: 고른 파일의 비교.
  */
+/** 홈 왼쪽 칸 기본 폭(rem, D-164). */
+const WORKSPACE_PANE_REM = 21.25;
+
 export function Workspace({ repo }: { repo: RepoInfo }) {
   const m = useMessages();
+  const pane = usePaneWidth("workspacePane", WORKSPACE_PANE_REM);
   const view = useRepoStore((s) => s.view);
   const selectedPath = useRepoStore((s) => s.selectedPath);
   const selectPath = useRepoStore((s) => s.selectPath);
@@ -90,7 +96,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       ) : (
         <>
         <HomeMap repo={repo.path} onDone={notifyDone} />
-        <div className={styles.twoPane}>
+        <div className={styles.twoPane} style={{ "--pane-width": `${pane.rem}rem` } as CSSProperties}>
           <section className={styles.left}>
             <div className={styles.scroll}>
               {status.isPending && <EmptyState>{m.loading}</EmptyState>}
@@ -114,6 +120,7 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
               )}
             </div>
           </section>
+          <Splitter label={m.paneWidth} {...pane.splitter} />
           <section className={styles.right} aria-label={m.compareArea}>
             {selected ? (
               <>

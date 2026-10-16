@@ -58,13 +58,12 @@
 .body {
   display: grid;
   flex: 1;
-  grid-template-columns: 13.75rem 1fr;
+  grid-template-columns: clamp(15rem, var(--pane-width, 15rem), 50%) auto 1fr;
   min-height: 0;
 }
 
 .files {
   overflow: auto;
-  border-right: var(--border-width) solid var(--border);
 }
 
 .files ul {

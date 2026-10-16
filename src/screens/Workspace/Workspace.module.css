@@ -4,11 +4,11 @@
   height: 100%;
 }
 
-/* 칸 사이는 간격 없이 1px 선, 둥근 모서리·그림자 없음(design.md "배치") */
+/* 칸 사이는 간격 없이 1px 나눔선, 둥근 모서리·그림자 없음(design.md "배치"). 왼쪽 폭은 15rem~50%(D-164) */
 .twoPane {
   display: grid;
   flex: 1;
-  grid-template-columns: minmax(min(17.5rem, 45vw), min(21.25rem, 45vw)) 1fr;
+  grid-template-columns: clamp(15rem, var(--pane-width, 21.25rem), 50%) auto 1fr;
   min-height: 0;
   background: var(--surface);
 }
@@ -19,10 +19,6 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-}
-
-.twoPane .left {
-  border-right: var(--border-width) solid var(--border);
 }
 
 .scroll {

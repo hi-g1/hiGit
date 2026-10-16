@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { HunkCards, WholeFile, type SideNames } from "../../features/conflict/HunkPanel";
 import { useConflictStore } from "../../features/conflict/conflictStore";
 import {
@@ -23,6 +23,8 @@ import { ErrorNotice } from "../../ui/ErrorNotice";
 import type { TermId } from "../../glossary/types";
 import { Term, TermTooltip } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
+import { usePaneWidth } from "../../lib/usePaneWidth";
+import { Splitter } from "../../ui/Splitter";
 import styles from "./Conflict.module.css";
 
 type Props = {
@@ -75,8 +77,12 @@ function contextCopy(context: ConflictStateView["context"], m: ReturnType<typeof
  * git의 충돌 표시 문자는 조회 결과에 없으므로 화면 어디에도 나오지 않는다. 앱이 시작한 복사·되돌리기·
  * 기록 정리도 같은 화면에서 푼다(D-101). 기록 정리는 마칠 때마다 다음 충돌로 이어질 수 있다.
  */
+/** 파일 목록 칸 기본 폭(rem, D-164). */
+const PANE_REM = 15;
+
 export function Conflict({ repo, state, onDone }: Props) {
   const m = useMessages();
+  const pane = usePaneWidth("conflictPane", PANE_REM);
   const copy = contextCopy(state.context, m);
   const locale = useUiStore((s) => s.locale);
   const queryClient = useQueryClient();
@@ -193,7 +199,7 @@ export function Conflict({ repo, state, onDone }: Props) {
       {files.length === 0 ? (
         <p className={styles.allChosen}>{m.allChosen}</p>
       ) : (
-        <div className={styles.body}>
+        <div className={styles.body} style={{ "--pane-width": `${pane.rem}rem` } as CSSProperties}>
           <nav className={styles.files} aria-label={m.conflictFiles}>
             <h2 className={styles.filesTitle}>{m.conflictFiles}</h2>
             <ul>
@@ -217,6 +223,7 @@ export function Conflict({ repo, state, onDone }: Props) {
             </ul>
             {state.cleanFiles > 0 && <p className={styles.clean}>{m.cleanMerged(state.cleanFiles)}</p>}
           </nav>
+          <Splitter label={m.paneWidth} {...pane.splitter} />
           <main className={styles.main}>
             {place && (
               <p className={styles.where}>

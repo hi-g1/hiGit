@@ -357,6 +357,7 @@ export const en: Messages = {
     cancel: "Cancel",
     close: "Close",
   },
+  paneWidth: "Pane width",
   settings: {
     title: "Settings",
     general: "General",

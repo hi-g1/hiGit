@@ -13,7 +13,7 @@
 .body {
   display: grid;
   flex: 1;
-  grid-template-columns: 16.25rem 1fr;
+  grid-template-columns: clamp(15rem, var(--pane-width, 16.25rem), 50%) auto 1fr;
   gap: var(--space-3);
   min-height: 0;
 }
@@ -77,9 +77,18 @@
   justify-content: flex-end;
 }
 
+.side {
+  min-width: 0;
+}
+
+/* 좁으면 위아래로 쌓여 나눔선을 숨긴다 */
 @media (width <= 900px) {
   .body {
     grid-template-columns: 1fr;
     grid-template-rows: 10rem 1fr;
+  }
+
+  .splitter {
+    display: none;
   }
 }
