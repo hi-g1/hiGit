@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ConflictFileView, ConflictHunkView, ConflictSide, SideState } from "../../lib/api";
 import { formatDate } from "../../lib/time";
 import { useMessages } from "../../messages";
@@ -10,15 +10,18 @@ import styles from "./HunkPanel.module.css";
 
 type Side = "ours" | "theirs";
 
+/** 카드 머리의 쪽 이름. 없으면 용어(`ours`·`theirs`). 복사·되돌리기·기록 정리는 맥락의 이름을 쓴다. */
+export type SideNames = { ours: ReactNode; theirs: ReactNode };
+
 /** 카드 머리: "내 브랜치 · 사람 · 날짜 · 이름". */
-function SideHeader({ side, info }: { side: Side; info: ConflictSide | null }) {
+function SideHeader({ side, info, name }: { side: Side; info: ConflictSide | null; name?: ReactNode }) {
   const locale = useUiStore((s) => s.locale);
   // 날짜 표시의 기준 시각. 다시 그려도 글자가 바뀌지 않게 처음 한 번만 잰다.
   const [now] = useState(() => Date.now());
   return (
     <span className={styles.cardHead}>
       <span className={side === "ours" ? styles.dotOurs : styles.dotTheirs} aria-hidden="true" />
-      <Term id={side} />
+      {name ?? <Term id={side} />}
       {info && (
         <span className={styles.meta}>
           {[info.label, info.author, formatDate(info.at, now, locale), info.summary].filter(Boolean).join(" · ")}
@@ -42,11 +45,12 @@ type HunkProps = {
   pick: HunkPick | null;
   ours: ConflictSide | null;
   theirs: ConflictSide | null;
+  names?: SideNames;
   onPick: (pick: HunkPick) => void;
 };
 
 /** 텍스트 파일의 곳 하나: 카드 둘, 둘 다·직접 고치기, 원래 코드, 저장될 모습(D-028 1안). */
-export function HunkCards({ hunk, pick, ours, theirs, onPick }: HunkProps) {
+export function HunkCards({ hunk, pick, ours, theirs, names, onPick }: HunkProps) {
   const m = useMessages();
   const [editing, setEditing] = useState(pick?.kind === "custom");
   const [draft, setDraft] = useState(() => customStart(hunk, pick));
@@ -54,7 +58,7 @@ export function HunkCards({ hunk, pick, ours, theirs, onPick }: HunkProps) {
   const card = (side: Side, lines: string[], info: ConflictSide | null) => (
     <section className={`${styles.card} ${side === "ours" ? styles.cardOurs : styles.cardTheirs} ${pick && !chosen(side) ? styles.dim : ""}`}>
       <div className={styles.cardTop}>
-        <SideHeader side={side} info={info} />
+        <SideHeader side={side} info={info} name={names?.[side]} />
         <Button variant={chosen(side) ? "primary" : "secondary"} onClick={() => onPick({ kind: side })} aria-pressed={chosen(side)}>
           {chosen(side) ? `✓ ${m.useThis}` : m.useThis}
         </Button>
@@ -145,11 +149,12 @@ type WholeProps = {
   pick: FilePick | undefined;
   ours: ConflictSide | null;
   theirs: ConflictSide | null;
+  names?: SideNames;
   onPick: (side: Side) => void;
 };
 
 /** 파일 단위로 고르는 파일(이진·삭제·링크 등, D-086). */
-export function WholeFile({ file, pick, ours, theirs, onPick }: WholeProps) {
+export function WholeFile({ file, pick, ours, theirs, names, onPick }: WholeProps) {
   const m = useMessages();
   const card = (side: Side, state: SideState, preview: string[], info: ConflictSide | null) => {
     const chosen = pick?.kind === side;
@@ -157,7 +162,7 @@ export function WholeFile({ file, pick, ours, theirs, onPick }: WholeProps) {
     return (
       <section className={`${styles.card} ${side === "ours" ? styles.cardOurs : styles.cardTheirs} ${pick && !chosen ? styles.dim : ""}`}>
         <div className={styles.cardTop}>
-          <SideHeader side={side} info={info} />
+          <SideHeader side={side} info={info} name={names?.[side]} />
           <Button variant={chosen ? "primary" : "secondary"} aria-pressed={chosen} onClick={() => onPick(side)}>
             {chosen ? `✓ ${m.useThis}` : m.useThis}
           </Button>

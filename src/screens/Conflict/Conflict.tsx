@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { HunkCards, WholeFile } from "../../features/conflict/HunkPanel";
+import { HunkCards, WholeFile, type SideNames } from "../../features/conflict/HunkPanel";
 import { useConflictStore } from "../../features/conflict/conflictStore";
 import {
   canFinish,
@@ -20,7 +20,8 @@ import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { Button } from "../../ui/Button";
 import { ErrorNotice } from "../../ui/ErrorNotice";
-import { TermTooltip } from "../../ui/Term";
+import type { TermId } from "../../glossary/types";
+import { Term, TermTooltip } from "../../ui/Term";
 import { useToastStore } from "../../ui/toastStore";
 import styles from "./Conflict.module.css";
 
@@ -31,12 +32,52 @@ type Props = {
   onDone: (text: string) => void;
 };
 
+/** 맥락별 단추·토스트 문구와 카드의 쪽 이름(D-101). 쪽의 뜻(내 쪽·합칠 쪽)과 색은 core가 맞춰 준다. */
+function contextCopy(context: ConflictStateView["context"], m: ReturnType<typeof useMessages>) {
+  switch (context) {
+    case "unpark":
+      return { finish: m.finishUnpark, abort: m.abortUnpark, done: m.parkedResolved, aborted: m.mergeAborted, term: "merge" as TermId, names: undefined };
+    case "cherryPick":
+      return {
+        finish: m.finishPick,
+        abort: m.abortPick,
+        done: m.picked,
+        aborted: m.pickAborted,
+        term: "cherry-pick" as TermId,
+        names: { ours: <Term id="ours" />, theirs: m.pickSide } satisfies SideNames,
+      };
+    case "revert":
+      return {
+        finish: m.finishRevert,
+        abort: m.abortRevert,
+        done: m.reverted,
+        aborted: m.revertAborted,
+        term: "revert" as TermId,
+        names: { ours: <Term id="ours" />, theirs: m.revertSide } satisfies SideNames,
+      };
+    case "rebase":
+      // 호버 설명(내 브랜치·합칠 브랜치)이 합치기 기준이라 용어를 쓰지 않는다.
+      return {
+        finish: m.finishRewrite,
+        abort: m.abortRewrite,
+        done: m.rewritten,
+        aborted: m.rewriteAborted,
+        term: "rebase-i" as TermId,
+        names: { ours: m.movingSide, theirs: m.rewrittenSide } satisfies SideNames,
+      };
+    default:
+      return { finish: m.finishMerge, abort: m.abortMerge, done: m.merged, aborted: m.mergeAborted, term: "merge" as TermId, names: undefined };
+  }
+}
+
 /**
  * 충돌 해결 화면(D-028 1안, D-069, D-086). 한 번에 한 곳만 묻고, 고르면 저장될 모습이 바뀐다.
- * git의 충돌 표시 문자는 조회 결과에 없으므로 화면 어디에도 나오지 않는다.
+ * git의 충돌 표시 문자는 조회 결과에 없으므로 화면 어디에도 나오지 않는다. 앱이 시작한 복사·되돌리기·
+ * 기록 정리도 같은 화면에서 푼다(D-101). 기록 정리는 마칠 때마다 다음 충돌로 이어질 수 있다.
  */
 export function Conflict({ repo, state, onDone }: Props) {
   const m = useMessages();
+  const copy = contextCopy(state.context, m);
   const locale = useUiStore((s) => s.locale);
   const queryClient = useQueryClient();
   const show = useToastStore((s) => s.show);
@@ -88,16 +129,17 @@ export function Conflict({ repo, state, onDone }: Props) {
     setError(null);
     try {
       if (finish) {
-        await api.executeAction(repo, {
+        const result = await api.executeAction(repo, {
           id: "conflict-finish",
           input: { resolutions: toResolutions(files, picks), locale },
         });
         store.clear();
-        onDone(unpark ? m.parkedResolved : m.merged);
+        // 기록 정리가 다음 버전에서 다시 겹쳤다: 토스트 없이 다음 충돌을 읽는다(새로 고침).
+        if (result.kind !== "conflictContinued") onDone(copy.done);
       } else {
         await api.executeAction(repo, { id: "conflict-abort" });
         store.clear();
-        show(m.mergeAborted);
+        show(copy.aborted);
       }
     } catch (e) {
       setError(e);
@@ -132,14 +174,14 @@ export function Conflict({ repo, state, onDone }: Props) {
         </span>
         {files.length > 0 && <span className={styles.progress}>{m.conflictsLeft(total, remaining)}</span>}
         <span className={styles.spacer} />
-        <TermTooltip id="merge">
+        <TermTooltip id={copy.term}>
           <Button variant="text" disabled={busy} onClick={() => void run(false)}>
-            {unpark ? m.abortUnpark : m.abortMerge}
+            {copy.abort}
           </Button>
         </TermTooltip>
         {done && (
           <Button id="finish-merge" variant="primary" disabled={busy} onClick={() => void run(true)}>
-            {unpark ? m.finishUnpark : m.finishMerge}
+            {copy.finish}
           </Button>
         )}
       </header>
@@ -191,6 +233,7 @@ export function Conflict({ repo, state, onDone }: Props) {
                 pick={hunkPick(picks, place.path, place.hunk)}
                 ours={state.ours}
                 theirs={theirs}
+                names={copy.names}
                 onPick={choose}
               />
             )}
@@ -200,6 +243,7 @@ export function Conflict({ repo, state, onDone }: Props) {
                 pick={picks[place.path]}
                 ours={state.ours}
                 theirs={theirs}
+                names={copy.names}
                 onPick={(side) => choose({ kind: side })}
               />
             )}

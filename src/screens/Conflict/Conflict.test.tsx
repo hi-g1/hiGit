@@ -151,4 +151,59 @@ describe("충돌 해결 화면", () => {
     await userEvent.click(screen.getByRole("button", { name: "합치기 그만두기" }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "conflict-abort" });
   });
+
+  it.each([
+    ["cherryPick", "내 브랜치", "복사할 버전", "복사 그만두기", "복사를 그만뒀어요"],
+    ["revert", "내 브랜치", "되돌린 모습", "되돌리기 그만두기", "되돌리기를 그만뒀어요"],
+    ["rebase", "옮기는 버전", "앞서 정리한 기록", "기록 정리 그만두기", "기록 정리를 그만뒀어요"],
+  ] as const)("%s 맥락의 쪽 이름과 단추", async (context, ours, theirs, abort, aborted) => {
+    vi.mocked(api.conflictFile).mockResolvedValue(textFile);
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "conflictAborted" });
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Conflict repo="/repo" state={{ ...state, context, files: [state.files[0]!] }} onDone={vi.fn()} />
+      </AppProviders>,
+    );
+    await screen.findByText('<Form title="로그인하기" />');
+    expect(screen.getAllByText(ours).length).toBeGreaterThan(0);
+    expect(screen.getByText(theirs)).toBeInTheDocument();
+    // 쪽 내용은 core가 준 그대로(기록 정리에서도 화면이 다시 뒤집지 않는다).
+    const oursCard = screen.getAllByText(ours)[0]!.closest("section")!;
+    expect(within(oursCard).getByText('<Form title="로그인하기" />')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: abort }));
+    expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "conflict-abort" });
+    await vi.waitFor(() => expect(screen.getByText(aborted)).toBeInTheDocument());
+  });
+
+  it("기록 정리가 다음 버전에서 다시 겹치면 토스트 없이 선택을 새로 시작한다", async () => {
+    vi.mocked(api.conflictFile).mockResolvedValue(textFile);
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "conflictContinued", paths: ["src/화면.tsx"] });
+    const onDone = vi.fn();
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Conflict repo="/repo" state={{ ...state, context: "rebase", files: [{ ...state.files[0]!, hunks: 1 }] }} onDone={onDone} />
+      </AppProviders>,
+    );
+    await screen.findByText('<Form title="로그인하기" />');
+    await userEvent.click(screen.getAllByRole("button", { name: "이걸로" })[0]!);
+    await userEvent.click(await screen.findByRole("button", { name: "기록 정리 마치기" }));
+    await vi.waitFor(() => expect(api.executeAction).toHaveBeenCalled());
+    await vi.waitFor(() => expect(useConflictStore.getState().picks).toEqual({}));
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("복사를 마치면 복사했다고 알린다", async () => {
+    vi.mocked(api.conflictFile).mockResolvedValue(textFile);
+    vi.mocked(api.executeAction).mockResolvedValue({ kind: "conflictFinished" });
+    const onDone = vi.fn();
+    render(
+      <AppProviders client={createQueryClient()}>
+        <Conflict repo="/repo" state={{ ...state, context: "cherryPick", files: [{ ...state.files[0]!, hunks: 1 }] }} onDone={onDone} />
+      </AppProviders>,
+    );
+    await screen.findByText('<Form title="로그인하기" />');
+    await userEvent.click(screen.getAllByRole("button", { name: "이걸로" })[1]!);
+    await userEvent.click(await screen.findByRole("button", { name: "복사 마치기" }));
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("버전을 복사했어요"));
+  });
 });
