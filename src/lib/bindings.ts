@@ -1313,6 +1313,13 @@ export type RecoveryItem = {
 	restore: RestoreKind,
 	/**  앱 작업 중 되돌린 것. */
 	undone: boolean,
+	/**  Ctrl+Z가 닿는지(D-204). */
+	undo: UndoHint,
+	/**
+	 *  앱 작업 줄의 실행 전 버전. "이 작업 전으로 되돌리기"가 `restore`로 보낸다. 지금 브랜치에서 HEAD를 옮긴
+	 *  줄이고 그 버전이 Git 기록에 있을 때만 값이 있다.
+	 */
+	beforeOid: string | null,
 };
 
 export type RecoverySource = 
@@ -1662,6 +1669,21 @@ export type TrustChoice =
 "trust" | 
 /**  끄고 열기 */
 "disable";
+
+/**  앱 작업 줄에 Ctrl+Z가 닿는지(D-204). */
+export type UndoHint = 
+/**  다음 Ctrl+Z가 되돌린다. */
+"next" | 
+/**  위의 더 새 작업을 먼저 되돌려야 한다. */
+"earlier" | 
+/**  되돌렸다. */
+"done" | 
+/**  Ctrl+Z로 되돌릴 수 없다(경계 앞, 올리기, 앱 밖에서 바뀜). */
+"never" | 
+/**  앱 작업 줄이 아니다. */
+"none" | 
+/**  다음 Ctrl+Z가 되돌리는 새 버전을 만든다(올린 버전, D-073). */
+"revertCommit";
 
 /**  되돌리는 방법(D-042). 화면은 `irreversible`이면 실행 전에 확인을 받는다(D-043). */
 export type UndoKindView = "nothing" | "restoreRef" | "restoreIndex" | "switchBack" | "restoreTree" | "deleteCreated" | "inverse" | "irreversible" | "barrier";

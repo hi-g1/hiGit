@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryItem } from "../../lib/api";
-import { backupLabel, groupByDay, restoreInput } from "./model";
+import { backupLabel, groupByDay, restoreInput, undoHintKey } from "./model";
 
 const item = (over: Partial<RecoveryItem>): RecoveryItem => ({
   id: "x",
@@ -13,6 +13,8 @@ const item = (over: Partial<RecoveryItem>): RecoveryItem => ({
   refname: null,
   restore: "version",
   undone: false,
+  undo: "none",
+  beforeOid: null,
   ...over,
 });
 
@@ -27,7 +29,10 @@ describe("작업 내역 모델", () => {
   });
 
   it("단추가 부를 입력은 조회가 준 값 그대로", () => {
-    expect(restoreInput(item({}))).toEqual({ id: "restore", input: { oid: "a".repeat(40) } });
+    // 앱 작업 줄은 그 작업 전 버전으로, 값이 없으면 단추가 없다(D-204).
+    expect(restoreInput(item({ beforeOid: "d".repeat(40) }))).toEqual({ id: "restore", input: { oid: "d".repeat(40) } });
+    expect(restoreInput(item({}))).toBeNull();
+    expect(restoreInput(item({ source: "reflog" }))).toEqual({ id: "restore", input: { oid: "a".repeat(40) } });
     expect(restoreInput(item({ source: "stash", restore: "changes" }))).toEqual({
       id: "take-out",
       input: { source: { kind: "stash", oid: "a".repeat(40) } },
@@ -37,6 +42,13 @@ describe("작업 내역 모델", () => {
       input: { source: { kind: "ref", refname: "refs/higit/backup/x/y" } },
     });
     expect(restoreInput(item({ restore: "none" }))).toBeNull();
+  });
+
+  it("Ctrl+Z 글자는 앱 작업 줄에만", () => {
+    expect(undoHintKey(item({ undo: "next" }))).toBe("next");
+    expect(undoHintKey(item({ undo: "revertCommit" }))).toBe("revertCommit");
+    expect(undoHintKey(item({ undo: "done" }))).toBeNull();
+    expect(undoHintKey(item({ source: "reflog", undo: "none" }))).toBeNull();
   });
 
   it("백업 이름을 용어와 이름으로", () => {

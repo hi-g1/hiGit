@@ -57,7 +57,7 @@ pub use map::{HomeMapView, MapCommit};
 pub use merge::{MergeHintKind, MergeHintView};
 pub use pending::{OtherOperation, PendingWorkView};
 pub use publish::PublishDraftView;
-pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind};
+pub use recovery::{RecoveryItem, RecoverySource, RecoveryView, RestoreKind, UndoHint};
 pub use remote_branch::{RemoteBranchBlock, RemoteBranchPlanView};
 pub use secret::{SecretCheckRequest, SecretCheckView, SecretFinding, SecretRule};
 pub use settings::{

@@ -77,6 +77,18 @@
   cursor: default;
 }
 
+.summary {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Ctrl+Z가 닿는지(D-204) */
+.hint {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
 /* 되돌린 작업은 투명도 대신 글자색으로 흐리게(design.md "흐린 줄") */
 .undone .title,
 .undone .summary {

@@ -70,6 +70,14 @@ impl Action for RestoreAction {
         if head == oid {
             return Err(CoreError::InvalidInput("지금 버전과 같아요"));
         }
+        // 뒤로 옮기면 빠지는 버전이 올라가 있으면 거절한다(되돌리기·기록 정리와 같은 규칙, D-204).
+        let rule = crate::guard::published_rule(git, repo, ctx.settings.allow_published_rewrite)?;
+        if crate::guard::touches_published(git, repo, &head, &oid)? {
+            if rule == crate::guard::PublishedRule::Refuse {
+                return Err(CoreError::PublishedHistory);
+            }
+            crate::rewrote::record(git, repo, ctx.key)?;
+        }
         // 되살려도 지금 버전은 남는다(작업 내역에 새 줄로 보인다).
         crate::undo::backup::backup_oid(git, repo, &head, &format!("restore-{branch}"))?;
         git.run(repo, &GitOp::ResetKeep { oid })?;

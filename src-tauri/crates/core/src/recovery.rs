@@ -6,7 +6,7 @@ use git::{GitBackend, RepoPath};
 
 use crate::Result;
 use crate::undo::journal::{Body, Journal};
-use crate::view::{RecoveryItem, RecoverySource, RestoreKind};
+use crate::view::{RecoveryItem, RecoverySource, RestoreKind, UndoHint};
 
 const MAX_ITEMS: usize = 200;
 /// 서명이 맞지 않는 journal 줄(받은 저장소, 다른 앱 데이터)은 이만큼만 보인다.
@@ -47,7 +47,9 @@ pub(crate) fn collect(
     }
     let mut items = Vec::new();
 
-    // 앱 작업. 되돌린 줄은 표시한다(다시 하면 표시를 지운다).
+    // 앱 작업. 되돌린 줄은 표시한다(다시 하면 표시를 지운다). Ctrl+Z가 닿는지도 함께(D-204).
+    let hints = crate::undo::run::undo_hints(git, repo, journal).unwrap_or_default();
+    let current = git.current_branch(repo)?;
     let lines = journal.read_all();
     let mut undone: HashMap<String, bool> = HashMap::new();
     for (body, _) in &lines {
@@ -62,6 +64,7 @@ pub(crate) fn collect(
         }
     }
     let mut journal_marks: Vec<(String, i64)> = Vec::new();
+    let mut journal_items = Vec::new();
     // 서명이 맞지 않는 줄은 최근 것만 남긴다(파일 순서가 옛 것부터).
     let unverified = lines.iter().filter(|(_, v)| !v).count();
     let mut skip_unverified = unverified.saturating_sub(MAX_UNVERIFIED);
@@ -90,7 +93,7 @@ pub(crate) fn collect(
         {
             journal_marks.push((o.clone(), at));
         }
-        items.push(RecoveryItem {
+        journal_items.push(RecoveryItem {
             id: format!("j:{id}"),
             at,
             source: RecoverySource::Journal,
@@ -105,11 +108,28 @@ pub(crate) fn collect(
             } else {
                 RestoreKind::None
             },
+            // 지금 브랜치에서 HEAD를 옮긴 줄만 "이 작업 전으로 되돌리기"를 보인다. `restore`가 다시 본다.
+            before_oid: before.head.clone().filter(|b| {
+                verified
+                    && before.head != after.head
+                    && before.branch.is_some()
+                    && before.branch == after.branch
+                    && after.branch == current
+                    && reflog.iter().any(|r| r.oid.as_str() == b)
+            }),
             oid,
             refname: None,
+            undo: if verified {
+                hints.get(&id).copied().unwrap_or(UndoHint::Never)
+            } else {
+                UndoHint::Never
+            },
             undone: undone.get(&id).copied().unwrap_or(false),
         });
     }
+
+    // journal은 옛 것부터라 같은 초의 줄이 최신 먼저 정렬되게 뒤집어 넣는다(정렬은 안정).
+    items.extend(journal_items.into_iter().rev());
 
     // git의 HEAD 기록. 앱 작업과 같은 순간이면 뺀다.
     for (i, r) in reflog.iter().enumerate() {
@@ -131,6 +151,8 @@ pub(crate) fn collect(
             refname: None,
             restore: RestoreKind::Version,
             undone: false,
+            undo: UndoHint::None,
+            before_oid: None,
         });
     }
 
@@ -152,6 +174,8 @@ pub(crate) fn collect(
             oid: Some(r.oid.clone()),
             refname: Some(r.name.clone()),
             undone: false,
+            undo: UndoHint::None,
+            before_oid: None,
         });
     }
 
@@ -171,6 +195,8 @@ pub(crate) fn collect(
             refname: Some(r.name.clone()),
             restore: RestoreKind::Changes,
             undone: false,
+            undo: UndoHint::None,
+            before_oid: None,
         });
     }
 
@@ -191,6 +217,8 @@ pub(crate) fn collect(
             refname: None,
             restore: RestoreKind::Changes,
             undone: false,
+            undo: UndoHint::None,
+            before_oid: None,
         });
     }
 

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { backupLabel, groupByDay, restoreInput } from "../../features/activity/model";
+import { backupLabel, groupByDay, restoreInput, undoHintKey } from "../../features/activity/model";
 import { NewBranchDialog } from "../../features/history/menu/dialogs/NewBranchDialog";
 import type { RunCtx } from "../../features/history/menu/run";
 import type { TermId } from "../../glossary/types";
@@ -93,6 +93,9 @@ export function Activity({ repo, onDone }: Props) {
             {g.items.map((item) => {
               const term = item.action ? termOf(item.action) : null;
               const input = restoreInput(item);
+              const hint = undoHintKey(item);
+              // 서명이 맞는 줄·git 기록·백업처럼 되살릴 수 있는 버전만(core가 해시를 다시 본다, E18).
+              const newBranch = item.restore === "version" && item.oid !== null;
               return (
                 <li key={item.id} className={`${styles.card} ${item.undone ? styles.undone : ""}`}>
                   <span className={styles.time}>
@@ -106,20 +109,28 @@ export function Activity({ repo, onDone }: Props) {
                       item.source !== "reflog" && item.label && <Truncate className={styles.label}>{item.label}</Truncate>
                     )}
                   </span>
-                  <Truncate>{item.summary}</Truncate>
+                  <span className={styles.summary}>
+                    <Truncate>{item.summary}</Truncate>
+                    {hint && <span className={styles.hint}>{m.activityUndo[hint]}</span>}
+                  </span>
                   {item.source === "reflog" && (
                     <details className={styles.raw}>
                       <summary>{m.showDetail}</summary>
                       <code>{item.label}</code>
                     </details>
                   )}
-                  {input && (
+                  {(input || newBranch) && (
                     <span className={styles.buttons}>
-                      <Button disabled={pending !== null} onClick={() => void run(item)}>
-                        {item.restore === "version" ? m.restoreHere : m.takeOut}
-                      </Button>
-                      {/* 서명이 맞는 줄·git 기록·백업처럼 되살릴 수 있는 버전만(core가 해시를 다시 본다, E18). */}
-                      {item.restore === "version" && item.oid && (
+                      {input && (
+                        <Button disabled={pending !== null} onClick={() => void run(item)}>
+                          {item.source === "journal"
+                            ? m.restoreBefore
+                            : item.restore === "version"
+                              ? m.restoreHere
+                              : m.takeOut}
+                        </Button>
+                      )}
+                      {newBranch && (
                         <Button
                           variant="text"
                           data-new-branch={item.id}

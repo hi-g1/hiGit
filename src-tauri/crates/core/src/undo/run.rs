@@ -1,12 +1,14 @@
 //! 되돌리기·다시 하기 실행(D-042, D-065). journal의 마지막 줄을 그 액션의 `undo` 종류대로 되돌린다.
 
+use std::collections::{HashMap, HashSet};
+
 use git::{GitBackend, GitOp, Oid, RefExpect, RepoPath};
 
 use super::journal::{self, Body, Journal};
 use super::{UndoKind, UndoState, backup};
 use crate::actions::switch::{refuse_during_operation, switch_with_parking};
 use crate::parked;
-use crate::view::{ActionInput, SwitchInput};
+use crate::view::{ActionInput, SwitchInput, UndoHint};
 use crate::{CoreError, Result};
 
 /// 되돌리기·다시 하기 결과. 화면은 토스트 문구와 이름 칸 채우기에 쓴다.
@@ -41,8 +43,15 @@ struct Entry {
 /// journal을 처음부터 따라가며 되돌릴 줄(마지막 적용)과 다시 할 줄(마지막 되돌림)을 찾는다.
 /// 경계 줄을 만나면 그 앞은 모두 잊는다. 새 작업이 생기면 다시 하기는 사라진다.
 fn stacks(lines: Vec<Body>) -> (Vec<Entry>, Vec<Entry>) {
+    let (applied, undone, _) = walk(lines);
+    (applied, undone)
+}
+
+/// `stacks`에 더해 되돌린 채인 줄 id(다시 하기 스택에서 사라졌어도)를 모은다.
+fn walk(lines: Vec<Body>) -> (Vec<Entry>, Vec<Entry>, HashSet<String>) {
     let mut applied: Vec<Entry> = Vec::new();
     let mut undone: Vec<Entry> = Vec::new();
+    let mut done: HashSet<String> = HashSet::new();
     for line in lines {
         match line {
             Body::Action {
@@ -72,6 +81,7 @@ fn stacks(lines: Vec<Body>) -> (Vec<Entry>, Vec<Entry>) {
                 if applied.last().is_some_and(|e| e.id == target)
                     && let Some(e) = applied.pop()
                 {
+                    done.insert(e.id.clone());
                     undone.push(e);
                 }
             }
@@ -79,12 +89,82 @@ fn stacks(lines: Vec<Body>) -> (Vec<Entry>, Vec<Entry>) {
                 if undone.last().is_some_and(|e| e.id == target)
                     && let Some(e) = undone.pop()
                 {
+                    done.remove(&e.id);
                     applied.push(e);
                 }
             }
         }
     }
-    (applied, undone)
+    (applied, undone, done)
+}
+
+/// `undo()`가 되돌리는 종류인지. 올리기·가져오기·동기화 같은 `Inverse`는 되돌리지 않는다(아래 `undo`의 match와 같게).
+fn undoable(entry: &Entry) -> bool {
+    match entry.kind {
+        UndoKind::Inverse => matches!(
+            entry.action.as_str(),
+            "stash" | "ignore" | "branch-rename" | "discard"
+        ),
+        UndoKind::RestoreRef
+        | UndoKind::RestoreIndex
+        | UndoKind::RestoreTree
+        | UndoKind::SwitchBack
+        | UndoKind::DeleteCreated => true,
+        _ => false,
+    }
+}
+
+/// 되돌리면 기록을 바꾸지 않고 되돌리는 새 버전을 만드는지(올린 버전, D-073). `undo_commit`·`undo_tree`와 같은 판정.
+fn reverts(git: &dyn GitBackend, repo: &RepoPath, entry: &Entry) -> Result<bool> {
+    let Some(after) = entry.after.head_oid() else {
+        return Ok(false);
+    };
+    let moving_back = match (entry.kind, entry.before.head_oid()) {
+        (UndoKind::RestoreRef, _) => entry.before.head != entry.after.head,
+        (UndoKind::RestoreTree, Some(before)) => {
+            !git.is_ancestor(repo, after.as_str(), before.as_str())?
+        }
+        _ => false,
+    };
+    Ok(moving_back && is_pushed(git, repo, &after)?)
+}
+
+/// 작업 내역의 줄마다 Ctrl+Z가 닿는지(D-204). `stacks`와 같은 규칙이고, 맨 위 줄은 `undo()`처럼 지금 상태와
+/// 맞는지(앱 밖에서 바뀌지 않음, 진행 중인 작업 없음)와 되돌리는 종류인지를 본다. 목록에 없는 줄(경계 앞,
+/// 서명이 맞지 않음)은 부르는 쪽이 `Never`로 본다.
+pub(crate) fn undo_hints(
+    git: &dyn GitBackend,
+    repo: &RepoPath,
+    journal: &Journal,
+) -> Result<HashMap<String, UndoHint>> {
+    let (applied, _, done) = walk(journal.read());
+    let mut hints: HashMap<String, UndoHint> =
+        done.into_iter().map(|id| (id, UndoHint::Done)).collect();
+    let Some(top) = applied.last() else {
+        return Ok(hints);
+    };
+    let now = UndoState::capture(git, repo)?;
+    let mut reachable = refuse_during_operation(git, repo).is_ok()
+        && now.head == top.after.head
+        && now.branch == top.after.branch;
+    for (i, entry) in applied.iter().enumerate().rev() {
+        let hint = if !reachable || !undoable(entry) {
+            reachable = false;
+            UndoHint::Never
+        } else if i + 1 == applied.len() {
+            if reverts(git, repo, entry)? {
+                // 되돌리는 새 버전을 만들면 그 앞 줄은 더 되돌리지 않는다.
+                reachable = false;
+                UndoHint::RevertCommit
+            } else {
+                UndoHint::Next
+            }
+        } else {
+            UndoHint::Earlier
+        };
+        hints.insert(entry.id.clone(), hint);
+    }
+    Ok(hints)
 }
 
 pub(crate) fn undo(

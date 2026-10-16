@@ -70,6 +70,13 @@ export const ko = {
     stash: t("stash"),
   } satisfies Record<RecoverySource, string>,
   restoreHere: "이 시점으로 되돌리기",
+  restoreBefore: "이 작업 전으로 되돌리기",
+  activityUndo: {
+    next: "Ctrl+Z로 되돌려요",
+    earlier: "위 작업을 먼저 되돌려야 해요",
+    never: "Ctrl+Z로 되돌릴 수 없어요",
+    revertCommit: "Ctrl+Z로 되돌리면 새 버전이 생겨요",
+  },
   stashed: "보관했어요",
   stashCount: (n: number) => `${t("stash")} ${n}개`,
   filesCount: (n: number) => `파일 ${n}개`,

@@ -50,6 +50,13 @@ export const en: Messages = {
     stash: t("stash"),
   } satisfies Record<RecoverySource, string>,
   restoreHere: "Go back to this point",
+  restoreBefore: "Go back to before this",
+  activityUndo: {
+    next: "Ctrl+Z undoes this",
+    earlier: "Undo the newer work first",
+    never: "Ctrl+Z can't undo this",
+    revertCommit: "Ctrl+Z adds a new version that reverses this",
+  },
   stashed: "Stashed",
   stashCount: (n: number) => `${t("stash")} ${n}`,
   filesCount: (n: number) => `${n} file${n === 1 ? "" : "s"}`,
