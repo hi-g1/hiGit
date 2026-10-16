@@ -30,6 +30,7 @@ import { branchColor } from "./color";
 import { RemoteBranchMenu } from "../remote-branch/RemoteBranchMenu";
 import { BranchRowMenu } from "./BranchRowMenu";
 import { canOfferCreate, rightText, search, sections, type ListItem } from "./model";
+import { useTipStore } from "../tips/tipStore";
 import { useBranchListStore } from "./branchListStore";
 import { SwitchDialog } from "./SwitchDialog";
 import { useSwitch, type SwitchTarget } from "./useSwitch";
@@ -208,6 +209,7 @@ function Panel({ repo, current, onDone, close, renaming, setRenaming, ask }: Pan
       await api.executeAction(repo, { id: "branch-create", input: { name: choice.name } });
       close();
       onDone(m.createdBranch(choice.name));
+      useTipStore.getState().trigger("firstBranch");
     } catch (e) {
       showError(e);
     } finally {

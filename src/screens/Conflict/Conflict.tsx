@@ -1,4 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTip } from "../../features/tips/useTip";
+import { TipLine } from "../../ui/TipLine";
 import { useEffect, useState, type CSSProperties } from "react";
 import { HunkCards, WholeFile, type SideNames } from "../../features/conflict/HunkPanel";
 import { useConflictStore } from "../../features/conflict/conflictStore";
@@ -83,6 +85,8 @@ const PANE_REM = 15;
 
 export function Conflict({ repo, state, onDone }: Props) {
   const m = useMessages();
+  // 첫 충돌 안내(D-205): 이 화면이 열렸다는 것이 곧 그 일을 처음 하는 때다.
+  const conflictTip = useTip("firstConflict");
   const pane = usePaneWidth("conflictPane", PANE_REM);
   const copy = contextCopy(state.context, m);
   const locale = useUiStore((s) => s.locale);
@@ -192,6 +196,9 @@ export function Conflict({ repo, state, onDone }: Props) {
           </Button>
         )}
       </header>
+      {conflictTip.visible && (
+        <TipLine onDismiss={conflictTip.dismiss}>{m.tip.firstConflict}</TipLine>
+      )}
       {error !== null && error !== undefined && (
         <div className={styles.error}>
           <ErrorNotice error={error} />

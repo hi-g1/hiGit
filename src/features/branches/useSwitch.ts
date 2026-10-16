@@ -4,6 +4,7 @@ import { api, type ActionResult, type DirtyChoice } from "../../lib/api";
 import { invalidateLog } from "../../lib/queries";
 import { useMessages, type Messages } from "../../messages";
 import { useToastStore } from "../../ui/toastStore";
+import { useTipStore } from "../tips/tipStore";
 
 export type SwitchTarget = { branch: string; remote: string | null };
 
@@ -32,6 +33,7 @@ export function useSwitch(repo: string, onDone: (text: string) => void) {
         input: dirty === undefined ? { ...target } : { ...target, dirty },
       });
       onDone(switchedText(m, target, result));
+      useTipStore.getState().trigger("firstBranch");
       return true;
     } catch (e) {
       showError(e);

@@ -178,6 +178,12 @@ export const en: Messages = {
   fetchFailed: (when: string) => `${t("fetch")} failed · ${when}`,
   shortcutsTitle: "Shortcuts",
   tipOk: "Got it",
+  tip: {
+    firstBranch: `A ${t("branch").toLowerCase()} isn't a folder; it's a line where history splits. Your files stay in this folder.`,
+    firstConflict: "Both sides changed the same place differently. Pick what to keep, one place at a time. You can stop anytime.",
+    firstSync: `${t("sync")} gets new versions first, then sends yours.`,
+    firstUndo: `Ctrl+Z undoes what you just did. Older work comes back from ${t("reflog")}.`,
+  },
   paletteSearch: "A command or branch name",
   paletteEmpty: "No matching command",
   paletteDone: (label: string) => `${label}: done`,

@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useTipStore } from "../tips/tipStore";
 import { useCallback } from "react";
 import { ApiError, api } from "../../lib/api";
 import { invalidateLog } from "../../lib/queries";
@@ -63,6 +64,7 @@ export function useUndo(repo: string) {
       }
       if (result.message !== null) setRestoredMessage(result.message);
       show(m.undone, { label: m.redo, kbd: SHORTCUTS.redo.label, onClick: () => void redo() });
+      useTipStore.getState().trigger("firstUndo");
     } catch (e) {
       fail(e);
     }

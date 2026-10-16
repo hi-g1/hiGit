@@ -22,6 +22,7 @@ import { ApiError } from "../../lib/api";
 import { ko } from "../../messages/ko";
 import { BranchList } from "./BranchList";
 import { useBranchListStore } from "./branchListStore";
+import { useTipStore } from "../tips/tipStore";
 
 const row = (name: string, over: Partial<BranchRow> = {}): BranchRow => ({
   name,
@@ -136,6 +137,8 @@ describe("브랜치 목록", () => {
     await userEvent.click(await screen.findByRole("option", { name: /^main/ }));
     expect(api.executeAction).toHaveBeenCalledWith("/repo", { id: "switch", input: { branch: "main", remote: null } });
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith("main 브랜치로 갈아탔어요"));
+    // 첫 브랜치 안내를 띄울 차례가 된다(D-205).
+    expect(useTipStore.getState().due).toContain("firstBranch");
   });
 
   it("고친 파일이 있으면 목록을 닫고 묻는다 · Enter는 새 브랜치로 옮기기", async () => {

@@ -203,6 +203,12 @@ export const ko = {
   fetchFailed: (when: string) => `${t("fetch")} 못 함 · ${when}`,
   shortcutsTitle: "단축키",
   tipOk: "알겠어요",
+  tip: {
+    firstBranch: `${josa(t("branch"), "은/는")} 폴더가 아니라 기록이 갈라진 선이에요. 파일은 그대로 이 폴더에 있어요.`,
+    firstConflict: "같은 곳을 서로 다르게 고친 거예요. 한 곳씩 남길 쪽을 고르면 돼요. 언제든 그만둘 수 있어요.",
+    firstSync: `${josa(t("sync"), "은/는")} 새 버전을 가져온 다음 내 버전을 올려요.`,
+    firstUndo: `방금 한 일은 Ctrl+Z로 되돌려요. 지난 작업은 ${t("reflog")}에서 되살려요.`,
+  },
   paletteSearch: "명령이나 브랜치 이름",
   paletteEmpty: "찾는 명령이 없어요",
   paletteDone: (label: string) => `${josa(label, "을/를")} 했어요`,

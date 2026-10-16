@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { NameBox } from "../../features/commit/NameBox";
 import { DiffView } from "../../features/diff/DiffView";
+import { HomeTips } from "../../features/tips/HomeTips";
 import { Palette } from "../../features/palette/Palette";
 import { PendingNotice } from "../../features/pending/PendingNotice";
 import { StuckNotice } from "../../features/progress/StuckNotice";
@@ -95,6 +96,8 @@ export function Workspace({ repo }: { repo: RepoInfo }) {
       {!merging && <FetchNotice />}
       <SyncNotice repo={repo.path} />
       {!merging && <RewriteNotice repo={repo.path} />}
+      {/* 처음 하는 일 안내는 다른 알림 줄 아래에 쌓는다. 충돌 화면이 열려 있으면 그쪽 안내만(D-205). */}
+      {!merging && <HomeTips />}
       {merging && conflict ? (
         <Conflict repo={repo.path} state={conflict} onDone={notifyDone} />
       ) : view === "rewrite" ? (

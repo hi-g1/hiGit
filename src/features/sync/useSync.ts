@@ -4,6 +4,7 @@ import { invalidateLog } from "../../lib/queries";
 import { useMessages } from "../../messages";
 import { useUiStore } from "../../state/uiStore";
 import { useToastStore } from "../../ui/toastStore";
+import { useTipStore } from "../tips/tipStore";
 import { useSyncStore } from "./syncStore";
 
 /**
@@ -34,6 +35,7 @@ export function useSync(repo: string): { run: () => void; runAnyway: () => void;
         lastCheckedAt: Date.now(),
       });
       if (result.overlap.length === 0) show(m.synced(result.sent, result.received));
+      if (!result.mergeStarted) useTipStore.getState().trigger("firstSync");
     },
     onError: (e) => {
       // 사람이 취소한 것은 오류가 아니다(D-080).
