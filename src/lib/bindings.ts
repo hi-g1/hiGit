@@ -230,6 +230,8 @@ export type AppStatus = {
 	gitSecurity: GitSecurity,
 	/**  배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`). */
 	gitPackageVersion: string | null,
+	/**  찾은 git 실행 파일의 경로(설정 "고급", D-160). 시험용 Core는 빈 글자. */
+	gitPath: string,
 };
 
 export type BranchCreateInput = {

@@ -27,6 +27,8 @@ pub struct Core {
     git_version: GitVersion,
     /// git 설치 방식. 보안 수정 기준 판정에 쓴다(D-050).
     git_build: platform::GitBuild,
+    /// 찾은 git 실행 파일(설정 "고급"에 보인다, D-160). 로그·오류에는 쓰지 않는다.
+    git_path: String,
     executor: Executor,
     queries: Queries,
     /// 지금 작업 폴더를 쓰는 작업이 실행 중인 저장소. 같은 곳에서 두 작업이 겹치면 index.lock이 부딪힌다.
@@ -147,6 +149,7 @@ impl Drop for BusyGuard<'_> {
 pub fn init() -> Result<Core> {
     let git_path = platform::find_git().ok_or(CoreError::GitMissing)?;
     let git_build = platform::git_build(&git_path);
+    let git_path_text = git_path.to_string_lossy().into_owned();
     let backend = CliBackend::new(git_path, Arc::new(platform::configure_child))
         .with_process_control(git::ProcessControl {
             prepare: Arc::new(platform::prepare_killable),
@@ -168,6 +171,7 @@ pub fn init() -> Result<Core> {
     backend.set_helper_program(platform::current_exe_path());
     let mut core = Core::with_stores(Arc::new(backend), recent, trust)?;
     core.git_build = git_build;
+    core.git_path = git_path_text;
     core.set_github(github_service(data_dir.as_deref()));
     if let Some(dir) = &data_dir {
         core.settings = Arc::new(crate::settings::SettingsStore::open(dir));
@@ -279,6 +283,7 @@ impl Core {
             git,
             git_version,
             git_build: platform::GitBuild::Unknown,
+            git_path: String::new(),
             busy: Mutex::new(HashSet::new()),
             net_busy: Mutex::new(HashSet::new()),
             bg_fetch: Mutex::new(HashSet::new()),
@@ -488,6 +493,7 @@ impl Core {
             git_version: self.git_version.to_string(),
             git_security: crate::git_security::judge(self.git_version, package.is_some()).into(),
             git_package_version: package,
+            git_path: self.git_path.clone(),
         }
     }
 

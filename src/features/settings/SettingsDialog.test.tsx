@@ -52,7 +52,7 @@ describe("SettingsDialog", () => {
     status.mockResolvedValue(notConnected);
     show();
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-    expect(headings).toEqual(["일반", "GitHub", "정보"]);
+    expect(headings).toEqual(["일반", "GitHub", "고급", "정보"]);
     const info = screen.getByRole("heading", { name: "정보" }).closest("section")!;
     expect(info.querySelector('img[alt="hiGit"]')).not.toBeNull();
   });

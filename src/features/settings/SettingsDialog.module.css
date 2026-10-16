@@ -23,6 +23,16 @@
   color: var(--text);
 }
 
+/* Git 위치: 코드 글꼴, 길면 말줄임(전체는 툴팁) */
+.gitPath {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .section {
   display: flex;
   flex-direction: column;

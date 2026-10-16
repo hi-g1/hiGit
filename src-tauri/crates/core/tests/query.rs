@@ -910,3 +910,10 @@ mod secrets {
         assert!(view.findings.is_empty(), "{:?}", view.findings);
     }
 }
+
+#[test]
+fn app_status_carries_the_git_path_field() {
+    let core = Core::with_backend(Arc::new(common::FakeGit::new()) as Arc<dyn GitBackend>).unwrap();
+    // 시험용 Core는 git을 찾지 않으므로 비어 있다. 실제 경로는 `init`이 채운다.
+    assert_eq!(core.app_status().git_path, "");
+}

@@ -6,7 +6,7 @@ vi.mock("../../lib/dialog", () => ({ pickFolder: vi.fn(async () => "/data/새 �
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/api")>()),
   api: {
-    appStatus: vi.fn(async () => ({ gitVersion: "2.50.1", gitSecurity: "ok", gitPackageVersion: null })),
+    appStatus: vi.fn(async () => ({ gitVersion: "2.50.1", gitSecurity: "ok", gitPackageVersion: null, gitPath: "/usr/bin/git" })),
     cloneDefaults: vi.fn(async () => ({ parent: "/home/me" })),
     githubStatus: vi.fn(async () => ({ configured: true, connected: false, login: null, remembered: false })),
     executeAction: vi.fn(),
@@ -133,7 +133,7 @@ describe("CloneDialog", () => {
   });
 
   it("Git이 오래됐으면 확인해야 복제할 수 있다", async () => {
-    vi.mocked(api.appStatus).mockResolvedValueOnce({ gitVersion: "2.34.1", gitSecurity: "outdated", gitPackageVersion: null });
+    vi.mocked(api.appStatus).mockResolvedValueOnce({ gitVersion: "2.34.1", gitSecurity: "outdated", gitPackageVersion: null, gitPath: "/usr/bin/git" });
     show();
     fireEvent.change(urlField(), { target: { value: "https://github.com/octo/hello" } });
     const check = await screen.findByLabelText("Git이 오래됐어요 · 그래도 복제");

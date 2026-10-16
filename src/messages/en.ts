@@ -379,6 +379,8 @@ export const en: Messages = {
     theme: "Appearance",
     themes: { system: "Follow system", light: "Light", dark: "Dark" },
     info: "About",
+    advanced: "Advanced",
+    gitPath: "Git location",
     github: "GitHub",
     notConfigured: "GitHub connection isn't set up in this app",
     connect: "Connect GitHub",

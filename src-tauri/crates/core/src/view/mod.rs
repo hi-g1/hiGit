@@ -79,6 +79,8 @@ pub struct AppStatus {
     pub git_security: GitSecurity,
     /// 배포판 패키지 git이면 패키지 버전(예: `1:2.34.1-1ubuntu1.17`).
     pub git_package_version: Option<String>,
+    /// 찾은 git 실행 파일의 경로(설정 "고급", D-160). 시험용 Core는 빈 글자.
+    pub git_path: String,
 }
 
 /// Git이 보안 수정 기준을 넘는지(D-050). `outdated`면 화면이 업데이트를 안내한다.
