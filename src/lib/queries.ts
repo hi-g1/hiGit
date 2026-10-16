@@ -303,6 +303,15 @@ export function useForcePushPlan(repo: string, enabled: boolean) {
   });
 }
 
+/** GitHub에 올리기 대화상자의 처음 값(D-132). 열 때마다 새로 읽는다. */
+export function usePublishDraft(repo: string) {
+  return useQuery<Awaited<ReturnType<typeof api.publishDraft>>, ApiError>({
+    queryKey: ["publishDraft", repo],
+    queryFn: () => api.publishDraft(repo),
+    staleTime: 0,
+  });
+}
+
 /** 원격 브랜치 지우기·이름 바꾸기 확인 창의 값(D-130). 창이 열렸을 때만 읽는다. */
 export function useRemoteBranchPlan(repo: string, remote: string, branch: string, enabled: boolean) {
   return useQuery<Awaited<ReturnType<typeof api.remoteBranchPlan>>, ApiError>({

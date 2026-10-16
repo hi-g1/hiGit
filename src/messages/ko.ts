@@ -421,6 +421,25 @@ export const ko = {
     deleted: `${t("remote")} 브랜치를 지웠어요`,
     renamed: "이름을 바꿨어요",
   },
+  // GitHub에 올리기(D-132)
+  publish: {
+    subtitle: (branch: string, versions: number) => `${branch} · ${t("commit")} ${versions}개`,
+    name: "저장소 이름",
+    nameHint: "영문·숫자·.·_·- 로 이름을 정해 주세요",
+    description: "설명",
+    visibility: "공개 여부",
+    private: "비공개",
+    public: "공개",
+    publicHint: "누구나 볼 수 있어요",
+    publicConfirm: "공개 저장소는 누구나 볼 수 있어요. 앱에서 지울 수 없어요.",
+    keepPrivate: "비공개로 하기",
+    makePublic: "공개로 만들고 올리기",
+    creating: "저장소를 만드는 중",
+    createdOnly: "저장소는 만들었어요",
+    retryPush: "다시 올리기",
+    done: "GitHub에 올렸어요",
+    open: "열기",
+  },
   // 태그 올리기(D-131)
   tagPush: { push: "올리기", done: "태그를 올렸어요" },
   // 덮어쓰며 올리기(D-128, D-129)

@@ -11,6 +11,7 @@ import { Term } from "../../ui/Term";
 import { ProjectMenu } from "./ProjectMenu";
 import styles from "./TopBar.module.css";
 import { Truncate } from "../../ui/Truncate";
+import { usePublishStore } from "../../features/publish/publishStore";
 
 /**
  * 상단 바(D-045). 왼쪽: 프로젝트 메뉴, 브랜치 단추(누르거나 Ctrl+B면 브랜치 목록).
@@ -39,6 +40,7 @@ export function TopBar({
   const showPr = hasRemote && hosting?.provider === "github" && !merging;
   const togglePr = () => setView(view === "pr" ? "home" : "pr");
   const openSettings = useSettingsStore((s) => s.openSettings);
+  const openPublish = usePublishStore((s) => s.openDialog);
   const view = useRepoStore((s) => s.view);
   const setView = useRepoStore((s) => s.setView);
   const toggleHistory = () => setView(view === "history" ? "home" : "history");
@@ -67,6 +69,11 @@ export function TopBar({
         {branches && !hasRemote && github?.configured && !github.connected && !merging && (
           <button type="button" className={styles.textButton} onClick={() => openSettings(true)}>
             {m.settings.connect}
+          </button>
+        )}
+        {branches && !hasRemote && github?.connected && !merging && (
+          <button type="button" className={styles.textButton} onClick={openPublish}>
+            <Term id="publish" focusable={false} />
           </button>
         )}
         {showPr && (
