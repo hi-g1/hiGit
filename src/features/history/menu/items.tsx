@@ -73,6 +73,19 @@ export const STATION_ITEMS: readonly StationMenuItem[] = [
     },
   },
   {
+    // 지금 위치의 버전만. 올린 버전인지는 core가 모든 원격으로 다시 본다(upstream이 없으면 흐리지 않음).
+    id: "amend",
+    group: "main",
+    label: () => <Term id="amend" focusable={false} />,
+    actionId: "amend",
+    availability: (info, env) => {
+      if (!info.isHead) return "hide";
+      if (env.upstream !== null && !info.unpushed) return { disabled: (m) => m.whyPublished };
+      return blockedByState(env) ?? "show";
+    },
+    run: (info, ctx) => ctx.ask({ kind: "amend", info }),
+  },
+  {
     // 고른 버전에서 새 브랜치를 만들고 갈아탄다. 지금 위치가 아니면 고친 파일이 섞이므로 흐린다.
     id: "new-branch",
     group: "main",

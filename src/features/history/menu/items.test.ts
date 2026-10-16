@@ -76,6 +76,12 @@ describe("되돌리기·복사·돌아가기 항목", () => {
     ["new-branch", info(), env({ operation: "other" }), ko.whyOtherOperation],
     ["tag", info({ isAncestorOfHead: false }), env({ currentBranch: null }), "show"],
     ["tag", info(), env({ operation: "other" }), ko.whyOtherOperation],
+    ["amend", info({ isHead: true }), env(), "show"],
+    ["amend", info(), env(), "hide"],
+    ["amend", info({ isHead: true, unpushed: false }), env({ upstream: "origin/main" }), ko.whyPublished],
+    ["amend", info({ isHead: true, unpushed: false }), env(), "show"],
+    ["amend", info({ isHead: true }), env({ operation: "other" }), ko.whyOtherOperation],
+    ["amend", info({ isHead: true }), env({ currentBranch: null }), ko.whyDetached],
   ] as const)("%s", (id, i, e, expected) => {
     expect(state(id, i, e)).toBe(expected);
   });
@@ -119,6 +125,7 @@ describe("대화상자를 여는 항목", () => {
   it.each([
     ["tag", "tag"],
     ["new-branch", "newBranch"],
+    ["amend", "amend"],
   ] as const)("%s는 대화상자를 연다", (id, kind) => {
     const ask = vi.fn();
     const ctx = { ask } as unknown as MenuCtx;
