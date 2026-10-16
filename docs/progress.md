@@ -4,9 +4,9 @@
 
 ## 지금
 - 반복: 4 (계획 009, 끝의 "검토 반영" 절이 단계 설명보다 우선)
-- 단계: G11 끝 (credential helper `--git-credential`, 원격 작업의 `AuthMode`, ExecCtx에 github)
-- 마지막 커밋: (이 갱신과 같은 커밋) core: github credential helper and authenticated remote actions
-- 다음 할 일: G12a 복제 액션 → G12b 복제 기본값 → G13a 검토 요청 조회 → G13b pr-create … (바뀐 순서는 계획 009 검토 반영 절)
+- 단계: G12a 끝 (복제 액션: 주소·이름·대상 검사, 대상 경로 키 잠금·진행·취소, 이번에 만든 폴더만 정리)
+- 마지막 커밋: (이 갱신과 같은 커밋) core: add clone action
+- 다음 할 일: G12b 복제 기본값(query_clone_defaults) → G13a 검토 요청 조회 → G13b pr-create → G14 대화상자 공용 … (바뀐 순서는 계획 009 검토 반영 절)
 
 ## 진행 방식 (사용자 지시, 2026-10-15)
 - 사람에게 묻지 않고 로드맵 끝까지 진행한다. 순서: 계획 005의 1b-1(1~26) → 1b-2(27~42) → 반복 2 → 반복 2b(버전 기록 노선도, 2026-10-16 사용자 추가) → 3 → 4 → 5.
@@ -182,7 +182,8 @@
 - [x] G10a `core::github::GitHubService`(github.json·키체인·메모리 토큰, 간격 안 폴링은 네트워크 없음, 401은 같은 세대만 끊음, 비밀 글자 지움), `CoreError::Github`·`ErrorCode` 15개·문구, `remote_host`→`hosting::GitHub::detect`
 - [x] G10b 명령 6개(모두 async + blocking, 네 곳 등록)·`api.ts`, `Core::hosting_page_url`(종류만 받고 주소는 core가, 검토 요청은 열린 저장소의 GitHub 원격), D-122
 - [x] G11 `git_credential_main`(get만, github.com https·사용자 이름 없음일 때만 키체인, 10초), `main`이 먼저 갈라짐, `auth_for`(주소 모두 github https·로컬 http.*/proxy 없음·이번 실행 키체인), helper 인증 실패 뒤 401이면 연결 끊김, `useAutoFetch` 인증 실패 목록
-- [ ] G12a 복제 액션 / G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
+- [x] G12a 액션 `clone`(31번째, safe/Nothing), `validate_clone_url`·`validate_clone_name`, Core가 열린 경로 대신 대상 검사(부모 폴더·링크 아님·.git 안 아님·대상 200자·없거나 빈 폴더·Git 보안 기준), 대상 경로로 잠금·진행·취소(정확히 같을 때만), 실패 때 이번에 만든 폴더만 지움, 오류 코드 3개
+- [ ] G12b 복제 기본값 / G13a 검토 요청 조회 / G13b pr-create
 - [ ] G14 대화상자 공용 / G15 설정 / G16 복제 화면 / G17 검토 요청 화면 / G18 새 검토 요청 / G19 브랜치 목록 "검토 요청" / G20 마무리
 
 ## 다음 반복

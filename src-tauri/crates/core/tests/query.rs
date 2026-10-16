@@ -246,6 +246,7 @@ fn action_input_tags_match_registry() {
     fn every_variant(input: &ActionInput) {
         match input {
             ActionInput::Init
+            | ActionInput::Clone(_)
             | ActionInput::Stage(_)
             | ActionInput::Unstage(_)
             | ActionInput::Commit(_)
@@ -282,6 +283,11 @@ fn action_input_tags_match_registry() {
     };
     let samples = [
         ActionInput::Init,
+        ActionInput::Clone(higit_core::view::CloneInput {
+            url: "https://github.com/octo/hello.git".into(),
+            name: "hello".into(),
+            accept_old_git: false,
+        }),
         ActionInput::Stage(paths.clone()),
         ActionInput::Unstage(paths.clone()),
         ActionInput::Ignore(paths),

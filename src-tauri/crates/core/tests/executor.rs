@@ -354,6 +354,7 @@ fn registered_actions_match_spec_risk() {
             ("tag-delete", "tag", Risk::Safe),
             ("branch-delete", "branch-delete", Risk::Caution),
             ("branch-rename", "branch-rename", Risk::Normal),
+            ("clone", "clone", Risk::Safe),
         ]
     );
 }

@@ -27,9 +27,9 @@ pub use history::{
     CommitDetailView, CommitFileView, RewriteBlocked, RewriteCardView, RewritePlanView,
 };
 pub use input::{
-    ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CommitInput,
-    ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice, MergeInput,
-    MergeIntoInput, OidInput, PathsInput, RestoreInput, RewriteInput, RewriteKindInput,
+    ActionInput, AmendInput, BranchCreateInput, BranchNameInput, BranchRenameInput, CloneInput,
+    CommitInput, ConflictFinishInput, FetchInput, FileChoice, FileResolution, HunkChoice,
+    MergeInput, MergeIntoInput, OidInput, PathsInput, RestoreInput, RewriteInput, RewriteKindInput,
     RewriteStepInput, SwitchInput, SyncInput, TagDeleteInput, TagInput, TakeOutInput,
     TakeOutSource,
 };
@@ -671,6 +671,9 @@ pub enum ErrorCode {
     GithubWorkflowScope,
     /// 복제할 폴더가 이미 있고 비어 있지 않다.
     CloneTargetExists,
+    CloneUrlInvalid,
+    CloneNameInvalid,
+    GitOutdated,
     RemoteUnreachable,
     ProtocolNotAllowed,
     UnparkConflict,
@@ -755,6 +758,10 @@ impl From<&CoreError> for ErrorView {
             CoreError::NoChange => ErrorCode::NoChange,
             CoreError::IdentityMissing => ErrorCode::IdentityMissing,
             CoreError::AnnotatedTag => ErrorCode::AnnotatedTag,
+            CoreError::CloneUrlInvalid => ErrorCode::CloneUrlInvalid,
+            CoreError::CloneNameInvalid => ErrorCode::CloneNameInvalid,
+            CoreError::CloneTargetExists => ErrorCode::CloneTargetExists,
+            CoreError::GitOutdated => ErrorCode::GitOutdated,
             CoreError::Git(e) => e.kind().into(),
             CoreError::Github { kind, .. } => github_code(*kind),
             CoreError::DuplicateAction(_) | CoreError::InputMismatch(_) | CoreError::Journal(_) => {

@@ -85,7 +85,9 @@ export const WATCH_STATUS_EVENT = "watch-status" as const;
 /* Types */
 export type ActionInput = 
 /**  관리 시작. 입력 없음. */
-{ id: "init" } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
+{ id: "init" } | 
+/**  원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115). */
+{ id: "clone"; input: CloneInput } | { id: "stage"; input: PathsInput } | { id: "unstage"; input: PathsInput } | { id: "commit"; input: CommitInput } | 
 /**  제외할 파일에 추가(새 파일만, 200개까지). */
 { id: "ignore"; input: PathsInput } | 
 /**  다른 브랜치를 지금 브랜치로 가져와 합친다(D-069). */
@@ -252,6 +254,14 @@ export type ChangedFile = {
 	staged: boolean,
 };
 
+/**  복제 입력. 주소와 폴더 이름은 core가 검사한다. */
+export type CloneInput = {
+	url: string,
+	name: string,
+	/**  git이 보안 수정 기준보다 낮은 것을 알고 진행한다. */
+	acceptOldGit: boolean,
+};
+
 /**  버전 상세(이때 파일 보기, 마지막 버전 고치기의 처음 값, D-105). */
 export type CommitDetailView = {
 	oid: string,
@@ -406,7 +416,7 @@ export type DiffRequest = {
 
 export type ErrorCode = "gitMissing" | "gitTooOld" | "folderNotFound" | "notARepo" | "alreadyRepo" | "unknownAction" | "previewRequired" | "previewMismatch" | "invalidInput" | "busy" | "notOpened" | "nothingToUndo" | "undoStale" | "undoPushed" | "stagedChanges" | "conflictChanged" | "backupFailed" | "operationInProgress" | "parkBlocked" | "needsTrust" | "noRemote" | "watchUnavailable" | "publishedHistory" | "hasChanges" | "tagExists" | "branchProtected" | "noChange" | "annotatedTag" | "githubNotConfigured" | "githubNotConnected" | "githubExpired" | "githubForbidden" | "githubRateLimited" | "githubSsoRequired" | "githubNotFound" | "githubMoved" | "githubUnreachable" | "githubUnavailable" | "githubBadResponse" | "githubKeychain" | "prAlreadyExists" | "prNoDifference" | "prInvalid" | "nothingToCommit" | "identityMissing" | "invalidBranchName" | "branchExists" | "wouldOverwrite" | "notFastForward" | "pushRejected" | "noUpstream" | "sshHostUnverified" | "sshAuthFailed" | "httpAuthFailed" | "httpForbidden" | "remoteNotFound" | "githubWorkflowScope" | 
 /**  복제할 폴더가 이미 있고 비어 있지 않다. */
-"cloneTargetExists" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
+"cloneTargetExists" | "cloneUrlInvalid" | "cloneNameInvalid" | "gitOutdated" | "remoteUnreachable" | "protocolNotAllowed" | "unparkConflict" | "timedOut" | "mergeConflict" | "dubiousOwnership" | "cancelled" | "stalled" | 
 /**  다른 git 작업의 잠금 파일이 있다(D-081). */
 "indexLocked" | 
 /**  분류하지 못한 git 실패. 원문은 "자세히 보기". */

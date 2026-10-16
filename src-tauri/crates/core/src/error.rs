@@ -125,6 +125,22 @@ pub enum CoreError {
     #[error("바뀌는 것이 없습니다")]
     NoChange,
 
+    /// 복제 주소가 규칙에 맞지 않는다(D-035, D-115).
+    #[error("복제할 수 없는 주소입니다")]
+    CloneUrlInvalid,
+
+    /// 복제할 폴더 이름이 규칙에 맞지 않는다.
+    #[error("쓸 수 없는 폴더 이름입니다")]
+    CloneNameInvalid,
+
+    /// 복제할 폴더가 이미 있고 비어 있지 않다(또는 파일·링크다).
+    #[error("같은 이름의 폴더가 이미 있습니다")]
+    CloneTargetExists,
+
+    /// git이 보안 수정 기준보다 낮아 복제하지 않았다(사람이 알고 진행하면 된다, D-050).
+    #[error("git이 보안 수정 기준보다 낮습니다")]
+    GitOutdated,
+
     #[error("미리보기를 먼저 확인해야 합니다")]
     PreviewRequired,
 

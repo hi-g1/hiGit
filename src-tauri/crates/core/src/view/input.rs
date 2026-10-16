@@ -11,6 +11,8 @@ use specta::Type;
 pub enum ActionInput {
     /// 관리 시작. 입력 없음.
     Init,
+    /// 원격 저장소를 부모 폴더(실행 폴더) 아래 새 폴더로 복제한다(D-115).
+    Clone(CloneInput),
     Stage(PathsInput),
     Unstage(PathsInput),
     Commit(CommitInput),
@@ -67,6 +69,7 @@ impl ActionInput {
     pub fn action_id(&self) -> &'static str {
         match self {
             ActionInput::Init => "init",
+            ActionInput::Clone(_) => "clone",
             ActionInput::Stage(_) => "stage",
             ActionInput::Unstage(_) => "unstage",
             ActionInput::Commit(_) => "commit",
@@ -202,6 +205,16 @@ pub struct BranchCreateInput {
     /// 시작할 버전(노선도의 역, 작업 내역). 없으면 지금 버전에서 만들고 고친 파일이 따라간다.
     #[serde(default)]
     pub from: Option<String>,
+}
+
+/// 복제 입력. 주소와 폴더 이름은 core가 검사한다.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneInput {
+    pub url: String,
+    pub name: String,
+    /// git이 보안 수정 기준보다 낮은 것을 알고 진행한다.
+    pub accept_old_git: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Type)]

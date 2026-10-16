@@ -178,5 +178,11 @@
     "glossaryId": "branch-rename",
     "risk": "normal",
     "undo": "inverse"
+  },
+  {
+    "id": "clone",
+    "glossaryId": "clone",
+    "risk": "safe",
+    "undo": "nothing"
   }
 ]

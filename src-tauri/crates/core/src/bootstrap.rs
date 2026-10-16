@@ -52,6 +52,8 @@ pub struct Core {
     asked: Mutex<Vec<(PathBuf, Ask)>>,
     /// GitHub 연결(D-109).
     github: Arc<crate::github::GitHubService>,
+    /// 시험용: 복제 주소로 로컬 절대 경로를 받는다.
+    allow_local_clone: bool,
 }
 
 /// 도는 작업 하나.
@@ -64,7 +66,10 @@ struct Running {
 }
 
 /// 원격 작업. 언제든 취소할 수 있다.
-const REMOTE_ACTIONS: [&str; 4] = ["fetch", "pull", "push", "sync"];
+const REMOTE_ACTIONS: [&str; 5] = ["fetch", "pull", "push", "sync", "clone"];
+
+/// 복제 대상 경로의 최대 글자 수(Windows 260자 한도 안에서 저장소 안 파일 자리를 남긴다).
+const CLONE_TARGET_MAX_CHARS: usize = 200;
 /// 로컬 쓰기는 이만큼 지나야 강제로 멈출 수 있다(D-080). 화면도 이때부터 단추를 보인다.
 const STUCK_LOCAL_SECS: u64 = 60;
 
@@ -278,7 +283,15 @@ impl Core {
             logger: crate::log::Logger::disabled(),
             running: Arc::default(),
             github,
+            allow_local_clone: false,
         })
+    }
+
+    /// **테스트 전용.** 복제 주소로 로컬 절대 경로(bare 원격)를 받는다.
+    #[doc(hidden)]
+    pub fn allow_local_clone_for_tests(mut self) -> Self {
+        self.allow_local_clone = true;
+        self
     }
 
     /// 설정의 GitHub 구역 상태. 키체인을 건드리지 않는다.
@@ -354,6 +367,14 @@ impl Core {
     /// (D-080). 그 밖에는 아무것도 하지 않는다. 확인과 취소 표시를 한 잠금 안에서 해서 끝난
     /// 작업 뒤에 표시가 남지 않게 한다.
     pub fn cancel(&self, folder: &Path) -> Result<()> {
+        // 복제는 대상 폴더와 정확히 같을 때만 취소한다. 열린 폴더가 아니어도 된다.
+        if let Some(key) = clone_key(folder) {
+            let running = self.running.lock().unwrap_or_else(PoisonError::into_inner);
+            if running.get(&key).is_some_and(|r| r.action == "clone") {
+                self.git.request_cancel(&RepoPath::new(&key));
+                return Ok(());
+            }
+        }
         let state = self.state_of(folder)?;
         let repo = state.repo.ok_or(CoreError::NotARepo)?;
         let running = self.running.lock().unwrap_or_else(PoisonError::into_inner);
@@ -587,6 +608,16 @@ impl Core {
         input: &ActionInput,
         preview_token: Option<String>,
     ) -> Result<ActionResult> {
+        if let ActionInput::Clone(clone) = input {
+            let result = self.run_clone(folder, clone);
+            self.logger.action("execute", "clone", &result);
+            let outcome = result?;
+            if let crate::Outcome::RepoCreated(repo) = &outcome {
+                self.opened.insert(repo.as_path());
+                self.recent.touch(repo.as_path());
+            }
+            return Ok(outcome.into());
+        }
         let token = preview_token.map(PreviewToken);
         // 올리기는 작업 폴더를 쓰지 않아 원격 잠금만 잡는다. 가져오기·동기화는 합치므로 둘 다(D-068).
         let locks = match input.action_id() {
@@ -789,6 +820,101 @@ impl Core {
         f(&self.executor, &ctx)
     }
 
+    /// 복제(D-115). 열린 저장소가 있을 수 없는 작업이라 D-037의 "열린 경로만" 대신 대상 경로를
+    /// 검사한다: 부모는 있는 폴더(링크 아님)이고 어떤 저장소의 `.git` 안이 아니며, 대상은 없거나 빈
+    /// 폴더. 잠금·진행·취소의 키는 대상 경로다. 실패·취소 때 이번에 만든 대상만 지운다.
+    fn run_clone(&self, parent: &Path, input: &crate::view::CloneInput) -> Result<crate::Outcome> {
+        let url = if self.allow_local_clone && Path::new(input.url.trim()).is_absolute() {
+            input.url.trim().to_owned()
+        } else {
+            crate::actions::names::validate_clone_url(&input.url)?
+        };
+        crate::actions::names::validate_clone_name(&input.name)?;
+        check_path_len(parent)?;
+        let meta = std::fs::symlink_metadata(parent).map_err(CoreError::FolderNotFound)?;
+        if !meta.is_dir() {
+            return Err(CoreError::FolderNotFound(std::io::Error::other(
+                "not a folder",
+            )));
+        }
+        let parent = platform::normalize_repo_path(parent).map_err(CoreError::FolderNotFound)?;
+        if parent
+            .components()
+            .any(|c| c.as_os_str().eq_ignore_ascii_case(".git"))
+        {
+            return Err(CoreError::InvalidInput(
+                "저장소의 .git 폴더 안에는 복제할 수 없어요",
+            ));
+        }
+        let target = parent.join(&input.name);
+        if target.to_string_lossy().chars().count() > CLONE_TARGET_MAX_CHARS {
+            return Err(CoreError::InvalidInput("경로가 너무 길어요"));
+        }
+        let existed = match std::fs::symlink_metadata(&target) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) => return Err(CoreError::FolderNotFound(e)),
+            Ok(m) if m.is_dir() => {
+                let empty = std::fs::read_dir(&target)
+                    .map_err(CoreError::FolderNotFound)?
+                    .next()
+                    .is_none();
+                if !empty {
+                    return Err(CoreError::CloneTargetExists);
+                }
+                true
+            }
+            Ok(_) => return Err(CoreError::CloneTargetExists),
+        };
+        let distro = matches!(self.git_build, platform::GitBuild::DistroPackage { .. });
+        if crate::git_security::judge(self.git_version, distro)
+            == crate::git_security::SecurityJudgement::Outdated
+            && !input.accept_old_git
+        {
+            return Err(CoreError::GitOutdated);
+        }
+        let _guards = self.lock_target(&target)?;
+        let state = RepoState {
+            folder: parent.clone(),
+            repo: None,
+        };
+        let ctx = ExecCtx {
+            git: self.git.as_ref(),
+            state: &state,
+            key: self.executor.journal_key(),
+            github: &self.github,
+        };
+        let input = ActionInput::Clone(crate::view::CloneInput {
+            url,
+            ..input.clone()
+        });
+        let result = self.tracked(self.git.as_ref(), &RepoPath::new(&target), "clone", || {
+            self.executor.execute(&ctx, "clone", &input, None)
+        });
+        if result.is_err() && !existed {
+            remove_created_target(&parent, &target);
+        }
+        result
+    }
+
+    /// 대상 경로로 작업 폴더·원격 잠금을 함께 잡는다. 같은 대상에 다른 복제가 돌면 `Busy`.
+    fn lock_target(&self, target: &Path) -> Result<Vec<BusyGuard<'_>>> {
+        let mut guards = Vec::new();
+        for set in [&self.busy, &self.net_busy] {
+            if !set
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .insert(target.to_path_buf())
+            {
+                return Err(CoreError::Busy);
+            }
+            guards.push(BusyGuard {
+                busy: set,
+                key: target.to_path_buf(),
+            });
+        }
+        Ok(guards)
+    }
+
     /// 폴더를 정규화하고 저장소인지 확인한다. 저장소 경로도 같은 형식으로 정규화한다.
     fn state_of(&self, path: &Path) -> Result<RepoState> {
         check_path_len(path)?;
@@ -800,6 +926,23 @@ impl Core {
                 .unwrap_or(r)
         });
         Ok(RepoState { folder, repo })
+    }
+}
+
+/// 취소 요청의 폴더를 복제 대상 키(정규화한 부모 + 이름)로. 대상이 아직 없어도 된다.
+fn clone_key(folder: &Path) -> Option<PathBuf> {
+    let name = folder.file_name()?;
+    let parent = platform::normalize_repo_path(folder.parent()?).ok()?;
+    Some(parent.join(name))
+}
+
+/// 이번 복제가 만든 대상 폴더만 지운다(링크가 아니고 바로 그 부모 아래일 때).
+fn remove_created_target(parent: &Path, target: &Path) {
+    let Ok(meta) = std::fs::symlink_metadata(target) else {
+        return;
+    };
+    if meta.is_dir() && !meta.file_type().is_symlink() && target.parent() == Some(parent) {
+        let _ = std::fs::remove_dir_all(target);
     }
 }
 
